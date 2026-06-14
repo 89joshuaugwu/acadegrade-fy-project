@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, Settings, Calculator, Bell, Info, LogOut, X } from 'lucide-react';
+import { Shield, Settings, Calculator, Bell, Info, LogOut, X, LayoutDashboard, BookOpen, BrainCircuit } from 'lucide-react';
 import { signOut } from '@/lib/firebase/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
