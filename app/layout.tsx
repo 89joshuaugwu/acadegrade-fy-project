@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, DM_Sans } from 'next/font/google';
 import { GeistMono } from 'geist/font/mono';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from '@/components/layout/AuthProvider';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -95,33 +96,35 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
-          <Toaster
-            position="top-center"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: 'var(--acade-deep)',
-                color: 'var(--acade-text)',
-                border: '1px solid var(--acade-border)',
-                borderRadius: '12px',
-                fontSize: 'var(--text-sm)',
-                fontFamily: 'var(--font-dm-sans)',
-              },
-              success: {
-                iconTheme: {
-                  primary: 'var(--acade-success)',
-                  secondary: 'var(--acade-deep)',
+          <AuthProvider>
+            {children}
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  background: 'var(--acade-deep)',
+                  color: 'var(--acade-text)',
+                  border: '1px solid var(--acade-border)',
+                  borderRadius: '12px',
+                  fontSize: 'var(--text-sm)',
+                  fontFamily: 'var(--font-dm-sans)',
                 },
-              },
-              error: {
-                iconTheme: {
-                  primary: 'var(--acade-danger)',
-                  secondary: 'var(--acade-deep)',
+                success: {
+                  iconTheme: {
+                    primary: 'var(--acade-success)',
+                    secondary: 'var(--acade-deep)',
+                  },
                 },
-              },
-            }}
-          />
+                error: {
+                  iconTheme: {
+                    primary: 'var(--acade-danger)',
+                    secondary: 'var(--acade-deep)',
+                  },
+                },
+              }}
+            />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

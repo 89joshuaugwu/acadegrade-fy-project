@@ -310,8 +310,8 @@ export default function LandingPage() {
                   Letter-grade discretized. 71% and 95% both yield an A = 5.00.
                   Your transcript shows perfection — but is it?
                 </p>
-                <div className="h-28">
-                  <LazyResponsiveContainer width="100%" height="100%">
+                <div className="h-28 w-full">
+                  <LazyResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
                     <LazyLineChart data={cgpaMockData}>
                       <LazyLine type="monotone" dataKey="val" stroke="var(--acade-primary)" strokeWidth={2} dot={false} />
                     </LazyLineChart>
@@ -335,8 +335,8 @@ export default function LandingPage() {
                   Detects when 71% and 95% both print as A — but represent very different mastery.
                   PI uses your raw scores for a continuous 0–5.00 metric.
                 </p>
-                <div className="h-28">
-                  <LazyResponsiveContainer width="100%" height="100%">
+                <div className="h-28 w-full">
+                  <LazyResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
                     <LazyLineChart data={piMockData}>
                       <LazyLine type="monotone" dataKey="val" stroke="var(--acade-gold)" strokeWidth={2} dot={false} />
                     </LazyLineChart>
@@ -467,7 +467,7 @@ export default function LandingPage() {
               </div>
               <div className="absolute bottom-4 right-4">
                 <Badge variant="status" icon={<Sparkles size={12} />}>
-                  Gemini 2.5 Flash-Lite
+                  Gemini 3.1 Flash-Lite
                 </Badge>
               </div>
             </Card>

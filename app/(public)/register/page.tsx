@@ -1,7 +1,702 @@
-export default function RegisterPage() {
+'use client';
+
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'motion/react';
+import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { ArrowLeft, ArrowRight, Check, Sparkles, AlertCircle, FileText, Database } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import { cn } from '@/lib/utils/cn';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAuth } from '@/hooks/useAuth';
+import { signUpWithEmail } from '@/lib/firebase/auth';
+import { setDocument, serverTimestamp } from '@/lib/firebase/firestore';
+import { DEFAULT_UNIVERSITY, STUDENT_LEVELS } from '@/lib/utils/constants';
+import type { StudentLevel, RecordMode, PastSemesterEntry } from '@/types/user';
+
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+
+/* ─── Validation Schemas per Step ─── */
+const step1Base = z.object({
+  fullName: z.string().min(2, 'Name is too short'),
+  matric: z.string().min(4, 'Matric number is required'),
+  email: z.string().email('Valid email is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string(),
+});
+const step1Schema = step1Base.refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ['confirmPassword'],
+});
+
+const step2Base = z.object({
+  university: z.string().min(2, 'University is required'),
+  department: z.string().min(2, 'Department is required'),
+  programme: z.string().min(2, 'Programme is required'),
+  currentLevel: z.union([z.literal(100), z.literal(200), z.literal(300), z.literal(400), z.literal(500)]),
+  currentSession: z.string().regex(/^\d{4}\/\d{4}$/, 'Must be format YYYY/YYYY (e.g. 2025/2026)'),
+});
+const step2Schema = step2Base;
+
+const step3Base = z.object({
+  recordMode: z.union([z.literal('fromScratch'), z.literal('complete')]),
+  semestersCompleted: z.number().min(1).max(10).optional(),
+});
+const step3Schema = step3Base.refine(
+  (data) => {
+    if (data.recordMode === 'complete') {
+      return data.semestersCompleted !== undefined && data.semestersCompleted > 0;
+    }
+    return true;
+  },
+  {
+    message: "Specify semesters completed",
+    path: ['semestersCompleted'],
+  }
+);
+
+const step4Base = z.object({
+  pastSemesters: z.array(z.object({
+    level: z.number(),
+    semester: z.union([z.literal(1), z.literal(2)]),
+    session: z.string().regex(/^\d{4}\/\d{4}$/, 'Invalid session format'),
+    label: z.string()
+  })).optional()
+});
+const step4Schema = step4Base;
+
+const formSchema = step1Base
+  .merge(step2Base)
+  .merge(step3Base)
+  .merge(step4Base)
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ['confirmPassword'],
+  })
+  .refine(
+    (data) => {
+      if (data.recordMode === 'complete') {
+        return data.semestersCompleted !== undefined && data.semestersCompleted > 0;
+      }
+      return true;
+    },
+    {
+      message: "Specify semesters completed",
+      path: ['semestersCompleted'],
+    }
+  );
+
+type FormData = z.infer<typeof formSchema>;
+
+/* ─── Helper to generate past semesters ─── */
+function generatePastSemesters(
+  currentLevel: number,
+  semestersCompleted: number,
+  currentSession: string
+): PastSemesterEntry[] {
+  const result: PastSemesterEntry[] = [];
+  
+  // Try to parse the starting year of the current session
+  const parts = currentSession.split('/');
+  let currentStartYear = parseInt(parts[0], 10);
+  if (isNaN(currentStartYear)) currentStartYear = new Date().getFullYear();
+
+  // If current is e.g. 400L, and we completed 6 semesters, that's 100L S1, 100L S2, etc.
+  // This logic works backwards from the current session.
+  // Actually, let's just go forward from 100L.
+  
+  let totalGenerated = 0;
+  // If we are at 400L, 100L was 3 years ago (approx)
+  // Let's just generate the list sequentially
+  const startYear = currentStartYear - Math.floor(semestersCompleted / 2);
+  let year = startYear;
+
+  const levelsToGenerate = [100, 200, 300, 400, 500];
+
+  for (const level of levelsToGenerate) {
+    if (totalGenerated >= semestersCompleted) break;
+    
+    // Semester 1
+    result.push({
+      level: level as StudentLevel,
+      semester: 1,
+      session: `${year}/${year + 1}`,
+      label: `${level}L First Semester`,
+    });
+    totalGenerated++;
+    if (totalGenerated >= semestersCompleted) break;
+
+    // Semester 2
+    result.push({
+      level: level as StudentLevel,
+      semester: 2,
+      session: `${year}/${year + 1}`,
+      label: `${level}L Second Semester`,
+    });
+    totalGenerated++;
+
+    year++; // next level
+  }
+  return result;
+}
+
+/* ════════════════════════════════════════════════════
+   WIZARD STEPS
+   ════════════════════════════════════════════════════ */
+
+// ----- STEP 1 -----
+function Step1Account({ onNext }: { onNext: () => void }) {
+  const { register, trigger, formState: { errors } } = useFormContext<FormData>();
+  
+  const handleNext = async () => {
+    const valid = await trigger(['fullName', 'matric', 'email', 'password', 'confirmPassword']);
+    if (valid) onNext();
+  };
+
   return (
-    <main>
-      <h1>Create Your AcadeGrade Account</h1>
+    <div className="flex flex-col gap-4">
+      <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+        Create Your Account
+      </h2>
+      <Input label="Full Name" placeholder="Joshua Chimaobi Ugwu" error={errors.fullName?.message} {...register('fullName')} />
+      <Input label="Matric Number" placeholder="2022030202909" error={errors.matric?.message} {...register('matric')} />
+      <Input label="Email Address" type="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')} />
+      <Input label="Password" type="password" placeholder="At least 8 characters" error={errors.password?.message} {...register('password')} />
+      <Input label="Confirm Password" type="password" placeholder="Type password again" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
+      
+      <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext} className="mt-2">
+        Continue <ArrowRight size={18} />
+      </Button>
+    </div>
+  );
+}
+
+// ----- STEP 2 -----
+function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
+  const { register, trigger, formState: { errors }, control, watch } = useFormContext<FormData>();
+  
+  const handleNext = async () => {
+    const valid = await trigger(['university', 'department', 'programme', 'currentLevel', 'currentSession']);
+    if (valid) onNext();
+  };
+
+  const levelVal = watch('currentLevel');
+
+  // Hardcoded departments for now (since we don't have catalog data fetch yet)
+  const deptOptions = [
+    { value: 'Computer Science', label: 'Computer Science' },
+    { value: 'Software Engineering', label: 'Software Engineering' },
+    { value: 'Information Technology', label: 'Information Technology' },
+    { value: 'Electrical Engineering', label: 'Electrical Engineering' },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+        Academic Details
+      </h2>
+      <Input label="University" placeholder="University Name" error={errors.university?.message} {...register('university')} />
+      
+      <Controller
+        name="department"
+        control={control}
+        render={({ field }) => (
+          <div>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-1.5 block">Department</label>
+            <Select 
+              options={deptOptions} 
+              value={field.value} 
+              onChange={field.onChange} 
+              placeholder="Select department..." 
+              searchable
+            />
+            {errors.department && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] mt-1.5 font-[family-name:var(--font-dm-sans)]">{errors.department.message}</p>}
+          </div>
+        )}
+      />
+      
+      <Input label="Programme" placeholder="e.g. B.Sc Computer Science" error={errors.programme?.message} {...register('programme')} />
+      
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Current Level</label>
+        <div className="flex flex-wrap gap-2">
+          {STUDENT_LEVELS.map((level) => (
+            <Controller
+              key={level}
+              name="currentLevel"
+              control={control}
+              render={({ field }) => (
+                <button
+                  type="button"
+                  onClick={() => field.onChange(level)}
+                  className={cn(
+                    'h-12 px-4 rounded-xl text-[length:var(--text-sm)] font-semibold transition-colors border',
+                    levelVal === level
+                      ? 'bg-[var(--acade-primary)]/20 border-[var(--acade-primary)] text-[var(--acade-primary-glow)]'
+                      : 'bg-[var(--acade-deep)] border-[var(--acade-border)] text-[var(--acade-text-muted)] hover:border-[var(--acade-text-faint)]'
+                  )}
+                >
+                  {level}L
+                </button>
+              )}
+            />
+          ))}
+        </div>
+        {errors.currentLevel && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] font-[family-name:var(--font-dm-sans)]">{errors.currentLevel.message}</p>}
+      </div>
+
+      <Input label="Current Session" placeholder="e.g. 2025/2026" error={errors.currentSession?.message} {...register('currentSession')} />
+      
+      <div className="flex items-center gap-3 mt-4">
+        <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
+          <ArrowLeft size={18} />
+        </Button>
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
+          Continue <ArrowRight size={18} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ----- STEP 3 -----
+function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
+  const { trigger, watch, setValue, formState: { errors } } = useFormContext<FormData>();
+  const shouldReduceMotion = useReducedMotion();
+  
+  const modeVal = watch('recordMode');
+  const semsCompleted = watch('semestersCompleted') || 1;
+
+  const handleNext = async () => {
+    const valid = await trigger(['recordMode', 'semestersCompleted']);
+    if (valid) {
+      if (modeVal === 'fromScratch') {
+        // Skip step 4 if from scratch
+        onNext(); 
+        onNext(); 
+      } else {
+        // Go to step 4
+        onNext();
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+        How do you want to track?
+      </h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <motion.div
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+          onClick={() => setValue('recordMode', 'fromScratch', { shouldValidate: true })}
+          className={cn(
+            'cursor-pointer rounded-2xl p-6 border-2 transition-all',
+            modeVal === 'fromScratch'
+              ? 'bg-[var(--acade-primary)]/10 border-[var(--acade-primary)] shadow-[0_0_20px_rgba(99,102,241,0.1)]'
+              : 'bg-[var(--acade-surface)] border-[var(--acade-border)] hover:border-[var(--acade-border-subtle)]'
+          )}
+        >
+          <div className="size-12 rounded-full bg-[var(--acade-deep)] flex items-center justify-center mb-4">
+            <Sparkles size={24} className={modeVal === 'fromScratch' ? 'text-[var(--acade-primary-glow)]' : 'text-[var(--acade-text-muted)]'} />
+          </div>
+          <h3 className="text-[length:var(--text-lg)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+            From Scratch
+          </h3>
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            Start fresh. Enter results as you go. Perfect for freshers.
+          </p>
+        </motion.div>
+
+        <motion.div
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+          onClick={() => setValue('recordMode', 'complete', { shouldValidate: true })}
+          className={cn(
+            'cursor-pointer rounded-2xl p-6 border-2 transition-all',
+            modeVal === 'complete'
+              ? 'bg-[var(--acade-gold)]/10 border-[var(--acade-gold)] shadow-[0_0_20px_rgba(245,158,11,0.1)]'
+              : 'bg-[var(--acade-surface)] border-[var(--acade-border)] hover:border-[var(--acade-border-subtle)]'
+          )}
+        >
+          <div className="size-12 rounded-full bg-[var(--acade-deep)] flex items-center justify-center mb-4">
+            <Database size={24} className={modeVal === 'complete' ? 'text-[var(--acade-gold)]' : 'text-[var(--acade-text-muted)]'} />
+          </div>
+          <h3 className="text-[length:var(--text-lg)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+            Complete Record
+          </h3>
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            I have past results to enter now to build my CGPA.
+          </p>
+        </motion.div>
+      </div>
+      
+      {errors.recordMode && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] font-[family-name:var(--font-dm-sans)] text-center -mt-2">{errors.recordMode.message}</p>}
+
+      <AnimatePresence>
+        {modeVal === 'complete' && (
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-5 rounded-2xl bg-[var(--acade-surface)] border border-[var(--acade-border)] mt-2">
+              <label className="flex items-center justify-between text-[length:var(--text-sm)] font-medium text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)] mb-4">
+                <span>How many semesters completed?</span>
+                <span className="bg-[var(--acade-deep)] px-3 py-1 rounded-full border border-[var(--acade-border)] font-[family-name:var(--font-geist-mono)]">
+                  {semsCompleted}
+                </span>
+              </label>
+              <input 
+                type="range" 
+                min="1" 
+                max="10" 
+                step="1"
+                value={semsCompleted}
+                onChange={(e) => setValue('semestersCompleted', parseInt(e.target.value), { shouldValidate: true })}
+                className="w-full accent-[var(--acade-gold)] h-2 bg-[var(--acade-deep)] rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex items-center gap-3 mt-4">
+        <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
+          <ArrowLeft size={18} />
+        </Button>
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
+          Continue <ArrowRight size={18} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ----- STEP 4 -----
+function Step4PastSemesters({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
+  const { watch, setValue } = useFormContext<FormData>();
+  const shouldReduceMotion = useReducedMotion();
+  
+  const currentLevel = watch('currentLevel');
+  const semestersCompleted = watch('semestersCompleted') || 1;
+  const currentSession = watch('currentSession');
+  const pastSemesters = watch('pastSemesters') || [];
+
+  // Generate if empty
+  useEffect(() => {
+    if (pastSemesters.length === 0 && currentLevel && currentSession) {
+      const generated = generatePastSemesters(currentLevel, semestersCompleted, currentSession);
+      setValue('pastSemesters', generated);
+    }
+  }, [currentLevel, semestersCompleted, currentSession, pastSemesters, setValue]);
+
+  const handleNext = () => {
+    // Basic validation could happen here
+    onNext();
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+        Confirm Past Semesters
+      </h2>
+      <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] -mt-2 mb-2">
+        We&apos;ve set up your timeline. You can adjust the session years if they look wrong.
+      </p>
+
+      <div className="flex flex-col gap-3 max-h-[300px] overflow-y-auto pr-2 pb-2">
+        <AnimatePresence>
+          {pastSemesters.map((sem, index) => (
+            <motion.div
+              key={`${sem.level}-${sem.semester}`}
+              initial={shouldReduceMotion ? {} : { opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05 }}
+              className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl bg-[var(--acade-surface)] border border-[var(--acade-border)]"
+            >
+              <div className="flex-1 flex flex-col">
+                <span className="text-[length:var(--text-sm)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
+                  {sem.label}
+                </span>
+                <span className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)]">
+                  Level: {sem.level} · Semester: {sem.semester}
+                </span>
+              </div>
+              <div className="shrink-0">
+                <input
+                  type="text"
+                  value={sem.session}
+                  onChange={(e) => {
+                    const newArr = [...pastSemesters];
+                    newArr[index].session = e.target.value;
+                    setValue('pastSemesters', newArr);
+                  }}
+                  className="w-32 h-10 px-3 bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-lg text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] font-[family-name:var(--font-dm-sans)] text-center"
+                />
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      <div className="flex items-center gap-3 mt-4">
+        <Button type="button" variant="ghost" size="lg" onClick={() => {
+          // Go back 2 steps to RecordMode, resetting the array
+          setValue('pastSemesters', []);
+          onBack(); 
+        }} className="px-4 shrink-0">
+          <ArrowLeft size={18} />
+        </Button>
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
+          Looks Good <Check size={18} className="ml-1" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════
+   MAIN REGISTER WIZARD
+   ════════════════════════════════════════════════════ */
+export default function RegisterWizard() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const shouldReduceMotion = useReducedMotion();
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const totalSteps = 5;
+
+  const methods = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    mode: 'onTouched',
+    defaultValues: {
+      university: DEFAULT_UNIVERSITY,
+      recordMode: 'fromScratch',
+    }
+  });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, authLoading, router]);
+
+  // Final submit handler
+  const onSubmit = async (data: FormData) => {
+    setIsSubmitting(true);
+    try {
+      // 1. Firebase Auth Create User
+      const userCred = await signUpWithEmail(data.email, data.password);
+      const uid = userCred.user.uid;
+
+      // 2. Create User Document
+      await setDocument(`users/${uid}`, {
+        name: data.fullName,
+        email: data.email,
+        matric: data.matric,
+        dept: data.department,
+        level: data.currentLevel,
+        programme: data.programme,
+        university: data.university,
+        avatarUrl: null,
+        recordMode: data.recordMode,
+        gradeMode: 'cgpa',
+        currentSession: data.currentSession,
+        isAdmin: false,
+        disabled: false,
+        fcmToken: null,
+      });
+
+      // 3. Pre-create Semesters if Complete Record mode
+      if (data.recordMode === 'complete' && data.pastSemesters) {
+        for (const [index, sem] of data.pastSemesters.entries()) {
+          const semId = `sem_${Date.now()}_${index}`;
+          await setDocument(`users/${uid}/semesters/${semId}`, {
+            label: sem.label,
+            session: sem.session,
+            level: sem.level,
+            semester: sem.semester,
+            gpa: 0,
+            pi: 0,
+            creditLoaded: 0,
+            isComplete: true, // past semesters are marked complete initially
+          });
+        }
+      }
+
+      // 4. Create dummy analytics document to prevent null errors later
+      await setDocument(`analytics/${uid}`, {
+        cgpa: 0,
+        pi: 0,
+        degreeClass: 'Fail',
+        totalCredits: 0,
+        semesterHistory: [],
+        regressionSlope: 0,
+        projectedCGPA: 0,
+        riskScore: 0,
+      });
+
+      // Show Success step
+      setIsSuccess(true);
+      setCurrentStep(5);
+      
+      // Auto redirect after 3 seconds
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
+
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(
+        err instanceof Error && err.message.includes('email-already-in-use')
+          ? 'An account with this email already exists.'
+          : 'Failed to create account. Please try again.'
+      );
+      // Go back to step 1 to let them change email
+      setCurrentStep(1);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (authLoading) {
+    return <div className="min-h-screen bg-[var(--acade-void)]" />;
+  }
+  if (user && !isSuccess) return null;
+
+  return (
+    <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
+      {/* Background glow */}
+      <div
+        className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, var(--acade-primary) 0%, transparent 70%)' }}
+        aria-hidden="true"
+      />
+
+      {/* Confetti container (Pure CSS) */}
+      {isSuccess && !shouldReduceMotion && (
+        <div className="fixed inset-0 pointer-events-none overflow-hidden z-50 flex justify-around">
+          {[...Array(30)].map((_, i) => (
+            <div 
+              key={i}
+              className="w-2 h-4 bg-[var(--acade-primary-glow)] rounded-sm animate-[confetti-fall_3s_ease-out_forwards]"
+              style={{
+                backgroundColor: i % 3 === 0 ? 'var(--acade-gold)' : i % 2 === 0 ? 'var(--acade-success)' : 'var(--acade-primary-glow)',
+                animationDelay: `${Math.random() * 0.5}s`,
+                transform: `rotate(${Math.random() * 360}deg)`
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="relative w-full max-w-lg">
+        {/* Progress Bar */}
+        {!isSuccess && (
+          <div className="mb-8">
+            <div className="flex justify-between text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-bold mb-2 px-1">
+              <span>STEP {currentStep} OF {totalSteps - 1}</span>
+              <span>{Math.round((currentStep / (totalSteps - 1)) * 100)}%</span>
+            </div>
+            <div className="h-2 w-full bg-[var(--acade-deep)] rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-[var(--acade-primary)]"
+                initial={{ width: 0 }}
+                animate={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}
+                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+              />
+            </div>
+          </div>
+        )}
+
+        <motion.div
+          initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn(
+            'bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-6 md:p-8',
+            'shadow-[0_0_40px_rgba(99,102,241,0.06)] overflow-hidden relative'
+          )}
+        >
+          {isSubmitting && (
+            <div className="absolute inset-0 bg-[var(--acade-deep)]/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-center">
+               <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin mb-4" />
+               <p className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">
+                 Setting up your academic profile...
+               </p>
+            </div>
+          )}
+
+          <FormProvider {...methods}>
+            <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
+              <AnimatePresence mode="wait">
+                {currentStep === 1 && (
+                  <motion.div key="step1" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Step1Account onNext={() => setCurrentStep(2)} />
+                  </motion.div>
+                )}
+                {currentStep === 2 && (
+                  <motion.div key="step2" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Step2Programme onNext={() => setCurrentStep(3)} onBack={() => setCurrentStep(1)} />
+                  </motion.div>
+                )}
+                {currentStep === 3 && (
+                  <motion.div key="step3" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    <Step3RecordMode onNext={() => setCurrentStep(4)} onBack={() => setCurrentStep(2)} />
+                  </motion.div>
+                )}
+                {currentStep === 4 && (
+                  <motion.div key="step4" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                    {/* The next button on step 4 submits the form */}
+                    <Step4PastSemesters onNext={methods.handleSubmit(onSubmit)} onBack={() => setCurrentStep(3)} />
+                  </motion.div>
+                )}
+                {currentStep === 5 && (
+                  <motion.div key="step5" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center text-center py-10">
+                    <div className="size-20 bg-[var(--acade-success)]/20 text-[var(--acade-success)] rounded-full flex items-center justify-center mb-6">
+                      <Check size={40} />
+                    </div>
+                    <h2 className="text-[length:var(--text-3xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+                      You&apos;re All Set!
+                    </h2>
+                    <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] max-w-sm">
+                      Your AcadeGrade profile is ready. Redirecting you to your new dashboard...
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </form>
+          </FormProvider>
+
+        </motion.div>
+
+        {/* Login Link */}
+        {!isSuccess && (
+          <p className="text-center mt-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
+            Already have an account?{' '}
+            <Link
+              href="/login"
+              className="text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] font-semibold transition-colors"
+            >
+              Sign in →
+            </Link>
+          </p>
+        )}
+      </div>
     </main>
   );
 }
