@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
@@ -23,6 +24,7 @@ const TABS = [
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { unreadCount } = useNotifications();
   const pathname = usePathname();
 
@@ -78,10 +80,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               <CGPAArc cgpa={0} pi={0} size="sm" showParticles={false} animateOnMount={false} />
             </div>
             <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate w-full text-center">
-              {user?.name || 'Student'}
+              {profile?.name || user?.displayName || 'Student'}
             </span>
             <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] truncate max-w-full">
-              {user?.matric || 'No Matric'}
+              {profile?.matric || 'No Matric'}
             </span>
           </div>
 

@@ -8,9 +8,11 @@ import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCir
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { useCGPA } from '@/hooks/useCGPA';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { setDocument } from '@/lib/firebase/firestore';
+import { updateDocument } from '@/lib/firebase/firestore';
+import { cn } from '@/lib/utils/cn';
 
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
@@ -21,27 +23,28 @@ import { TrendChart } from '@/components/charts/TrendChart';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { cgpa, pi, degreeClass, semesterHistory, totalCredits, totalCourses, loading: cgpaLoading } = useCGPA();
   const shouldReduceMotion = useReducedMotion();
 
   // Primary mode state: false = CGPA, true = PI
-  const [isPIMode, setIsPIMode] = useState(user?.gradeMode === 'pi');
+  const [isPIMode, setIsPIMode] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
   // Sync state with user preference on mount
   useEffect(() => {
-    if (user?.gradeMode) {
-      setIsPIMode(user.gradeMode === 'pi');
+    if (profile?.gradeMode) {
+      setIsPIMode(profile.gradeMode === 'pi');
     }
-  }, [user?.gradeMode]);
+  }, [profile?.gradeMode]);
 
   // Handle grade mode toggle
   const handleModeChange = async (checked: boolean) => {
     setIsPIMode(checked);
     if (user?.uid) {
       try {
-        await setDocument(`users/${user.uid}`, { gradeMode: checked ? 'pi' : 'cgpa' }, { merge: true });
+        await updateDocument(`users/${user.uid}`, { gradeMode: checked ? 'pi' : 'cgpa' });
       } catch (e) {
         console.error('Failed to save preference', e);
       }
@@ -111,7 +114,7 @@ export default function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <Card variant="glass" padding="xl" className="relative overflow-hidden group">
+        <Card variant="glass" padding="lg" className="relative overflow-hidden group">
           {/* Subtle background glow based on degree class */}
           <div 
             className="absolute inset-0 opacity-10 pointer-events-none transition-colors duration-1000"
@@ -123,7 +126,7 @@ export default function DashboardPage() {
           <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
             <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start order-2 md:order-1">
               <h1 className="text-[length:var(--text-3xl)] md:text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-2">
-                Good {timeOfDay}, {user?.name?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
+                Good {timeOfDay}, {profile?.name?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
               </h1>
               <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] mb-6 max-w-md font-[family-name:var(--font-dm-sans)]">
                 {semesterHistory.length === 0 
@@ -141,7 +144,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-8">
-                <DegreeClassBadge degreeClass={degreeClass} />
+                <DegreeClassBadge cgpa={isPIMode ? pi : cgpa} animated={true} />
               </div>
             </div>
 
@@ -325,7 +328,7 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-3">
                 {semesterHistory.length > 0 ? (
                   <div className="flex flex-col gap-3">
-                    <div className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between">
+                     <div className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between">
                        <div className="flex items-center gap-3">
                          <div className="bg-[var(--acade-success)]/20 p-2 rounded-lg">
                            <BookOpen size={16} className="text-[var(--acade-success)]" />
@@ -335,7 +338,7 @@ export default function DashboardPage() {
                            <div className="text-[10px] text-[var(--acade-text-faint)]">400L First Semester</div>
                          </div>
                        </div>
-                       <Badge variant="success">A</Badge>
+                       <Badge variant="grade-a">A</Badge>
                     </div>
                     {/* Stubbed second item */}
                     <div className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between">
@@ -348,7 +351,7 @@ export default function DashboardPage() {
                            <div className="text-[10px] text-[var(--acade-text-faint)]">400L First Semester</div>
                          </div>
                        </div>
-                       <Badge variant="primary">B</Badge>
+                       <Badge variant="grade-b">B</Badge>
                     </div>
                   </div>
                 ) : (

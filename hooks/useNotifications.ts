@@ -3,9 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { subscribeToRTDB } from '@/lib/firebase/rtdb';
-import { subscribeToQuery } from '@/lib/firebase/firestore';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
-import { db } from '@/lib/firebase/client';
+import { subscribeToCollection } from '@/lib/firebase/firestore';
+import { orderBy, limit } from 'firebase/firestore';
 import type { NotificationWithId, NotificationCount } from '@/types/analytics';
 
 interface NotificationState {
@@ -37,15 +36,14 @@ export function useNotifications(): NotificationState {
     );
 
     // Subscribe to last 5 notifications from Firestore
-    const notifsRef = collection(db, `notifications/${uid}/items`);
-    const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(5));
-    
-    const unsubscribeFirestore = subscribeToQuery<NotificationWithId>(
-      q,
+    const unsubscribeFirestore = subscribeToCollection<NotificationWithId>(
+      `notifications/${uid}/items`,
       (data) => {
         setNotifications(data);
         setLoading(false);
-      }
+      },
+      orderBy('createdAt', 'desc'),
+      limit(5)
     );
 
     return () => {

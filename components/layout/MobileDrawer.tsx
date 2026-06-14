@@ -8,6 +8,7 @@ import { signOut } from '@/lib/firebase/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useProfile } from '@/hooks/useProfile';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { cn } from '@/lib/utils/cn';
 
@@ -19,6 +20,7 @@ interface MobileDrawerProps {
 
 export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerProps) {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const { unreadCount } = useNotifications();
   const shouldReduceMotion = useReducedMotion();
 
@@ -127,10 +129,10 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
                 </div>
                 <div className="flex flex-col overflow-hidden">
                   <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] truncate font-[family-name:var(--font-bricolage)]">
-                    {user.name || 'Student'}
+                    {profile?.name || user?.displayName || 'Student'}
                   </span>
                   <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">
-                    {user.matric || 'No Matric'}
+                    {profile?.matric || 'No Matric'}
                   </span>
                 </div>
               </div>
