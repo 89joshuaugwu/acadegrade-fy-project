@@ -1,8 +1,5 @@
-/**
- * CGPA Components
- * - CGPAArc (signature element)
- * - GradeTable
- * - DegreeClassBadge
- * Built in Phase 2
- */
-export {};
+export { CGPAArc } from './CGPAArc';
+export type { CGPAArcProps, ArcSize } from './CGPAArc';
+
+export { DegreeClassBadge } from './DegreeClassBadge';
+export type { DegreeClassBadgeProps } from './DegreeClassBadge';
