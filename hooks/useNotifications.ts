@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { subscribeToRTDB } from '@/lib/firebase/rtdb';
+import { subscribeToQuery } from '@/lib/firebase/firestore';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
 import type { NotificationWithId, NotificationCount } from '@/types/analytics';
 
 interface NotificationState {
@@ -12,10 +15,6 @@ interface NotificationState {
   error: Error | null;
 }
 
-/**
- * Subscribe to notification count from RTDB and recent notifications from Firestore.
- * RTDB provides instant badge updates; Firestore provides full notification list.
- */
 export function useNotifications(): NotificationState {
   const { uid } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -34,12 +33,24 @@ export function useNotifications(): NotificationState {
       `notif_counts/${uid}`,
       (data) => {
         setUnreadCount(data?.unread ?? 0);
+      }
+    );
+
+    // Subscribe to last 5 notifications from Firestore
+    const notifsRef = collection(db, `notifications/${uid}/items`);
+    const q = query(notifsRef, orderBy('createdAt', 'desc'), limit(5));
+    
+    const unsubscribeFirestore = subscribeToQuery<NotificationWithId>(
+      q,
+      (data) => {
+        setNotifications(data);
         setLoading(false);
       }
     );
 
     return () => {
       unsubscribeRTDB();
+      unsubscribeFirestore();
     };
   }, [uid]);
 

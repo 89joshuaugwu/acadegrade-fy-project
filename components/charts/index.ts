@@ -5,4 +5,4 @@
  * - SemesterBarChart
  * Built in Phase 5/7
  */
-export {};
+export * from './TrendChart';

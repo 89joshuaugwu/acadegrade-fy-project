@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { StudentShell } from '@/components/layout/StudentShell';
 
 export default function StudentLayout({
   children,
@@ -27,6 +28,5 @@ export default function StudentLayout({
     );
   }
 
-  // Phase 5 will inject the StudentShell here
-  return <>{children}</>;
+  return <StudentShell>{children}</StudentShell>;
 }
