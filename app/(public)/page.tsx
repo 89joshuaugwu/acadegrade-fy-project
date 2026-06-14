@@ -179,12 +179,12 @@ export default function LandingPage() {
       : { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
   };
 
-  const fadeUp = {
-    hidden: shouldReduceMotion ? {} : { opacity: 0, y: 30 },
-    visible: shouldReduceMotion
-      ? {}
-      : { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
-  };
+  const fadeUp = shouldReduceMotion
+    ? { hidden: {}, visible: {} }
+    : {
+        hidden: { opacity: 0, y: 30 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' as const } },
+      };
 
   return (
     <div className="relative min-h-screen overflow-hidden">
