@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "skills": {
+    "developing-genkit-js": {
+      "source": "firebase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/developing-genkit-js/SKILL.md",
+      "computedHash": "4d3de47b5be279ab3b0ee6055ae541f28d1cc45f8e8986c0b5df2f8d89f4ea30"
+    },
+    "frontend-developer": {
+      "source": "benjaming/ai-skills",
+      "sourceType": "github",
+      "skillPath": "frontend-developer/SKILL.md",
+      "computedHash": "5f7ffe50891bbe539ec957d2b6da7971ebb37ef6038a44fc64f9765b74f255f5"
+    },
+    "nextjs-app-router-patterns": {
+      "source": "rmyndharis/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nextjs-app-router-patterns/SKILL.md",
+      "computedHash": "f736e4d0c70ca1d1f103672ad5fee3a80caace22afc629fa5a6e120f2a85f70c"
+    },
+    "tailwind-design-system": {
+      "source": "rmyndharis/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/tailwind-design-system/SKILL.md",
+      "computedHash": "b05ff736f220ac495164cc50836dc9fcc9f0608111e3a9fcff7ae68cb5dbeab3"
+    },
+    "typescript-pro": {
+      "source": "rmyndharis/antigravity-skills",
+      "sourceType": "github",
+      "skillPath": "skills/typescript-pro/SKILL.md",
+      "computedHash": "bef6e83ae8e3d8b49c4930fdefe3611bf8176f081853ac20127e3fafd218fc53"
+    },
+    "ui-skills": {
+      "source": "benjaming/ai-skills",
+      "sourceType": "github",
+      "skillPath": "ui-skills/SKILL.md",
+      "computedHash": "93f44b990dec5353695f4b2ec3cfc523eb253cc39501c198c26a68cd5872dbbe"
+    }
+  }
+}

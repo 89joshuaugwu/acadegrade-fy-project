@@ -1,0 +1,328 @@
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════
+   AcadeGrade v2 — Design System Tokens
+   Tailwind CSS v4 CSS-first approach
+   ═══════════════════════════════════════════════════ */
+
+@theme {
+  /* ── Backgrounds — layer stack ── */
+  --color-acade-void: #07090F;
+  --color-acade-deep: #0E1322;
+  --color-acade-surface: #141B2E;
+  --color-acade-overlay: #1A243D;
+  --color-acade-border: #1F2B47;
+  --color-acade-border-subtle: #162038;
+
+  /* ── Primary — Electric Indigo ── */
+  --color-acade-primary: #6366F1;
+  --color-acade-primary-hover: #4F46E5;
+  --color-acade-primary-glow: #818CF8;
+  --color-acade-primary-dim: #1e1b4b;
+
+  /* ── Accent — Nigerian Gold ── */
+  --color-acade-gold: #F59E0B;
+  --color-acade-gold-hover: #D97706;
+  --color-acade-gold-dim: #1C1005;
+
+  /* ── Semantic ── */
+  --color-acade-success: #22C55E;
+  --color-acade-success-dim: #052E16;
+  --color-acade-danger: #EF4444;
+  --color-acade-danger-dim: #450A0A;
+  --color-acade-warning: #F59E0B;
+  --color-acade-info: #38BDF8;
+
+  /* ── Text ── */
+  --color-acade-text: #E8EDFF;
+  --color-acade-text-muted: #8892B0;
+  --color-acade-text-faint: #4A5580;
+  --color-acade-text-inverse: #07090F;
+
+  /* ── Grade Colors ── */
+  --color-grade-a: #22C55E;
+  --color-grade-b: #6366F1;
+  --color-grade-c: #F59E0B;
+  --color-grade-d: #F97316;
+  --color-grade-e: #EF4444;
+  --color-grade-f: #6B7280;
+
+  /* ── Degree Class Colors ── */
+  --color-class-first: #22C55E;
+  --color-class-2upper: #6366F1;
+  --color-class-2lower: #F59E0B;
+  --color-class-third: #F97316;
+  --color-class-pass: #EF4444;
+  --color-class-fail: #6B7280;
+}
+
+/* ═══════════════════════════════════════════════════
+   CSS Custom Properties (non-Tailwind tokens)
+   ═══════════════════════════════════════════════════ */
+
+:root {
+  /* ── Backgrounds ── */
+  --acade-void: #07090F;
+  --acade-deep: #0E1322;
+  --acade-surface: #141B2E;
+  --acade-overlay: #1A243D;
+  --acade-border: #1F2B47;
+  --acade-border-subtle: #162038;
+
+  /* ── Primary ── */
+  --acade-primary: #6366F1;
+  --acade-primary-hover: #4F46E5;
+  --acade-primary-glow: #818CF8;
+  --acade-primary-dim: #1e1b4b;
+
+  /* ── Gold ── */
+  --acade-gold: #F59E0B;
+  --acade-gold-hover: #D97706;
+  --acade-gold-dim: #1C1005;
+
+  /* ── Semantic ── */
+  --acade-success: #22C55E;
+  --acade-success-dim: #052E16;
+  --acade-danger: #EF4444;
+  --acade-danger-dim: #450A0A;
+  --acade-warning: #F59E0B;
+  --acade-info: #38BDF8;
+
+  /* ── Text ── */
+  --acade-text: #E8EDFF;
+  --acade-text-muted: #8892B0;
+  --acade-text-faint: #4A5580;
+  --acade-text-inverse: #07090F;
+
+  /* ── Grade Colors ── */
+  --grade-a: #22C55E;
+  --grade-b: #6366F1;
+  --grade-c: #F59E0B;
+  --grade-d: #F97316;
+  --grade-e: #EF4444;
+  --grade-f: #6B7280;
+
+  /* ── Degree Class ── */
+  --class-first: #22C55E;
+  --class-2upper: #6366F1;
+  --class-2lower: #F59E0B;
+  --class-third: #F97316;
+  --class-pass: #EF4444;
+  --class-fail: #6B7280;
+
+  /* ── Type Scale — clamp() responsive ── */
+  --text-xs: clamp(0.65rem, 1.5vw, 0.75rem);
+  --text-sm: clamp(0.75rem, 1.8vw, 0.875rem);
+  --text-base: clamp(0.875rem, 2vw, 1rem);
+  --text-lg: clamp(1rem, 2.5vw, 1.125rem);
+  --text-xl: clamp(1.125rem, 3vw, 1.25rem);
+  --text-2xl: clamp(1.25rem, 4vw, 1.5rem);
+  --text-3xl: clamp(1.5rem, 5vw, 1.875rem);
+  --text-4xl: clamp(1.875rem, 6vw, 2.25rem);
+  --text-hero: clamp(2.25rem, 9vw, 4.5rem);
+  --cgpa-num: clamp(2.75rem, 10vw, 5rem);
+
+  /* ── Z-index scale ── */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --z-tooltip: 60;
+}
+
+/* ── Light Mode ── */
+.light {
+  --acade-void: #F0F4FF;
+  --acade-deep: #FFFFFF;
+  --acade-surface: #F8FAFF;
+  --acade-overlay: #EEF2FF;
+  --acade-border: #C7D2FE;
+  --acade-border-subtle: #E0E7FF;
+  --acade-primary: #4F46E5;
+  --acade-primary-hover: #4338CA;
+  --acade-primary-glow: #6366F1;
+  --acade-gold: #D97706;
+  --acade-text: #1A1F36;
+  --acade-text-muted: #4B5563;
+  --acade-text-faint: #9CA3AF;
+}
+
+/* ═══════════════════════════════════════════════════
+   Base Styles
+   ═══════════════════════════════════════════════════ */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--acade-void);
+  color: var(--acade-text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ═══════════════════════════════════════════════════
+   Scrollbar Styling — dark, thin
+   ═══════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--acade-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--acade-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--acade-text-faint);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--acade-border) var(--acade-void);
+}
+
+/* ═══════════════════════════════════════════════════
+   Keyframe Animations
+   ═══════════════════════════════════════════════════ */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-100vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes typing-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   Utility Classes
+   ═══════════════════════════════════════════════════ */
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--acade-deep) 25%,
+    var(--acade-overlay) 50%,
+    var(--acade-deep) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+.font-display {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+}
+
+.font-body {
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+}
+
+.font-mono {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Safe area padding for PWA bottom bar ── */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ── Marquee for landing page ── */
+.marquee-container {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+.marquee-track {
+  animation: marquee 30s linear infinite;
+}
+
+/* ── Focus ring ── */
+.focus-ring {
+  outline: 2px solid var(--acade-primary);
+  outline-offset: 2px;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--acade-primary);
+  outline-offset: 2px;
+}
+
+/* ── Selection ── */
+::selection {
+  background-color: var(--acade-primary);
+  color: var(--acade-text-inverse);
+}
