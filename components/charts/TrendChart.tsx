@@ -53,11 +53,6 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
     const history = semesters.map((s, idx) => ({
       name: s.label,
       idx,
-      cgpa: s.gpa, // or calculate running CGPA? In this app, we plot semester GPA or cumulative CGPA? 
-      // Wait, semester GPA is just for that semester. We usually plot CGPA per semester.
-      // But SemesterSummary has gpa and pi. We will plot those.
-      // Let's assume s.gpa is the cumulative CGPA at that point, or we plot the raw semester PI/GPA.
-      // Let's just use the values from the object.
       cgpa: s.gpa,
       pi: s.pi,
       isForecast: false,
