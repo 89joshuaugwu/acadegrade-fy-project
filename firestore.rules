@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      // Users can only read and write their own profile document
+      allow read, write: if isOwner(userId);
+      
+      // Subcollection: Semesters
+      match /semesters/{semesterId} {
+        allow read, write: if isOwner(userId);
+        
+        // Subcollection: Courses (within a semester)
+        match /courses/{courseId} {
+          allow read, write: if isOwner(userId);
+        }
+      }
+    }
+    
+    // 2. Analytics Collection
+    match /analytics/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // 3. Notifications Collection
+    match /notifications/{userId}/items/{notifId} {
+      allow read, write: if isOwner(userId);
+    }
+    
+    // 4. Configuration & Admins (Read-only for clients)
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if false; // Only updated via Admin SDK or Firebase Console
+    }
+    
+    // 5. Course Catalog (Read-only for clients)
+    match /catalog/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only updated via Admin SDK or Firebase Console
+    }
+  }
+}
