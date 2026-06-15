@@ -21,6 +21,7 @@ const navLinks = [
 ];
 
 function Navbar({ className }: NavbarProps) {
+    const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const shouldReduceMotion = useReducedMotion();
@@ -76,12 +77,20 @@ function Navbar({ className }: NavbarProps) {
 
         {/* Desktop CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => window.location.href = '/login'}>
-            Sign In
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => window.location.href = '/register'}>
-            Get Started
-          </Button>
+          {loading ? null : user ? (
+            <Button variant="primary" size="sm" onClick={() => window.location.href = '/dashboard'}>
+              Dashboard
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => window.location.href = '/login'}>
+                Sign In
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => window.location.href = '/register'}>
+                Get Started
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile hamburger */}
@@ -122,12 +131,20 @@ function Navbar({ className }: NavbarProps) {
               </motion.div>
             ))}
             <div className="flex flex-col gap-3 mt-4 w-56">
-              <Button variant="outline" size="md" fullWidth onClick={() => { setMobileOpen(false); window.location.href = '/login'; }}>
-                Sign In
-              </Button>
-              <Button variant="primary" size="md" fullWidth onClick={() => { setMobileOpen(false); window.location.href = '/register'; }}>
-                Get Started
-              </Button>
+              {loading ? null : user ? (
+                <Button variant="primary" size="md" fullWidth onClick={() => { setMobileOpen(false); window.location.href = '/dashboard'; }}>
+                  Dashboard
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" size="md" fullWidth onClick={() => { setMobileOpen(false); window.location.href = '/login'; }}>
+                    Sign In
+                  </Button>
+                  <Button variant="primary" size="md" fullWidth onClick={() => { setMobileOpen(false); window.location.href = '/register'; }}>
+                    Get Started
+                  </Button>
+                </>
+              )}
             </div>
           </motion.div>
         )}

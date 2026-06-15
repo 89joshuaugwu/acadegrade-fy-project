@@ -41,7 +41,7 @@ const step2Base = z.object({
   department: z.string().min(2, 'Department is required'),
   programme: z.string().min(2, 'Programme is required'),
   currentLevel: z.union([z.literal(100), z.literal(200), z.literal(300), z.literal(400), z.literal(500)]),
-  currentSession: z.string().regex(/^\d{4}\/\d{4}$/, 'Must be format YYYY/YYYY (e.g. 2025/2026)'),
+  entrySession: z.string().regex(/^\d{4}\/\d{4}$/, 'Must be format YYYY/YYYY (e.g. 2022/2023)'),
 });
 const step2Schema = step2Base;
 
@@ -99,23 +99,16 @@ type FormData = z.infer<typeof formSchema>;
 function generatePastSemesters(
   currentLevel: number,
   semestersCompleted: number,
-  currentSession: string
+  entrySession: string
 ): PastSemesterEntry[] {
   const result: PastSemesterEntry[] = [];
   
-  // Try to parse the starting year of the current session
-  const parts = currentSession.split('/');
-  let currentStartYear = parseInt(parts[0], 10);
-  if (isNaN(currentStartYear)) currentStartYear = new Date().getFullYear();
+  // Try to parse the starting year of the entry session
+  const parts = entrySession.split('/');
+  let startYear = parseInt(parts[0], 10);
+  if (isNaN(startYear)) startYear = new Date().getFullYear();
 
-  // If current is e.g. 400L, and we completed 6 semesters, that's 100L S1, 100L S2, etc.
-  // This logic works backwards from the current session.
-  // Actually, let's just go forward from 100L.
-  
   let totalGenerated = 0;
-  // If we are at 400L, 100L was 3 years ago (approx)
-  // Let's just generate the list sequentially
-  const startYear = currentStartYear - Math.floor(semestersCompleted / 2);
   let year = startYear;
 
   const levelsToGenerate = [100, 200, 300, 400, 500];
@@ -183,7 +176,7 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
   const { register, trigger, formState: { errors }, control, watch } = useFormContext<FormData>();
   
   const handleNext = async () => {
-    const valid = await trigger(['university', 'department', 'programme', 'currentLevel', 'currentSession']);
+    const valid = await trigger(['university', 'department', 'programme', 'currentLevel', 'entrySession']);
     if (valid) onNext();
   };
 
@@ -252,7 +245,7 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
         {errors.currentLevel && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] font-[family-name:var(--font-dm-sans)]">{errors.currentLevel.message}</p>}
       </div>
 
-      <Input label="Current Session" placeholder="e.g. 2025/2026" error={errors.currentSession?.message} {...register('currentSession')} />
+      <Input label="Entry Year/Session" placeholder="e.g. 2022/2023" error={errors.entrySession?.message} {...register('entrySession')} />
       
       <div className="flex items-center gap-3 mt-4">
         <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
@@ -390,16 +383,16 @@ function Step4PastSemesters({ onNext, onBack }: { onNext: () => void, onBack: ()
   
   const currentLevel = watch('currentLevel');
   const semestersCompleted = watch('semestersCompleted') || 1;
-  const currentSession = watch('currentSession');
+  const entrySession = watch('entrySession');
   const pastSemesters = watch('pastSemesters') || [];
 
   // Generate if empty
   useEffect(() => {
-    if (pastSemesters.length === 0 && currentLevel && currentSession) {
-      const generated = generatePastSemesters(currentLevel, semestersCompleted, currentSession);
+    if (pastSemesters.length === 0 && currentLevel && entrySession) {
+      const generated = generatePastSemesters(currentLevel, semestersCompleted, entrySession);
       setValue('pastSemesters', generated);
     }
-  }, [currentLevel, semestersCompleted, currentSession, pastSemesters, setValue]);
+  }, [currentLevel, semestersCompleted, entrySession, pastSemesters, setValue]);
 
   const handleNext = () => {
     // Basic validation could happen here
@@ -516,7 +509,7 @@ export default function RegisterWizard() {
         avatarUrl: null,
         recordMode: data.recordMode,
         gradeMode: 'cgpa',
-        currentSession: data.currentSession,
+        currentSession: data.entrySession, // We'll save it as currentSession in DB for compatibility, or change later
         isAdmin: false,
         disabled: false,
         fcmToken: null,
