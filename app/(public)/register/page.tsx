@@ -48,7 +48,7 @@ const step2Schema = step2Base;
 
 const step3Base = z.object({
   recordMode: z.union([z.literal('fromScratch'), z.literal('complete')]),
-  semestersCompleted: z.number().min(1).max(10).optional(),
+  semestersCompleted: z.number().min(1).max(20).optional(),
 });
 const step3Schema = step3Base.refine(
   (data) => {
@@ -160,8 +160,8 @@ function Step1Account({ onNext }: { onNext: () => void }) {
       <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
         Create Your Account
       </h2>
-      <Input label="Full Name" placeholder="Joshua Chimaobi Ugwu" error={errors.fullName?.message} {...register('fullName')} />
-      <Input label="Matric Number" placeholder="2022030202909" error={errors.matric?.message} {...register('matric')} />
+      <Input label="Full Name" placeholder="joshuazaza" error={errors.fullName?.message} {...register('fullName')} />
+      <Input label="Matric Number" placeholder="2022030200000" error={errors.matric?.message} {...register('matric')} />
       <Input label="Email Address" type="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')} />
       <Input label="Password" type="password" placeholder="At least 8 characters" error={errors.password?.message} {...register('password')} />
       <Input label="Confirm Password" type="password" placeholder="Type password again" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
@@ -208,9 +208,31 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
       <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
         Academic Details
       </h2>
-      <Input label="University" placeholder="University Name" error={errors.university?.message} {...register('university')} />
-      <Input label="Department" placeholder="e.g. Computer Science" error={errors.department?.message} {...register('department')} />
-      <Input label="Programme" placeholder="e.g. B.Sc Computer Science" error={errors.programme?.message} {...register('programme')} />
+      
+      <Input label="University" placeholder="University Name" list="universities" error={errors.university?.message} {...register('university')} />
+      <datalist id="universities">
+        <option value="Enugu State University of Science and Technology" />
+        <option value="University of Nigeria, Nsukka" />
+        <option value="Nnamdi Azikiwe University" />
+        <option value="Federal University of Technology, Owerri" />
+      </datalist>
+
+      <Input label="Department" placeholder="e.g. Computer Science" list="departments" error={errors.department?.message} {...register('department')} />
+      <datalist id="departments">
+        <option value="Computer Science" />
+        <option value="Software Engineering" />
+        <option value="Information Technology" />
+        <option value="Electrical Engineering" />
+        <option value="Mechanical Engineering" />
+      </datalist>
+
+      <Input label="Programme" placeholder="e.g. B.Sc Computer Science" list="programmes" error={errors.programme?.message} {...register('programme')} />
+      <datalist id="programmes">
+        <option value="B.Sc Computer Science" />
+        <option value="B.Eng Software Engineering" />
+        <option value="B.Sc Information Technology" />
+        <option value="B.Eng Electrical Engineering" />
+      </datalist>
       
       <div className="flex flex-col gap-1.5">
         <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-1 block">Course Duration (Years)</label>
@@ -274,6 +296,8 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
   const shouldReduceMotion = useReducedMotion();
   
   const modeVal = watch('recordMode');
+  const durationVal = watch('courseDuration') || 4;
+  const maxSemesters = durationVal * 2;
   const semsCompleted = watch('semestersCompleted') || 1;
 
   const handleNext = async () => {
@@ -362,7 +386,7 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
               <input 
                 type="range" 
                 min="1" 
-                max="10" 
+                max={maxSemesters} 
                 step="1"
                 value={semsCompleted}
                 onChange={(e) => setValue('semestersCompleted', parseInt(e.target.value), { shouldValidate: true })}

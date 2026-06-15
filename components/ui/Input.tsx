@@ -1,7 +1,8 @@
 'use client';
 
-import { forwardRef, useId } from 'react';
+import { forwardRef, useId, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -37,6 +38,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
       icon,
       className,
       id: propId,
+      type,
       ...props
     },
     ref
@@ -44,6 +46,10 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const generatedId = useId();
     const id = propId ?? generatedId;
     const shouldReduceMotion = useReducedMotion();
+    const [showPassword, setShowPassword] = useState(false);
+
+    const isPassword = type === 'password';
+    const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
 
     return (
       <div className="flex flex-col gap-1.5 w-full">
@@ -66,6 +72,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={id}
+            type={inputType}
             inputMode={variant === 'score' ? 'numeric' : undefined}
             className={cn(
               'w-full h-12 px-4 rounded-xl',
@@ -77,6 +84,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               'focus:outline-none focus:border-[var(--acade-primary)] focus:ring-2 focus:ring-[var(--acade-primary)]/20',
               'disabled:opacity-50 disabled:cursor-not-allowed',
               error && 'border-[var(--acade-danger)] focus:border-[var(--acade-danger)] focus:ring-[var(--acade-danger)]/20',
+              isPassword && 'pr-12', // make room for the eye icon
               variantStyles[variant],
               className
             )}
@@ -84,6 +92,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
             {...props}
           />
+
+          {isPassword && (
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors p-1"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          )}
         </div>
 
         <AnimatePresence mode="wait">
