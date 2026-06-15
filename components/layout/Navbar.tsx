@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 
 interface NavbarProps {

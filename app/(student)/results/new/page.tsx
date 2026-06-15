@@ -27,10 +27,10 @@ export default function NewSemesterPage() {
   const [session, setSession] = useState(new Date().getFullYear() + '/' + (new Date().getFullYear() + 1));
 
   useEffect(() => {
-    if (profile?.level) {
-      setLevel(profile.level);
+    if (profile?.currentLevel) {
+      setLevel(profile.currentLevel);
     }
-  }, [profile?.level]);
+  }, [profile?.currentLevel]);
 
   const handleCreate = async () => {
     if (!user) return;

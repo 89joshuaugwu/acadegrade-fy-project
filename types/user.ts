@@ -1,7 +1,8 @@
 import { Timestamp } from 'firebase/firestore';
 
 /** Student level in Nigerian university system */
-export type StudentLevel = 100 | 200 | 300 | 400 | 500;
+export const STUDENT_LEVELS = [100, 200, 300, 400, 500] as const;
+export type StudentLevel = typeof STUDENT_LEVELS[number];
 
 /** Record mode determines how students enter their results */
 export type RecordMode = 'fromScratch' | 'complete';
@@ -11,11 +12,11 @@ export type GradeMode = 'cgpa' | 'pi';
 
 /** Firestore users/{uid} document */
 export interface User {
-  name: string;
+  fullName: string;
   email: string;
   matric: string;
-  dept: string;
-  level: StudentLevel;
+  department: string;
+  currentLevel: StudentLevel;
   programme: string;
   university: string;
   avatarUrl: string | null;

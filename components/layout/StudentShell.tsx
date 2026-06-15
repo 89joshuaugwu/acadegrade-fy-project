@@ -80,7 +80,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               <CGPAArc cgpa={0} pi={0} size="sm" showParticles={false} animateOnMount={false} />
             </div>
             <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate w-full text-center">
-              {profile?.name || user?.displayName || 'Student'}
+              {profile?.fullName || user?.displayName || 'Student'}
             </span>
             <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] truncate max-w-full">
               {profile?.matric || 'No Matric'}

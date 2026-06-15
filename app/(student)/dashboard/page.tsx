@@ -126,7 +126,7 @@ export default function DashboardPage() {
           <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
             <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start order-2 md:order-1">
               <h1 className="text-[length:var(--text-3xl)] md:text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-2">
-                Good {timeOfDay}, {profile?.name?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
+                Good {timeOfDay}, {profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
               </h1>
               <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] mb-6 max-w-md font-[family-name:var(--font-dm-sans)]">
                 {semesterHistory.length === 0 

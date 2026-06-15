@@ -129,7 +129,7 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
                 </div>
                 <div className="flex flex-col overflow-hidden">
                   <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] truncate font-[family-name:var(--font-bricolage)]">
-                    {profile?.name || user?.displayName || 'Student'}
+                    {profile?.fullName || user?.displayName || 'Student'}
                   </span>
                   <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">
                     {profile?.matric || 'No Matric'}

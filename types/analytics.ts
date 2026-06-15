@@ -46,10 +46,11 @@ export interface AdminConfig {
 
 /** Firestore notifications/{uid}/items/{notifId} document */
 export interface Notification {
-  type: 'achievement' | 'warning' | 'tip' | 'system';
+  type: 'achievement' | 'warning' | 'tip' | 'system' | 'info' | 'success' | 'error' | 'ai';
   title: string;
   message: string;
   read: boolean;
+  actionUrl?: string;
   createdAt: Timestamp;
 }
 

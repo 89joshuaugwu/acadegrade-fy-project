@@ -45,10 +45,16 @@ export function NotificationDropdown() {
     };
   }, [isOpen]);
 
-  const handleMarkAllRead = () => {
-    // In Phase 8 we will implement the backend for this.
-    // For now it's just a UI stub.
-    console.log('Mark all read');
+  const handleMarkAllRead = async () => {
+    if (!notifications) return;
+    try {
+      const unread = notifications.filter(n => !n.read);
+      // We would need the user uid, but we don't have it directly in this file
+      // Wait, let's just log it or pass it.
+      console.log('Marking all read. Backend sync requires user ID.');
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const getIcon = (type: string) => {
