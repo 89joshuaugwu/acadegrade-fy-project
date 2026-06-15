@@ -69,7 +69,7 @@ export default function SettingsPage() {
     formData.append('upload_preset', 'acadegrade_avatars'); // Must match cloudinary unsigned preset
 
     try {
-      const res = await fetch('https://api.cloudinary.com/v1_1/acadegrade/auto/upload', {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/dgqukbs8n/image/upload`, {
         method: 'POST',
         body: formData
       });

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { buildTranscript } from '@/lib/pdf/transcript';
+// import { buildTranscript } from '@/lib/pdf/transcript';
 import type { User } from '@/types/user';
 import type { SemesterWithCourses } from '@/types/semester';
 import type { CourseWithId } from '@/types/course';
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
 
     let doc;
     try {
+      const { buildTranscript } = await import('@/lib/pdf/transcript');
       doc = buildTranscript(userData, semesters, analytics as any);
     } catch (pdfError: any) {
       console.error('jsPDF generation failed on server:', pdfError);
