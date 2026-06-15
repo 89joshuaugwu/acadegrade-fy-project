@@ -58,3 +58,4 @@ export interface PastSemesterEntry {
   session: string;
   label: string;
 }
+
