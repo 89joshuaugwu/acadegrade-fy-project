@@ -12,50 +12,54 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
     // 1. Users Collection
     match /users/{userId} {
-      // Users can only read and write their own profile document
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
       
       // Subcollection: Semesters
       match /semesters/{semesterId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isOwner(userId) || isAdmin();
         
         // Subcollection: Courses (within a semester)
         match /courses/{courseId} {
-          allow read, write: if isOwner(userId);
+          allow read, write: if isOwner(userId) || isAdmin();
         }
       }
     }
     
     // 2. Analytics Collection
     match /analytics/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
     }
     
     // 3. Notifications Collection
     match /notifications/{userId}/items/{notifId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
     }
     
-    // 4. Configuration & Admins (Read-only for clients)
+    // 4. Configuration & Admins
     match /config/{document=**} {
       allow read: if true;
-      allow write: if false; // Only updated via Admin SDK or Firebase Console
+      allow write: if isAdmin(); 
     }
     
-    // 5. Course Catalog (Read-only for clients)
+    // 5. Course Catalog
     match /catalog/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if false; // Only updated via Admin SDK or Firebase Console
+      allow write: if isAdmin(); 
     }
     
     // 6. Share Codes
     match /shareCodes/{codeId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated();
-      // Allow update only if modifying the useCount field
-      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount']);
+      allow read: if isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() || isAdmin();
+      allow update: if (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])) || isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }

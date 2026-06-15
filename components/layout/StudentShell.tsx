@@ -67,8 +67,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
           {/* Profile snippet */}
           <div className="flex flex-col items-center mb-8 bg-[var(--acade-surface)] p-4 rounded-2xl border border-[var(--acade-border-subtle)]">
-            <div className="mb-3 bg-[var(--acade-deep)] rounded-full p-1 border border-[var(--acade-border)]">
-              <CGPAArc cgpa={0} pi={0} size="sm" showParticles={false} animateOnMount={false} />
+            <div className="mb-3 rounded-full border-2 border-[var(--acade-primary)]/50 overflow-hidden size-16 shrink-0 relative flex items-center justify-center bg-[var(--acade-deep)]">
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} alt="Avatar" className="w-full h-full object-cover" />
+              )}
             </div>
             <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate w-full text-center">
               {profile?.fullName || user?.displayName || 'Student'}

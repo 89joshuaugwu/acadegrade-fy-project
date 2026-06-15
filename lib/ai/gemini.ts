@@ -8,7 +8,12 @@
  */
 import { GoogleGenAI } from '@google/genai';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+let ai: GoogleGenAI;
+try {
+  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || 'dummy-key' });
+} catch (error) {
+  console.error("Gemini AI Initialization Error:", error);
+}
 
 /**
  * Generate text content from Gemini.

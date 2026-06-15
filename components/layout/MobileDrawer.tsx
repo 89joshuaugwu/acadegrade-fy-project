@@ -124,8 +124,12 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
             {/* Profile Section (Student Only) */}
             {!isAdmin && user && (
               <div className="p-6 border-b border-[var(--acade-border)] flex items-center gap-4">
-                <div className="shrink-0 bg-[var(--acade-deep)] rounded-full p-1 border border-[var(--acade-border)]">
-                  <CGPAArc cgpa={0} pi={0} size="sm" showParticles={false} animateOnMount={false} />
+                <div className="shrink-0 size-12 rounded-full border-2 border-[var(--acade-primary)]/50 overflow-hidden bg-[var(--acade-deep)]">
+                  {profile?.avatarUrl ? (
+                    <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} alt="Avatar" className="w-full h-full object-cover" />
+                  )}
                 </div>
                 <div className="flex flex-col overflow-hidden">
                   <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] truncate font-[family-name:var(--font-bricolage)]">
