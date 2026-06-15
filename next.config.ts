@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
+  // ✅ FIX: Prevents firebase-admin ESM conflict (ERR_REQUIRE_ESM jose/jwks-rsa)
   serverExternalPackages: ['firebase-admin'],
   images: {
     remotePatterns: [
