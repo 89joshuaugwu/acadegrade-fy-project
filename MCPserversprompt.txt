@@ -1,0 +1,30 @@
+so i installed some additional mcp servers:
+21stdevmagic — 4/4 tools ✅:
+21st_magic_component_builder — builds UI components
+logo_search — finds SVG logos/icons
+21st_magic_component_inspiration (visible below)
+21st_magic_component_refiner (visible below)
+
+context7 — 2/2 tools ✅:
+resolve-library-id
+query-docs
+
+
+How to Use These in Antigravity Now
+For documentation (every prompt):
+...build the WhatIfCalculator component 
+as per Phase 7 spec. use context7 for 
+Next.js 16 and motion v12 docs.
+For UI inspiration (Sandbox Reference strategy):
+Use 21stdevmagic to search for a premium 
+slider/range input component. Save the 
+result to _ui_reference/slider-ref.tsx. 
+Then rebuild it from scratch in 
+components/ui/Slider.tsx using our 
+--acade-primary tokens and motion/react. 
+Zero external imports.
+For icons:
+Use 21stdevmagic logo_search to find 
+the Gemini AI SVG icon in dark theme, 
+then embed it inline in the InsightCard 
+component.
