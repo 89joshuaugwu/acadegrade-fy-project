@@ -8,6 +8,7 @@ import { auth } from '@/lib/firebase/client';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { cn } from '@/lib/utils/cn';
 import { updateDocument } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -185,19 +186,35 @@ export default function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Sidebar Navigation (Visual Only for now) */}
-        <div className="hidden md:flex flex-col gap-2">
-          <div className="font-bold text-[length:var(--text-sm)] p-3 bg-[var(--acade-surface)] border-l-4 border-[var(--acade-primary)] text-[var(--acade-text)]">Profile</div>
-          <div className="font-bold text-[length:var(--text-sm)] p-3 text-[var(--acade-text-muted)]">Preferences</div>
-          <div className="font-bold text-[length:var(--text-sm)] p-3 text-[var(--acade-text-muted)]">Notifications</div>
-          <div className="font-bold text-[length:var(--text-sm)] p-3 text-[var(--acade-danger)]">Danger Zone</div>
+        {/* Sidebar Navigation */}
+        <div className="hidden md:flex flex-col gap-2 sticky top-24 h-fit">
+          {[
+            { id: 'profile', label: 'Profile', danger: false },
+            { id: 'academic', label: 'Academic Setup', danger: false },
+            { id: 'notifications', label: 'Notifications', danger: false },
+            { id: 'security', label: 'Security & Danger', danger: true }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                document.getElementById(`section-${tab.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className={cn(
+                "text-left font-bold text-[length:var(--text-sm)] p-3 rounded-xl transition-all duration-200 border-l-4",
+                tab.danger ? "hover:bg-[var(--acade-danger)]/10 text-[var(--acade-danger)] border-transparent hover:border-[var(--acade-danger)]" 
+                           : "hover:bg-[var(--acade-surface)] text-[var(--acade-text-muted)] border-transparent hover:border-[var(--acade-border-subtle)] focus:border-[var(--acade-primary)] focus:text-[var(--acade-text)]"
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
         <div className="md:col-span-2 space-y-8">
           
           {/* PROFILE SECTION */}
-          <section className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6">
+          <section id="section-profile" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Public Profile</h2>
             
             <div className="flex items-center gap-6 mb-8">
@@ -244,7 +261,7 @@ export default function SettingsPage() {
           </section>
 
           {/* ACADEMIC SETUP SECTION */}
-          <section className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6">
+          <section id="section-academic" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Academic Setup</h2>
             
             <div className="space-y-6">
@@ -273,7 +290,7 @@ export default function SettingsPage() {
           </section>
 
           {/* NOTIFICATIONS SECTION */}
-          <section className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6">
+          <section id="section-notifications" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Bell size={20} /> Notifications
             </h2>
@@ -297,7 +314,7 @@ export default function SettingsPage() {
           </section>
 
           {/* SECURITY & DANGER SECTION */}
-          <section className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6">
+          <section id="section-security" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Shield size={20} /> Security & Data
             </h2>

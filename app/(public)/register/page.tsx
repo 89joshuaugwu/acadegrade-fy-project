@@ -40,7 +40,8 @@ const step2Base = z.object({
   university: z.string().min(2, 'University is required'),
   department: z.string().min(2, 'Department is required'),
   programme: z.string().min(2, 'Programme is required'),
-  currentLevel: z.union([z.literal(100), z.literal(200), z.literal(300), z.literal(400), z.literal(500)]),
+  courseDuration: z.number().min(1).max(10),
+  currentLevel: z.number(),
   entrySession: z.string().regex(/^\d{4}\/\d{4}$/, 'Must be format YYYY/YYYY (e.g. 2022/2023)'),
 });
 const step2Schema = step2Base;
@@ -111,7 +112,8 @@ function generatePastSemesters(
   let totalGenerated = 0;
   let year = startYear;
 
-  const levelsToGenerate = [100, 200, 300, 400, 500];
+  // Support up to course duration (up to 1000L)
+  const levelsToGenerate = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 
   for (const level of levelsToGenerate) {
     if (totalGenerated >= semestersCompleted) break;
@@ -176,19 +178,30 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
   const { register, trigger, formState: { errors }, control, watch } = useFormContext<FormData>();
   
   const handleNext = async () => {
-    const valid = await trigger(['university', 'department', 'programme', 'currentLevel', 'entrySession']);
+    const valid = await trigger(['university', 'department', 'programme', 'courseDuration', 'currentLevel', 'entrySession']);
     if (valid) onNext();
   };
 
   const levelVal = watch('currentLevel');
+  const entrySessionVal = watch('entrySession');
+  const durationVal = watch('courseDuration');
+  const setValue = useFormContext<FormData>().setValue;
 
-  // Hardcoded departments for now (since we don't have catalog data fetch yet)
-  const deptOptions = [
-    { value: 'Computer Science', label: 'Computer Science' },
-    { value: 'Software Engineering', label: 'Software Engineering' },
-    { value: 'Information Technology', label: 'Information Technology' },
-    { value: 'Electrical Engineering', label: 'Electrical Engineering' },
-  ];
+  // Auto-calculate level when entry session changes
+  useEffect(() => {
+    if (entrySessionVal && /^\d{4}\/\d{4}$/.test(entrySessionVal)) {
+      const startYear = parseInt(entrySessionVal.split('/')[0]);
+      const currentYear = new Date().getFullYear();
+      let calculatedLevel = (currentYear - startYear) * 100 + 100;
+      
+      // Clamp between 100 and (duration * 100)
+      const maxLevel = (durationVal || 4) * 100;
+      if (calculatedLevel < 100) calculatedLevel = 100;
+      if (calculatedLevel > maxLevel) calculatedLevel = maxLevel;
+      
+      setValue('currentLevel', calculatedLevel, { shouldValidate: true });
+    }
+  }, [entrySessionVal, durationVal, setValue]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -196,31 +209,29 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
         Academic Details
       </h2>
       <Input label="University" placeholder="University Name" error={errors.university?.message} {...register('university')} />
-      
-      <Controller
-        name="department"
-        control={control}
-        render={({ field }) => (
-          <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-1.5 block">Department</label>
-            <Select 
-              options={deptOptions} 
-              value={field.value} 
-              onChange={field.onChange} 
-              placeholder="Select department..." 
-              searchable
-            />
-            {errors.department && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] mt-1.5 font-[family-name:var(--font-dm-sans)]">{errors.department.message}</p>}
-          </div>
-        )}
-      />
-      
+      <Input label="Department" placeholder="e.g. Computer Science" error={errors.department?.message} {...register('department')} />
       <Input label="Programme" placeholder="e.g. B.Sc Computer Science" error={errors.programme?.message} {...register('programme')} />
       
       <div className="flex flex-col gap-1.5">
-        <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Current Level</label>
-        <div className="flex flex-wrap gap-2">
-          {STUDENT_LEVELS.map((level) => (
+        <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-1 block">Course Duration (Years)</label>
+        <div className="flex items-center gap-4">
+          <input 
+            type="range" min="1" max="10" step="1"
+            className="w-full accent-[var(--acade-primary)] h-2 bg-[var(--acade-deep)] rounded-lg appearance-none cursor-pointer"
+            {...register('courseDuration', { valueAsNumber: true })}
+          />
+          <span className="bg-[var(--acade-deep)] px-3 py-1 rounded-lg border border-[var(--acade-border)] font-bold">
+            {durationVal || 4}
+          </span>
+        </div>
+      </div>
+
+      <Input label="Entry Year/Session" placeholder="e.g. 2022/2023" error={errors.entrySession?.message} {...register('entrySession')} />
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Current Level (Auto-calculated, you can adjust)</label>
+        <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-2">
+          {Array.from({length: durationVal || 4}, (_, i) => (i + 1) * 100).map((level) => (
             <Controller
               key={level}
               name="currentLevel"
@@ -230,7 +241,7 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
                   type="button"
                   onClick={() => field.onChange(level)}
                   className={cn(
-                    'h-12 px-4 rounded-xl text-[length:var(--text-sm)] font-semibold transition-colors border',
+                    'h-10 px-3 rounded-xl text-[length:var(--text-xs)] font-semibold transition-colors border',
                     levelVal === level
                       ? 'bg-[var(--acade-primary)]/20 border-[var(--acade-primary)] text-[var(--acade-primary-glow)]'
                       : 'bg-[var(--acade-deep)] border-[var(--acade-border)] text-[var(--acade-text-muted)] hover:border-[var(--acade-text-faint)]'
@@ -244,8 +255,6 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
         </div>
         {errors.currentLevel && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] font-[family-name:var(--font-dm-sans)]">{errors.currentLevel.message}</p>}
       </div>
-
-      <Input label="Entry Year/Session" placeholder="e.g. 2022/2023" error={errors.entrySession?.message} {...register('entrySession')} />
       
       <div className="flex items-center gap-3 mt-4">
         <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
@@ -479,6 +488,7 @@ export default function RegisterWizard() {
     defaultValues: {
       university: DEFAULT_UNIVERSITY,
       recordMode: 'fromScratch',
+      courseDuration: 4,
     }
   });
 
