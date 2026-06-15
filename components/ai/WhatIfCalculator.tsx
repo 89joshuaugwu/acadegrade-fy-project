@@ -20,7 +20,7 @@ export function WhatIfCalculator({
   initialRemainingSemesters = 2,
   initialCreditLoad = 18,
 }: WhatIfCalculatorProps) {
-  const shouldReduceMotion = useReduceMotion();
+  const shouldReduceMotion = useReducedMotion();
   
   const [targetCGPA, setTargetCGPA] = useState(Math.min(5.0, currentCGPA + 0.2));
   const [remainingSemesters, setRemainingSemesters] = useState(initialRemainingSemesters);
