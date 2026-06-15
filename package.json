@@ -18,7 +18,7 @@
     "firebase": "12.14.0",
     "firebase-admin": "14.0.0",
     "geist": "1.7.2",
-    "jose": "^5.9.6",
+    "jose": "^5.6.3",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "jwks-rsa": "^3.1.0",
@@ -45,5 +45,11 @@
     "@types/nodemailer": "^6.4.17",
     "@types/react": "19.2.17",
     "typescript": "6.0.3"
+  },
+  "overrides": {
+    "firebase-admin": {
+      "jose": "^5.6.3",
+      "jwks-rsa": "^3.1.0"
+    }
   }
 }
