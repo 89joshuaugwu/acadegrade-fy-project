@@ -1,44 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeForecast, getTrendDirection } from '@/lib/ai/forecast';
 import { generateContent } from '@/lib/ai/gemini';
+import { adminDb, adminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
-    // ── 1. Parse body ────────────────────────────────────────────────────────
-    const body = await request.json();
-    const { uid, piHistory } = body;
-
-    if (!uid || !Array.isArray(piHistory)) {
-      return NextResponse.json(
-        { error: 'Missing uid or piHistory' },
-        { status: 400 }
-      );
-    }
-
-    // ── 2. Optional auth verification ────────────────────────────────────────
-    // Verify the token if provided (good practice even if uid is in body)
+    // ✅ FIX 1: Verify Firebase Auth token
     const authHeader = request.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.replace('Bearer ', '');
-        // Dynamic import avoids top-level firebase-admin ESM crash
-        const { adminAuth } = await import('@/lib/firebase/admin');
-        const decoded = await adminAuth.verifyIdToken(token);
-        // Ensure uid in body matches the token owner
-        if (decoded.uid !== uid) {
-          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-      } catch (authErr) {
-        console.warn('Token verification failed:', authErr);
-        // Don't block — uid from body is still accepted for now
-      }
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (!token) {
+      return NextResponse.json({ error: 'Unauthorized — no token provided' }, { status: 401 });
     }
 
-    // ── 3. Compute regression forecast ───────────────────────────────────────
+    let uid: string;
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      uid = decoded.uid;
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized — invalid token' }, { status: 401 });
+    }
+
+    // Parse body
+    const body = await request.json();
+    const { piHistory } = body;
+
+    if (!Array.isArray(piHistory)) {
+      return NextResponse.json({ error: 'Missing piHistory array' }, { status: 400 });
+    }
+
+    // Guard: need at least 1 data point
+    if (piHistory.length === 0) {
+      return NextResponse.json({
+        slope: 0,
+        projected: [0, 0],
+        riskScore: 3,
+        trendLabel: 'Not enough data yet',
+        trendDirection: 'stable',
+        lastUpdated: new Date()
+      });
+    }
+
+    // Compute regression forecast
     const { slope, projected, riskScore } = computeForecast(piHistory);
     const trendDirection = getTrendDirection(slope);
 
-    // ── 4. Gemini trend label ─────────────────────────────────────────────────
+    // Gemini writes a trend label
     const prompt = `
       A student has an academic Performance Index (PI) trend.
       The recent slope of their performance is ${slope.toFixed(3)} (positive = improving, negative = declining).
@@ -50,38 +57,35 @@ export async function POST(request: NextRequest) {
       Do not use quotes in your response.
     `;
 
-    const trendLabel = await generateContent(prompt);
+    const trendLabel = (await generateContent(prompt)).trim();
 
-    // ── 5. Build response object ──────────────────────────────────────────────
     const forecastData = {
       slope,
       projected,
       riskScore,
-      trendLabel: trendLabel.trim(),
+      trendLabel,
       trendDirection,
-      lastUpdated: new Date().toISOString(),
+      lastUpdated: new Date()
     };
 
-    // ── 6. Persist to Firestore via dynamic import ────────────────────────────
-    // Dynamic import CRITICAL: prevents top-level firebase-admin ESM crash.
-    // If adminDb fails here, the error is caught below and JSON is returned.
+    // ✅ FIX 2: Wrap adminDb write in its own try/catch
+    // If Firestore write fails, still return the forecast data to the client
     try {
-      const { adminDb } = await import('@/lib/firebase/admin');
       await adminDb.collection('analytics').doc(uid).set(
         { forecast: forecastData },
         { merge: true }
       );
-    } catch (dbErr) {
-      // Log but don't fail the request — forecast data is still returned
-      console.error('Firestore write failed (non-fatal):', dbErr);
+    } catch (dbError) {
+      console.error('Analytics write failed (non-fatal):', dbError);
+      // Don't throw — just log. Client still gets the forecast.
     }
 
     return NextResponse.json(forecastData);
 
   } catch (error: any) {
-    console.error('Forecast Error:', error?.message ?? error);
+    console.error('Forecast route error:', error);
     return NextResponse.json(
-      { error: error?.message ?? 'Failed to generate forecast' },
+      { error: error?.message || 'Failed to generate forecast' },
       { status: 500 }
     );
   }
