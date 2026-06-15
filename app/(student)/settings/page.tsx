@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Switch } from '@/components/ui/Switch';
 import { Select } from '@/components/ui/Select';
-const STUDENT_LEVELS = [100, 200, 300, 400, 500];
+const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -33,10 +33,10 @@ export default function SettingsPage() {
   // Initialize state when profile loads
   useEffect(() => {
     if (profile) {
-      setFullName(profile.fullName || '');
-      setDepartment(profile.department || '');
+      setFullName(profile.fullName || (profile as any).name || '');
+      setDepartment(profile.department || (profile as any).dept || '');
       setProgramme(profile.programme || '');
-      setLevel(profile.currentLevel || 100);
+      setLevel(profile.currentLevel || (profile as any).level || 100);
       setAvatarUrl(profile.avatarUrl || '');
       setRecordMode(profile.recordMode || 'fromScratch');
       setGradeMode(profile.gradeMode || 'cgpa');
@@ -95,9 +95,12 @@ export default function SettingsPage() {
     try {
       await updateDocument(`users/${user.uid}`, {
         fullName,
+        name: fullName, // Legacy compatibility
         department,
+        dept: department, // Legacy compatibility
         programme,
-        currentLevel: level
+        currentLevel: level,
+        level: level, // Legacy compatibility
       });
       toast.success('Profile updated');
     } catch (err) {

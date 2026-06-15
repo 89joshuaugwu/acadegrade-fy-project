@@ -530,11 +530,11 @@ export default function RegisterWizard() {
 
       // 2. Create User Document
       await setDocument(`users/${uid}`, {
-        name: data.fullName,
+        fullName: data.fullName,
         email: data.email,
         matric: data.matric,
-        dept: data.department,
-        level: data.currentLevel,
+        department: data.department,
+        currentLevel: data.currentLevel,
         programme: data.programme,
         university: data.university,
         avatarUrl: null,

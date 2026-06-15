@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { increment } from 'firebase/firestore';
 
 import { useAuth } from '@/hooks/useAuth';
-import { getDocument, setDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
+import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
 import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
 import { GRADE_SCALE } from '@/lib/utils/constants';
@@ -87,10 +87,16 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
       let totalGP = 0;
       let totalPI = 0;
 
-      // 1. Write all courses
-      // First delete existing courses (naive approach for sync, in production we'd do a batch diff)
-      // Actually, since we want to be safe, let's just write them with random IDs or use a subcollection batch.
-      // For this phase, we'll just write them.
+      // Find which existing courses were deleted
+      const updatedIds = updatedCourses.map(c => c.id).filter(Boolean);
+      const coursesToDelete = initialCourses.filter(c => c.id && !updatedIds.includes(c.id));
+      
+      for (const course of coursesToDelete) {
+        if (course.id) {
+          await deleteDocument(`users/${user.uid}/semesters/${semesterId}/courses/${course.id}`);
+        }
+      }
+
       for (const course of updatedCourses) {
         const totalScore = (course.caScore || 0) + (course.examScore || 0);
         const scale = GRADE_SCALE.find(g => totalScore >= g.minScore && totalScore <= g.maxScore) || GRADE_SCALE[GRADE_SCALE.length - 1];
@@ -112,11 +118,10 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         totalPI += courseData.piPoint! * course.units;
 
         // Use a stable ID if we had one, else generate new
-        const cid = Math.random().toString(36).substr(2, 9);
+        const cid = course.id || Math.random().toString(36).substr(2, 9);
         await setDocument(`users/${user.uid}/semesters/${semesterId}/courses/${cid}`, courseData);
       }
 
-      // 2. Compute GPA + PI
       const gpa = totalUnits > 0 ? totalGP / totalUnits : 0;
       const pi = totalUnits > 0 ? totalPI / totalUnits : 0;
 
@@ -128,12 +133,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         isComplete: true, // Mark complete on save
       });
 
-      // 4. POST to AI forecast (Stubbed for Phase 7)
-      try {
-        await fetch('/api/ai/forecast', { method: 'POST', body: JSON.stringify({ uid: user.uid }) });
-      } catch (e) {
-        console.warn('Forecast API not ready yet');
-      }
+      // 4. Forecast is handled lazily when the user visits the Insights page.
+      // No need to trigger a backend prediction here.
 
       toast.success('Semester saved successfully!');
       router.push('/results');

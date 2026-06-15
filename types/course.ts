@@ -26,6 +26,8 @@ export interface CourseWithId extends Course {
 
 /** Input data for creating/editing a course (before computation) */
 export interface CourseInput {
+  id?: string;
+  localId?: string;
   code: string;
   title: string;
   units: number;

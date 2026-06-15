@@ -16,13 +16,19 @@ const serviceAccount: ServiceAccount = {
   privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
 };
 
-const app =
-  getApps().length === 0
+let app: any;
+try {
+  app = getApps().length === 0
     ? initializeApp({
         credential: cert(serviceAccount),
         databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
       })
     : getApps()[0];
+} catch (error) {
+  console.error("Firebase Admin Initialization Error:", error);
+  // Create a dummy app object to prevent downstream destructuring crashes
+  app = { name: '[DEFAULT]' };
+}
 
 /** Admin Auth — verify ID tokens, manage users */
 export const adminAuth = getAuth(app);
