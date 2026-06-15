@@ -32,6 +32,8 @@ export interface CourseInput {
   caScore: number | null;
   examScore: number | null;
   grade?: Grade;
+  estimated?: boolean;
+  isAR?: boolean;
 }
 
 /** Computed metrics for a single course */

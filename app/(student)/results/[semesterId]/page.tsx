@@ -3,8 +3,9 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Save, ArrowLeft, Loader2 } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { increment } from 'firebase/firestore';
 
 import { useAuth } from '@/hooks/useAuth';
 import { getDocument, setDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
@@ -15,6 +16,10 @@ import { GRADE_SCALE } from '@/lib/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { GradeTable } from '@/components/cgpa/GradeTable';
+import { Modal } from '@/components/ui/Modal';
+import { Input } from '@/components/ui/Input';
+
+const generateRandomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
 export default function SemesterDetailPage({ params }: { params: Promise<{ semesterId: string }> }) {
   const resolvedParams = use(params);
@@ -27,6 +32,16 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const [initialCourses, setInitialCourses] = useState<CourseInput[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Modals state
+  const [isImportSlipOpen, setIsImportSlipOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isImportCodeOpen, setIsImportCodeOpen] = useState(false);
+  
+  const [uploadingSlip, setUploadingSlip] = useState(false);
+  const [shareCodeInput, setShareCodeInput] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [importingCode, setImportingCode] = useState(false);
 
   useEffect(() => {
     if (!user?.uid || semesterId === 'new') {
@@ -130,6 +145,141 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      toast.error('Please upload an image or PDF file');
+      return;
+    }
+
+    setUploadingSlip(true);
+    try {
+      // Convert to base64
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]); // get just the base64 part
+        };
+        reader.onerror = error => reject(error);
+      });
+
+      const res = await fetch('/api/results/extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Data, mimeType: file.type })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Extraction failed');
+      }
+
+      const data = await res.json();
+      if (!data.courses || data.courses.length === 0) {
+        toast.error('No courses found in the document');
+        return;
+      }
+
+      // Format extracted courses
+      const mappedCourses: CourseInput[] = data.courses.map((c: any) => ({
+        code: c.code || '',
+        title: c.title || '',
+        units: c.units || 3,
+        caScore: c.caScore || null,
+        examScore: c.examScore || null,
+        isAR: c.isAR || false,
+        estimated: c.isAR ? true : false,
+      }));
+
+      setInitialCourses(mappedCourses);
+      toast.success(`Extracted ${mappedCourses.length} courses!`);
+      setIsImportSlipOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to extract results');
+    } finally {
+      setUploadingSlip(false);
+      // clear input
+      e.target.value = '';
+    }
+  };
+
+  const handleGenerateShareCode = async () => {
+    if (!user) return;
+    if (initialCourses.length < 3) {
+      toast.error('Add at least 3 courses first to generate a share code');
+      return;
+    }
+
+    try {
+      const code = generateRandomCode();
+      const codeData = {
+        code,
+        authorId: user.uid,
+        useCount: 0,
+        createdAt: new Date(),
+        courses: initialCourses.map(c => ({
+          code: c.code,
+          title: c.title,
+          units: c.units
+        }))
+      };
+
+      await setDocument(`shareCodes/${code}`, codeData);
+      setGeneratedCode(code);
+      setIsShareModalOpen(true);
+    } catch (err) {
+      toast.error('Failed to generate share code');
+    }
+  };
+
+  const handleImportCourseCode = async () => {
+    if (!shareCodeInput.trim() || shareCodeInput.length !== 6) {
+      toast.error('Enter a valid 6-character code');
+      return;
+    }
+    
+    setImportingCode(true);
+    try {
+      const codeDoc = await getDocument<any>(`shareCodes/${shareCodeInput.toUpperCase()}`);
+      if (!codeDoc) {
+        toast.error('Invalid share code');
+        // trigger shake animation natively via DOM if we wanted to
+        const el = document.getElementById('share-code-input');
+        if (el) {
+          el.classList.add('animate-shake');
+          setTimeout(() => el.classList.remove('animate-shake'), 500);
+        }
+        return;
+      }
+
+      const importedCourses: CourseInput[] = codeDoc.courses.map((c: any) => ({
+        ...c,
+        caScore: null,
+        examScore: null,
+      }));
+
+      setInitialCourses(importedCourses);
+      toast.success(`${importedCourses.length} courses imported. Fill in your scores.`);
+      setIsImportCodeOpen(false);
+      setShareCodeInput('');
+
+      // Increment use count safely using updateDocument with increment value
+      await updateDocument(`shareCodes/${shareCodeInput.toUpperCase()}`, {
+        useCount: increment(1)
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to import courses');
+    } finally {
+      setImportingCode(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -142,7 +292,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
   return (
     <div className="max-w-5xl mx-auto pb-10">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="px-2">
             <ArrowLeft size={20} />
@@ -159,6 +309,18 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
             </h1>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
+          <Button variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="whitespace-nowrap">
+            <Download size={16} className="mr-2" /> Import Code
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleGenerateShareCode} className="whitespace-nowrap">
+            <Share2 size={16} className="mr-2" /> Share
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="whitespace-nowrap">
+            <FileText size={16} className="mr-2" /> Import Result Slip
+          </Button>
+        </div>
       </div>
 
       <motion.div
@@ -173,6 +335,85 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           isSaving={saving}
         />
       </motion.div>
+
+      {/* Modals */}
+      <Modal open={isImportSlipOpen} onClose={() => setIsImportSlipOpen(false)} title="Import Result Slip">
+        <div className="flex flex-col gap-4 mt-2">
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            Upload your official academic result slip (Image or PDF) and our AI will automatically extract your courses and scores.
+          </p>
+          <div className="relative border-2 border-dashed border-[var(--acade-border-subtle)] rounded-xl p-8 hover:border-[var(--acade-primary)] hover:bg-[var(--acade-overlay)] transition-colors flex flex-col items-center justify-center cursor-pointer">
+            <input 
+              type="file" 
+              accept="image/*,application/pdf" 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" 
+              onChange={handleFileUpload}
+              disabled={uploadingSlip}
+            />
+            {uploadingSlip ? (
+              <div className="flex flex-col items-center gap-3 text-[var(--acade-primary)]">
+                <div className="size-8 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[length:var(--text-sm)] font-bold">Extracting Results...</span>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-[var(--acade-text-muted)]">
+                <Upload size={32} />
+                <span className="text-[length:var(--text-sm)] font-medium">Click or drag file here</span>
+                <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">JPG, PNG, PDF</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title="Share Course Code">
+        <div className="flex flex-col gap-4 mt-2">
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            Share this code with your classmates so they can instantly import your course list (scores are kept private).
+          </p>
+          <div className="flex items-center gap-3 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)]">
+            <div className="flex-1 text-center text-3xl font-bold tracking-[0.25em] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
+              {generatedCode}
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="p-2 h-auto"
+              onClick={() => {
+                navigator.clipboard.writeText(generatedCode);
+                toast.success('Code copied!');
+              }}
+            >
+              <Copy size={18} />
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={isImportCodeOpen} onClose={() => setIsImportCodeOpen(false)} title="Import Courses">
+        <div className="flex flex-col gap-4 mt-2">
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            Enter a 6-character share code from a classmate to quickly add courses to your semester.
+          </p>
+          <Input 
+            id="share-code-input"
+            placeholder="Enter 6-character code"
+            value={shareCodeInput}
+            onChange={(e) => setShareCodeInput(e.target.value.toUpperCase())}
+            maxLength={6}
+            className="text-center text-2xl tracking-[0.2em] uppercase font-[family-name:var(--font-geist-mono)] font-bold"
+          />
+          <Button 
+            variant="primary" 
+            className="w-full mt-2" 
+            onClick={handleImportCourseCode}
+            loading={importingCode}
+            disabled={shareCodeInput.length !== 6}
+          >
+            Import Courses
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

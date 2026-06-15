@@ -30,12 +30,19 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
   );
   const [shakeId, setShakeId] = useState<string | null>(null);
 
+  // Sync courses if initialCourses changes (e.g. from an import)
+  useEffect(() => {
+    if (initialCourses.length > 0) {
+      setCourses(initialCourses.map(c => ({ ...c, localId: Math.random().toString(36).substr(2, 9) })));
+    }
+  }, [initialCourses]);
+
   // Auto-add an empty row if empty and editable
   useEffect(() => {
     if (courses.length === 0 && editable) {
       handleAddRow();
     }
-  }, []);
+  }, [editable]);
 
   const handleAddRow = () => {
     setCourses([...courses, {
@@ -82,7 +89,10 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     setTimeout(() => setShakeId(null), 500);
   };
 
-  const computeRow = useCallback((ca: number | null, exam: number | null) => {
+  const computeRow = useCallback((ca: number | null, exam: number | null, isAR?: boolean) => {
+    if (isAR) {
+      return { totalScore: null, grade: 'AR', gradePoint: 0, piPoint: 0 };
+    }
     const totalScore = (ca || 0) + (exam || 0);
     const scale = GRADE_SCALE.find(g => totalScore >= g.minScore && totalScore <= g.maxScore) || GRADE_SCALE[GRADE_SCALE.length - 1];
     return {
@@ -101,11 +111,15 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     const gradeCount: Record<Grade, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
 
     courses.forEach(c => {
-      const { grade, gradePoint, piPoint } = computeRow(c.caScore, c.examScore);
-      totalUnits += c.units;
-      totalGP += gradePoint * c.units;
-      totalPI += piPoint * c.units;
-      gradeCount[grade]++;
+      const { grade, gradePoint, piPoint } = computeRow(c.caScore, c.examScore, c.isAR);
+      if (grade !== 'AR') {
+        totalUnits += c.units;
+        totalGP += gradePoint * c.units;
+        totalPI += piPoint * c.units;
+        if (grade in gradeCount) {
+          gradeCount[grade as Grade]++;
+        }
+      }
     });
 
     const gpa = totalUnits > 0 ? totalGP / totalUnits : 0;
@@ -144,7 +158,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <tbody>
             <AnimatePresence initial={false}>
               {courses.map((course, idx) => {
-                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore);
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
                 const isShaking = shakeId === course.localId;
 
                 return (
@@ -214,7 +228,8 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                           value={course.caScore === null ? '' : course.caScore}
                           onChange={e => updateCourse(course.localId, 'caScore', e.target.value ? parseInt(e.target.value) : null)}
                           placeholder="-"
-                          className="w-full bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-md px-2 py-1.5 text-[length:var(--text-sm)] text-center text-[var(--acade-text)] focus:outline-none focus:border-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)]"
+                          disabled={course.isAR}
+                          className="w-full bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-md px-2 py-1.5 text-[length:var(--text-sm)] text-center text-[var(--acade-text)] focus:outline-none focus:border-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)] disabled:opacity-50"
                         />
                       ) : (
                         <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">{course.caScore ?? '-'}</span>
@@ -228,7 +243,8 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                           value={course.examScore === null ? '' : course.examScore}
                           onChange={e => updateCourse(course.localId, 'examScore', e.target.value ? parseInt(e.target.value) : null)}
                           placeholder="-"
-                          className="w-full bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-md px-2 py-1.5 text-[length:var(--text-sm)] text-center text-[var(--acade-text)] focus:outline-none focus:border-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)]"
+                          disabled={course.isAR}
+                          className="w-full bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-md px-2 py-1.5 text-[length:var(--text-sm)] text-center text-[var(--acade-text)] focus:outline-none focus:border-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)] disabled:opacity-50"
                         />
                       ) : (
                         <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">{course.examScore ?? '-'}</span>
@@ -237,25 +253,29 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
 
                     <td className="p-3 text-center">
                       <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
-                        {totalScore}
+                        {totalScore !== null ? totalScore : '-'}
                       </span>
                     </td>
 
                     <td className="p-3 text-center">
-                      <Badge variant={`grade-${grade.toLowerCase()}` as any}>
-                        {grade}
-                      </Badge>
+                      {grade === 'AR' ? (
+                        <Badge variant="ongoing">AR</Badge>
+                      ) : (
+                        <Badge variant={`grade-${grade.toLowerCase()}` as any}>
+                          {grade}
+                        </Badge>
+                      )}
                     </td>
 
                     <td className="p-3 text-center">
                       <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">
-                        {gradePoint.toFixed(1)}
+                        {grade === 'AR' ? '-' : gradePoint.toFixed(1)}
                       </span>
                     </td>
 
                     <td className="p-3 text-center">
                       <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-gold)] font-[family-name:var(--font-geist-mono)]">
-                        {piPoint.toFixed(2)}
+                        {grade === 'AR' ? '-' : piPoint.toFixed(2)}
                       </span>
                     </td>
 

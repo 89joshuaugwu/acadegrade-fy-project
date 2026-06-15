@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { SemesterSummary } from '@/types/semester';
@@ -107,9 +107,19 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
   const showCGPA = metric === 'cgpa' || metric === 'both';
   const showPI = metric === 'pi' || metric === 'both';
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="w-full h-64 md:h-80 bg-[var(--acade-deep)] animate-pulse rounded-xl" />;
+  }
+
   return (
-    <div className="w-full h-64 md:h-80">
-      <LazyResponsiveContainer width="100%" height="100%" minHeight={1} minWidth={1}>
+    <div className="w-full h-64 md:h-80 relative">
+      <div className="absolute inset-0">
+      <LazyResponsiveContainer width="100%" height="100%">
         <LazyLineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
           <LazyCartesianGrid strokeDasharray="3 3" stroke="var(--acade-border-subtle)" vertical={false} />
           <LazyXAxis 
@@ -178,6 +188,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
           )}
         </LazyLineChart>
       </LazyResponsiveContainer>
+      </div>
     </div>
   );
 }

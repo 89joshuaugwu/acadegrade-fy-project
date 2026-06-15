@@ -49,5 +49,13 @@ service cloud.firestore {
       allow read: if isAuthenticated();
       allow write: if false; // Only updated via Admin SDK or Firebase Console
     }
+    
+    // 6. Share Codes
+    match /shareCodes/{codeId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      // Allow update only if modifying the useCount field
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount']);
+    }
   }
 }
