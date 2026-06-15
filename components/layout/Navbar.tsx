@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
+import { Logo } from '@/components/ui';
 
 interface NavbarProps {
   className?: string;
@@ -56,12 +57,7 @@ function Navbar({ className }: NavbarProps) {
         style={{ zIndex: 'var(--z-sticky)' } as React.CSSProperties}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 shrink-0">
-          <Image src="/logo.png" alt="AcadeGrade" width={32} height={32} className="rounded-lg" />
-          <span className="text-[length:var(--text-lg)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
-            AcadeGrade
-          </span>
-        </Link>
+        <Logo href="/" size="md" />
 
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-6">

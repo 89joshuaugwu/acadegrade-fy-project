@@ -12,6 +12,7 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
 import { NotificationDropdown } from './NotificationDropdown';
+import { Logo } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
 
 const TABS = [
@@ -46,12 +47,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[var(--acade-void)] flex flex-col md:flex-row">
       {/* Mobile Header */}
       <header className="sticky top-0 z-30 flex items-center justify-between px-4 h-16 bg-[var(--acade-deep)]/80 backdrop-blur-md border-b border-[var(--acade-border)] md:hidden">
-        <Link href="/dashboard" className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--acade-primary)] to-[var(--acade-primary-glow)] flex items-center justify-center text-white text-[length:var(--text-sm)]">
-            A
-          </div>
-          AcadeGrade
-        </Link>
+        <Logo size="sm" />
         <div className="flex items-center gap-1">
           <NotificationDropdown />
           <button
@@ -67,12 +63,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-[240px] fixed inset-y-0 left-0 bg-[var(--acade-deep)] border-r border-[var(--acade-border)] z-40 overflow-y-auto">
         <div className="p-6">
-          <Link href="/dashboard" className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] flex items-center gap-2 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--acade-primary)] to-[var(--acade-primary-glow)] flex items-center justify-center text-white text-[length:var(--text-sm)]">
-              A
-            </div>
-            AcadeGrade
-          </Link>
+          <Logo size="md" className="mb-8" />
 
           {/* Profile snippet */}
           <div className="flex flex-col items-center mb-8 bg-[var(--acade-surface)] p-4 rounded-2xl border border-[var(--acade-border-subtle)]">

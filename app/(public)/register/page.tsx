@@ -23,6 +23,7 @@ import type { StudentLevel, RecordMode, PastSemesterEntry } from '@/types/user';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { Logo } from '@/components/ui';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -630,6 +631,11 @@ export default function RegisterWizard() {
       )}
 
       <div className="relative w-full max-w-lg">
+        {/* Header Logo */}
+        <div className="flex justify-center mb-8">
+          <Logo href="/" size="lg" />
+        </div>
+
         {/* Progress Bar */}
         {!isSuccess && (
           <div className="mb-8">

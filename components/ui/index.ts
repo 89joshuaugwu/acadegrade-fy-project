@@ -21,3 +21,5 @@ export type { SkeletonProps, SkeletonShape } from './Skeleton';
 
 export { Select } from './Select';
 export type { SelectProps, SelectOption } from './Select';
+
+export { Logo } from './Logo';

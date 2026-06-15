@@ -17,6 +17,7 @@ import { signInWithEmail, signInWithGoogle, resetPassword } from '@/lib/firebase
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
+import { Logo } from '@/components/ui';
 
 /* ─── Validation Schema ─── */
 const loginSchema = z.object({
@@ -160,12 +161,9 @@ export default function LoginPage() {
       >
         {/* Logo + Title */}
         <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="flex items-center gap-2.5 mb-6">
-            <Image src="/logo.png" alt="AcadeGrade" width={40} height={40} className="rounded-lg" />
-            <span className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
-              AcadeGrade
-            </span>
-          </Link>
+          <div className="mb-6">
+            <Logo href="/" size="lg" />
+          </div>
           <h1 className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] text-center">
             Welcome Back
           </h1>
