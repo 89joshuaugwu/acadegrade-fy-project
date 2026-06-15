@@ -32,6 +32,7 @@ export async function generateContent(prompt: string): Promise<string> {
   return response.text ?? '';
 }
 
+
 /**
  * Generate structured JSON content from Gemini.
  * Strips markdown backticks before parsing.
