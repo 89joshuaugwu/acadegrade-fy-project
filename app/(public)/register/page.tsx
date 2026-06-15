@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { signUpWithEmail } from '@/lib/firebase/auth';
 import { setDocument, serverTimestamp } from '@/lib/firebase/firestore';
 import { DEFAULT_UNIVERSITY, STUDENT_LEVELS } from '@/lib/utils/constants';
+import { NIGERIAN_UNIVERSITIES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES } from '@/lib/utils/academic-data';
 import type { StudentLevel, RecordMode, PastSemesterEntry } from '@/types/user';
 
 import { Button } from '@/components/ui/Button';
@@ -211,27 +212,23 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
       
       <Input label="University" placeholder="University Name" list="universities" error={errors.university?.message} {...register('university')} />
       <datalist id="universities">
-        <option value="Enugu State University of Science and Technology" />
-        <option value="University of Nigeria, Nsukka" />
-        <option value="Nnamdi Azikiwe University" />
-        <option value="Federal University of Technology, Owerri" />
+        {NIGERIAN_UNIVERSITIES.map(uni => (
+          <option key={uni} value={uni} />
+        ))}
       </datalist>
 
       <Input label="Department" placeholder="e.g. Computer Science" list="departments" error={errors.department?.message} {...register('department')} />
       <datalist id="departments">
-        <option value="Computer Science" />
-        <option value="Software Engineering" />
-        <option value="Information Technology" />
-        <option value="Electrical Engineering" />
-        <option value="Mechanical Engineering" />
+        {ACADEMIC_DEPARTMENTS.map(dept => (
+          <option key={dept} value={dept} />
+        ))}
       </datalist>
 
       <Input label="Programme" placeholder="e.g. B.Sc Computer Science" list="programmes" error={errors.programme?.message} {...register('programme')} />
       <datalist id="programmes">
-        <option value="B.Sc Computer Science" />
-        <option value="B.Eng Software Engineering" />
-        <option value="B.Sc Information Technology" />
-        <option value="B.Eng Electrical Engineering" />
+        {ACADEMIC_PROGRAMMES.map(prog => (
+          <option key={prog} value={prog} />
+        ))}
       </datalist>
       
       <div className="flex flex-col gap-1.5">
