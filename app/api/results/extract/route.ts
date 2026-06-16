@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
         if (isClean) {
           // Use cheaper text-only extraction
           const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
+            model: 'gemini-3.1-flash-lite',
             contents: `${PROMPT}\n\nDocument Text:\n${text}`,
             config: { responseMimeType: 'application/json' }
           });
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         } else {
           // Fallback to sending the PDF document directly to Gemini
           const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-lite',
+            model: 'gemini-3.1-flash-lite',
             contents: [
               { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
               PROMPT
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       } catch (pdfErr) {
         // If pdf-parse fails entirely, just send to Gemini
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-lite',
+          model: 'gemini-3.1-flash-lite',
           contents: [
             { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
             PROMPT
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       }
     } else if (mimeType.startsWith('image/')) {
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-3.1-flash-lite',
         contents: [
           { inlineData: { data: base64Data, mimeType } },
           PROMPT

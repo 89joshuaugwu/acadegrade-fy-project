@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/layout/AuthProvider';
+import { ServiceWorkerKill } from '@/components/shared/ServiceWorkerKill';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -90,6 +91,7 @@ export default function RootLayout({
       className={`${bricolage.variable} ${dmSans.variable} ${GeistMono.variable}`}
     >
       <body className="font-body antialiased">
+        <ServiceWorkerKill />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

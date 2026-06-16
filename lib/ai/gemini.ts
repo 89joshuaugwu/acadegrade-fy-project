@@ -4,7 +4,7 @@
  * NEVER import this file in client components.
  *
  * Package: @google/genai v2.8.0
- * Model: gemini-2.5-flash-lite
+ * Model: gemini-3.1-flash-lite
  */
 import { GoogleGenAI } from '@google/genai';
 
@@ -22,7 +22,7 @@ try {
  */
 export async function generateContent(prompt: string): Promise<string> {
   const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-lite',
+    model: 'gemini-3.1-flash-lite',
     contents: prompt,
     config: {
       maxOutputTokens: 1024,
