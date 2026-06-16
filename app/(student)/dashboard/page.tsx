@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useCGPA } from '@/hooks/useCGPA';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { updateDocument } from '@/lib/firebase/firestore';
+import { updateDocument, getDocument } from '@/lib/firebase/firestore';
 import { cn } from '@/lib/utils/cn';
 
 import { Card } from '@/components/ui/Card';
@@ -51,14 +51,23 @@ export default function DashboardPage() {
     }
   };
 
-  // Fetch AI summary stub
+  // Fetch AI summary from Firestore cache
   const fetchAiSummary = async () => {
+    if (!user) return;
     setAiLoading(true);
-    // Stub for Phase 7 implementation
-    setTimeout(() => {
-      setAiSummary("Your recent performance indicates a stable upward trend. If you maintain this trajectory, you're projected to hit First Class in two semesters. Focus on pulling up your lower grades in core courses.");
+    try {
+      const analyticsData = await getDocument<any>(`analytics/${user.uid}`);
+      if (analyticsData?.lastInsight?.data?.degreeOutlook) {
+        setAiSummary(analyticsData.lastInsight.data.degreeOutlook);
+      } else {
+        setAiSummary("Visit the Insights Hub to generate your first personalized AI analysis.");
+      }
+    } catch (e) {
+      console.error('Failed to load insight', e);
+      setAiSummary("Failed to load insights. Please try again later.");
+    } finally {
       setAiLoading(false);
-    }, 2000);
+    }
   };
 
   useEffect(() => {
@@ -263,7 +272,7 @@ export default function DashboardPage() {
 
               <div className="mt-6 flex items-center justify-between relative z-10">
                 <span className="text-[10px] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
-                  POWERED BY GEMINI 3.1 FLASH-LITE
+                  POWERED BY DEEPSEEK AI
                 </span>
                 <Link 
                   href="/insights"
