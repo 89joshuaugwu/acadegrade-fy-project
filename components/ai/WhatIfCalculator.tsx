@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Loader2, Target } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
+import toast from 'react-hot-toast';
 
 interface WhatIfCalculatorProps {
   currentCGPA: number;
@@ -31,6 +32,10 @@ export function WhatIfCalculator({
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   
+  // ✅ Rate limiting state
+  const [lastRequestTime, setLastRequestTime] = useState(0);
+  const RATE_LIMIT_MS = 2000; // 2 seconds between requests
+  
   // Client-side math computation
   useEffect(() => {
     const futureCredits = remainingSemesters * creditLoad;
@@ -45,6 +50,12 @@ export function WhatIfCalculator({
   // Debounced API call for AI note
   useEffect(() => {
     const timer = setTimeout(async () => {
+      const now = Date.now();
+      // ✅ Check rate limit
+      if (now - lastRequestTime < RATE_LIMIT_MS) {
+        return; // Skip this request, too soon
+      }
+
       setLoading(true);
       try {
         const res = await fetch('/api/ai/whatif', {
@@ -58,8 +69,19 @@ export function WhatIfCalculator({
             creditLoad
           })
         });
+        
+        if (!res.ok) {
+          if (res.status === 429) {
+            toast.error('Rate limited. Please wait before adjusting again.');
+          } else {
+            console.error('WhatIf failed:', res.status);
+          }
+          return;
+        }
+        
         const data = await res.json();
         if (data.feasibilityNote) {
+          setLastRequestTime(now); // ✅ Update last request time on success
           setIsTyping(false); // Reset animation
           setTimeout(() => {
             setFeasibilityNote(data.feasibilityNote);
@@ -74,7 +96,7 @@ export function WhatIfCalculator({
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits]);
+  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, lastRequestTime]);
 
   return (
     <div className="bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
@@ -118,7 +140,7 @@ export function WhatIfCalculator({
             </div>
             {/* Custom Thumb */}
             <motion.div 
-              className="absolute h-6 w-6 bg-white rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)] border-2 border-[var(--acade-primary)] pointer-events-none flex items-center justify-center transform -translate-x-1/2"
+              className="absolute h-6 w-6 bg-white rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)] border-2 border-[var(--acade-primary)] pointer-events-none flex items-center justify-center"
               style={{ left: `${((targetCGPA - currentCGPA) / (5.0 - currentCGPA)) * 100}%` }}
               animate={{ scale: loading ? 0.9 : 1 }}
               whileHover={{ scale: 1.1 }}
@@ -138,7 +160,7 @@ export function WhatIfCalculator({
               max={10} 
               value={remainingSemesters}
               onChange={(e) => setRemainingSemesters(parseInt(e.target.value) || 1)}
-              className="w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] focus:outline-none focus:border-[var(--acade-primary)] transition-colors text-center"
+              className="w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
             />
           </div>
           <div className="space-y-2">
@@ -149,7 +171,7 @@ export function WhatIfCalculator({
               max={30} 
               value={creditLoad}
               onChange={(e) => setCreditLoad(parseInt(e.target.value) || 18)}
-              className="w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] focus:outline-none focus:border-[var(--acade-primary)] transition-colors text-center"
+              className="w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
             />
           </div>
         </div>

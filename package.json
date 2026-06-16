@@ -16,7 +16,7 @@
     "@tailwindcss/postcss": "^4.3.1",
     "date-fns": "4.4.0",
     "firebase": "12.14.0",
-    "firebase-admin": "14.0.0",
+    "firebase-admin": "13.0.0",
     "geist": "1.7.2",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",

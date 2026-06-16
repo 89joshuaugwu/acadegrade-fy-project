@@ -14,9 +14,9 @@ import { InsightCard } from '@/components/ai/InsightCard';
 import { WhatIfCalculator } from '@/components/ai/WhatIfCalculator';
 import { ForecastChart } from '@/components/charts/ForecastChart';
 
-import type { Semester, SemesterWithId } from '@/types/semester';
+import type { SemesterWithId } from '@/types/semester';
 import type { Course } from '@/types/course';
-import type { InsightResponse, ForecastResponse, RiskLevel } from '@/types/ai';
+import type { InsightResponse, ForecastResponse } from '@/types/ai';
 
 type TabType = 'forecast' | 'whatif' | 'risk' | 'analysis';
 const TABS: { id: TabType; label: string }[] = [
@@ -39,12 +39,8 @@ export default function InsightsPage() {
   const [refreshing, setRefreshing] = useState(false);
   
   const [analytics, setAnalytics] = useState<AnalyticsDoc | null>(null);
-  
-  // Base data for what-if
   const [currentCGPA, setCurrentCGPA] = useState(0);
   const [totalCredits, setTotalCredits] = useState(0);
-  
-  // Data for risk
   const [flaggedCourses, setFlaggedCourses] = useState<Course[]>([]);
 
   useEffect(() => {
@@ -58,17 +54,18 @@ export default function InsightsPage() {
     try {
       if (!forceRefresh) setLoading(true);
 
-      // 1. Fetch semesters to compute base stats and piHistory
+      // 1. Fetch semesters
       const semesters = await queryCollection<SemesterWithId>(`users/${user.uid}/semesters`);
-      // Sort semesters by level then term to get chronological order
       semesters.sort((a, b) => {
         if (a.level !== b.level) return a.level - b.level;
         return a.semester - b.semester;
       });
-      
-      const piHistory = semesters.filter(s => s.isComplete && s.pi !== undefined).map(s => s.pi!);
-      
-      // Let's accurately compute current CGPA
+
+      const piHistory = semesters
+        .filter(s => s.isComplete && s.pi !== undefined && s.pi !== null)
+        .map(s => s.pi!);
+
+      // Compute CGPA
       let tPoints = 0;
       let tUnits = 0;
       semesters.filter(s => s.isComplete).forEach(s => {
@@ -78,56 +75,76 @@ export default function InsightsPage() {
       setCurrentCGPA(tUnits > 0 ? tPoints / tUnits : 0);
       setTotalCredits(tUnits);
 
-      // Extract flagged courses (< 50) from the last 2 semesters
+      // Flagged courses (score < 50) from last 2 completed semesters
       const recentSemesters = semesters.filter(s => s.isComplete).slice(-2);
       let flagged: Course[] = [];
       for (const sem of recentSemesters) {
-        const courses = await queryCollection<Course>(`users/${user.uid}/semesters/${sem.id}/courses`);
+        const courses = await queryCollection<Course>(
+          `users/${user.uid}/semesters/${sem.id}/courses`
+        );
         flagged.push(...courses.filter(c => (c.totalScore ?? 0) < 50));
       }
       setFlaggedCourses(flagged);
 
-      // 2. Fetch or generate forecast
+      // 2. Fetch existing analytics doc
       let analyticsData = await getDocument<AnalyticsDoc>(`analytics/${user.uid}`);
-      
+
+      // 3. Generate forecast if needed
       if (!analyticsData?.forecast || forceRefresh) {
         if (piHistory.length > 0) {
+          // ✅ FIX: Get auth token and send with forecast request
+          const authToken = await user.getIdToken();
+
           const res = await fetch('/api/ai/forecast', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uid: user.uid, piHistory })
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`,  // ✅ Added
+            },
+            body: JSON.stringify({ piHistory }),        // ✅ uid removed — server gets it from token
           });
-          const forecastData = await res.json();
-          analyticsData = { ...analyticsData, forecast: forecastData };
+
+          // ✅ FIX: Check res.ok before calling .json()
+          if (res.ok) {
+            const forecastData = await res.json();
+            analyticsData = { ...analyticsData, forecast: forecastData };
+          } else {
+            const errText = await res.text();
+            console.error('Forecast failed:', res.status, errText);
+            toast.error('Could not generate forecast. Please try again.');
+          }
         }
       }
 
-      // 3. Fetch or generate written insights
+      // 4. Generate written insights if needed
       if (!analyticsData?.lastInsight || forceRefresh) {
-        const authHeader = await user.getIdToken();
+        const authToken = await user.getIdToken();
         const res = await fetch('/api/ai/insights', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authHeader}`
+            'Authorization': `Bearer ${authToken}`,
           },
-          body: JSON.stringify({ forceRegenerate: forceRefresh, semesterData: semesters })
+          body: JSON.stringify({ forceRegenerate: forceRefresh, semesterData: semesters }),
         });
-        
+
         if (res.ok) {
           const insightData = await res.json();
           analyticsData = {
             ...analyticsData,
-            lastInsight: { data: insightData, timestamp: new Date() }
+            lastInsight: { data: insightData, timestamp: new Date() },
           };
         } else if (res.status === 429) {
-          if (forceRefresh) toast.error("Please wait 1 hour before regenerating insights.");
+          if (forceRefresh) toast.error('Please wait 1 hour before regenerating insights.');
+        } else {
+          const errText = await res.text();
+          console.error('Insights failed:', res.status, errText);
         }
       }
 
       setAnalytics(analyticsData || null);
     } catch (err) {
-      console.error(err);
+      console.error('loadData error:', err);
       toast.error('Failed to load insights.');
     } finally {
       setLoading(false);
@@ -155,7 +172,7 @@ export default function InsightsPage() {
     switch (activeTab) {
       case 'forecast':
         return (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
@@ -165,8 +182,8 @@ export default function InsightsPage() {
               </h2>
               {analytics?.forecast ? (
                 <>
-                  <ForecastChart 
-                    history={analytics.forecast.projected.map((_, i) => i === 0 ? 3.5 : 4.0)} 
+                  <ForecastChart
+                    history={analytics.forecast.projected.map((_, i) => i === 0 ? 3.5 : 4.0)}
                     projected={analytics.forecast.projected}
                     labels={['Past', 'Current', 'Next Sem', 'Next Year']}
                   />
@@ -185,7 +202,9 @@ export default function InsightsPage() {
                   </div>
                 </>
               ) : (
-                <p className="text-[var(--acade-text-muted)] text-[length:var(--text-sm)]">Not enough data to forecast. Add more semesters.</p>
+                <p className="text-[var(--acade-text-muted)] text-[length:var(--text-sm)]">
+                  Not enough data to forecast. Add more completed semesters.
+                </p>
               )}
             </div>
           </motion.div>
@@ -200,7 +219,10 @@ export default function InsightsPage() {
 
       case 'risk':
         return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Risk Gauge */}
               <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 flex flex-col items-center justify-center text-center">
@@ -208,18 +230,18 @@ export default function InsightsPage() {
                 <div className="relative size-32 flex items-center justify-center">
                   <svg className="absolute inset-0 w-full h-full transform -rotate-90">
                     <circle cx="64" cy="64" r="56" stroke="var(--acade-deep)" strokeWidth="12" fill="none" />
-                    <circle 
-                      cx="64" cy="64" r="56" 
+                    <circle
+                      cx="64" cy="64" r="56"
                       stroke={
-                        analytics?.forecast?.riskScore === 5 ? 'var(--acade-danger)' : 
-                        analytics?.forecast?.riskScore === 4 ? 'var(--acade-warning)' : 
+                        analytics?.forecast?.riskScore === 5 ? 'var(--acade-danger)' :
+                        analytics?.forecast?.riskScore === 4 ? 'var(--acade-warning)' :
                         'var(--acade-success)'
-                      } 
-                      strokeWidth="12" 
-                      strokeDasharray="351" 
+                      }
+                      strokeWidth="12"
+                      strokeDasharray="351"
                       strokeDashoffset={351 - (351 * (analytics?.forecast?.riskScore || 1)) / 5}
-                      strokeLinecap="round" 
-                      fill="none" 
+                      strokeLinecap="round"
+                      fill="none"
                       className="transition-all duration-1000 ease-out"
                     />
                   </svg>
@@ -229,7 +251,7 @@ export default function InsightsPage() {
                 </div>
                 <span className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] mt-4">1 = Safe, 5 = Critical</span>
               </div>
-              
+
               {/* Trend Banner */}
               <div className="md:col-span-2 bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 flex flex-col justify-center">
                 <span className="text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-wider mb-2">Trend Analysis</span>
@@ -294,33 +316,20 @@ export default function InsightsPage() {
 
       case 'analysis':
         return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
             {analytics?.lastInsight?.data ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <InsightCard 
-                  title="Identified Strengths" 
-                  content={analytics.lastInsight.data.strengths} 
-                  type="success" 
-                />
-                <InsightCard 
-                  title="Areas of Concern" 
-                  content={analytics.lastInsight.data.concerns} 
-                  type="warning" 
-                />
-                <InsightCard 
-                  title="Actionable Recommendations" 
-                  content={analytics.lastInsight.data.recommendations} 
-                  type="info" 
-                />
-                <InsightCard 
-                  title="Degree Outlook" 
-                  content={analytics.lastInsight.data.degreeOutlook} 
-                  type="success" 
-                />
+                <InsightCard title="Identified Strengths" content={analytics.lastInsight.data.strengths} type="success" />
+                <InsightCard title="Areas of Concern" content={analytics.lastInsight.data.concerns} type="warning" />
+                <InsightCard title="Actionable Recommendations" content={analytics.lastInsight.data.recommendations} type="info" />
+                <InsightCard title="Degree Outlook" content={analytics.lastInsight.data.degreeOutlook} type="success" />
               </div>
             ) : (
               <div className="p-8 text-center text-[var(--acade-text-muted)] bg-[var(--acade-surface)] rounded-2xl border border-[var(--acade-border)]">
-                No written analysis available. Click refresh to generate.
+                No written analysis available. Click Refresh Insights to generate.
               </div>
             )}
           </motion.div>
@@ -339,11 +348,11 @@ export default function InsightsPage() {
             Powered by Gemini 2.5 Flash-Lite
           </p>
         </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRefresh} 
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
           disabled={refreshing}
           className="bg-[var(--acade-surface)] self-start md:self-auto"
         >

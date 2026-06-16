@@ -10,7 +10,7 @@ import { GoogleGenAI } from '@google/genai';
 
 let ai: GoogleGenAI;
 try {
-  // If the API key is missing (e.g. during build time), this will throw an error
+  // If the API key is missing (e.g. during build time), this will throw an error,
   // but we catch it here so the entire Next.js server doesn't crash on cold boot.
   ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 } catch (error) {
