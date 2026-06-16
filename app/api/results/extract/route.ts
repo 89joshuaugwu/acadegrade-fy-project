@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenAI } from '@google/genai';
+import { generateMultimodalGeminiContent } from '@/lib/ai/manager';
 // pdf-parse is required dynamically inside the handler
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const PROMPT = `Extract course results from the provided academic result slip.
 Return ONLY a JSON array of objects representing each course. 
@@ -39,46 +37,26 @@ export async function POST(req: NextRequest) {
 
         if (isClean) {
           // Use cheaper text-only extraction
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite',
-            contents: `${PROMPT}\n\nDocument Text:\n${text}`,
-            config: { responseMimeType: 'application/json' }
-          });
-          geminiResponse = response.text;
+          geminiResponse = await generateMultimodalGeminiContent([`${PROMPT}\n\nDocument Text:\n${text}`], 'application/json');
         } else {
           // Fallback to sending the PDF document directly to Gemini
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.1-flash-lite',
-            contents: [
-              { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
-              PROMPT
-            ],
-            config: { responseMimeType: 'application/json' }
-          });
-          geminiResponse = response.text;
+          geminiResponse = await generateMultimodalGeminiContent([
+            { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
+            PROMPT
+          ], 'application/json');
         }
       } catch (pdfErr) {
         // If pdf-parse fails entirely, just send to Gemini
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite',
-          contents: [
-            { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
-            PROMPT
-          ],
-          config: { responseMimeType: 'application/json' }
-        });
-        geminiResponse = response.text;
+        geminiResponse = await generateMultimodalGeminiContent([
+          { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
+          PROMPT
+        ], 'application/json');
       }
     } else if (mimeType.startsWith('image/')) {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.1-flash-lite',
-        contents: [
-          { inlineData: { data: base64Data, mimeType } },
-          PROMPT
-        ],
-        config: { responseMimeType: 'application/json' }
-      });
-      geminiResponse = response.text;
+      geminiResponse = await generateMultimodalGeminiContent([
+        { inlineData: { data: base64Data, mimeType } },
+        PROMPT
+      ], 'application/json');
     } else {
       return NextResponse.json({ error: 'Unsupported file type' }, { status: 400 });
     }

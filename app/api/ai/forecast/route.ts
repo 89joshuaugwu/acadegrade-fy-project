@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeForecast, getTrendDirection } from '@/lib/ai/forecast';
-import { generateContent } from '@/lib/ai/gemini';
+import { generateDeepInsight } from '@/lib/ai/manager';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const { slope, projected, riskScore } = computeForecast(piHistory);
     const trendDirection = getTrendDirection(slope);
 
-    // Gemini writes a trend label
+    // DeepSeek writes a trend label
     const prompt = `
       A student has an academic Performance Index (PI) trend.
       The recent slope of their performance is ${slope.toFixed(3)} (positive = improving, negative = declining).
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       Do not use quotes in your response.
     `;
 
-    const trendLabel = (await generateContent(prompt)).trim();
+    const trendLabel = (await generateDeepInsight(prompt)).trim();
 
     const forecastData = {
       slope,

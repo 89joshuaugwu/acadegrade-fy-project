@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateContent } from '@/lib/ai/gemini';
+import { generateFastResponse } from '@/lib/ai/manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         Write EXACTLY ONE concise, encouraging, and highly specific sentence analyzing the feasibility of this goal.
         Do not repeat the math. Do not give generic advice. Keep it under 20 words.
       `;
-      feasibilityNote = await generateContent(prompt);
+      feasibilityNote = await generateFastResponse(prompt);
     }
 
     return NextResponse.json({

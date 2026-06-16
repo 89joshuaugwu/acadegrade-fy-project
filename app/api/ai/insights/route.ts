@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateJSON } from '@/lib/ai/gemini';
+import { generateDeepInsightJSON } from '@/lib/ai/manager';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import type { InsightResponse } from '@/types/ai';
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       }
     `;
 
-    const insightData = await generateJSON<InsightResponse>(prompt);
+    const insightData = await generateDeepInsightJSON<InsightResponse>(prompt);
 
     // Save to Firestore
     await analyticsRef.set({
@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(insightData);
   } catch (error: any) {
     console.error('Insights Error:', error);
+    if (error.message && error.message.includes('429')) {
+      return NextResponse.json({ error: 'AI quota temporarily reached. Please try again later.' }, { status: 429 });
+    }
     return NextResponse.json({ error: 'Failed to generate insights' }, { status: 500 });
   }
 }

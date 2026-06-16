@@ -37,6 +37,7 @@ export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('forecast');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [rateLimitError, setRateLimitError] = useState(false);
   
   const [analytics, setAnalytics] = useState<AnalyticsDoc | null>(null);
   const [currentCGPA, setCurrentCGPA] = useState(0);
@@ -53,6 +54,7 @@ export default function InsightsPage() {
     if (!user) return;
     try {
       if (!forceRefresh) setLoading(true);
+      setRateLimitError(false);
 
       // 1. Fetch semesters
       const semesters = await queryCollection<SemesterWithId>(`users/${user.uid}/semesters`);
@@ -92,22 +94,22 @@ export default function InsightsPage() {
       // 3. Generate forecast if needed
       if (!analyticsData?.forecast || forceRefresh) {
         if (piHistory.length > 0) {
-          // ✅ FIX: Get auth token and send with forecast request
           const authToken = await user.getIdToken();
 
           const res = await fetch('/api/ai/forecast', {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${authToken}`,  // ✅ Added
+               'Content-Type': 'application/json',
+               'Authorization': `Bearer ${authToken}`,
             },
-            body: JSON.stringify({ piHistory }),        // ✅ uid removed — server gets it from token
+            body: JSON.stringify({ piHistory }),
           });
 
-          // ✅ FIX: Check res.ok before calling .json()
           if (res.ok) {
             const forecastData = await res.json();
             analyticsData = { ...analyticsData, forecast: forecastData };
+          } else if (res.status === 429) {
+            setRateLimitError(true);
           } else {
             const errText = await res.text();
             console.error('Forecast failed:', res.status, errText);
@@ -135,7 +137,8 @@ export default function InsightsPage() {
             lastInsight: { data: insightData, timestamp: new Date() },
           };
         } else if (res.status === 429) {
-          if (forceRefresh) toast.error('Please wait 1 hour before regenerating insights.');
+          setRateLimitError(true);
+          if (forceRefresh) toast.error('AI quota reached. Serving cached insights.');
         } else {
           const errText = await res.text();
           console.error('Insights failed:', res.status, errText);
@@ -339,13 +342,30 @@ export default function InsightsPage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-10">
+      <AnimatePresence>
+        {rateLimitError && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)] text-[var(--acade-warning)] rounded-xl p-4 flex items-center gap-3"
+          >
+            <AlertTriangle size={20} />
+            <div>
+              <p className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">AI quota temporarily reached.</p>
+              <p className="text-[length:var(--text-xs)]">We are serving your last cached insights. Please try again in 59 seconds.</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
         <div>
           <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] tracking-tight">
             AI Insights Hub
           </h1>
           <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-            Powered by Gemini 2.5 Flash-Lite
+            Powered by DeepSeek AI & Groq
           </p>
         </div>
 
