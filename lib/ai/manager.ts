@@ -83,7 +83,7 @@ export async function generateFastResponse(prompt: string): Promise<string> {
 
 /**
  * ACADEMIND INSIGHTS ENGINE
- * Model: meta-llama/llama-3.3-70b-instruct:free (via OpenRouter)
+ * Model: openrouter/free (Auto-routes to best available free model)
  */
 export async function generateDeepInsight(prompt: string): Promise<string> {
   const indexRef = { current: currentOpenRouterIndex };
@@ -95,7 +95,7 @@ export async function generateDeepInsight(prompt: string): Promise<string> {
     });
     const completion = await openai.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'meta-llama/llama-3.3-70b-instruct:free',
+      model: 'openrouter/free',
       temperature: 0.65,
       max_tokens: 1024,
     });
