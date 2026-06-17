@@ -46,6 +46,8 @@ export default function InsightsPage() {
   const [currentCGPA, setCurrentCGPA] = useState(0);
   const [totalCredits, setTotalCredits] = useState(0);
   const [flaggedCourses, setFlaggedCourses] = useState<Course[]>([]);
+  const [piHistory, setPiHistory] = useState<number[]>([]);
+  const [currentLevel, setCurrentLevel] = useState<number>(100);
 
   useEffect(() => {
     if (user) {
@@ -72,9 +74,13 @@ export default function InsightsPage() {
         return a.semester - b.semester;
       });
 
-      const piHistory = semesters
+      const piHist = semesters
         .filter(s => s.isComplete && s.pi !== undefined && s.pi !== null)
         .map(s => s.pi!);
+      setPiHistory(piHist);
+      
+      const maxLevel = semesters.length > 0 ? Math.max(...semesters.map(s => s.level || 100)) : 100;
+      setCurrentLevel(maxLevel);
 
       // Compute CGPA
       let tPoints = 0;
@@ -102,7 +108,7 @@ export default function InsightsPage() {
 
       // 3. Generate forecast if needed
       if (!analyticsData?.forecast || forceRefresh) {
-        if (piHistory.length > 0) {
+        if (piHist.length > 0) {
           const authToken = await user.getIdToken();
 
           const res = await fetch('/api/ai/forecast', {
@@ -111,7 +117,7 @@ export default function InsightsPage() {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${authToken}`,
             },
-            body: JSON.stringify({ piHistory }),
+            body: JSON.stringify({ piHistory: piHist }),
           });
 
           if (res.ok) {
@@ -203,9 +209,9 @@ export default function InsightsPage() {
               {analytics?.forecast ? (
                 <>
                   <ForecastChart
-                    history={analytics.forecast.projected.map((_, i) => i === 0 ? 3.5 : 4.0)}
+                    history={piHistory.length > 0 ? piHistory.slice(-3) : [0]}
                     projected={analytics.forecast.projected}
-                    labels={['Past', 'Current', 'Next Sem', 'Next Year']}
+                    labels={[...piHistory.slice(-3).map((_, i) => i === piHistory.slice(-3).length - 1 ? 'Current' : `Past ${piHistory.slice(-3).length - 1 - i}`), 'Next Sem', currentLevel >= 400 ? 'Graduation' : 'Next Year']}
                   />
                   <div className="mt-6 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border-subtle)] flex flex-col md:flex-row items-center gap-4 justify-between">
                     <div>
