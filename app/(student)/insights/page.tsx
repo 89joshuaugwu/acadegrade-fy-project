@@ -8,7 +8,9 @@ import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
-import { getDocument, queryCollection, setDocument } from '@/lib/firebase/firestore';
+import { useProfile } from '@/hooks/useProfile';
+import { getDocument, queryCollection, setDocument, updateDocument } from '@/lib/firebase/firestore';
+import { DEGREE_CLASSES } from '@/lib/utils/constants';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { InsightCard } from '@/components/ai/InsightCard';
@@ -31,10 +33,13 @@ interface AnalyticsDoc {
   forecast?: ForecastResponse & { lastUpdated: any; trendDirection: string; trendLabel: string };
   lastInsight?: { data: InsightResponse; timestamp: any };
   insightsStale?: boolean;
+  degreeClass?: string;
+  cgpa?: number;
 }
 
 export default function InsightsPage() {
   const { user } = useAuth();
+  const { profile } = useProfile();
   
   const [activeTab, setActiveTab] = useState<TabType>('forecast');
   const [loading, setLoading] = useState(true);
@@ -136,6 +141,50 @@ export default function InsightsPage() {
       setCurrentCGPA(tUnits > 0 ? tPoints / tUnits : 0);
       setTotalCredits(tUnits);
 
+      const computedCgpa = tUnits > 0 ? tPoints / tUnits : 0;
+      const newDegreeClassObj = DEGREE_CLASSES.find(dc => computedCgpa >= dc.minCGPA && computedCgpa <= dc.maxCGPA) ?? DEGREE_CLASSES[DEGREE_CLASSES.length - 1];
+      const newDegreeClass = newDegreeClassObj.label;
+
+      // 2. Fetch existing analytics doc
+      let analyticsData = await getDocument<AnalyticsDoc>(`analytics/${user.uid}`);
+
+      // If degree class changed and it's not the initial "Fail" save
+      if (analyticsData && analyticsData.degreeClass && analyticsData.degreeClass !== 'Fail' && analyticsData.degreeClass !== newDegreeClass) {
+        const token = await user.getIdToken();
+        // Send Push
+        fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            uid: user.uid,
+            title: 'Degree Class Update! 🎓',
+            message: `Your CGPA trajectory has shifted your degree class to: ${newDegreeClass}.`,
+            type: 'achievement'
+          })
+        }).catch(console.error);
+
+        // Send Email
+        fetch('/api/notifications/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            uid: user.uid,
+            type: 'email',
+            event: 'degreeClass',
+            data: { name: profile?.fullName || 'Student', degreeClass: newDegreeClass }
+          })
+        }).catch(console.error);
+      }
+
+      // Save new CGPA and degreeClass to analytics doc
+      if (analyticsData) {
+        await updateDocument(`analytics/${user.uid}`, {
+          cgpa: computedCgpa,
+          degreeClass: newDegreeClass
+        });
+        analyticsData.degreeClass = newDegreeClass;
+      }
+
       // Flagged courses (score < 50) from ALL completed semesters (Carry-Overs)
       const completedSemestersForRisk = semesters.filter(s => s.isComplete);
       let flagged: Course[] = [];
@@ -147,8 +196,7 @@ export default function InsightsPage() {
       }
       setFlaggedCourses(flagged);
 
-      // 2. Fetch existing analytics doc
-      let analyticsData = await getDocument<AnalyticsDoc>(`analytics/${user.uid}`);
+      // 2. We already fetched the existing analytics doc above
 
       // 3. Generate forecast if needed
       if (!analyticsData?.forecast || forceRefresh) {

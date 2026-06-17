@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { increment } from 'firebase/firestore';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
 import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
@@ -26,6 +27,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const semesterId = resolvedParams.semesterId;
   
   const { user } = useAuth();
+  const { profile } = useProfile();
   const router = useRouter();
 
   const [semester, setSemester] = useState<Semester | null>(null);
@@ -135,6 +137,32 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
       // 4. Mark AI insights as stale so the user gets a red dot on the Insights tab
       await setDocument(`analytics/${user.uid}`, { insightsStale: true });
+
+      // 5. Trigger Notifications
+      const token = await user.getIdToken();
+      // Push Notification
+      fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          uid: user.uid,
+          title: 'Semester Saved 📝',
+          message: `Your results for ${semester?.label || 'this semester'} have been saved. GPA: ${gpa.toFixed(2)}`,
+          type: 'success'
+        })
+      }).catch(console.error);
+
+      // Email Notification
+      fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          uid: user.uid,
+          type: 'email',
+          event: 'semesterSaved',
+          data: { name: profile?.fullName || 'Student', gpa, semester: semester?.label || 'Semester' }
+        })
+      }).catch(console.error);
 
       toast.success('Semester saved successfully!');
       router.push('/results');

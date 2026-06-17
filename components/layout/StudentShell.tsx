@@ -10,6 +10,8 @@ import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { getDocument } from '@/lib/firebase/firestore';
+import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase/fcm';
+import toast from 'react-hot-toast';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
@@ -50,6 +52,30 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     };
     fetchBanner();
   }, []);
+
+  // Request FCM Permission and Listen
+  useEffect(() => {
+    if (user?.uid) {
+      requestNotificationPermission(user.uid).catch(console.error);
+
+      const unsubscribe = onForegroundMessage((payload) => {
+        if (payload?.notification) {
+          toast(
+            <div className="flex flex-col gap-1">
+              <span className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">
+                {payload.notification.title}
+              </span>
+              <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
+                {payload.notification.body}
+              </span>
+            </div>,
+            { icon: '🔔', duration: 5000 }
+          );
+        }
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
 
   const dismissBanner = () => {
     if (announcement) {

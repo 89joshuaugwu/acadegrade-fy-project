@@ -588,6 +588,22 @@ export default function RegisterWizard() {
         riskScore: 0,
       });
 
+      // 5. Trigger Welcome Email
+      fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Assuming we use an internal secret or the user token
+          'Authorization': `Bearer ${await userCred.user.getIdToken()}`,
+        },
+        body: JSON.stringify({
+          uid,
+          type: 'email',
+          event: 'welcome',
+          data: { name: data.fullName },
+        }),
+      }).catch(console.error);
+
       // Show Success step
       setIsSuccess(true);
       setCurrentStep(5);

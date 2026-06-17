@@ -77,6 +77,24 @@ export async function POST(request: NextRequest) {
         { forecast: forecastData },
         { merge: true }
       );
+
+      // Trigger Risk Notification if needed
+      if (riskScore >= 4) {
+        const notifUrl = new URL('/api/notifications/send', request.url);
+        await fetch(notifUrl.toString(), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            uid,
+            title: 'Academic Risk Alert ⚠️',
+            message: 'Your recent trajectory indicates high academic risk. Check your insights for recommendations.',
+            type: 'warning'
+          })
+        }).catch(e => console.error('Failed to trigger risk notification', e));
+      }
     } catch (dbError) {
       console.error('Analytics write failed (non-fatal):', dbError);
       // Don't throw — just log. Client still gets the forecast.
