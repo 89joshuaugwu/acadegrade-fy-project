@@ -13,39 +13,40 @@ import type { TrendDirection } from '@/types/analytics';
 const clamp = (v: number): number => Math.max(0, Math.min(5, v));
 
 /**
- * Compute forecast from PI history using linear regression.
- * Returns projected values for next 2 semesters, slope, risk score, and trend.
+ * Compute forecast from PI history and CGPA history using linear regression.
+ * Returns projected values for next 2 semesters for both, slope (based on PI), and risk score.
  */
-export function computeForecast(piHistory: number[]): Omit<ForecastResponse, 'trendLabel'> {
-  if (piHistory.length < 2) {
-    return {
-      slope: 0,
-      projected: [piHistory[0] ?? 0, piHistory[0] ?? 0],
-      riskScore: 3 as RiskLevel,
-    };
+export function computeForecast(piHistory: number[], cgpaHistory?: number[]) {
+  const getProjection = (history: number[]): [number, number] => {
+    if (history.length < 2) return [history[0] ?? 0, history[0] ?? 0];
+    const data: [number, number][] = history.map((y, x) => [x, y]);
+    const predict = linearRegressionLine(linearRegression(data));
+    const n = history.length;
+    return [clamp(predict(n)), clamp(predict(n + 1))];
+  };
+
+  const projectedPi = getProjection(piHistory);
+  const projectedCgpa = cgpaHistory && cgpaHistory.length > 0 ? getProjection(cgpaHistory) : projectedPi;
+
+  let slope = 0;
+  if (piHistory.length >= 2) {
+    const data: [number, number][] = piHistory.map((y, x) => [x, y]);
+    slope = linearRegression(data).m;
   }
-
-  const data: [number, number][] = piHistory.map((y, x) => [x, y]);
-  const regression = linearRegression(data);
-  const predict = linearRegressionLine(regression);
-
-  const n = piHistory.length;
-  const projected: [number, number] = [
-    clamp(predict(n)),
-    clamp(predict(n + 1)),
-  ];
 
   // Risk score: 1 (low risk, improving) to 5 (high risk, declining)
   let riskScore: RiskLevel;
-  if (regression.m > 0.1) riskScore = 1;
-  else if (regression.m > 0) riskScore = 2;
-  else if (regression.m > -0.05) riskScore = 3;
-  else if (regression.m > -0.15) riskScore = 4;
+  if (slope > 0.1) riskScore = 1;
+  else if (slope > 0) riskScore = 2;
+  else if (slope > -0.05) riskScore = 3;
+  else if (slope > -0.15) riskScore = 4;
   else riskScore = 5;
 
   return {
-    slope: regression.m,
-    projected,
+    slope,
+    projected: projectedPi, // For backward compatibility
+    projectedPi,
+    projectedCgpa,
     riskScore,
   };
 }

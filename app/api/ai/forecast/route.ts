@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     // Parse body
     const body = await request.json();
-    const { piHistory } = body;
+    const { piHistory, cgpaHistory } = body;
 
     if (!Array.isArray(piHistory)) {
       return NextResponse.json({ error: 'Missing piHistory array' }, { status: 400 });
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Compute regression forecast
-    const { slope, projected, riskScore } = computeForecast(piHistory);
+    const { slope, projected, projectedPi, projectedCgpa, riskScore } = computeForecast(piHistory, cgpaHistory);
     const trendDirection = getTrendDirection(slope);
 
     // DeepSeek writes a trend label
@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
     const forecastData = {
       slope,
       projected,
+      projectedPi,
+      projectedCgpa,
       riskScore,
       trendLabel,
       trendDirection,

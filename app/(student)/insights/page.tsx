@@ -47,7 +47,9 @@ export default function InsightsPage() {
   const [totalCredits, setTotalCredits] = useState(0);
   const [flaggedCourses, setFlaggedCourses] = useState<Course[]>([]);
   const [piHistory, setPiHistory] = useState<number[]>([]);
+  const [cgpaHistory, setCgpaHistory] = useState<number[]>([]);
   const [currentLevel, setCurrentLevel] = useState<number>(100);
+  const [projectionMode, setProjectionMode] = useState<'pi' | 'cgpa'>('pi');
 
   useEffect(() => {
     if (user) {
@@ -82,13 +84,17 @@ export default function InsightsPage() {
       const maxLevel = semesters.length > 0 ? Math.max(...semesters.map(s => s.level || 100)) : 100;
       setCurrentLevel(maxLevel);
 
-      // Compute CGPA
+      // Compute CGPA & History
       let tPoints = 0;
       let tUnits = 0;
-      semesters.filter(s => s.isComplete).forEach(s => {
+      const cgpaHist: number[] = [];
+      const completedSemesters = semesters.filter(s => s.isComplete);
+      completedSemesters.forEach(s => {
         tUnits += s.creditLoaded || 0;
         tPoints += (s.gpa || 0) * (s.creditLoaded || 0);
+        cgpaHist.push(tUnits > 0 ? tPoints / tUnits : 0);
       });
+      setCgpaHistory(cgpaHist);
       setCurrentCGPA(tUnits > 0 ? tPoints / tUnits : 0);
       setTotalCredits(tUnits);
 
@@ -117,7 +123,7 @@ export default function InsightsPage() {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${authToken}`,
             },
-            body: JSON.stringify({ piHistory: piHist }),
+            body: JSON.stringify({ piHistory: piHist, cgpaHistory: cgpaHist, forceRegenerate: forceRefresh }),
           });
 
           if (res.ok) {
@@ -203,23 +209,54 @@ export default function InsightsPage() {
             className="space-y-6"
           >
             <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6">
-              <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 font-[family-name:var(--font-bricolage)]">
-                Performance Index Projection
-              </h2>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+                <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+                  {projectionMode === 'pi' ? 'Performance Index Projection' : 'Cumulative GPA Projection'}
+                </h2>
+                
+                {/* Mobile-responsive Toggle */}
+                <div className="flex bg-[var(--acade-deep)] p-1 rounded-lg border border-[var(--acade-border-subtle)] w-full md:w-auto">
+                  <button
+                    onClick={() => setProjectionMode('pi')}
+                    className={cn(
+                      "flex-1 md:flex-none px-4 py-1.5 rounded-md text-[length:var(--text-xs)] font-bold transition-colors text-center",
+                      projectionMode === 'pi' ? "bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm border border-[var(--acade-border-subtle)]" : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text-faint)]"
+                    )}
+                  >
+                    PI
+                  </button>
+                  <button
+                    onClick={() => setProjectionMode('cgpa')}
+                    className={cn(
+                      "flex-1 md:flex-none px-4 py-1.5 rounded-md text-[length:var(--text-xs)] font-bold transition-colors text-center",
+                      projectionMode === 'cgpa' ? "bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm border border-[var(--acade-border-subtle)]" : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text-faint)]"
+                    )}
+                  >
+                    CGPA
+                  </button>
+                </div>
+              </div>
+
               {analytics?.forecast ? (
                 <>
                   <ForecastChart
-                    history={piHistory.length > 0 ? piHistory.slice(-3) : [0]}
-                    projected={analytics.forecast.projected}
+                    history={projectionMode === 'pi' 
+                      ? (piHistory.length > 0 ? piHistory.slice(-3) : [0]) 
+                      : (cgpaHistory.length > 0 ? cgpaHistory.slice(-3) : [0])}
+                    projected={projectionMode === 'pi' 
+                      ? analytics.forecast.projectedPi || analytics.forecast.projected 
+                      : analytics.forecast.projectedCgpa || analytics.forecast.projected}
                     labels={[...piHistory.slice(-3).map((_, i) => i === piHistory.slice(-3).length - 1 ? 'Current' : `Past ${piHistory.slice(-3).length - 1 - i}`), 'Next Sem', currentLevel >= 400 ? 'Graduation' : 'Next Year']}
                   />
                   <div className="mt-6 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border-subtle)] flex flex-col md:flex-row items-center gap-4 justify-between">
                     <div>
                       <span className="text-[length:var(--text-xs)] uppercase tracking-wider font-bold text-[var(--acade-text-faint)] block mb-1">
-                        Projected Next Semester PI
+                        Projected Next Semester {projectionMode === 'pi' ? 'PI' : 'CGPA'}
                       </span>
                       <span className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums">
-                        {analytics.forecast.projected[0]?.toFixed(2)}
+                        {(projectionMode === 'pi' 
+                          ? (analytics.forecast.projectedPi || analytics.forecast.projected)[0] 
+                          : (analytics.forecast.projectedCgpa || analytics.forecast.projected)[0])?.toFixed(2)}
                       </span>
                     </div>
                     <Badge variant="status" className="bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)] border-[var(--acade-primary)]/30">
