@@ -17,6 +17,7 @@ interface CGPAArcProps {
   animateOnMount?: boolean;
   showParticles?: boolean;
   className?: string;
+  secondaryLabel?: string;
 }
 
 /* ─── Size presets ─── */
@@ -77,6 +78,7 @@ function CGPAArc({
   animateOnMount = true,
   showParticles = false,
   className,
+  secondaryLabel = 'PI',
 }: CGPAArcProps) {
   const shouldReduceMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -326,7 +328,7 @@ function CGPAArc({
                   : 'text-[length:var(--text-xs)]'
               )}
             >
-              PI: {clampedPI.toFixed(2)}
+              {secondaryLabel}: {clampedPI.toFixed(2)}
             </span>
           </div>
         )}

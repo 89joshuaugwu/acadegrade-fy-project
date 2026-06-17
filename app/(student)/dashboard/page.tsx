@@ -167,6 +167,7 @@ export default function DashboardPage() {
                 size="lg" 
                 animateOnMount={true} 
                 showParticles={true} 
+                secondaryLabel={isPIMode ? 'CGPA' : 'PI'}
               />
               <div className="mt-2 text-center text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
                 {isPIMode ? 'Primary: PI' : 'Primary: CGPA'}

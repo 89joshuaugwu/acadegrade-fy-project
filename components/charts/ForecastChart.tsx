@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, ReferenceArea, ReferenceLine
 } from 'recharts';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -11,9 +11,10 @@ interface ForecastChartProps {
   history: number[];
   projected: number[];
   labels: string[]; // e.g. ["100L S1", "100L S2", "200L S1 (Proj)", "200L S2 (Proj)"]
+  metricName?: string; // "PI" or "CGPA"
 }
 
-export function ForecastChart({ history, projected, labels }: ForecastChartProps) {
+export function ForecastChart({ history, projected, labels, metricName = "PI" }: ForecastChartProps) {
   const [mounted, setMounted] = useState(false);
   const shouldReduceMotion = useReducedMotion();
 
@@ -58,7 +59,7 @@ export function ForecastChart({ history, projected, labels }: ForecastChartProps
   return (
     <div className="w-full h-[300px] text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)]">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="var(--acade-primary)" stopOpacity={0.8}/>
@@ -97,17 +98,18 @@ export function ForecastChart({ history, projected, labels }: ForecastChartProps
               boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
             }}
             itemStyle={{ color: 'var(--acade-text)' }}
-            formatter={(value: any, name: any) => [Number(value).toFixed(2), name === 'actual' ? 'Historical PI' : 'Projected PI']}
+            formatter={(value: any, name: any) => [Number(value).toFixed(2), name === 'actual' ? `Historical ${metricName}` : `Projected ${metricName}`]}
             labelStyle={{ color: 'var(--acade-text-muted)', marginBottom: '4px', fontWeight: 'bold' }}
           />
           
           {/* Historical Area/Line */}
-          <Line 
+          <Area 
             type="monotone" 
             dataKey="actual" 
             stroke="var(--acade-primary)" 
+            fillOpacity={1} 
+            fill="url(#colorActual)" 
             strokeWidth={3}
-            dot={{ r: 4, fill: 'var(--acade-primary)', strokeWidth: 2, stroke: 'var(--acade-deep)' }}
             activeDot={{ r: 6, fill: 'var(--acade-primary)', strokeWidth: 0 }}
             isAnimationActive={!shouldReduceMotion}
             animationDuration={1500}
@@ -148,7 +150,7 @@ export function ForecastChart({ history, projected, labels }: ForecastChartProps
               opacity={0.5} 
             />
           )}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

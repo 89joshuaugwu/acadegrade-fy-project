@@ -48,6 +48,7 @@ export default function InsightsPage() {
   const [flaggedCourses, setFlaggedCourses] = useState<Course[]>([]);
   const [piHistory, setPiHistory] = useState<number[]>([]);
   const [cgpaHistory, setCgpaHistory] = useState<number[]>([]);
+  const [semesterLabels, setSemesterLabels] = useState<string[]>([]);
   const [currentLevel, setCurrentLevel] = useState<number>(100);
   const [projectionMode, setProjectionMode] = useState<'pi' | 'cgpa'>('pi');
   const [cooldownText, setCooldownText] = useState<string | null>(null);
@@ -122,13 +123,16 @@ export default function InsightsPage() {
       let tPoints = 0;
       let tUnits = 0;
       const cgpaHist: number[] = [];
+      const labelsHist: string[] = [];
       const completedSemesters = semesters.filter(s => s.isComplete);
       completedSemesters.forEach(s => {
         tUnits += s.creditLoaded || 0;
         tPoints += (s.gpa || 0) * (s.creditLoaded || 0);
         cgpaHist.push(tUnits > 0 ? tPoints / tUnits : 0);
+        labelsHist.push(`${s.level}L S${s.semester}`);
       });
       setCgpaHistory(cgpaHist);
+      setSemesterLabels(labelsHist);
       setCurrentCGPA(tUnits > 0 ? tPoints / tUnits : 0);
       setTotalCredits(tUnits);
 
@@ -287,7 +291,11 @@ export default function InsightsPage() {
                     projected={projectionMode === 'pi' 
                       ? analytics.forecast.projectedPi || analytics.forecast.projected 
                       : analytics.forecast.projectedCgpa || analytics.forecast.projected}
-                    labels={[...piHistory.slice(-3).map((_, i) => i === piHistory.slice(-3).length - 1 ? 'Current' : `Past ${piHistory.slice(-3).length - 1 - i}`), 'Next Sem', currentLevel >= 400 ? 'Graduation' : 'Next Year']}
+                    labels={semesterLabels.length > 0 
+                      ? [...semesterLabels.slice(-3), 'Next Sem', currentLevel >= 400 ? 'Graduation' : 'Next Year']
+                      : ['Past', 'Current', 'Next Sem', 'Next Year']
+                    }
+                    metricName={projectionMode === 'pi' ? 'PI' : 'CGPA'}
                   />
                   <div className="mt-6 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border-subtle)] flex flex-col md:flex-row items-center gap-4 justify-between">
                     <div>
