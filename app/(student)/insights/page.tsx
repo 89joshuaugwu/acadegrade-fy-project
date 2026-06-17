@@ -136,10 +136,10 @@ export default function InsightsPage() {
       setCurrentCGPA(tUnits > 0 ? tPoints / tUnits : 0);
       setTotalCredits(tUnits);
 
-      // Flagged courses (score < 50) from last 2 completed semesters
-      const recentSemesters = semesters.filter(s => s.isComplete).slice(-2);
+      // Flagged courses (score < 50) from ALL completed semesters (Carry-Overs)
+      const completedSemestersForRisk = semesters.filter(s => s.isComplete);
       let flagged: Course[] = [];
-      for (const sem of recentSemesters) {
+      for (const sem of completedSemestersForRisk) {
         const courses = await queryCollection<Course>(
           `users/${user.uid}/semesters/${sem.id}/courses`
         );
