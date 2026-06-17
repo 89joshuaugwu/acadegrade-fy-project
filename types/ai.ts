@@ -31,6 +31,8 @@ export interface ForecastRequest {
 export interface ForecastResponse {
   slope: number;
   projected: [number, number];
+  projectedPi?: [number, number];
+  projectedCgpa?: [number, number];
   riskScore: number;
   trendLabel: string;
 }
