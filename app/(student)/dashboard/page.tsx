@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import CountUp from 'react-countup';
 import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen } from 'lucide-react';
@@ -245,8 +246,8 @@ export default function DashboardPage() {
               
               <div className="flex items-center justify-between mb-4 relative z-10">
                 <div className="flex items-center gap-2 text-[var(--acade-primary-glow)] font-bold font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)]">
-                  <BrainCircuit size={20} />
-                  Gemini Insight
+                  <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="rounded-md object-contain" />
+                  AcadeMind Insight
                   {insightsStale && (
                     <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/20 text-[var(--acade-warning)] text-[10px] uppercase tracking-wider font-bold">
                       <AlertTriangle size={10} /> Stale
@@ -279,7 +280,7 @@ export default function DashboardPage() {
 
               <div className="mt-6 flex items-center justify-between relative z-10">
                 <span className="text-[10px] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
-                  POWERED BY DEEPSEEK AI
+                  POWERED BY ACADEMIND
                 </span>
                 <Link 
                   href="/insights"

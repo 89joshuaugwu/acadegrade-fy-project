@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, BookOpen } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -168,9 +169,11 @@ export default function InsightsPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+        <div className="size-12 relative animate-pulse flex items-center justify-center">
+          <Image src="/acadegradeailogo.png" alt="AcadeMind" width={40} height={40} className="object-contain" />
+        </div>
         <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-bold animate-pulse">
-          Gemini AI is analyzing your records...
+          AcadeMind is analyzing your records...
         </p>
       </div>
     );
@@ -383,9 +386,10 @@ export default function InsightsPage() {
           <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] tracking-tight">
             AI Insights Hub
           </h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-            Powered by DeepSeek AI & Groq
-          </p>
+          <div className="flex items-center gap-2 mt-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            <Image src="/acadegradeailogo.png" alt="AcadeMind" width={20} height={20} className="rounded-md object-contain opacity-80" />
+            <span>Powered by AcadeMind</span>
+          </div>
         </div>
 
         <div className="relative self-start md:self-auto">
