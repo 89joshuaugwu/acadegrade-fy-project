@@ -82,8 +82,8 @@ export async function generateFastResponse(prompt: string): Promise<string> {
 }
 
 /**
- * DEEPSEEK: High-quality reasoning for Insights generation.
- * Model: deepseek/deepseek-v4-flash:free (via OpenRouter)
+ * ACADEMIND INSIGHTS ENGINE
+ * Model: meta-llama/llama-3.3-70b-instruct:free (via OpenRouter)
  */
 export async function generateDeepInsight(prompt: string): Promise<string> {
   const indexRef = { current: currentOpenRouterIndex };
@@ -95,7 +95,7 @@ export async function generateDeepInsight(prompt: string): Promise<string> {
     });
     const completion = await openai.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'deepseek/deepseek-v4-flash:free',
+      model: 'meta-llama/llama-3.3-70b-instruct:free',
       temperature: 0.65,
       max_tokens: 1024,
     });
