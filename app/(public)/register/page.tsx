@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
 import { signUpWithEmail } from '@/lib/firebase/auth';
-import { setDocument, serverTimestamp } from '@/lib/firebase/firestore';
+import { setDocument, getDocument, serverTimestamp } from '@/lib/firebase/firestore';
 import { DEFAULT_UNIVERSITY, STUDENT_LEVELS } from '@/lib/utils/constants';
 import { NIGERIAN_UNIVERSITIES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES } from '@/lib/utils/academic-data';
 import type { StudentLevel, RecordMode, PastSemesterEntry } from '@/types/user';
@@ -520,6 +520,18 @@ export default function RegisterWizard() {
       router.replace('/dashboard');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const doc = await getDocument<any>('config/settings');
+        if (doc?.maintenanceMode) {
+          router.replace('/maintenance');
+        }
+      } catch (err) {}
+    };
+    checkMaintenance();
+  }, [router]);
 
   // Final submit handler
   const onSubmit = async (data: FormData) => {

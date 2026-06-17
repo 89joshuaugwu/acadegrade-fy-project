@@ -14,7 +14,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+             (request.auth.token.email.lower() in get(/databases/$(database)/documents/config/admins).data.emails);
     }
 
     // 1. Users Collection
@@ -43,13 +43,18 @@ service cloud.firestore {
     }
     
     // 4. Configuration & Admins
-    match /config/{document=**} {
-      allow read: if true;
+    match /config/settings {
+      allow read: if true; // All users need to read announcement banners, etc.
       allow write: if isAdmin(); 
     }
     
+    match /config/admins {
+      allow read: if isAdmin(); // Only admins can read the admin list
+      allow write: if false; // Only manageable directly via Firebase Console
+    }
+    
     // 5. Course Catalog
-    match /catalog/{document=**} {
+    match /courseCatalog/{document=**} {
       allow read: if isAuthenticated();
       allow write: if isAdmin(); 
     }

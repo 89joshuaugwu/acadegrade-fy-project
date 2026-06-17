@@ -46,8 +46,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Fetch custom AI prompt if exists
+    const settingsDoc = await adminDb.collection('config').doc('settings').get();
+    const customPrompt = settingsDoc.data()?.aiSystemPrompt;
+
+    const basePrompt = customPrompt 
+      ? customPrompt 
+      : 'You are an expert academic advisor at a top Nigerian University.';
+
     const prompt = `
-      You are an expert academic advisor at a top Nigerian University.
+      ${basePrompt}
+      
       Analyze the following student data and provide a structured JSON response.
       
       Student Data:

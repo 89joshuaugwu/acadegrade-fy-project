@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
 import { signInWithEmail, signInWithGoogle, resetPassword } from '@/lib/firebase/auth';
+import { getDocument } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -61,6 +62,18 @@ export default function LoginPage() {
       router.replace('/dashboard');
     }
   }, [user, authLoading, router]);
+
+  useEffect(() => {
+    const checkMaintenance = async () => {
+      try {
+        const doc = await getDocument<any>('config/settings');
+        if (doc?.maintenanceMode) {
+          router.replace('/maintenance');
+        }
+      } catch (err) {}
+    };
+    checkMaintenance();
+  }, [router]);
 
   const {
     register,
