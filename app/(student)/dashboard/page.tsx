@@ -13,7 +13,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useCGPA } from '@/hooks/useCGPA';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { updateDocument, getDocument } from '@/lib/firebase/firestore';
+import { updateDocument, getDocument, queryCollection } from '@/lib/firebase/firestore';
 import { cn } from '@/lib/utils/cn';
 
 import { Card } from '@/components/ui/Card';
@@ -34,6 +34,8 @@ export default function DashboardPage() {
   const [isPIMode, setIsPIMode] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [coursesDone, setCoursesDone] = useState(0);
+  const [atRiskCount, setAtRiskCount] = useState(0);
 
   // Sync state with user preference on mount
   useEffect(() => {
@@ -77,6 +79,34 @@ export default function DashboardPage() {
     fetchAiSummary();
   }, []);
 
+  // Fetch real course data for Quick Stats
+  useEffect(() => {
+    if (!user || semesterHistory.length === 0) return;
+
+    let isMounted = true;
+    const fetchCoursesData = async () => {
+      let total = 0;
+      let risk = 0;
+
+      try {
+        for (const sem of semesterHistory) {
+          const courses = await queryCollection<any>(`users/${user.uid}/semesters/${sem.semesterId}/courses`);
+          total += courses.length;
+          risk += courses.filter(c => (c.totalScore ?? 0) < 50).length;
+        }
+        if (isMounted) {
+          setCoursesDone(total);
+          setAtRiskCount(risk);
+        }
+      } catch (err) {
+        console.error('Failed to fetch courses data for stats', err);
+      }
+    };
+
+    fetchCoursesData();
+    return () => { isMounted = false; };
+  }, [user, semesterHistory]);
+
   // Web Share API
   const handleShare = async () => {
     const text = `I'm tracking my academic performance on AcadeGrade! My current ${isPIMode ? 'PI' : 'CGPA'} is ${isPIMode ? pi.toFixed(2) : cgpa.toFixed(2)}.`;
@@ -102,10 +132,6 @@ export default function DashboardPage() {
     const lastSem = semesterHistory[semesterHistory.length - 1];
     return isPIMode ? lastSem.pi : lastSem.gpa;
   }, [semesterHistory, isPIMode]);
-
-  // Mock quick stats
-  const coursesDone = totalCourses || semesterHistory.length * 6; // Rough estimate for now
-  const atRiskCount = 0; // Requires full courses data which we don't fetch at this level
 
   const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
 
@@ -162,12 +188,12 @@ export default function DashboardPage() {
 
             <div className="shrink-0 order-1 md:order-2">
               <CGPAArc 
-                cgpa={isPIMode ? pi : cgpa} 
-                pi={isPIMode ? cgpa : pi} 
+                cgpa={cgpa} 
+                pi={pi} 
                 size="lg" 
                 animateOnMount={true} 
                 showParticles={true} 
-                secondaryLabel={isPIMode ? 'CGPA' : 'PI'}
+                primaryMetric={isPIMode ? 'pi' : 'cgpa'}
               />
               <div className="mt-2 text-center text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
                 {isPIMode ? 'Primary: PI' : 'Primary: CGPA'}

@@ -161,7 +161,10 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             tickFormatter={(val) => val.toFixed(1)}
             dx={-10}
           />
-          <LazyTooltip content={<CustomTooltip />} />
+          <LazyTooltip 
+            content={<CustomTooltip />} 
+            cursor={{ stroke: 'var(--acade-border)', strokeWidth: 1, strokeDasharray: '4 4' }}
+          />
           
           {showForecast && (
             <LazyReferenceArea 

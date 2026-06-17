@@ -100,6 +100,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
             itemStyle={{ color: 'var(--acade-text)' }}
             formatter={(value: any, name: any) => [Number(value).toFixed(2), name === 'actual' ? `Historical ${metricName}` : `Projected ${metricName}`]}
             labelStyle={{ color: 'var(--acade-text-muted)', marginBottom: '4px', fontWeight: 'bold' }}
+            cursor={{ stroke: 'var(--acade-border)', strokeWidth: 1, strokeDasharray: '4 4' }}
           />
           
           {/* Historical Area/Line */}

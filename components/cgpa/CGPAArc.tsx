@@ -17,7 +17,7 @@ interface CGPAArcProps {
   animateOnMount?: boolean;
   showParticles?: boolean;
   className?: string;
-  secondaryLabel?: string;
+  primaryMetric?: 'cgpa' | 'pi';
 }
 
 /* ─── Size presets ─── */
@@ -78,7 +78,7 @@ function CGPAArc({
   animateOnMount = true,
   showParticles = false,
   className,
-  secondaryLabel = 'PI',
+  primaryMetric = 'cgpa',
 }: CGPAArcProps) {
   const shouldReduceMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -122,8 +122,14 @@ function CGPAArc({
   const cgpaDashOffset = useTransform(cgpaSpring, (v: number) => outerCircumference * (1 - v));
   const piDashOffset = useTransform(piSpring, (v: number) => innerCircumference * (1 - v));
 
+  // Determine active metrics
+  const primarySpring = primaryMetric === 'cgpa' ? cgpaSpring : piSpring;
+  const primaryFrac = primaryMetric === 'cgpa' ? cgpaFrac : piFrac;
+  const outerDashOffset = primaryMetric === 'cgpa' ? cgpaDashOffset : piDashOffset;
+  const innerDashOffset = primaryMetric === 'cgpa' ? piDashOffset : cgpaDashOffset;
+
   // Glowing dot position
-  const dotAngle = useTransform(cgpaSpring, (v: number) => START_RAD + SWEEP_RAD * v);
+  const dotAngle = useTransform(primarySpring, (v: number) => START_RAD + SWEEP_RAD * v);
   const dotX = useTransform(dotAngle, (a: number) => cx + config.outerR * Math.cos(a));
   const dotY = useTransform(dotAngle, (a: number) => cx + config.outerR * Math.sin(a));
 
@@ -160,7 +166,7 @@ function CGPAArc({
     const colors = ['#6366F1', '#818CF8', '#F59E0B', '#22C55E', '#38BDF8'];
 
     // Spawn from arc tip position
-    const tipAngle = START_RAD + SWEEP_RAD * cgpaFrac;
+    const tipAngle = START_RAD + SWEEP_RAD * primaryFrac;
     const tipX = cx + config.outerR * Math.cos(tipAngle);
     const tipY = cy + config.outerR * Math.sin(tipAngle);
 
@@ -211,7 +217,7 @@ function CGPAArc({
       clearTimeout(timeout);
       cancelAnimationFrame(frame);
     };
-  }, [showParticles, size, shouldReduceMotion, cgpaFrac, cx, cy, config.outerR]);
+  }, [showParticles, size, shouldReduceMotion, primaryFrac, cx, cy, config.outerR]);
 
   useEffect(() => {
     const cleanup = fireParticles();
@@ -261,27 +267,27 @@ function CGPAArc({
             opacity="0.2"
           />
 
-          {/* PI arc (inner, gold) */}
+          {/* Inner arc (Secondary Metric) */}
           <motion.path
             d={fullInnerPath}
             fill="none"
-            stroke="var(--acade-gold)"
+            stroke={primaryMetric === 'cgpa' ? 'var(--acade-gold)' : `url(#cgpa-grad-${size})`}
             strokeWidth={config.innerStroke}
             strokeLinecap="round"
             strokeDasharray={innerCircumference}
-            style={{ strokeDashoffset: piDashOffset }}
+            style={{ strokeDashoffset: innerDashOffset }}
             opacity="0.85"
           />
 
-          {/* CGPA arc (outer, gradient color) */}
+          {/* Outer arc (Primary Metric) */}
           <motion.path
             d={fullArcPath}
             fill="none"
-            stroke={`url(#cgpa-grad-${size})`}
+            stroke={primaryMetric === 'cgpa' ? `url(#cgpa-grad-${size})` : 'var(--acade-gold)'}
             strokeWidth={config.outerStroke}
             strokeLinecap="round"
             strokeDasharray={outerCircumference}
-            style={{ strokeDashoffset: cgpaDashOffset }}
+            style={{ strokeDashoffset: outerDashOffset }}
             filter={size === 'lg' ? `url(#arc-glow-${size})` : undefined}
           />
 
@@ -307,17 +313,17 @@ function CGPAArc({
                   ? 'text-[length:var(--cgpa-num)]'
                   : 'text-[length:var(--text-3xl)]'
               )}
-              style={{ color: cgpaColor }}
+              style={{ color: primaryMetric === 'cgpa' ? cgpaColor : 'var(--acade-gold)' }}
             >
               {animateOnMount && !shouldReduceMotion ? (
                 <CountUp
-                  end={clampedCGPA}
+                  end={primaryMetric === 'cgpa' ? clampedCGPA : clampedPI}
                   decimals={2}
                   duration={1.8}
                   delay={0.3}
                 />
               ) : (
-                clampedCGPA.toFixed(2)
+                (primaryMetric === 'cgpa' ? clampedCGPA : clampedPI).toFixed(2)
               )}
             </span>
             <span
@@ -328,7 +334,7 @@ function CGPAArc({
                   : 'text-[length:var(--text-xs)]'
               )}
             >
-              {secondaryLabel}: {clampedPI.toFixed(2)}
+              {primaryMetric === 'cgpa' ? `PI: ${clampedPI.toFixed(2)}` : `CGPA: ${clampedCGPA.toFixed(2)}`}
             </span>
           </div>
         )}
