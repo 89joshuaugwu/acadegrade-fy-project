@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut } from 'lucide-react';
+import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { getDocument } from '@/lib/firebase/firestore';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
@@ -30,6 +31,32 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const { unreadCount } = useNotifications();
   const { insightsStale } = useAnalytics();
   const pathname = usePathname();
+  const [announcement, setAnnouncement] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBanner = async () => {
+      try {
+        const doc = await getDocument<any>('config/settings');
+        if (doc?.announcementBanner) {
+          // Check if dismissed in localStorage
+          const dismissed = localStorage.getItem('dismissed_banner');
+          if (dismissed !== doc.announcementBanner) {
+            setAnnouncement(doc.announcementBanner);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load banner', err);
+      }
+    };
+    fetchBanner();
+  }, []);
+
+  const dismissBanner = () => {
+    if (announcement) {
+      localStorage.setItem('dismissed_banner', announcement);
+      setAnnouncement(null);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -163,6 +190,19 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <main className="flex-1 md:ml-[240px] pb-[80px] md:pb-0 relative min-h-screen">
+        {announcement && (
+          <div className="bg-[var(--acade-gold)]/10 border-b border-[var(--acade-gold)]/20 px-4 py-3 flex items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3 text-[var(--acade-gold)]">
+              <AlertTriangle size={18} className="shrink-0 mt-0.5 sm:mt-0" />
+              <p className="text-[length:var(--text-sm)] font-medium font-[family-name:var(--font-dm-sans)] leading-tight">
+                {announcement}
+              </p>
+            </div>
+            <button onClick={dismissBanner} className="p-1 rounded-full text-[var(--acade-gold)] hover:bg-[var(--acade-gold)]/20 transition-colors shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+        )}
         <div className="max-w-6xl mx-auto p-4 md:p-8 w-full h-full">
           {children}
         </div>
