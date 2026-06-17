@@ -125,6 +125,7 @@ export default function RootLayout({
                     secondary: 'var(--acade-deep)',
                   },
                 },
+              }}
             />
             <PWABanner />
           </AuthProvider>
