@@ -40,6 +40,7 @@ export default function InsightsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [rateLimitError, setRateLimitError] = useState(false);
+  const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
   
   const [analytics, setAnalytics] = useState<AnalyticsDoc | null>(null);
   const [currentCGPA, setCurrentCGPA] = useState(0);
@@ -51,6 +52,12 @@ export default function InsightsPage() {
       loadData();
     }
   }, [user]);
+
+  useEffect(() => {
+    if (rateLimitCooldown <= 0) return;
+    const timer = setInterval(() => setRateLimitCooldown(c => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [rateLimitCooldown]);
 
   const loadData = async (forceRefresh = false) => {
     if (!user) return;
@@ -112,6 +119,7 @@ export default function InsightsPage() {
             analyticsData = { ...analyticsData, forecast: forecastData };
           } else if (res.status === 429) {
             setRateLimitError(true);
+            setRateLimitCooldown(59);
           } else {
             const errText = await res.text();
             console.error('Forecast failed:', res.status, errText);
@@ -144,6 +152,7 @@ export default function InsightsPage() {
           }
         } else if (res.status === 429) {
           setRateLimitError(true);
+          setRateLimitCooldown(59);
           if (forceRefresh) toast.error('AI quota reached. Serving cached insights.');
         } else {
           const errText = await res.text();
@@ -361,7 +370,9 @@ export default function InsightsPage() {
             <AlertTriangle size={20} />
             <div>
               <p className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">AI quota temporarily reached.</p>
-              <p className="text-[length:var(--text-xs)]">We are serving your last cached insights. Please try again in 59 seconds.</p>
+              <p className="text-[length:var(--text-xs)]">
+                We are serving your last cached insights. {rateLimitCooldown > 0 ? `Please try again in ${rateLimitCooldown} seconds.` : 'You can try refreshing again.'}
+              </p>
             </div>
           </motion.div>
         )}
@@ -397,11 +408,11 @@ export default function InsightsPage() {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={refreshing}
+            disabled={refreshing || rateLimitCooldown > 0}
             className="bg-[var(--acade-surface)]"
           >
             <RefreshCw size={16} className={cn("mr-2", refreshing && "animate-spin")} />
-            {refreshing ? 'Analyzing...' : 'Refresh Insights'}
+            {refreshing ? 'Analyzing...' : rateLimitCooldown > 0 ? `Wait ${rateLimitCooldown}s` : 'Refresh Insights'}
           </Button>
           {analytics?.insightsStale && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
