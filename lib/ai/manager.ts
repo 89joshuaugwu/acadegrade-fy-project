@@ -82,26 +82,55 @@ export async function generateFastResponse(prompt: string): Promise<string> {
 }
 
 /**
- * ACADEMIND INSIGHTS ENGINE
- * Model: openrouter/free (Auto-routes to best available free model)
+ * ACADEMIND INSIGHTS ENGINE - HIGH AVAILABILITY CASCADE
+ * 1st Try: openrouter/free (Auto-routes to best available free model)
+ * 2nd Try: meta-llama/llama-3.3-70b-instruct:free (Direct attempt)
+ * 3rd Try: Gemini Fallback (via INSIGHT_GEMINI_KEY)
  */
 export async function generateDeepInsight(prompt: string): Promise<string> {
   const indexRef = { current: currentOpenRouterIndex };
   
-  return withKeyRotation(OPENROUTER_KEYS, indexRef, async (apiKey) => {
-    const openai = new OpenAI({ 
-      baseURL: 'https://openrouter.ai/api/v1',
-      apiKey: apiKey 
-    });
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'openrouter/free',
-      temperature: 0.65,
-      max_tokens: 1024,
-    });
-    currentOpenRouterIndex = indexRef.current;
-    return completion.choices[0]?.message?.content || '';
-  }, 'OpenRouter');
+  const attemptOpenRouter = async (modelSlug: string) => {
+    return withKeyRotation(OPENROUTER_KEYS, indexRef, async (apiKey) => {
+      const openai = new OpenAI({ 
+        baseURL: 'https://openrouter.ai/api/v1',
+        apiKey: apiKey 
+      });
+      const completion = await openai.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: modelSlug,
+        temperature: 0.65,
+        max_tokens: 1024,
+      });
+      currentOpenRouterIndex = indexRef.current;
+      return completion.choices[0]?.message?.content || '';
+    }, 'OpenRouter');
+  };
+
+  try {
+    // Try 1: OpenRouter Smart Auto-Router
+    return await attemptOpenRouter('openrouter/free');
+  } catch (err1) {
+    console.warn('OpenRouter Auto failed (Try 1). Retrying with direct model...', err1);
+    try {
+      // Try 2: Direct model fallback on OpenRouter
+      return await attemptOpenRouter('meta-llama/llama-3.3-70b-instruct:free');
+    } catch (err2) {
+      console.warn('OpenRouter completely failed (Try 2). Falling back to Gemini (Try 3)...', err2);
+      // Try 3: Complete fallback to Google Gemini
+      const fallbackKey = process.env.INSIGHT_GEMINI_KEY || process.env.GEMINI_API_KEY;
+      if (!fallbackKey) throw new Error("All AI providers failed and no Gemini fallback key is available.");
+      
+      const { GoogleGenAI } = await import('@google/genai');
+      const ai = new GoogleGenAI({ apiKey: fallbackKey });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.1-flash-lite',
+        contents: prompt,
+        config: { maxOutputTokens: 1024, temperature: 0.65 },
+      });
+      return response.text ?? '';
+    }
+  }
 }
 
 /**

@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Rate limiting fallback: even if forceRegenerate is true, prevent abuse (e.g., max 5 times a day)
-    // We will just do a simple 1h limit on forceRegenerate for safety in this phase.
+    // Rate limiting fallback: even if forceRegenerate is true, prevent abuse.
+    // 12-hour strict rate limit for Written Analysis to protect quota.
     if (forceRegenerate && analyticsData?.lastInsight) {
       const lastCall = analyticsData.lastInsight.timestamp?.toDate();
-      if (lastCall && (new Date().getTime() - lastCall.getTime()) / (1000 * 60 * 60) < 1) {
-        return NextResponse.json({ error: 'Please wait at least 1 hour before regenerating.' }, { status: 429 });
+      if (lastCall && (new Date().getTime() - lastCall.getTime()) / (1000 * 60 * 60) < 12) {
+        return NextResponse.json({ error: 'Please wait at least 12 hours before regenerating.' }, { status: 429 });
       }
     }
 

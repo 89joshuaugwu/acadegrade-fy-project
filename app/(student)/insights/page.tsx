@@ -50,6 +50,8 @@ export default function InsightsPage() {
   const [cgpaHistory, setCgpaHistory] = useState<number[]>([]);
   const [currentLevel, setCurrentLevel] = useState<number>(100);
   const [projectionMode, setProjectionMode] = useState<'pi' | 'cgpa'>('pi');
+  const [cooldownText, setCooldownText] = useState<string | null>(null);
+  const [isCooldownActive, setIsCooldownActive] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -62,6 +64,38 @@ export default function InsightsPage() {
     const timer = setInterval(() => setRateLimitCooldown(c => c - 1), 1000);
     return () => clearInterval(timer);
   }, [rateLimitCooldown]);
+
+  useEffect(() => {
+    if (!analytics?.lastInsight?.timestamp) {
+      setCooldownText(null);
+      setIsCooldownActive(false);
+      return;
+    }
+    
+    const updateCooldown = () => {
+      const timestamp = analytics.lastInsight!.timestamp;
+      const lastCallTime = typeof timestamp.toDate === 'function' 
+        ? timestamp.toDate().getTime() 
+        : new Date(timestamp).getTime();
+        
+      const msIn12Hours = 12 * 60 * 60 * 1000;
+      const timeRemaining = msIn12Hours - (Date.now() - lastCallTime);
+
+      if (timeRemaining > 0) {
+        setIsCooldownActive(true);
+        const h = Math.floor(timeRemaining / (1000 * 60 * 60));
+        const m = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+        setCooldownText(`${h}h ${m}m`);
+      } else {
+        setIsCooldownActive(false);
+        setCooldownText(null);
+      }
+    };
+
+    updateCooldown();
+    const interval = setInterval(updateCooldown, 60000);
+    return () => clearInterval(interval);
+  }, [analytics?.lastInsight?.timestamp]);
 
   const loadData = async (forceRefresh = false) => {
     if (!user) return;
@@ -141,7 +175,8 @@ export default function InsightsPage() {
       }
 
       // 4. Generate written insights if needed
-      if (!analyticsData?.lastInsight || forceRefresh) {
+      // Skip hitting the API if they are on a 12-hour cooldown and forced a refresh
+      if (!analyticsData?.lastInsight || (forceRefresh && !isCooldownActive)) {
         const authToken = await user.getIdToken();
         const res = await fetch('/api/ai/insights', {
           method: 'POST',
@@ -170,6 +205,12 @@ export default function InsightsPage() {
           const errText = await res.text();
           console.error('Insights failed:', res.status, errText);
         }
+      } else if (forceRefresh && isCooldownActive) {
+        // They forced a refresh, but Written Analysis is on cooldown.
+        // We still mark insights as not stale since the forecast was updated.
+        analyticsData = { ...analyticsData, insightsStale: false };
+        await setDocument(`analytics/${user.uid}`, { insightsStale: false });
+        toast.success(`Forecast updated! Written Analysis unlocks in ${cooldownText}.`);
       }
 
       setAnalytics(analyticsData || null);
@@ -383,6 +424,16 @@ export default function InsightsPage() {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
+            {isCooldownActive && (
+              <div className="bg-[var(--acade-deep)] border border-[var(--acade-border-subtle)] rounded-xl p-4 flex items-center justify-between">
+                <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text-muted)]">
+                  Written Analysis rate-limited to protect AI quotas.
+                </span>
+                <Badge variant="status" className="bg-[var(--acade-warning)]/10 text-[var(--acade-warning)] border-[var(--acade-warning)]/30 font-[family-name:var(--font-geist-mono)]">
+                  Updates unlock in: {cooldownText}
+                </Badge>
+              </div>
+            )}
             {analytics?.lastInsight?.data ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InsightCard title="Identified Strengths" content={analytics.lastInsight.data.strengths} type="success" />
@@ -451,11 +502,17 @@ export default function InsightsPage() {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={refreshing || rateLimitCooldown > 0}
-            className="bg-[var(--acade-surface)]"
+            disabled={refreshing || rateLimitCooldown > 0 || !analytics?.insightsStale}
+            className="bg-[var(--acade-surface)] disabled:opacity-50"
           >
             <RefreshCw size={16} className={cn("mr-2", refreshing && "animate-spin")} />
-            {refreshing ? 'Analyzing...' : rateLimitCooldown > 0 ? `Wait ${rateLimitCooldown}s` : 'Refresh Insights'}
+            {refreshing 
+              ? 'Analyzing...' 
+              : rateLimitCooldown > 0 
+                ? `Wait ${rateLimitCooldown}s` 
+                : !analytics?.insightsStale 
+                  ? 'Up to Date' 
+                  : 'Refresh Insights'}
           </Button>
           {analytics?.insightsStale && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
