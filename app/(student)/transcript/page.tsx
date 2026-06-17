@@ -174,11 +174,11 @@ export default function TranscriptPage() {
       </div>
 
       {/* Transcript Paper Preview */}
-      <div className="bg-white text-black p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full">
+      <div className="bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden">
         
         {/* Header */}
-        <div className="text-center mb-8 border-b-2 border-black pb-4">
-          <h2 className="text-xl md:text-2xl font-bold font-serif mb-1 uppercase tracking-tight">
+        <div className="text-center mb-6 sm:mb-8 border-b-2 border-black pb-4">
+          <h2 className="text-base sm:text-xl md:text-2xl font-bold font-serif mb-1 uppercase tracking-tight">
             Enugu State University of Science and Technology
           </h2>
           <p className="text-sm font-semibold uppercase tracking-widest text-gray-700">Agbani, Enugu State</p>
@@ -207,7 +207,8 @@ export default function TranscriptPage() {
               <h3 className="font-bold text-sm bg-gray-200 px-2 py-1 mb-2 border border-gray-400">
                 {sem.label} ({sem.session})
               </h3>
-              <table className="w-full text-xs text-left border-collapse border border-gray-400">
+              <div className="overflow-x-auto pb-2">
+                <table className="w-full min-w-[600px] text-xs text-left border-collapse border border-gray-400">
                 <thead className="bg-gray-100">
                   <tr>
                     <th className="border border-gray-400 p-1.5 w-24">Code</th>
@@ -243,6 +244,7 @@ export default function TranscriptPage() {
                   </tr>
                 </tbody>
               </table>
+              </div>
             </div>
           ))}
         </div>

@@ -9,8 +9,12 @@ const LazyResponsiveContainer = dynamic(
   () => import('recharts').then((m) => m.ResponsiveContainer),
   { ssr: false }
 );
-const LazyLineChart = dynamic(
-  () => import('recharts').then((m) => m.LineChart),
+const LazyComposedChart = dynamic(
+  () => import('recharts').then((m) => m.ComposedChart),
+  { ssr: false }
+);
+const LazyArea = dynamic(
+  () => import('recharts').then((m) => m.Area),
   { ssr: false }
 );
 const LazyLine = dynamic(
@@ -120,7 +124,17 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
     <div className="w-full h-64 md:h-80 relative">
       <div className="absolute inset-0">
       <LazyResponsiveContainer width="100%" height="100%">
-        <LazyLineChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+        <LazyComposedChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+          <defs>
+            <linearGradient id="colorCgpa" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--acade-primary)" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="var(--acade-primary)" stopOpacity={0}/>
+            </linearGradient>
+            <linearGradient id="colorPi" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--acade-gold)" stopOpacity={0.4}/>
+              <stop offset="95%" stopColor="var(--acade-gold)" stopOpacity={0}/>
+            </linearGradient>
+          </defs>
           <LazyCartesianGrid strokeDasharray="3 3" stroke="var(--acade-border-subtle)" vertical={false} />
           <LazyXAxis 
             dataKey="name" 
@@ -160,12 +174,14 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
 
           {/* Historical lines */}
           {showCGPA && (
-            <LazyLine 
+            <LazyArea 
               type="monotone" 
               dataKey="cgpa" 
               stroke="var(--acade-primary)" 
+              fillOpacity={1}
+              fill="url(#colorCgpa)"
               strokeWidth={3}
-              dot={{ r: 4, strokeWidth: 2, fill: 'var(--acade-deep)' }}
+              dot={{ r: 4, strokeWidth: 2, fill: 'var(--acade-deep)', stroke: 'var(--acade-primary)' }}
               activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--acade-primary-glow)' }}
               isAnimationActive={!shouldReduceMotion}
               animationBegin={100}
@@ -186,7 +202,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
               animationDuration={1200}
             />
           )}
-        </LazyLineChart>
+        </LazyComposedChart>
       </LazyResponsiveContainer>
       </div>
     </div>
