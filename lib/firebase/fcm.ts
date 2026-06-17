@@ -12,6 +12,9 @@ if (typeof window !== 'undefined') {
   }
 }
 
+import { doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { db } from './client';
+
 export async function requestNotificationPermission(uid: string): Promise<string | null> {
   if (!messaging) return null;
 
@@ -27,8 +30,11 @@ export async function requestNotificationPermission(uid: string): Promise<string
       });
       
       if (currentToken) {
-        // Save token to Firestore to use in the backend
-        await updateDocument(`users/${uid}`, { fcmToken: currentToken });
+        // Save token to Firestore array
+        const userRef = doc(db, `users/${uid}`);
+        await updateDoc(userRef, {
+          fcmTokens: arrayUnion(currentToken)
+        });
         return currentToken;
       }
     }
@@ -36,6 +42,17 @@ export async function requestNotificationPermission(uid: string): Promise<string
     console.error('Error retrieving notification token:', err);
   }
   return null;
+}
+
+export async function removeNotificationToken(uid: string, token: string): Promise<void> {
+  try {
+    const userRef = doc(db, `users/${uid}`);
+    await updateDoc(userRef, {
+      fcmTokens: arrayRemove(token)
+    });
+  } catch (err) {
+    console.error('Error removing notification token:', err);
+  }
 }
 
 export function onForegroundMessage(callback: (payload: any) => void) {

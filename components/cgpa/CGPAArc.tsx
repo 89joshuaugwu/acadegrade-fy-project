@@ -119,14 +119,15 @@ function CGPAArc({
   });
 
   // Dash offset transforms
-  const cgpaDashOffset = useTransform(cgpaSpring, (v: number) => outerCircumference * (1 - v));
-  const piDashOffset = useTransform(piSpring, (v: number) => innerCircumference * (1 - v));
+  const outerSpring = primaryMetric === 'cgpa' ? cgpaSpring : piSpring;
+  const innerSpring = primaryMetric === 'cgpa' ? piSpring : cgpaSpring;
+
+  const outerDashOffset = useTransform(outerSpring, (v: number) => outerCircumference * (1 - v));
+  const innerDashOffset = useTransform(innerSpring, (v: number) => innerCircumference * (1 - v));
 
   // Determine active metrics
-  const primarySpring = primaryMetric === 'cgpa' ? cgpaSpring : piSpring;
+  const primarySpring = outerSpring;
   const primaryFrac = primaryMetric === 'cgpa' ? cgpaFrac : piFrac;
-  const outerDashOffset = primaryMetric === 'cgpa' ? cgpaDashOffset : piDashOffset;
-  const innerDashOffset = primaryMetric === 'cgpa' ? piDashOffset : cgpaDashOffset;
 
   // Glowing dot position
   const dotAngle = useTransform(primarySpring, (v: number) => START_RAD + SWEEP_RAD * v);

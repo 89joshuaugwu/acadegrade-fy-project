@@ -5,6 +5,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/layout/AuthProvider';
 import { ServiceWorkerKill } from '@/components/shared/ServiceWorkerKill';
+import { PWABanner } from '@/components/ui/PWABanner';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -124,8 +125,8 @@ export default function RootLayout({
                     secondary: 'var(--acade-deep)',
                   },
                 },
-              }}
             />
+            <PWABanner />
           </AuthProvider>
         </ThemeProvider>
       </body>

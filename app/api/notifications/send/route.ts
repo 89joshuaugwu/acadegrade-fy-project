@@ -36,13 +36,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let fcmToken = providedToken;
+    let fcmTokens: string[] = providedToken ? [providedToken] : [];
     let userEmail = '';
 
     // Fetch user doc if UID is provided
     if (uid) {
       const userDoc = await adminDb.collection('users').doc(uid).get();
-      fcmToken = fcmToken || userDoc.data()?.fcmToken;
+      const dbTokens = userDoc.data()?.fcmTokens || [];
+      if (dbTokens.length > 0) {
+        fcmTokens = [...new Set([...fcmTokens, ...dbTokens])];
+      } else if (userDoc.data()?.fcmToken) {
+        fcmTokens.push(userDoc.data()?.fcmToken);
+      }
       userEmail = userDoc.data()?.email || '';
     }
 
@@ -95,10 +100,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Send Push Notification if token exists
-    if (fcmToken) {
+    if (fcmTokens.length > 0) {
       try {
-        await adminMessaging.send({
-          token: fcmToken,
+        await adminMessaging.sendEachForMulticast({
+          tokens: fcmTokens,
           notification: {
             title,
             body: message,
@@ -109,8 +114,7 @@ export async function POST(request: NextRequest) {
         });
       } catch (fcmError) {
         console.error('FCM Send Error:', fcmError);
-        // We do not fail the request if push fails (token might be invalid),
-        // we already saved it to the inbox.
+        // We do not fail the request if push fails
       }
     }
 
