@@ -54,8 +54,8 @@ export function InsightCard({ title, content, type, animated = true }: InsightCa
       )}
     >
       <div className="absolute top-4 right-4 flex items-center gap-2 bg-[var(--acade-deep)] border border-[var(--acade-border-subtle)] px-2 py-1 rounded-full">
-        <Image src="/icons/gemini.svg" alt="Gemini AI" width={14} height={14} />
-        <span className="text-[10px] font-bold text-[var(--acade-text-muted)] tracking-wider uppercase">AI Analysis</span>
+        <Image src="/acadegradeailogo.png" alt="AcadeMind" width={14} height={14} className="rounded-full" />
+        <span className="text-[10px] font-bold text-[var(--acade-text-muted)] tracking-wider uppercase">AcadeMind Analysis</span>
       </div>
 
       <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">

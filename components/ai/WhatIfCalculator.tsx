@@ -32,9 +32,8 @@ export function WhatIfCalculator({
   const [isTyping, setIsTyping] = useState(false);
   const [loading, setLoading] = useState(false);
   
-  // ✅ Rate limiting state
-  const [lastRequestTime, setLastRequestTime] = useState(0);
-  const RATE_LIMIT_MS = 2000; // 2 seconds between requests
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [cooldown, setCooldown] = useState(0);
   
   // Client-side math computation
   useEffect(() => {
@@ -47,45 +46,54 @@ export function WhatIfCalculator({
     }
   }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits]);
 
+  // Cooldown effect
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown(c => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   // Debounced API call for AI note
   useEffect(() => {
-    const timer = setTimeout(async () => {
-      const now = Date.now();
-      // ✅ Check rate limit
-      if (now - lastRequestTime < RATE_LIMIT_MS) {
-        return; // Skip this request, too soon
-      }
+    if (cooldown > 0) return; // Skip if in cooldown
 
+    setCountdown(5);
+    
+    // UI countdown interval
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    const timer = setTimeout(async () => {
+      setCountdown(null);
       setLoading(true);
       try {
         const res = await fetch('/api/ai/whatif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentCGPA,
-            totalCredits,
-            targetCGPA,
-            remainingSemesters,
-            creditLoad
-          })
+          body: JSON.stringify({ currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad })
         });
         
         if (!res.ok) {
-          if (res.status === 429) {
-            toast.error('Rate limited. Please wait before adjusting again.');
-          } else {
-            console.error('WhatIf failed:', res.status);
-          }
+          if (res.status === 429) toast.error('Rate limited. Please wait.');
+          else console.error('WhatIf failed:', res.status);
           return;
         }
         
         const data = await res.json();
         if (data.feasibilityNote) {
-          setLastRequestTime(now); // ✅ Update last request time on success
-          setIsTyping(false); // Reset animation
+          setIsTyping(false);
           setTimeout(() => {
             setFeasibilityNote(data.feasibilityNote);
             setIsTyping(true);
+            setCooldown(30); // Start 30s cooldown after success
           }, 50);
         }
       } catch (err) {
@@ -93,10 +101,13 @@ export function WhatIfCalculator({
       } finally {
         setLoading(false);
       }
-    }, 800);
+    }, 5000); // 5 seconds debounce
 
-    return () => clearTimeout(timer);
-  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, lastRequestTime]);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits]);
 
   return (
     <div className="bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
@@ -128,7 +139,8 @@ export function WhatIfCalculator({
               step={0.01} 
               value={targetCGPA}
               onChange={(e) => setTargetCGPA(parseFloat(e.target.value))}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              disabled={cooldown > 0 || loading}
+              className={cn("absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10", (cooldown > 0 || loading) && "cursor-not-allowed")}
             />
             {/* Custom Track */}
             <div className="absolute inset-x-0 h-2 bg-[var(--acade-surface)] rounded-full overflow-hidden border border-[var(--acade-border-subtle)] pointer-events-none">
@@ -148,6 +160,13 @@ export function WhatIfCalculator({
               <div className="w-1.5 h-1.5 bg-[var(--acade-primary)] rounded-full" />
             </motion.div>
           </div>
+          {cooldown > 0 && (
+            <div className="text-center mt-2">
+              <span className="text-[10px] text-[var(--acade-danger)] font-bold tracking-wider uppercase">
+                Analysis locked. Cooldown: {cooldown}s
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Number Inputs */}
@@ -160,7 +179,8 @@ export function WhatIfCalculator({
               max={10} 
               value={remainingSemesters}
               onChange={(e) => setRemainingSemesters(parseInt(e.target.value) || 1)}
-              className="w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
+              disabled={cooldown > 0 || loading}
+              className={cn("w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors", (cooldown > 0 || loading) && "opacity-50 cursor-not-allowed")}
             />
           </div>
           <div className="space-y-2">
@@ -171,7 +191,8 @@ export function WhatIfCalculator({
               max={30} 
               value={creditLoad}
               onChange={(e) => setCreditLoad(parseInt(e.target.value) || 18)}
-              className="w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
+              disabled={cooldown > 0 || loading}
+              className={cn("w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors", (cooldown > 0 || loading) && "opacity-50 cursor-not-allowed")}
             />
           </div>
         </div>
@@ -218,7 +239,12 @@ export function WhatIfCalculator({
             {loading ? (
               <div className="flex items-center gap-2 text-[var(--acade-text-muted)] text-[length:var(--text-sm)]">
                 <Loader2 size={16} className="animate-spin" />
-                <span>Gemini is analyzing feasibility...</span>
+                <span>AcadeMind is analyzing feasibility...</span>
+              </div>
+            ) : countdown !== null && countdown > 0 ? (
+              <div className="flex items-center gap-2 text-[var(--acade-warning)] text-[length:var(--text-sm)]">
+                <Loader2 size={16} className="animate-spin" />
+                <span>Finalizing points... ({countdown}s)</span>
               </div>
             ) : (
               <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] leading-relaxed italic">

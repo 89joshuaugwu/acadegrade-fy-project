@@ -63,7 +63,7 @@ const steps = [
   { num: 1, title: 'Create Account', desc: 'Sign up with your university details and pick your record mode.' },
   { num: 2, title: 'Enter Results', desc: 'Add courses with scores or letter grades — semester by semester.' },
   { num: 3, title: 'See Your CGPA', desc: 'Watch your CGPA & PI animate in real-time on the signature arc.' },
-  { num: 4, title: 'Get AI Insights', desc: 'Gemini analyzes your trend and recommends actions to improve.' },
+  { num: 4, title: 'Get AI Insights', desc: 'AcadeMind analyzes your trend and recommends actions to improve.' },
 ];
 
 /* ─── AI mock text ─── */
@@ -441,7 +441,7 @@ export default function LandingPage() {
             AI-Powered Analysis
           </motion.h2>
           <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] text-center mb-10 max-w-lg mx-auto">
-            Gemini reads your entire academic history and delivers personalized insights.
+            AcadeMind reads your entire academic history and delivers personalized insights.
           </p>
 
           <motion.div
@@ -467,7 +467,7 @@ export default function LandingPage() {
               </div>
               <div className="absolute bottom-4 right-4">
                 <Badge variant="status" icon={<Sparkles size={12} />}>
-                  Gemini 3.1 Flash-Lite
+                  AcadeMind Engine
                 </Badge>
               </div>
             </Card>
