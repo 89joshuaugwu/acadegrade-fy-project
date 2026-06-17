@@ -9,8 +9,8 @@ const GROQ_KEYS = [
   process.env.GROQ_API_KEY_2
 ].filter(Boolean) as string[];
 
-const DEEPSEEK_KEYS = [
-  process.env.DEEPSEEK_API_KEY_1
+const OPENROUTER_KEYS = [
+  process.env.OPENROUTER_API_KEY
 ].filter(Boolean) as string[];
 
 const GEMINI_KEYS = [
@@ -20,7 +20,7 @@ const GEMINI_KEYS = [
 
 // State to track current keys
 let currentGroqIndex = 0;
-let currentDeepseekIndex = 0;
+let currentOpenRouterIndex = 0;
 let currentGeminiIndex = 0;
 
 /**
@@ -71,8 +71,8 @@ export async function generateFastResponse(prompt: string): Promise<string> {
     const groq = new Groq({ apiKey });
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama3-8b-8192',
-      temperature: 0.5,
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
       max_tokens: 512,
     });
     // Sync the global index after success
@@ -83,25 +83,25 @@ export async function generateFastResponse(prompt: string): Promise<string> {
 
 /**
  * DEEPSEEK: High-quality reasoning for Insights generation.
- * Model: deepseek-chat
+ * Model: deepseek/deepseek-v4-flash:free (via OpenRouter)
  */
 export async function generateDeepInsight(prompt: string): Promise<string> {
-  const indexRef = { current: currentDeepseekIndex };
+  const indexRef = { current: currentOpenRouterIndex };
   
-  return withKeyRotation(DEEPSEEK_KEYS, indexRef, async (apiKey) => {
+  return withKeyRotation(OPENROUTER_KEYS, indexRef, async (apiKey) => {
     const openai = new OpenAI({ 
-      baseURL: 'https://api.deepseek.com',
+      baseURL: 'https://openrouter.ai/api/v1',
       apiKey: apiKey 
     });
     const completion = await openai.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'deepseek-chat',
+      model: 'deepseek/deepseek-v4-flash:free',
       temperature: 0.65,
       max_tokens: 1024,
     });
-    currentDeepseekIndex = indexRef.current;
+    currentOpenRouterIndex = indexRef.current;
     return completion.choices[0]?.message?.content || '';
-  }, 'DeepSeek');
+  }, 'OpenRouter');
 }
 
 /**
