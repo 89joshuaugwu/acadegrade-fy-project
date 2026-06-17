@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
@@ -27,6 +28,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { unreadCount } = useNotifications();
+  const { insightsStale } = useAnalytics();
   const pathname = usePathname();
 
   const handleSignOut = async () => {
@@ -97,7 +99,15 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                       : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
                   )}
                 >
-                  <Icon size={20} className={active ? "text-[var(--acade-primary-glow)]" : ""} />
+                  <div className="relative">
+                    <Icon size={20} className={active ? "text-[var(--acade-primary-glow)]" : ""} />
+                    {tab.label === 'Insights' && insightsStale && (
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-[var(--acade-deep)]"></span>
+                      </span>
+                    )}
+                  </div>
                   {tab.label}
                 </Link>
               );

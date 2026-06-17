@@ -32,13 +32,14 @@ export async function getDocument<T>(path: string): Promise<T | null> {
 /** Set a document (create or overwrite) */
 export async function setDocument(
   path: string,
-  data: DocumentData
+  data: DocumentData,
+  options: { merge: boolean } = { merge: true }
 ): Promise<void> {
   const docRef = doc(db, path);
   await setDoc(docRef, {
     ...data,
     updatedAt: serverTimestamp(),
-  });
+  }, options);
 }
 
 /** Update specific fields on a document */

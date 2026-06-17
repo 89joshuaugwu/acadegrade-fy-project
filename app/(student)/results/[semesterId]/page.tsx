@@ -133,8 +133,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         isComplete: true, // Mark complete on save
       });
 
-      // 4. Forecast is handled lazily when the user visits the Insights page.
-      // No need to trigger a backend prediction here.
+      // 4. Mark AI insights as stale so the user gets a red dot on the Insights tab
+      await setDocument(`analytics/${user.uid}`, { insightsStale: true });
 
       toast.success('Semester saved successfully!');
       router.push('/results');

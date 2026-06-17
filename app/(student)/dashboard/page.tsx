@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useCGPA } from '@/hooks/useCGPA';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { updateDocument, getDocument } from '@/lib/firebase/firestore';
 import { cn } from '@/lib/utils/cn';
 
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const { profile } = useProfile();
   const { cgpa, pi, degreeClass, semesterHistory, totalCredits, totalCourses, loading: cgpaLoading } = useCGPA();
   const shouldReduceMotion = useReducedMotion();
+  const { insightsStale } = useAnalytics();
 
   // Primary mode state: false = CGPA, true = PI
   const [isPIMode, setIsPIMode] = useState(false);
@@ -245,6 +247,11 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2 text-[var(--acade-primary-glow)] font-bold font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)]">
                   <BrainCircuit size={20} />
                   Gemini Insight
+                  {insightsStale && (
+                    <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/20 text-[var(--acade-warning)] text-[10px] uppercase tracking-wider font-bold">
+                      <AlertTriangle size={10} /> Stale
+                    </span>
+                  )}
                 </div>
                 <button 
                   onClick={fetchAiSummary}

@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
-import { getDocument, queryCollection } from '@/lib/firebase/firestore';
+import { getDocument, queryCollection, setDocument } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { InsightCard } from '@/components/ai/InsightCard';
@@ -29,6 +29,7 @@ const TABS: { id: TabType; label: string }[] = [
 interface AnalyticsDoc {
   forecast?: ForecastResponse & { lastUpdated: any; trendDirection: string; trendLabel: string };
   lastInsight?: { data: InsightResponse; timestamp: any };
+  insightsStale?: boolean;
 }
 
 export default function InsightsPage() {
@@ -135,7 +136,11 @@ export default function InsightsPage() {
           analyticsData = {
             ...analyticsData,
             lastInsight: { data: insightData, timestamp: new Date() },
+            insightsStale: false,
           };
+          if (forceRefresh) {
+             await setDocument(`analytics/${user.uid}`, { insightsStale: false });
+          }
         } else if (res.status === 429) {
           setRateLimitError(true);
           if (forceRefresh) toast.error('AI quota reached. Serving cached insights.');
@@ -357,6 +362,20 @@ export default function InsightsPage() {
             </div>
           </motion.div>
         )}
+        {!rateLimitError && analytics?.insightsStale && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-6 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)] text-[var(--acade-primary)] rounded-xl p-4 flex items-center gap-3"
+          >
+            <RefreshCw size={20} className="animate-pulse" />
+            <div>
+              <p className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">Your results changed.</p>
+              <p className="text-[length:var(--text-xs)]">Refresh your insights to get an updated AI analysis.</p>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
@@ -369,16 +388,24 @@ export default function InsightsPage() {
           </p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="bg-[var(--acade-surface)] self-start md:self-auto"
-        >
-          <RefreshCw size={16} className={cn("mr-2", refreshing && "animate-spin")} />
-          {refreshing ? 'Analyzing...' : 'Refresh Insights'}
-        </Button>
+        <div className="relative self-start md:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="bg-[var(--acade-surface)]"
+          >
+            <RefreshCw size={16} className={cn("mr-2", refreshing && "animate-spin")} />
+            {refreshing ? 'Analyzing...' : 'Refresh Insights'}
+          </Button>
+          {analytics?.insightsStale && (
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-[var(--acade-surface)]"></span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Animated Tabs */}

@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import { LayoutDashboard, BookOpen, BrainCircuit, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAnalytics } from '@/hooks/useAnalytics';
 
 const TABS = [
   { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
@@ -17,6 +18,7 @@ const TABS = [
 export function BottomTabBar() {
   const pathname = usePathname();
   const shouldReduceMotion = useReducedMotion();
+  const { insightsStale } = useAnalytics();
 
   // Highlight 'Home' if on dashboard, etc.
   // Using exact matches or startsWith based on the route
@@ -52,14 +54,22 @@ export function BottomTabBar() {
                 <div className="absolute top-0 w-8 h-0.5 bg-[var(--acade-primary)] rounded-b-full" />
               )}
               
-              <Icon
-                size={20}
-                className={cn(
-                  'transition-colors duration-200',
-                  active ? 'text-[var(--acade-primary)] fill-[var(--acade-primary)]/20' : 'text-[var(--acade-text-muted)]'
+              <div className="relative">
+                <Icon
+                  size={20}
+                  className={cn(
+                    'transition-colors duration-200',
+                    active ? 'text-[var(--acade-primary)] fill-[var(--acade-primary)]/20' : 'text-[var(--acade-text-muted)]'
+                  )}
+                  strokeWidth={active ? 2.5 : 2}
+                />
+                {tab.label === 'Insights' && insightsStale && (
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 z-10">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-[var(--acade-deep)]"></span>
+                  </span>
                 )}
-                strokeWidth={active ? 2.5 : 2}
-              />
+              </div>
               <span
                 className={cn(
                   'text-[length:var(--text-xs)] font-medium font-[family-name:var(--font-dm-sans)] transition-colors duration-200',
