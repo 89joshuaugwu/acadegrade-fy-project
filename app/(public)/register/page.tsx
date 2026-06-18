@@ -150,12 +150,126 @@ function generatePastSemesters(
 
 // ----- STEP 1 -----
 function Step1Account({ onNext }: { onNext: () => void }) {
-  const { register, trigger, formState: { errors } } = useFormContext<FormData>();
-  
-  const handleNext = async () => {
+  const { register, trigger, getValues, formState: { errors } } = useFormContext<FormData>();
+  const [showOtp, setShowOtp] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (cooldown > 0) {
+      timer = setInterval(() => setCooldown((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleSendOtp = async () => {
     const valid = await trigger(['fullName', 'matric', 'email', 'password', 'confirmPassword']);
-    if (valid) onNext();
+    if (!valid) return;
+
+    setIsLoading(true);
+    try {
+      const email = getValues('email');
+      const res = await fetch('/api/auth/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, type: 'registration' })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        if (res.status === 429) {
+          setCooldown(data.cooldownRemaining || 60);
+        }
+        toast.error(data.error || 'Failed to send verification code');
+        return;
+      }
+      
+      setShowOtp(true);
+      setCooldown(60);
+      toast.success('Verification code sent to your email!');
+    } catch (err) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) {
+      toast.error('Please enter a 6-digit code');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const email = getValues('email');
+      const res = await fetch('/api/auth/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, type: 'registration', code: otpCode })
+      });
+      const data = await res.json();
+      
+      if (!res.ok) {
+        toast.error(data.error || 'Invalid verification code');
+        return;
+      }
+      
+      toast.success('Email verified successfully!');
+      onNext();
+    } catch (err) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (showOtp) {
+    return (
+      <div className="flex flex-col gap-4">
+        <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
+          Verify Your Email
+        </h2>
+        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
+          We sent a 6-digit verification code to <strong>{getValues('email')}</strong>. Please enter it below to proceed. The code expires in 5 minutes.
+        </p>
+        
+        <Input 
+          label="Verification Code (OTP)" 
+          placeholder="123456" 
+          value={otpCode}
+          onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+          maxLength={6}
+          className="text-center tracking-[0.5em] font-mono text-lg"
+        />
+        
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleVerifyOtp} disabled={isLoading || otpCode.length !== 6} className="mt-2">
+          {isLoading ? 'Verifying...' : 'Verify Email'}
+        </Button>
+        
+        <div className="flex items-center justify-between mt-4">
+          <button 
+            type="button" 
+            onClick={() => setShowOtp(false)}
+            className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hover:text-white transition-colors flex items-center gap-1"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={handleSendOtp}
+            disabled={cooldown > 0 || isLoading}
+            className="text-[length:var(--text-sm)] text-[var(--grade-b)] hover:underline disabled:opacity-50 disabled:hover:no-underline"
+          >
+            {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend Code'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -168,8 +282,8 @@ function Step1Account({ onNext }: { onNext: () => void }) {
       <Input label="Password" type="password" placeholder="At least 8 characters" error={errors.password?.message} {...register('password')} />
       <Input label="Confirm Password" type="password" placeholder="Type password again" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
       
-      <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext} className="mt-2">
-        Continue <ArrowRight size={18} />
+      <Button type="button" variant="primary" size="lg" fullWidth onClick={handleSendOtp} disabled={isLoading} className="mt-2">
+        {isLoading ? 'Sending Code...' : 'Continue'} <ArrowRight size={18} />
       </Button>
     </div>
   );
@@ -556,7 +670,7 @@ export default function RegisterWizard() {
         currentSession: data.entrySession, // We'll save it as currentSession in DB for compatibility, or change later
         isAdmin: false,
         disabled: false,
-        fcmToken: null,
+        fcmTokens: [],
       });
 
       // 3. Pre-create Semesters if Complete Record mode

@@ -13,11 +13,11 @@ import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
-import { signInWithEmail, signInWithGoogle, resetPassword } from '@/lib/firebase/auth';
+import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Modal } from '@/components/ui/Modal';
+
 import { Logo } from '@/components/ui';
 
 /* ─── Validation Schema ─── */
@@ -51,9 +51,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetLoading, setResetLoading] = useState(false);
+
   const [shakeForm, setShakeForm] = useState(false);
 
   // Redirect if already logged in
@@ -124,24 +122,7 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  /* ── Password Reset ── */
-  const handlePasswordReset = useCallback(async () => {
-    if (!resetEmail.trim()) {
-      toast.error('Enter your email address');
-      return;
-    }
-    setResetLoading(true);
-    try {
-      await resetPassword(resetEmail.trim());
-      toast.success('Reset link sent! Check your inbox.');
-      setShowResetModal(false);
-      setResetEmail('');
-    } catch {
-      toast.error('Could not send reset email. Check the address.');
-    } finally {
-      setResetLoading(false);
-    }
-  }, [resetEmail]);
+
 
   // Show nothing while checking auth state
   if (authLoading) {
@@ -251,13 +232,12 @@ export default function LoginPage() {
 
             {/* Forgot password */}
             <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowResetModal(true)}
+              <Link
+                href="/forgot-password"
                 className="text-[length:var(--text-sm)] text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors font-[family-name:var(--font-dm-sans)] h-10 flex items-center"
               >
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             {/* Root error */}
@@ -292,31 +272,7 @@ export default function LoginPage() {
         </p>
       </motion.div>
 
-      {/* Password Reset Modal */}
-      <Modal
-        open={showResetModal}
-        onClose={() => setShowResetModal(false)}
-        title="Reset Password"
-        description="Enter your email address and we'll send you a link to reset your password."
-      >
-        <div className="flex flex-col gap-4 mt-2">
-          <Input
-            label="Email Address"
-            type="email"
-            placeholder="you@university.edu"
-            value={resetEmail}
-            onChange={(e) => setResetEmail(e.target.value)}
-          />
-          <div className="flex items-center justify-end gap-3 mt-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowResetModal(false)}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" loading={resetLoading} onClick={handlePasswordReset}>
-              <Mail size={16} /> Send Reset Link
-            </Button>
-          </div>
-        </div>
-      </Modal>
+
     </main>
   );
 }

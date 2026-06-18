@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Settings, Calculator, Bell, Info, LogOut, X, LayoutDashboard, BookOpen, BrainCircuit } from 'lucide-react';
 import { signOut } from '@/lib/firebase/auth';
+import { removeNotificationToken } from '@/lib/firebase/fcm';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -59,6 +60,9 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
 
   const handleSignOut = async () => {
     try {
+      if (user?.uid) {
+        await removeNotificationToken(user.uid);
+      }
       await signOut();
       onClose();
     } catch (error) {

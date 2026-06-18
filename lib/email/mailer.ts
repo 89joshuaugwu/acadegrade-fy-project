@@ -93,6 +93,32 @@ export const adminNewUserEmail = (name: string, matric: string) => baseTemplate(
   `
 );
 
+export const registrationOtpEmail = (otp: string) => baseTemplate(
+  'Verify your AcadeGrade Registration',
+  `
+    <h2>Hello,</h2>
+    <p>Thank you for starting your registration at AcadeGrade. To securely verify your email address and proceed with your account creation, please use the following One-Time Password (OTP):</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: ${PRIMARY}; background-color: #1F2937; padding: 12px 24px; border-radius: 8px;">${otp}</span>
+    </div>
+    <p>This code will expire in <strong>5 minutes</strong>.</p>
+    <p style="color: #6B7280; font-size: 14px;">If you did not request this, please ignore this email.</p>
+  `
+);
+
+export const resetPasswordOtpEmail = (otp: string) => baseTemplate(
+  'Reset Your AcadeGrade Password',
+  `
+    <h2>Hello,</h2>
+    <p>We received a request to reset the password for your AcadeGrade account. Please use the following One-Time Password (OTP) to verify your identity:</p>
+    <div style="text-align: center; margin: 30px 0;">
+      <span style="font-size: 32px; font-weight: bold; letter-spacing: 4px; color: ${PRIMARY}; background-color: #1F2937; padding: 12px 24px; border-radius: 8px;">${otp}</span>
+    </div>
+    <p>This code will expire in <strong>5 minutes</strong>.</p>
+    <p style="color: #6B7280; font-size: 14px;">If you did not request a password reset, please ignore this email and your password will remain unchanged.</p>
+  `
+);
+
 export async function sendEmail(to: string, subject: string, html: string) {
   try {
     if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {

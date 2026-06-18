@@ -10,7 +10,7 @@ import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { getDocument } from '@/lib/firebase/firestore';
-import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase/fcm';
+import { requestNotificationPermission, onForegroundMessage, removeNotificationToken } from '@/lib/firebase/fcm';
 import toast from 'react-hot-toast';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
@@ -86,6 +86,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = async () => {
     try {
+      if (user?.uid) {
+        await removeNotificationToken(user.uid);
+      }
       await signOut();
     } catch (error) {
       console.error('Failed to sign out', error);
