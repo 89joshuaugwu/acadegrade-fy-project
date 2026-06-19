@@ -101,20 +101,35 @@ export async function POST(request: NextRequest) {
 
     // 3. Send Push Notification if token exists
     if (fcmTokens.length > 0) {
-      try {
-        await adminMessaging.sendEachForMulticast({
-          tokens: fcmTokens,
-          notification: {
-            title,
-            body: message,
-          },
-          data: {
-            type: type || 'info',
-          },
-        });
-      } catch (fcmError) {
-        console.error('FCM Send Error:', fcmError);
-        // We do not fail the request if push fails
+      // Check user preferences if uid is provided
+      let shouldSendPush = true;
+      if (uid) {
+        const userDoc = await adminDb.collection('users').doc(uid).get();
+        const prefs = userDoc.data()?.notificationPreferences || {};
+        
+        // Map event to preference key
+        if (event === 'semesterSaved' && prefs.semesterSaved === false) shouldSendPush = false;
+        if (event === 'degreeClass' && prefs.degreeClass === false) shouldSendPush = false;
+        if (event === 'aiInsights' && prefs.aiInsights === false) shouldSendPush = false;
+        if (type === 'broadcast' && prefs.adminBroadcasts === false) shouldSendPush = false;
+      }
+
+      if (shouldSendPush) {
+        try {
+          await adminMessaging.sendEachForMulticast({
+            tokens: fcmTokens,
+            notification: {
+              title,
+              body: message,
+            },
+            data: {
+              type: type || 'info',
+            },
+          });
+        } catch (fcmError) {
+          console.error('FCM Send Error:', fcmError);
+          // We do not fail the request if push fails
+        }
       }
     }
 

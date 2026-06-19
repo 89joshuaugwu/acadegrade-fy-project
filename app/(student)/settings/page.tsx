@@ -29,6 +29,14 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [recordMode, setRecordMode] = useState<'fromScratch' | 'complete'>('fromScratch');
   const [gradeMode, setGradeMode] = useState<'cgpa' | 'pi'>('cgpa');
+  
+  // Notification Preferences
+  const [notifPrefs, setNotifPrefs] = useState({
+    semesterSaved: true,
+    degreeClass: true,
+    aiInsights: true,
+    adminBroadcasts: true
+  });
 
   // Initialize state when profile loads
   useEffect(() => {
@@ -40,6 +48,15 @@ export default function SettingsPage() {
       setAvatarUrl(profile.avatarUrl || '');
       setRecordMode(profile.recordMode || 'fromScratch');
       setGradeMode(profile.gradeMode || 'cgpa');
+      
+      if (profile.notificationPreferences) {
+        setNotifPrefs({
+          semesterSaved: profile.notificationPreferences.semesterSaved ?? true,
+          degreeClass: profile.notificationPreferences.degreeClass ?? true,
+          aiInsights: profile.notificationPreferences.aiInsights ?? true,
+          adminBroadcasts: profile.notificationPreferences.adminBroadcasts ?? true,
+        });
+      }
     }
   }, [profile]);
 
@@ -139,6 +156,20 @@ export default function SettingsPage() {
       toast.success('Notification permission granted!');
     } else {
       toast.error('Permission denied');
+    }
+  };
+
+  const handleTogglePreference = async (key: keyof typeof notifPrefs, value: boolean) => {
+    if (!user) return;
+    const newPrefs = { ...notifPrefs, [key]: value };
+    setNotifPrefs(newPrefs);
+    try {
+      await updateDocument(`users/${user.uid}`, { notificationPreferences: newPrefs });
+      toast.success('Notification preferences updated');
+    } catch (err) {
+      toast.error('Failed to update preferences');
+      // Revert on error
+      setNotifPrefs(notifPrefs);
     }
   };
 
@@ -307,12 +338,22 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              {['Semester saved successfully', 'Degree class projections change', 'AI insights are ready', 'Admin broadcasts'].map(pref => (
-                <div key={pref} className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)] last:border-0">
-                  <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">{pref}</span>
-                  <Switch checked={true} onCheckedChange={() => {}} />
-                </div>
-              ))}
+              <div className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)]">
+                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Semester saved successfully</span>
+                <Switch checked={notifPrefs.semesterSaved} onCheckedChange={(val) => handleTogglePreference('semesterSaved', val)} />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)]">
+                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Degree class projections change</span>
+                <Switch checked={notifPrefs.degreeClass} onCheckedChange={(val) => handleTogglePreference('degreeClass', val)} />
+              </div>
+              <div className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)]">
+                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">AI insights are ready</span>
+                <Switch checked={notifPrefs.aiInsights} onCheckedChange={(val) => handleTogglePreference('aiInsights', val)} />
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Admin broadcasts</span>
+                <Switch checked={notifPrefs.adminBroadcasts} onCheckedChange={(val) => handleTogglePreference('adminBroadcasts', val)} />
+              </div>
             </div>
           </section>
 

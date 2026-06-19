@@ -159,7 +159,8 @@ export default function InsightsPage() {
             uid: user.uid,
             title: 'Degree Class Update! 🎓',
             message: `Your CGPA trajectory has shifted your degree class to: ${newDegreeClass}.`,
-            type: 'achievement'
+            type: 'achievement',
+            event: 'degreeClass'
           })
         }).catch(console.error);
 

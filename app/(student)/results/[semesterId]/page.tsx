@@ -148,7 +148,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           uid: user.uid,
           title: 'Semester Saved 📝',
           message: `Your results for ${semester?.label || 'this semester'} have been saved. GPA: ${gpa.toFixed(2)}`,
-          type: 'success'
+          type: 'success',
+          event: 'semesterSaved'
         })
       }).catch(console.error);
 

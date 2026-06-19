@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
             uid,
             title: 'Academic Risk Alert ⚠️',
             message: 'Your recent trajectory indicates high academic risk. Check your insights for recommendations.',
-            type: 'warning'
+            type: 'warning',
+            event: 'aiInsights'
           })
         }).catch(e => console.error('Failed to trigger risk notification', e));
       }
