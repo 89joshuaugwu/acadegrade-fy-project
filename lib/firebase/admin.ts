@@ -21,10 +21,24 @@ function getPrivateKey(): string {
   return key.replace(/\\n/g, '\n');
 }
 
-const serviceAccount: ServiceAccount = {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: getPrivateKey(),
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const projectId = process.env.FIREBASE_PROJECT_ID;
+const privateKey = getPrivateKey();
+
+if (!clientEmail) {
+  console.error('FIREBASE_CLIENT_EMAIL is missing or undefined in environment variables!');
+}
+if (!projectId) {
+  console.error('FIREBASE_PROJECT_ID is missing or undefined in environment variables!');
+}
+
+const serviceAccount = {
+  projectId: projectId || '',
+  clientEmail: clientEmail || '',
+  privateKey: privateKey || '',
+  project_id: projectId || '',
+  client_email: clientEmail || '',
+  private_key: privateKey || '',
 };
 
 let app: any;
