@@ -26,6 +26,13 @@ export interface User {
   isAdmin: boolean;
   disabled: boolean;
   fcmToken: string | null;
+  fcmTokens?: string[];
+  notificationPreferences?: {
+    semesterSaved?: boolean;
+    degreeClass?: boolean;
+    aiInsights?: boolean;
+    adminBroadcasts?: boolean;
+  };
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
