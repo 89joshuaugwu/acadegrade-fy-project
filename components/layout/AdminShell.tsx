@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Settings, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
+import { removeNotificationToken } from '@/lib/firebase/fcm';
 import { MobileDrawer } from './MobileDrawer';
 import { cn } from '@/lib/utils/cn';
 
@@ -24,6 +25,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = async () => {
     try {
+      if (user?.uid) {
+        await removeNotificationToken(user.uid);
+      }
       await signOut();
     } catch (error) {
       console.error('Failed to sign out', error);
