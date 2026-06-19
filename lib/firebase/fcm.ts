@@ -12,14 +12,39 @@ if (typeof window !== 'undefined') {
   }
 }
 
+/** Wait until the service worker registration has an active worker */
+async function waitForActiveWorker(reg: ServiceWorkerRegistration, maxWaitMs = 5000): Promise<boolean> {
+  if (reg.active) return true;
+  
+  const worker = reg.installing || reg.waiting;
+  if (!worker) return false;
+  
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(false), maxWaitMs);
+    worker.addEventListener('statechange', () => {
+      if (worker.state === 'activated') {
+        clearTimeout(timeout);
+        resolve(true);
+      }
+    });
+  });
+}
+
 export async function requestNotificationPermission(uid: string): Promise<string | null> {
   if (!messaging) return null;
 
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      // Ensure the service worker is ready so we don't need a separate firebase-messaging-sw.js
+      // Wait for the service worker to be fully ready AND active
       const registration = await navigator.serviceWorker.ready;
+      
+      // Ensure the worker is actually active before subscribing
+      const isActive = await waitForActiveWorker(registration);
+      if (!isActive) {
+        console.warn('Service worker did not activate in time, skipping FCM token retrieval');
+        return null;
+      }
       
       const currentToken = await getToken(messaging, {
         vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,

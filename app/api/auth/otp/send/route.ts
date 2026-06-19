@@ -25,8 +25,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
       } catch (e: any) {
         if (e.code !== 'auth/user-not-found') {
-          return NextResponse.json({ error: 'Error checking email' }, { status: 500 });
+          console.error('Registration email check failed:', e.code, e.message);
+          return NextResponse.json({ error: 'Unable to verify email. Please try again.' }, { status: 500 });
         }
+        // auth/user-not-found means the email is available — proceed
       }
     }
 
@@ -35,12 +37,11 @@ export async function POST(request: NextRequest) {
       try {
         await adminAuth.getUserByEmail(normalizedEmail);
       } catch (e: any) {
-        // To prevent email enumeration, we still pretend we sent it, but we won't actually send it.
-        // But for better UX, maybe we should tell them. Let's return error.
         if (e.code === 'auth/user-not-found') {
-          return NextResponse.json({ error: 'Email not found' }, { status: 404 });
+          return NextResponse.json({ error: 'No account found with this email' }, { status: 404 });
         }
-        return NextResponse.json({ error: 'Error checking email' }, { status: 500 });
+        console.error('Reset email check failed:', e.code, e.message);
+        return NextResponse.json({ error: 'Unable to verify email. Please try again.' }, { status: 500 });
       }
     }
 
@@ -77,15 +78,15 @@ export async function POST(request: NextRequest) {
     });
 
     // Send Email
-    const subject = type === 'registration' ? 'Verify your Registration' : 'Reset your Password';
+    const subject = type === 'registration' ? 'Verify your AcadeGrade Registration' : 'Reset your AcadeGrade Password';
     const htmlBody = type === 'registration' ? registrationOtpEmail(code) : resetPasswordOtpEmail(code);
     
     await sendEmail(normalizedEmail, subject, htmlBody);
 
     return NextResponse.json({ success: true, message: 'OTP sent successfully' });
 
-  } catch (error) {
-    console.error('OTP Send Error:', error);
+  } catch (error: any) {
+    console.error('OTP Send Error:', error?.code, error?.message, error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

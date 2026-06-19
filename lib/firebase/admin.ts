@@ -10,10 +10,21 @@ import { getMessaging } from 'firebase-admin/messaging';
  * NEVER import this file in client components.
  */
 
+function getPrivateKey(): string {
+  const key = process.env.FIREBASE_PRIVATE_KEY;
+  if (!key) {
+    console.error('FIREBASE_PRIVATE_KEY is not set!');
+    return '';
+  }
+  // Handle both Vercel's double-escaped newlines and regular ones
+  // Vercel stores the key with literal \n characters that need to become real newlines
+  return key.replace(/\\n/g, '\n');
+}
+
 const serviceAccount: ServiceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  privateKey: getPrivateKey(),
 };
 
 let app: any;
