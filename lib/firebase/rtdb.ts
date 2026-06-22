@@ -25,3 +25,9 @@ export function subscribeToRTDB<T>(
 export function getRTDBRef(path: string): DatabaseReference {
   return ref(rtdb, path);
 }
+
+/** Set data at a RTDB path */
+export async function setRTDB(path: string, value: any): Promise<void> {
+  const { set } = await import('firebase/database');
+  await set(ref(rtdb, path), value);
+}

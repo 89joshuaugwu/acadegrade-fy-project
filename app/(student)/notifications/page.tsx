@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 import { useAuth } from '@/hooks/useAuth';
 import { queryCollection, updateDocument } from '@/lib/firebase/firestore';
+import { setRTDB } from '@/lib/firebase/rtdb';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils/cn';
 import type { NotificationWithId } from '@/types/analytics';
@@ -52,7 +53,11 @@ export default function NotificationsPage() {
     if (!user) return;
     try {
       await updateDocument(`notifications/${user.uid}/items/${id}`, { read: true });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
+      setNotifications(updated);
+      
+      const newUnreadCount = updated.filter(n => !n.read).length;
+      await setRTDB(`notif_counts/${user.uid}/unread`, newUnreadCount);
     } catch (err) {
       console.error(err);
     }
@@ -68,6 +73,7 @@ export default function NotificationsPage() {
     );
     
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    await setRTDB(`notif_counts/${user.uid}/unread`, 0);
   };
 
   if (loading) {
