@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. Send Push Notification if token exists
+    // 3. Send Push Notification if tokens exist
     if (fcmTokens.length > 0) {
       // Check user preferences if uid is provided
       let shouldSendPush = true;
@@ -116,16 +116,71 @@ export async function POST(request: NextRequest) {
 
       if (shouldSendPush) {
         try {
-          await adminMessaging.sendEachForMulticast({
-            tokens: fcmTokens,
+          // De-duplicate tokens
+          const uniqueTokens = [...new Set(fcmTokens)];
+          
+          const response = await adminMessaging.sendEachForMulticast({
+            tokens: uniqueTokens,
             notification: {
               title,
               body: message,
             },
             data: {
               type: type || 'info',
+              url: data?.url || '/notifications',
+            },
+            // Android-specific: high priority for immediate delivery
+            android: {
+              priority: 'high',
+              notification: {
+                channelId: 'acadegrade_default',
+                icon: 'ic_notification',
+                color: '#6366F1',
+              },
+            },
+            // Web push specific
+            webpush: {
+              headers: {
+                Urgency: 'high',
+              },
+              notification: {
+                icon: 'https://acadegrade.com/android-chrome-192x192.png',
+                badge: 'https://acadegrade.com/favicon-32x32.png',
+              },
             },
           });
+
+          // Clean up invalid/expired tokens
+          const tokensToRemove: string[] = [];
+          response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              const errorCode = resp.error?.code;
+              // These error codes indicate the token is permanently invalid
+              if (
+                errorCode === 'messaging/invalid-registration-token' ||
+                errorCode === 'messaging/registration-token-not-registered' ||
+                errorCode === 'messaging/invalid-argument'
+              ) {
+                tokensToRemove.push(uniqueTokens[idx]);
+              }
+              console.warn(`FCM send failed for token ${idx}:`, resp.error?.code, resp.error?.message);
+            }
+          });
+
+          // Remove stale tokens from user's Firestore document
+          if (tokensToRemove.length > 0 && uid) {
+            try {
+              const { FieldValue } = await import('firebase-admin/firestore');
+              await adminDb.collection('users').doc(uid).update({
+                fcmTokens: FieldValue.arrayRemove(...tokensToRemove),
+              });
+              console.log(`Cleaned up ${tokensToRemove.length} stale FCM tokens for user ${uid}`);
+            } catch (cleanupErr) {
+              console.error('Failed to clean up stale FCM tokens:', cleanupErr);
+            }
+          }
+
+          console.log(`FCM: ${response.successCount}/${uniqueTokens.length} delivered for user ${uid || 'unknown'}`);
         } catch (fcmError) {
           console.error('FCM Send Error:', fcmError);
           // We do not fail the request if push fails
