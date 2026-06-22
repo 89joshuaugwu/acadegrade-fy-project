@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
@@ -47,7 +47,7 @@ export default function LoginPage() {
   const { user, loading: authLoading } = useAuth();
   const shouldReduceMotion = useReducedMotion();
 
-  const [showPassword, setShowPassword] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -210,24 +210,14 @@ export default function LoginPage() {
               })}
             />
 
-            <div className="relative">
-              <Input
-                label="Password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="Enter your password"
-                error={errors.password?.message}
-                {...register('password', { required: 'Password is required' })}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[38px] size-10 flex items-center justify-center text-[var(--acade-text-faint)] hover:text-[var(--acade-text)] transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+            <Input
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              error={errors.password?.message}
+              {...register('password', { required: 'Password is required' })}
+            />
 
             {/* Forgot password */}
             <div className="flex justify-end">

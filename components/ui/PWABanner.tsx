@@ -4,8 +4,10 @@ import { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from './Button';
+import { useAuth } from '@/hooks/useAuth';
 
 export function PWABanner() {
+  const { user } = useAuth();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showBanner, setShowBanner] = useState(false);
 
@@ -14,7 +16,7 @@ export function PWABanner() {
       e.preventDefault();
       setDeferredPrompt(e);
       // Check if user previously dismissed the banner
-      if (localStorage.getItem('pwa_banner_dismissed') !== 'true') {
+      if (localStorage.getItem('pwa_banner_dismissed') !== 'true' && user) {
         setShowBanner(true);
       }
     };
@@ -30,7 +32,7 @@ export function PWABanner() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
     };
-  }, []);
+  }, [user]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
