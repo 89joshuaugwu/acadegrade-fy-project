@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Github, Globe, Mail, Code2, GraduationCap, Cpu, ShieldCheck, Zap } from 'lucide-react';
+import { GitBranch, Globe, Mail, Code2, GraduationCap, Cpu, ShieldCheck, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 export const metadata: Metadata = {
@@ -89,7 +89,7 @@ export default function AboutPage() {
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" className="gap-2" asChild>
                     <a href="https://github.com/89joshuaugwu" target="_blank" rel="noopener noreferrer">
-                      <Github size={16} /> GitHub
+                      <GitBranch size={16} /> GitHub
                     </a>
                   </Button>
                 </div>
@@ -107,7 +107,7 @@ export default function AboutPage() {
             <div className="space-y-3">
               <Button variant="primary" className="w-full gap-2 justify-start" asChild>
                 <a href="https://github.com/89joshuaugwu/acadegrade-fy-project" target="_blank" rel="noopener noreferrer">
-                  <Github size={18} /> Source Repository
+                  <GitBranch size={18} /> Source Repository
                 </a>
               </Button>
               <Button variant="outline" className="w-full gap-2 justify-start" asChild>
