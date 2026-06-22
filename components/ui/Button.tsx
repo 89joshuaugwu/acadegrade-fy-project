@@ -99,7 +99,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             aria-hidden="true"
           />
         )}
-        <span className={cn(loading && 'opacity-80')}>{children}</span>
+        <span className={cn('inline-flex items-center justify-center gap-[inherit]', loading && 'opacity-80')}>
+          {children}
+        </span>
       </motion.button>
     );
   }

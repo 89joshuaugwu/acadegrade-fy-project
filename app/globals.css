@@ -167,6 +167,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Hide default browser password reveal eye icon */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════
    Scrollbar Styling — dark, thin
    ═══════════════════════════════════════════════════ */
