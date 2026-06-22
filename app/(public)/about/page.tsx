@@ -87,11 +87,14 @@ export default function AboutPage() {
                   Software Engineer & Student. Focused on creating impactful, scalable, and beautifully designed web applications.
                 </p>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="gap-2" asChild>
-                    <a href="https://github.com/89joshuaugwu" target="_blank" rel="noopener noreferrer">
-                      <GitBranch size={16} /> GitHub
-                    </a>
-                  </Button>
+                  <a 
+                    href="https://github.com/89joshuaugwu" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors border border-[var(--acade-border)] bg-transparent hover:bg-[var(--acade-deep)] h-9 px-4 py-2"
+                  >
+                    <GitBranch size={16} /> GitHub
+                  </a>
                 </div>
               </div>
             </div>
@@ -105,21 +108,28 @@ export default function AboutPage() {
               Explore the source code or contact for inquiries.
             </p>
             <div className="space-y-3">
-              <Button variant="primary" className="w-full gap-2 justify-start" asChild>
-                <a href="https://github.com/89joshuaugwu/acadegrade-fy-project" target="_blank" rel="noopener noreferrer">
-                  <GitBranch size={18} /> Source Repository
-                </a>
-              </Button>
-              <Button variant="outline" className="w-full gap-2 justify-start" asChild>
-                <a href="https://acadegrade.vercel.app" target="_blank" rel="noopener noreferrer">
-                  <Globe size={18} /> Live Deployment
-                </a>
-              </Button>
-              <Button variant="ghost" className="w-full gap-2 justify-start text-[var(--acade-text-muted)]" asChild>
-                <a href="mailto:contact@joshuazaza.com">
-                  <Mail size={18} /> Contact Builder
-                </a>
-              </Button>
+              <a 
+                href="https://github.com/89joshuaugwu/acadegrade-fy-project" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-start gap-2 rounded-xl text-sm font-medium transition-colors bg-[var(--acade-primary)] text-white hover:bg-[var(--acade-primary-glow)] h-10 px-4 py-2"
+              >
+                <GitBranch size={18} /> Source Repository
+              </a>
+              <a 
+                href="https://acadegrade.vercel.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-full inline-flex items-center justify-start gap-2 rounded-xl text-sm font-medium transition-colors border border-[var(--acade-border)] bg-transparent hover:bg-[var(--acade-deep)] h-10 px-4 py-2"
+              >
+                <Globe size={18} /> Live Deployment
+              </a>
+              <a 
+                href="mailto:contact@joshuazaza.com"
+                className="w-full inline-flex items-center justify-start gap-2 rounded-xl text-sm font-medium transition-colors text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-deep)] h-10 px-4 py-2"
+              >
+                <Mail size={18} /> Contact Builder
+              </a>
             </div>
           </div>
         </section>
