@@ -33,6 +33,17 @@ export async function POST(request: Request) {
   try {
     await verifyAdmin(request);
     const body = await request.json();
+
+    // Support for writing entire documents (e.g. config/about)
+    if (body.collection && body.doc && body.data) {
+      await adminDb.collection(body.collection).doc(body.doc).set(
+        { ...body.data, updatedAt: new Date() },
+        { merge: true }
+      );
+      return NextResponse.json({ message: `Document "${body.collection}/${body.doc}" updated.` });
+    }
+
+    // Original field-level update for config/settings
     const { field, value } = body;
 
     if (!field) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings2, Save, MessageSquare, AlertTriangle, Power, BookOpen } from 'lucide-react';
+import { Settings2, Save, MessageSquare, AlertTriangle, Power, BookOpen, Info, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -27,6 +27,39 @@ const DEFAULT_GRADE_SCALE = [
   { grade: 'F', min: 0, max: 39, points: 0.0 },
 ];
 
+interface AboutPageData {
+  platformDescription: string;
+  academicContext: string;
+  academicContextExtra: string;
+  builderName: string;
+  builderInitials: string;
+  builderBio: string;
+  githubUrl: string;
+  repoUrl: string;
+  liveUrl: string;
+  contactEmail: string;
+  techStack: Array<{ name: string; description: string }>;
+}
+
+const DEFAULT_ABOUT: AboutPageData = {
+  platformDescription: 'The next-generation academic tracking and predictive analytics platform built to help students monitor their progress effortlessly.',
+  academicContext: 'AcadeGrade is a comprehensive Final Year Project (FYP) fulfilling the requirements of the CSC 499 course.',
+  academicContextExtra: 'Beyond standard CGPA calculation, this platform introduces AI-driven forecasts, PWA offline capabilities, strict role-based access control, and granular push notifications.',
+  builderName: 'Joshuazaza',
+  builderInitials: 'JZ',
+  builderBio: 'Software Engineer & Student.',
+  githubUrl: 'https://github.com/89joshuaugwu',
+  repoUrl: 'https://github.com/89joshuaugwu/acadegrade-fy-project',
+  liveUrl: 'https://acadegrade.vercel.app',
+  contactEmail: 'contact@joshuazaza.com',
+  techStack: [
+    { name: 'Next.js', description: 'App Router & Server Actions' },
+    { name: 'React', description: 'Client Components & UI' },
+    { name: 'Firebase', description: 'Auth, Firestore, Cloud Messaging' },
+    { name: 'Tailwind CSS', description: 'Utility-first styling system' },
+  ],
+};
+
 export default function AdminSettingsPage() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<AppSettings>({});
@@ -36,7 +69,16 @@ export default function AdminSettingsPage() {
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [savingGradeScale, setSavingGradeScale] = useState(false);
 
-  useEffect(() => { if (user) loadSettings(); }, [user]);
+  // About page state
+  const [aboutData, setAboutData] = useState<AboutPageData>(DEFAULT_ABOUT);
+  const [savingAbout, setSavingAbout] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      loadSettings();
+      loadAboutData();
+    }
+  }, [user]);
 
   const loadSettings = async () => {
     try {
@@ -48,6 +90,34 @@ export default function AdminSettingsPage() {
       }
     } catch (err) { console.error(err); toast.error('Failed to load settings.'); }
     finally { setLoading(false); }
+  };
+
+  const loadAboutData = async () => {
+    try {
+      const res = await fetch('/api/about');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.about) setAboutData({ ...DEFAULT_ABOUT, ...json.about });
+      }
+    } catch (err) { console.error('Failed to load about data', err); }
+  };
+
+  const saveAboutData = async () => {
+    setSavingAbout(true);
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ collection: 'config', doc: 'about', data: aboutData }),
+      });
+      if (res.ok) {
+        toast.success('About page content updated!');
+      } else {
+        toast.error('Failed to save about page data.');
+      }
+    } catch (err) { toast.error('Error saving about page data.'); }
+    finally { setSavingAbout(false); }
   };
 
   const saveSetting = async (field: keyof AppSettings, value: any, setSavingState: (s: boolean) => void) => {
@@ -226,6 +296,133 @@ export default function AdminSettingsPage() {
             onCheckedChange={(checked) => saveSetting('maintenanceMode', checked, setSavingMaintenance)}
             disabled={savingMaintenance}
           />
+        </div>
+      </Card>
+
+      {/* ─── About Page Content ─── */}
+      <Card variant="default" padding="lg">
+        <div className="flex items-center gap-3 mb-4">
+          <Info className="text-[var(--acade-primary)]" size={20} />
+          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">About Page Content</h2>
+        </div>
+        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-6">
+          Edit the public About page. Changes are reflected immediately on the /about page.
+        </p>
+
+        <div className="space-y-6">
+          {/* Platform Description */}
+          <div>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Platform Description</label>
+            <textarea
+              value={aboutData.platformDescription}
+              onChange={e => setAboutData({ ...aboutData, platformDescription: e.target.value })}
+              rows={3}
+              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
+            />
+          </div>
+
+          {/* Academic Context */}
+          <div>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Academic Context (Main)</label>
+            <textarea
+              value={aboutData.academicContext}
+              onChange={e => setAboutData({ ...aboutData, academicContext: e.target.value })}
+              rows={3}
+              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
+            />
+          </div>
+          <div>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Academic Context (Extra)</label>
+            <textarea
+              value={aboutData.academicContextExtra}
+              onChange={e => setAboutData({ ...aboutData, academicContextExtra: e.target.value })}
+              rows={3}
+              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
+            />
+          </div>
+
+          {/* Builder Info */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="Builder Name" value={aboutData.builderName} onChange={e => setAboutData({ ...aboutData, builderName: e.target.value })} />
+            <Input label="Builder Initials" value={aboutData.builderInitials} onChange={e => setAboutData({ ...aboutData, builderInitials: e.target.value })} />
+            <Input label="Contact Email" value={aboutData.contactEmail} onChange={e => setAboutData({ ...aboutData, contactEmail: e.target.value })} />
+          </div>
+          <div>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Builder Bio</label>
+            <textarea
+              value={aboutData.builderBio}
+              onChange={e => setAboutData({ ...aboutData, builderBio: e.target.value })}
+              rows={2}
+              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
+            />
+          </div>
+
+          {/* Links */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Input label="GitHub URL" value={aboutData.githubUrl} onChange={e => setAboutData({ ...aboutData, githubUrl: e.target.value })} />
+            <Input label="Repository URL" value={aboutData.repoUrl} onChange={e => setAboutData({ ...aboutData, repoUrl: e.target.value })} />
+            <Input label="Live Site URL" value={aboutData.liveUrl} onChange={e => setAboutData({ ...aboutData, liveUrl: e.target.value })} />
+          </div>
+
+          {/* Tech Stack */}
+          <div>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-3 block">Tech Stack</label>
+            <div className="space-y-3">
+              {aboutData.techStack.map((tech, idx) => (
+                <div key={idx} className="grid grid-cols-12 gap-3 items-end">
+                  <div className="col-span-4">
+                    <Input
+                      label={idx === 0 ? 'Name' : ''}
+                      value={tech.name}
+                      onChange={e => {
+                        const newStack = [...aboutData.techStack];
+                        newStack[idx] = { ...newStack[idx], name: e.target.value };
+                        setAboutData({ ...aboutData, techStack: newStack });
+                      }}
+                    />
+                  </div>
+                  <div className="col-span-7">
+                    <Input
+                      label={idx === 0 ? 'Description' : ''}
+                      value={tech.description}
+                      onChange={e => {
+                        const newStack = [...aboutData.techStack];
+                        newStack[idx] = { ...newStack[idx], description: e.target.value };
+                        setAboutData({ ...aboutData, techStack: newStack });
+                      }}
+                    />
+                  </div>
+                  <div className="col-span-1 flex justify-center pb-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-[var(--acade-danger)] px-2"
+                      onClick={() => {
+                        const newStack = aboutData.techStack.filter((_, i) => i !== idx);
+                        setAboutData({ ...aboutData, techStack: newStack });
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setAboutData({ ...aboutData, techStack: [...aboutData.techStack, { name: '', description: '' }] })}
+              >
+                <Plus size={16} /> Add Tech
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end mt-6 pt-4 border-t border-[var(--acade-border-subtle)]">
+          <Button loading={savingAbout} onClick={saveAboutData} className="gap-2">
+            <Save size={16} /> Save About Page
+          </Button>
         </div>
       </Card>
     </div>
