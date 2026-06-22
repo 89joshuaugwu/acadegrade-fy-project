@@ -5,7 +5,8 @@ import { motion } from 'motion/react';
 import { GitBranch, Globe, Mail, Code2, GraduationCap, Cpu, ShieldCheck, Zap, Database, Palette } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Logo } from '@/components/ui/Logo';
-import { PublicHeader, PublicFooter } from '@/components/layout/PublicShell';
+import { Navbar } from '@/components/layout/Navbar';
+import { PublicFooter } from '@/components/layout/PublicShell';
 
 /** Map tech name → icon */
 const TECH_ICONS: Record<string, React.ReactNode> = {
@@ -51,7 +52,7 @@ export default function AboutPage() {
   if (loading) {
     return (
       <>
-        <PublicHeader />
+        <Navbar />
         <div className="min-h-screen pt-24 pb-20 px-4">
           <div className="max-w-4xl mx-auto space-y-10">
             <Skeleton className="h-12 w-64 mx-auto" />
@@ -77,7 +78,7 @@ export default function AboutPage() {
 
   return (
     <>
-      <PublicHeader />
+      <Navbar />
 
       <div className="min-h-screen pt-24 pb-20 px-4 relative overflow-hidden">
         {/* Background blobs */}

@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'motion/react';
 import { FileText, Download, AlertCircle, Clock } from 'lucide-react';
-import { PublicHeader, PublicFooter } from '@/components/layout/PublicShell';
+import { Navbar } from '@/components/layout/Navbar';
+import { PublicFooter } from '@/components/layout/PublicShell';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -90,7 +91,7 @@ export default function ShareTranscriptPage() {
   if (loading) {
     return (
       <>
-        <PublicHeader />
+        <Navbar />
         <div className="min-h-screen pt-24 pb-20 px-4">
           <div className="max-w-4xl mx-auto space-y-6">
             <Skeleton className="h-12 w-64" />
@@ -106,7 +107,7 @@ export default function ShareTranscriptPage() {
   if (error) {
     return (
       <>
-        <PublicHeader />
+        <Navbar />
         <div className="min-h-screen pt-24 pb-20 px-4 flex items-center justify-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -142,7 +143,7 @@ export default function ShareTranscriptPage() {
 
   return (
     <>
-      <PublicHeader />
+      <Navbar />
 
       <div className="min-h-screen pt-24 pb-20 px-4">
         <div className="max-w-4xl mx-auto">

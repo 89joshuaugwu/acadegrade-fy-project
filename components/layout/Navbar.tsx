@@ -29,12 +29,17 @@ function Navbar({ className }: NavbarProps) {
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
+    const sentinel = document.getElementById('hero-sentinel');
+    if (!sentinel) {
+      // On pages without a hero section, always show the opaque background
+      setScrolled(true);
+      return;
+    }
     const observer = new IntersectionObserver(
       ([entry]) => setScrolled(!entry.isIntersecting),
       { threshold: 0, rootMargin: '-80px 0px 0px 0px' }
     );
-    const sentinel = document.getElementById('hero-sentinel');
-    if (sentinel) observer.observe(sentinel);
+    observer.observe(sentinel);
     return () => observer.disconnect();
   }, []);
 

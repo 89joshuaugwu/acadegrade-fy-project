@@ -5,7 +5,8 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calculator, Plus, Trash2, Share2, Save, ArrowRight, Settings2 } from 'lucide-react';
 
-import { PublicHeader, PublicFooter } from '@/components/layout/PublicShell';
+import { Navbar } from '@/components/layout/Navbar';
+import { PublicFooter } from '@/components/layout/PublicShell';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -354,7 +355,7 @@ function QuickCalculatorInner() {
 export default function QuickCalculatorPage() {
   return (
     <>
-      <PublicHeader />
+      <Navbar />
       <div className="min-h-screen pt-24 pb-20 px-4">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Header */}
