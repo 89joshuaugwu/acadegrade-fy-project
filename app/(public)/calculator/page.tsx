@@ -269,9 +269,9 @@ export default function QuickCalculatorPage() {
                     <div className="sm:col-span-1 flex justify-end">
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => handleRemoveCourse(course.id)}
-                        className="text-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/10"
+                        className="text-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/10 px-2"
                         title="Remove course"
                       >
                         <Trash2 size={18} />
