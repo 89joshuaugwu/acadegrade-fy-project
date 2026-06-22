@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Share2, Printer } from 'lucide-react';
+import { Download, Share2, Printer, Link2, Copy, Check, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +20,10 @@ export default function TranscriptPage() {
   const [semesters, setSemesters] = useState<SemesterWithCourses[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (user) loadData();
@@ -89,33 +93,41 @@ export default function TranscriptPage() {
     window.print();
   };
 
-  const handleShare = async () => {
-    if (!navigator.share) {
-      toast.error('Sharing not supported on this browser');
-      return;
-    }
-    
-    setDownloading(true);
+  const handleShareLink = async () => {
+    if (!user) return;
+    setSharing(true);
     try {
-      const token = await user?.getIdToken();
-      const res = await fetch('/api/transcript/generate', {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/transcript/share', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` },
       });
-      
-      if (res.ok) {
-        const blob = await res.blob();
-        const file = new File([blob], 'AcadeGrade_Transcript.pdf', { type: 'application/pdf' });
-        await navigator.share({
-          title: 'My Unofficial Transcript',
-          files: [file]
-        });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to create share link');
       }
-    } catch (err) {
+
+      const { shareUrl: url } = await res.json();
+      setShareUrl(url);
+      setShareModalOpen(true);
+    } catch (err: any) {
       console.error(err);
-      toast.error('Failed to share');
+      toast.error(err.message || 'Failed to create share link');
     } finally {
-      setDownloading(false);
+      setSharing(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success('Link copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
     }
   };
 
@@ -162,9 +174,9 @@ export default function TranscriptPage() {
             <Printer size={16} className="mr-2" />
             Print HTML
           </Button>
-          <Button variant="outline" size="sm" onClick={handleShare}>
-            <Share2 size={16} className="mr-2" />
-            Share
+          <Button variant="outline" size="sm" onClick={handleShareLink} disabled={sharing}>
+            <Link2 size={16} className={cn("mr-2", sharing && "animate-spin")} />
+            {sharing ? 'Creating...' : 'Share Link'}
           </Button>
           <Button variant="primary" size="sm" onClick={handleDownload} disabled={downloading}>
             <Download size={16} className={cn("mr-2", downloading && "animate-bounce")} />
@@ -172,6 +184,56 @@ export default function TranscriptPage() {
           </Button>
         </div>
       </div>
+
+      {/* Share Link Modal */}
+      {shareModalOpen && shareUrl && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden" style={{ zIndex: 9999 }}>
+          <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+            <button
+              onClick={() => setShareModalOpen(false)}
+              className="absolute top-4 right-4 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl bg-[var(--acade-primary)]/10 flex items-center justify-center mx-auto">
+                <Share2 size={24} className="text-[var(--acade-primary)]" />
+              </div>
+              <h3 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)]">
+                Transcript Shared!
+              </h3>
+              <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+                Anyone with this link can view your transcript. The link expires in 30 days.
+              </p>
+
+              {/* QR Code */}
+              <div className="bg-white rounded-xl p-4 inline-block mx-auto">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=4f46e5`}
+                  alt="QR Code"
+                  width={180}
+                  height={180}
+                  className="mx-auto"
+                />
+              </div>
+
+              {/* Link + Copy */}
+              <div className="flex items-center gap-2 bg-[var(--acade-deep)] rounded-xl p-2 border border-[var(--acade-border-subtle)]">
+                <input
+                  readOnly
+                  value={shareUrl}
+                  className="flex-1 bg-transparent text-[length:var(--text-sm)] text-[var(--acade-text)] px-2 outline-none truncate"
+                />
+                <Button variant="primary" size="sm" onClick={handleCopyLink} className="shrink-0 gap-1.5">
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Transcript Paper Preview */}
       <div className="bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden">

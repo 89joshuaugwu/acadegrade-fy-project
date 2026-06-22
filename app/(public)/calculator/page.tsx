@@ -5,6 +5,8 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calculator, Plus, Trash2, Share2, Save, ArrowRight, Settings2 } from 'lucide-react';
 
+import { PublicHeader, PublicFooter } from '@/components/layout/PublicShell';
+
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -351,36 +353,40 @@ function QuickCalculatorInner() {
 /** Page wrapper — Suspense boundary required by useSearchParams */
 export default function QuickCalculatorPage() {
   return (
-    <div className="min-h-screen pt-24 pb-20 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="w-16 h-16 bg-[var(--acade-primary-dim)] rounded-2xl flex items-center justify-center mx-auto mb-6"
-          >
-            <Calculator size={32} className="text-[var(--acade-primary)]" />
-          </motion.div>
-          <h1 className="text-[length:var(--text-4xl)] md:text-[length:var(--text-5xl)] font-bold font-[family-name:var(--font-bricolage)]">
-            Quick Calculator
-          </h1>
-          <p className="text-[var(--acade-text-muted)] text-[length:var(--text-lg)] max-w-2xl mx-auto">
-            Instantly calculate your CGPA and Performance Index. No account required.
-            Share your results or save them for later.
-          </p>
-        </div>
+    <>
+      <PublicHeader />
+      <div className="min-h-screen pt-24 pb-20 px-4">
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="w-16 h-16 bg-[var(--acade-primary-dim)] rounded-2xl flex items-center justify-center mx-auto mb-6"
+            >
+              <Calculator size={32} className="text-[var(--acade-primary)]" />
+            </motion.div>
+            <h1 className="text-[length:var(--text-4xl)] md:text-[length:var(--text-5xl)] font-bold font-[family-name:var(--font-bricolage)]">
+              Quick Calculator
+            </h1>
+            <p className="text-[var(--acade-text-muted)] text-[length:var(--text-lg)] max-w-2xl mx-auto">
+              Instantly calculate your CGPA and Performance Index. No account required.
+              Share your results or save them for later.
+            </p>
+          </div>
 
-        <Suspense
-          fallback={
-            <div className="flex items-center justify-center py-20">
-              <div className="w-8 h-8 border-2 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
-            </div>
-          }
-        >
-          <QuickCalculatorInner />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center py-20">
+                <div className="w-8 h-8 border-2 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            }
+          >
+            <QuickCalculatorInner />
+          </Suspense>
+        </div>
       </div>
-    </div>
+      <PublicFooter />
+    </>
   );
 }
