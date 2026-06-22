@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 
+/** Main transporter — used for general notifications (welcome, semester saved, etc.) */
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
@@ -7,6 +8,18 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS, // App Password
+  },
+});
+
+/** OTP transporter — separate Gmail to reduce load on the main notification account.
+ *  Falls back to the main GMAIL_USER/GMAIL_PASS if OTP-specific credentials aren't set. */
+const otpTransporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.OTP_GMAIL_USER || process.env.GMAIL_USER,
+    pass: process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS,
   },
 });
 
@@ -37,7 +50,7 @@ const baseTemplate = (title: string, content: string) => `
       ${content}
     </div>
     <div class="footer">
-      AcadeGrade &copy; ${new Date().getFullYear()} — Premium Grade Calculator & Academic Advisor
+      AcadeGrade &copy; ${new Date().getFullYear()} — Premium Grade Calculator &amp; Academic Advisor
     </div>
   </div>
 </body>
@@ -119,6 +132,7 @@ export const resetPasswordOtpEmail = (otp: string) => baseTemplate(
   `
 );
 
+/** Send a general notification email (welcome, semester saved, degree class, etc.) */
 export async function sendEmail(to: string, subject: string, html: string) {
   try {
     if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
@@ -133,5 +147,26 @@ export async function sendEmail(to: string, subject: string, html: string) {
     });
   } catch (error) {
     console.error('Failed to send email:', error);
+  }
+}
+
+/** Send an OTP email using the dedicated OTP transporter.
+ *  Uses OTP_GMAIL_USER/OTP_GMAIL_PASS if set, otherwise falls back to GMAIL_USER/GMAIL_PASS. */
+export async function sendOtpEmail(to: string, subject: string, html: string) {
+  try {
+    const otpUser = process.env.OTP_GMAIL_USER || process.env.GMAIL_USER;
+    const otpPass = process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS;
+    if (!otpUser || !otpPass) {
+      console.warn('OTP email credentials missing. Skipping OTP email send to:', to);
+      return;
+    }
+    await otpTransporter.sendMail({
+      from: '"AcadeGrade Auth" <' + otpUser + '>',
+      to,
+      subject,
+      html,
+    });
+  } catch (error) {
+    console.error('Failed to send OTP email:', error);
   }
 }

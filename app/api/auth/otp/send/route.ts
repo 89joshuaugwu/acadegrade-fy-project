@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { sendEmail, registrationOtpEmail, resetPasswordOtpEmail } from '@/lib/email/mailer';
+import { sendOtpEmail, registrationOtpEmail, resetPasswordOtpEmail } from '@/lib/email/mailer';
 
 // 60 seconds cooldown
 const COOLDOWN_MS = 60 * 1000;
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     const subject = type === 'registration' ? 'Verify your AcadeGrade Registration' : 'Reset your AcadeGrade Password';
     const htmlBody = type === 'registration' ? registrationOtpEmail(code) : resetPasswordOtpEmail(code);
     
-    await sendEmail(normalizedEmail, subject, htmlBody);
+    await sendOtpEmail(normalizedEmail, subject, htmlBody);
 
     return NextResponse.json({ success: true, message: 'OTP sent successfully' });
 

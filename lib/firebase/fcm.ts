@@ -35,34 +35,54 @@ export async function requestNotificationPermission(uid: string): Promise<string
 
   try {
     const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      // Wait for the service worker to be fully ready AND active
-      const registration = await navigator.serviceWorker.ready;
-      
-      // Ensure the worker is actually active before subscribing
-      const isActive = await waitForActiveWorker(registration);
-      if (!isActive) {
-        console.warn('Service worker did not activate in time, skipping FCM token retrieval');
-        return null;
-      }
-      
-      const currentToken = await getToken(messaging, {
-        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-        serviceWorkerRegistration: registration,
-      });
-      
-      if (currentToken) {
-        // Use setDoc with merge to handle users created before fcmTokens field existed
-        const userRef = doc(db, `users/${uid}`);
-        await setDoc(userRef, {
-          fcmTokens: arrayUnion(currentToken)
-        }, { merge: true });
+    if (permission !== 'granted') return null;
+
+    // Wait for the service worker to be fully ready AND active
+    const registration = await navigator.serviceWorker.ready;
+    
+    // Ensure the worker is actually active before subscribing
+    const isActive = await waitForActiveWorker(registration);
+    if (!isActive) {
+      console.warn('Service worker did not activate in time, skipping FCM token retrieval');
+      return null;
+    }
+
+    // Retry logic — the first attempt can fail with storage/AbortError
+    // if the SW just activated and IndexedDB isn't ready yet
+    let currentToken: string | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        currentToken = await getToken(messaging!, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+          serviceWorkerRegistration: registration,
+        });
+        break; // success
+      } catch (tokenErr: any) {
+        const isRetryable =
+          tokenErr?.name === 'AbortError' ||
+          tokenErr?.message?.includes('storage') ||
+          tokenErr?.message?.includes('Registration failed');
         
-        // Store the token in sessionStorage so we can remove it on logout
-        sessionStorage.setItem('acadegrade_fcm_token', currentToken);
-        
-        return currentToken;
+        if (isRetryable && attempt < 2) {
+          console.warn(`FCM getToken attempt ${attempt + 1} failed, retrying...`, tokenErr.message);
+          await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+        } else {
+          throw tokenErr;
+        }
       }
+    }
+    
+    if (currentToken) {
+      // Use setDoc with merge to handle users created before fcmTokens field existed
+      const userRef = doc(db, `users/${uid}`);
+      await setDoc(userRef, {
+        fcmTokens: arrayUnion(currentToken)
+      }, { merge: true });
+      
+      // Store the token in sessionStorage so we can remove it on logout
+      sessionStorage.setItem('acadegrade_fcm_token', currentToken);
+      
+      return currentToken;
     }
   } catch (err) {
     console.error('Error retrieving notification token:', err);

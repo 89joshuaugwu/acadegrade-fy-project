@@ -2,8 +2,6 @@
 import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
 import { Serwist } from 'serwist';
-import { initializeApp } from 'firebase/app';
-import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -34,36 +32,36 @@ const serwist = new Serwist({
 serwist.addEventListeners();
 
 // --- FIREBASE CLOUD MESSAGING (BACKGROUND) ---
-try {
-  const firebaseConfig = {
-    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+// We lazy-initialize Firebase Messaging inside the 'push' and 'notificationclick'
+// events to avoid IndexedDB storage conflicts with Serwist's precaching.
+// The push event is the reliable way to handle background push notifications.
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload: any = {};
+  try {
+    payload = event.data.json();
+  } catch {
+    // If it's not JSON, treat as text
+    payload = { notification: { title: 'AcadeGrade', body: event.data.text() } };
+  }
+
+  // FCM wraps the payload — handle both raw and FCM-wrapped formats
+  const notif = payload.notification || {};
+  const title = notif.title || payload.data?.title || 'AcadeGrade Update';
+  const body = notif.body || payload.data?.body || '';
+
+  const options: NotificationOptions = {
+    body,
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    data: payload.data || {},
+    tag: `acadegrade-${Date.now()}`,
   };
 
-  const app = initializeApp(firebaseConfig);
-  const messaging = getMessaging(app);
-
-  onBackgroundMessage(messaging, (payload) => {
-    console.log('[sw.js] Received background message ', payload);
-
-    const notificationTitle = payload.notification?.title || 'AcadeGrade Update';
-    const notificationOptions = {
-      body: payload.notification?.body,
-      icon: '/icon-192x192.png',
-      badge: '/icon-192x192.png',
-      data: payload.data,
-    };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-  });
-} catch (error) {
-  console.error('Firebase messaging sw error:', error);
-}
+  event.waitUntil(self.registration.showNotification(title, options));
+});
 
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
