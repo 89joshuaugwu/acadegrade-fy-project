@@ -25,7 +25,24 @@ export async function requestNotificationPermission(uid: string): Promise<string
     if (permission !== 'granted') return null;
 
     // Wait for the service worker to be fully ready
-    const registration = await navigator.serviceWorker.ready;
+    let registration = await navigator.serviceWorker.ready;
+
+    // Ensure the service worker is active before subscribing
+    if (!registration.active) {
+      await new Promise<void>((resolve) => {
+        const worker = registration.installing || registration.waiting;
+        if (worker) {
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'activated') {
+              resolve();
+            }
+          });
+        } else {
+          resolve();
+        }
+      });
+      registration = await navigator.serviceWorker.ready;
+    }
 
     // Retry logic — the first attempt can fail with storage/AbortError
     // if the SW just activated and IndexedDB isn't ready yet
@@ -41,7 +58,8 @@ export async function requestNotificationPermission(uid: string): Promise<string
         const isRetryable =
           tokenErr?.name === 'AbortError' ||
           tokenErr?.message?.includes('storage') ||
-          tokenErr?.message?.includes('Registration failed');
+          tokenErr?.message?.includes('Registration failed') ||
+          tokenErr?.message?.includes('active Service Worker');
         
         if (isRetryable && attempt < 2) {
           console.warn(`FCM getToken attempt ${attempt + 1} failed, retrying...`, tokenErr.message);
