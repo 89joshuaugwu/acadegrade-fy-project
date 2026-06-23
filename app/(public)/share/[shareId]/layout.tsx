@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import { adminDb } from '@/lib/firebase/admin';
 
 type Props = {
-  params: { shareId: string };
+  params: Promise<{ shareId: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const shareId = params.shareId;
+  const resolvedParams = await params;
+  const shareId = resolvedParams.shareId;
   let studentName = 'Student';
 
   try {
