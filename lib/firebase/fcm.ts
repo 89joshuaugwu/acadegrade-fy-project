@@ -1,8 +1,9 @@
-import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, deleteToken, type Messaging } from 'firebase/messaging';
 import { doc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import app, { db } from './client';
 
 let messaging: Messaging | null = null;
+let isRequesting = false;
 
 if (typeof window !== 'undefined') {
   try {
@@ -14,6 +15,10 @@ if (typeof window !== 'undefined') {
 
 export async function requestNotificationPermission(uid: string): Promise<string | null> {
   if (!messaging) return null;
+  
+  // Prevent concurrent requests in React Strict Mode which causes IndexedDB storage errors
+  if (isRequesting) return null;
+  isRequesting = true;
 
   try {
     const permission = await Notification.requestPermission();
@@ -61,19 +66,44 @@ export async function requestNotificationPermission(uid: string): Promise<string
     }
   } catch (err) {
     console.error('Error retrieving notification token:', err);
+  } finally {
+    isRequesting = false;
   }
   return null;
 }
 
 export async function removeNotificationToken(uid: string, token?: string): Promise<void> {
   try {
-    const tokenToRemove = token || sessionStorage.getItem('acadegrade_fcm_token');
-    if (!tokenToRemove) return;
+    let tokenToRemove = token || sessionStorage.getItem('acadegrade_fcm_token');
     
-    const userRef = doc(db, `users/${uid}`);
-    await updateDoc(userRef, {
-      fcmTokens: arrayRemove(tokenToRemove)
-    });
+    // If we couldn't find the token in sessionStorage (e.g. new tab), try to get it directly
+    if (!tokenToRemove && messaging) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        tokenToRemove = await getToken(messaging, {
+          vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+          serviceWorkerRegistration: registration,
+        });
+      } catch (e) {
+        console.warn('Could not retrieve token to remove:', e);
+      }
+    }
+
+    if (tokenToRemove) {
+      const userRef = doc(db, `users/${uid}`);
+      await updateDoc(userRef, {
+        fcmTokens: arrayRemove(tokenToRemove)
+      });
+    }
+
+    // Delete the token locally so the next user on this device gets a fresh token
+    if (messaging) {
+      try {
+        await deleteToken(messaging);
+      } catch (e) {
+        console.warn('Could not delete FCM token locally:', e);
+      }
+    }
     
     sessionStorage.removeItem('acadegrade_fcm_token');
   } catch (err) {
