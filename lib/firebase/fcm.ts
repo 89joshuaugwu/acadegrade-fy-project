@@ -12,24 +12,6 @@ if (typeof window !== 'undefined') {
   }
 }
 
-/** Wait until the service worker registration has an active worker */
-async function waitForActiveWorker(reg: ServiceWorkerRegistration, maxWaitMs = 5000): Promise<boolean> {
-  if (reg.active) return true;
-  
-  const worker = reg.installing || reg.waiting;
-  if (!worker) return false;
-  
-  return new Promise((resolve) => {
-    const timeout = setTimeout(() => resolve(false), maxWaitMs);
-    worker.addEventListener('statechange', () => {
-      if (worker.state === 'activated') {
-        clearTimeout(timeout);
-        resolve(true);
-      }
-    });
-  });
-}
-
 export async function requestNotificationPermission(uid: string): Promise<string | null> {
   if (!messaging) return null;
 
@@ -37,15 +19,8 @@ export async function requestNotificationPermission(uid: string): Promise<string
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 
-    // Wait for the service worker to be fully ready AND active
+    // Wait for the service worker to be fully ready
     const registration = await navigator.serviceWorker.ready;
-    
-    // Ensure the worker is actually active before subscribing
-    const isActive = await waitForActiveWorker(registration);
-    if (!isActive) {
-      console.warn('Service worker did not activate in time, skipping FCM token retrieval');
-      return null;
-    }
 
     // Retry logic — the first attempt can fail with storage/AbortError
     // if the SW just activated and IndexedDB isn't ready yet
