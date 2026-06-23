@@ -23,23 +23,28 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://acadegrade.com'),
   title: {
-    default: 'AcadeGrade — AI-Powered CGPA Tracker',
+    default: 'AcadeGrade — Premium AI-Powered CGPA Tracker & Academic Advisor',
     template: '%s | AcadeGrade',
   },
   description:
-    'The smartest CGPA tracker built for Nigerian university students. AI-powered insights, dual-metric analysis, and real academic clarity.',
+    'The smartest academic companion for university students. Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',
   keywords: [
     'CGPA calculator',
-    'Nigerian university',
     'GPA tracker',
+    'university grades',
     'academic performance',
-    'ESUT',
-    'AI insights',
-    'Performance Index',
+    'AI academic advisor',
+    'degree class calculator',
+    'student dashboard',
+    'Nigeria university grading',
+    'academic trajectory',
   ],
-  authors: [{ name: 'Joshuazaza', url: 'https://acadegrade.vercel.app' }],
+  authors: [{ name: 'Joshua Chimaobi Ugwu', url: 'https://github.com/joshuazaza' }],
   creator: 'Joshua Chimaobi Ugwu',
+  publisher: 'AcadeGrade',
+  category: 'Education',
   manifest: '/manifest.json',
   verification: {
     google: 'F3WW92_FNlQviz77sKTnTL-EnbLbWuh0P1snZC5e72o',
@@ -54,21 +59,38 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_NG',
-    url: 'https://acadegrade.vercel.app',
-    title: 'AcadeGrade — AI-Powered CGPA Tracker',
+    url: 'https://acadegrade.com',
+    title: 'AcadeGrade — Premium AI-Powered CGPA Tracker',
     description:
-      'Track your CGPA and Performance Index with AI-powered insights. Built for Nigerian university students.',
+      'Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',
     siteName: 'AcadeGrade',
+    images: [
+      {
+        url: '/logo.png', // Fallback OG image
+        width: 800,
+        height: 600,
+        alt: 'AcadeGrade Logo',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AcadeGrade — AI-Powered CGPA Tracker',
+    title: 'AcadeGrade — Premium AI-Powered CGPA Tracker',
     description:
-      'Track your CGPA with AI insights. Built for Nigerian university students.',
+      'Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',
+    creator: '@joshuazaza',
+    images: ['/logo.png'],
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
