@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/admin/', '/api/', '/dashboard', '/insights', '/transcript', '/settings'],
     },
-    sitemap: 'https://acadegrade.com/sitemap.xml',
+    sitemap: 'https://acadegrade.vercel.app/sitemap.xml',
   };
 }

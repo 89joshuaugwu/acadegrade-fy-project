@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      url: `https://acadegrade.com/share/${shareId}`,
+      url: `https://acadegrade.vercel.app/share/${shareId}`,
       images: [
         {
           url: '/logo.png', // Or a dynamic OG image if available

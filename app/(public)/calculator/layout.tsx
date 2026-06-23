@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: 'CGPA & Performance Index Calculator | AcadeGrade',
     description:
       'Instantly calculate your CGPA and Performance Index. Share your results with friends or save them to your profile.',
-    url: 'https://acadegrade.com/calculator',
+    url: 'https://acadegrade.vercel.app/calculator',
   },
 };
 

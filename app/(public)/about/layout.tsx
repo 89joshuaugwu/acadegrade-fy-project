@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     title: 'About AcadeGrade | The Builder & Technology',
     description:
       'Learn about the academic context behind AcadeGrade, the technology stack, and the builder behind the project.',
-    url: 'https://acadegrade.com/about',
+    url: 'https://acadegrade.vercel.app/about',
   },
 };
 

@@ -23,7 +23,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://acadegrade.com'),
+  metadataBase: new URL('https://acadegrade.vercel.app'),
   title: {
     default: 'AcadeGrade — Premium AI-Powered CGPA Tracker & Academic Advisor',
     template: '%s | AcadeGrade',
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_NG',
-    url: 'https://acadegrade.com',
+    url: 'https://acadegrade.vercel.app',
     title: 'AcadeGrade — Premium AI-Powered CGPA Tracker',
     description:
       'Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',

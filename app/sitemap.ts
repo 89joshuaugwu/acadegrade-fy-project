@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://acadegrade.com';
+  const baseUrl = 'https://acadegrade.vercel.app';
 
   // These are the public pages that should be indexed by search engines
   const routes = [

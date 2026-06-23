@@ -45,8 +45,8 @@ const COLORS = {
   textFaint: '#4A5580',
 };
 
-const LOGO_URL = 'https://acadegrade.com/logo.png';
-const SITE_URL = 'https://acadegrade.com';
+const LOGO_URL = 'https://acadegrade.vercel.app/logo.png';
+const SITE_URL = 'https://acadegrade.vercel.app';
 
 /**
  * Premium base email template matching AcadeGrade's dark UI
