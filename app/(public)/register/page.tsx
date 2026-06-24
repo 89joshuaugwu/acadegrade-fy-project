@@ -14,7 +14,8 @@ import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
-import { signUpWithEmail } from '@/lib/firebase/auth';
+import { useProfile } from '@/hooks/useProfile';
+import { signUpWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { setDocument, getDocument, serverTimestamp } from '@/lib/firebase/firestore';
 import { DEFAULT_UNIVERSITY, STUDENT_LEVELS } from '@/lib/utils/constants';
 import { NIGERIAN_UNIVERSITIES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES } from '@/lib/utils/academic-data';
@@ -27,13 +28,27 @@ import { Logo } from '@/components/ui';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
+  authMethod: z.enum(['email', 'google']).default('email'),
   fullName: z.string().min(2, 'Name is too short'),
   matric: z.string().min(4, 'Matric number is required'),
   email: z.string().email('Valid email is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string(),
+  password: z.string().optional(),
+  confirmPassword: z.string().optional(),
 });
-const step1Schema = step1Base.refine((data) => data.password === data.confirmPassword, {
+const step1Schema = step1Base.refine((data) => {
+  if (data.authMethod === 'email') {
+    return !!data.password && data.password.length >= 8;
+  }
+  return true;
+}, {
+  message: "Password must be at least 8 characters",
+  path: ['password'],
+}).refine((data) => {
+  if (data.authMethod === 'email') {
+    return data.password === data.confirmPassword;
+  }
+  return true;
+}, {
   message: "Passwords don't match",
   path: ['confirmPassword'],
 });
@@ -79,7 +94,21 @@ const formSchema = step1Base
   .merge(step2Base)
   .merge(step3Base)
   .merge(step4Base)
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => {
+    if (data.authMethod === 'email') {
+      return !!data.password && data.password.length >= 8;
+    }
+    return true;
+  }, {
+    message: "Password must be at least 8 characters",
+    path: ['password'],
+  })
+  .refine((data) => {
+    if (data.authMethod === 'email') {
+      return data.password === data.confirmPassword;
+    }
+    return true;
+  }, {
     message: "Passwords don't match",
     path: ['confirmPassword'],
   })
@@ -150,11 +179,12 @@ function generatePastSemesters(
 
 // ----- STEP 1 -----
 function Step1Account({ onNext }: { onNext: () => void }) {
-  const { register, trigger, getValues, formState: { errors } } = useFormContext<FormData>();
+  const { register, trigger, getValues, setValue, watch, formState: { errors } } = useFormContext<FormData>();
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const authMethod = watch('authMethod');
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -164,9 +194,38 @@ function Step1Account({ onNext }: { onNext: () => void }) {
     return () => clearInterval(timer);
   }, [cooldown]);
 
+  const handleGoogleSignup = async () => {
+    setIsLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      const user = result.user;
+      
+      setValue('authMethod', 'google', { shouldValidate: true });
+      if (user.email) setValue('email', user.email, { shouldValidate: true });
+      if (user.displayName) setValue('fullName', user.displayName, { shouldValidate: true });
+      
+      toast.success('Authenticated! Please verify your name and enter your matric number.');
+    } catch (err: any) {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        toast.error('Failed to authenticate with Google');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSendOtp = async () => {
-    const valid = await trigger(['fullName', 'matric', 'email', 'password', 'confirmPassword']);
+    const fieldsToValidate = authMethod === 'google' 
+      ? ['fullName', 'matric', 'email'] as const
+      : ['fullName', 'matric', 'email', 'password', 'confirmPassword'] as const;
+      
+    const valid = await trigger(fieldsToValidate);
     if (!valid) return;
+
+    if (authMethod === 'google') {
+      onNext();
+      return;
+    }
 
     setIsLoading(true);
     try {
@@ -276,14 +335,47 @@ function Step1Account({ onNext }: { onNext: () => void }) {
       <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
         Create Your Account
       </h2>
+
+      {authMethod === 'email' && (
+        <Button type="button" variant="outline" size="lg" fullWidth onClick={handleGoogleSignup} disabled={isLoading} className="mb-2">
+          <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+          </svg>
+          Continue with Google
+        </Button>
+      )}
+
+      {authMethod === 'email' && (
+        <div className="relative flex items-center py-2 mb-2">
+          <div className="flex-grow border-t border-[var(--acade-border)]"></div>
+          <span className="flex-shrink-0 mx-4 text-[var(--acade-text-muted)] text-[length:var(--text-xs)] uppercase tracking-wider font-bold">OR</span>
+          <div className="flex-grow border-t border-[var(--acade-border)]"></div>
+        </div>
+      )}
+
+      {authMethod === 'google' && (
+        <div className="bg-[var(--acade-success)]/10 text-[var(--acade-success)] p-3 rounded-xl mb-4 flex items-start gap-2 border border-[var(--acade-success)]/20">
+          <Check className="shrink-0 mt-0.5" size={18} />
+          <p className="text-[length:var(--text-sm)]">Google authenticated! Verify your details below to continue.</p>
+        </div>
+      )}
+
       <Input label="Full Name" placeholder="joshuazaza" error={errors.fullName?.message} {...register('fullName')} />
       <Input label="Matric Number" placeholder="2022030200000" error={errors.matric?.message} {...register('matric')} />
-      <Input label="Email Address" type="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')} />
-      <Input label="Password" type="password" placeholder="At least 8 characters" error={errors.password?.message} {...register('password')} />
-      <Input label="Confirm Password" type="password" placeholder="Type password again" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
+      <Input label="Email Address" type="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')} disabled={authMethod === 'google'} />
+      
+      {authMethod === 'email' && (
+        <>
+          <Input label="Password" type="password" placeholder="At least 8 characters" error={errors.password?.message} {...register('password')} />
+          <Input label="Confirm Password" type="password" placeholder="Type password again" error={errors.confirmPassword?.message} {...register('confirmPassword')} />
+        </>
+      )}
       
       <Button type="button" variant="primary" size="lg" fullWidth onClick={handleSendOtp} disabled={isLoading} className="mt-2">
-        {isLoading ? 'Sending Code...' : 'Continue'} <ArrowRight size={18} />
+        {isLoading ? (authMethod === 'google' ? 'Saving...' : 'Sending Code...') : 'Continue'} <ArrowRight size={18} />
       </Button>
     </div>
   );
@@ -619,22 +711,34 @@ export default function RegisterWizard() {
 
   const totalSteps = 5;
 
+  const { profile } = useProfile();
+
   const methods = useForm<FormData>({
     resolver: zodResolver(formSchema),
     mode: 'onTouched',
     defaultValues: {
+      authMethod: 'email',
       university: DEFAULT_UNIVERSITY,
       recordMode: 'fromScratch',
       courseDuration: 4,
     }
   });
 
-  // Redirect if already logged in
+  // Redirect if already logged in AND has a profile
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading && user && profile) {
       router.replace('/dashboard');
     }
-  }, [user, authLoading, router]);
+  }, [user, profile, authLoading, router]);
+
+  // Pre-fill if logged in via Google but no profile yet
+  useEffect(() => {
+    if (!authLoading && user && !profile && methods.getValues('authMethod') !== 'google') {
+      methods.setValue('authMethod', 'google');
+      if (user.email) methods.setValue('email', user.email);
+      if (user.displayName) methods.setValue('fullName', user.displayName);
+    }
+  }, [user, profile, authLoading, methods]);
 
   useEffect(() => {
     const checkMaintenance = async () => {
@@ -654,9 +758,18 @@ export default function RegisterWizard() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      // 1. Firebase Auth Create User
-      const userCred = await signUpWithEmail(data.email, data.password);
-      const uid = userCred.user.uid;
+      // 1. Firebase Auth Create User (if not already authenticated via Google)
+      let uid = user?.uid;
+      let userToken = '';
+      if (!user) {
+        const userCred = await signUpWithEmail(data.email, data.password!);
+        uid = userCred.user.uid;
+        userToken = await userCred.user.getIdToken();
+      } else {
+        userToken = await user.getIdToken();
+      }
+
+      if (!uid) throw new Error('Failed to obtain user ID');
 
       // 2. Create User Document
       await setDocument(`users/${uid}`, {
@@ -711,7 +824,7 @@ export default function RegisterWizard() {
         headers: {
           'Content-Type': 'application/json',
           // Assuming we use an internal secret or the user token
-          'Authorization': `Bearer ${await userCred.user.getIdToken()}`,
+          'Authorization': `Bearer ${userToken}`,
         },
         body: JSON.stringify({
           uid,
@@ -748,7 +861,8 @@ export default function RegisterWizard() {
     return <div className="min-h-screen bg-[var(--acade-void)]" />;
   }
 
-  if (signupsDisabled) {
+  // We only hide the wizard if they are logged in AND have a profile completed
+  if (user && profile && !isSuccess) return null;
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--acade-void)] text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[var(--acade-primary)]/5 mix-blend-overlay pointer-events-none" />

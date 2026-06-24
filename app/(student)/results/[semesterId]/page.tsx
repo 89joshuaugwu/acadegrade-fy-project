@@ -7,7 +7,8 @@ import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, Che
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument, increment } from '@/lib/firebase/firestore';
+import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
+import { increment } from 'firebase/firestore';
 import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
 import { GRADE_SCALE } from '@/lib/utils/constants';
