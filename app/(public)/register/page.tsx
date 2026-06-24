@@ -863,6 +863,8 @@ export default function RegisterWizard() {
 
   // We only hide the wizard if they are logged in AND have a profile completed
   if (user && profile && !isSuccess) return null;
+
+  if (signupsDisabled) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--acade-void)] text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)] relative overflow-hidden">
         <div className="absolute inset-0 bg-[var(--acade-primary)]/5 mix-blend-overlay pointer-events-none" />
@@ -891,8 +893,6 @@ export default function RegisterWizard() {
       </div>
     );
   }
-
-  if (user && !isSuccess) return null;
 
   return (
     <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
