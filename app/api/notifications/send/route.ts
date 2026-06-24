@@ -176,8 +176,8 @@ export async function POST(request: NextRequest) {
                   Urgency: 'high',
                 },
                 notification: {
-                  icon: 'https://acadegrade.com/android-chrome-192x192.png',
-                  badge: 'https://acadegrade.com/favicon-32x32.png',
+                  icon: 'https://acadegrade.vercel.app/android-chrome-192x192.png',
+                  badge: 'https://acadegrade.vercel.app/favicon-32x32.png',
                 },
               },
             });
