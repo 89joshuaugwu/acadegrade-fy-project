@@ -15,6 +15,7 @@ To keep the documentation organized and digestible, the system architecture has 
 6. **[Tech Stack & Environment variables](6_tech_stack_and_env.md)**: Core libraries (Next.js, React 19, SWR), AI Services, and `.env` setup.
 7. **[Core Packages & Dependencies](7_packages.md)**: Detailed breakdown of every NPM package used in the project, categorized by utility.
 8. **[Deployment & Maintenance](8_deployment_and_maintenance.md)**: Step-by-step Vercel deployment instructions, Firebase setup rules, and how to safely ignore known build warnings.
+9. **[Recent Updates & Monetization](9_recent_updates_and_monetization.md)**: Sponsored Advert banners, Developer image uploads, and dashboard ad delivery system.
 
 ---
 
