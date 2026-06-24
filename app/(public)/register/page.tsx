@@ -28,7 +28,7 @@ import { Logo } from '@/components/ui';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
-  authMethod: z.enum(['email', 'google']).default('email'),
+  authMethod: z.enum(['email', 'google']),
   fullName: z.string().min(2, 'Name is too short'),
   matric: z.string().min(4, 'Matric number is required'),
   email: z.string().email('Valid email is required'),
