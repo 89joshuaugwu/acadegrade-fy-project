@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { getDocument, queryCollection, setDocument, updateDocument } from '@/lib/firebase/firestore';
 import { DEGREE_CLASSES } from '@/lib/utils/constants';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { InsightCard } from '@/components/ai/InsightCard';
@@ -40,6 +41,8 @@ interface AnalyticsDoc {
 export default function InsightsPage() {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { isFeatureDisabled } = usePlatformSettings();
+  const disableInsights = isFeatureDisabled('ai_insights');
   
   const [activeTab, setActiveTab] = useState<TabType>('forecast');
   const [loading, setLoading] = useState(true);
@@ -200,7 +203,7 @@ export default function InsightsPage() {
       // 2. We already fetched the existing analytics doc above
 
       // 3. Generate forecast if needed
-      if (!analyticsData?.forecast || forceRefresh) {
+      if ((!analyticsData?.forecast || forceRefresh) && !disableInsights) {
         if (piHist.length > 0) {
           const authToken = await user.getIdToken();
 
@@ -229,7 +232,7 @@ export default function InsightsPage() {
 
       // 4. Generate written insights if needed
       // Skip hitting the API if they are on a 12-hour cooldown and forced a refresh
-      if (!analyticsData?.lastInsight || (forceRefresh && !isCooldownActive)) {
+      if ((!analyticsData?.lastInsight || (forceRefresh && !isCooldownActive)) && !disableInsights) {
         const authToken = await user.getIdToken();
         const res = await fetch('/api/ai/insights', {
           method: 'POST',
@@ -559,19 +562,22 @@ export default function InsightsPage() {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={refreshing || rateLimitCooldown > 0 || !analytics?.insightsStale}
+            disabled={refreshing || rateLimitCooldown > 0 || !analytics?.insightsStale || disableInsights}
             className="bg-[var(--acade-surface)] disabled:opacity-50"
+            title={disableInsights ? "AI Insights are temporarily disabled for maintenance" : ""}
           >
             <RefreshCw size={16} className={cn("mr-2", refreshing && "animate-spin")} />
             {refreshing 
               ? 'Analyzing...' 
               : rateLimitCooldown > 0 
                 ? `Wait ${rateLimitCooldown}s` 
-                : !analytics?.insightsStale 
-                  ? 'Up to Date' 
-                  : 'Refresh Insights'}
+                : disableInsights
+                  ? 'Maintenance Mode'
+                  : !analytics?.insightsStale 
+                    ? 'Up to Date' 
+                    : 'Refresh Insights'}
           </Button>
-          {analytics?.insightsStale && (
+          {analytics?.insightsStale && !disableInsights && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-[var(--acade-surface)]"></span>

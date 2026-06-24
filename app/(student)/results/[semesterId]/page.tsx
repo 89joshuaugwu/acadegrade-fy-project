@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { increment } from 'firebase/firestore';
-
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
+import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument, increment } from '@/lib/firebase/firestore';
 import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
 import { GRADE_SCALE } from '@/lib/utils/constants';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -29,6 +28,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const { user } = useAuth();
   const { profile } = useProfile();
   const router = useRouter();
+  const { isFeatureDisabled } = usePlatformSettings();
 
   const [semester, setSemester] = useState<Semester | null>(null);
   const [initialCourses, setInitialCourses] = useState<CourseInput[]>([]);
@@ -341,13 +341,13 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-          <Button variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="whitespace-nowrap">
+          <Button variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Download size={16} className="mr-2" /> Import Code
           </Button>
-          <Button variant="outline" size="sm" onClick={handleGenerateShareCode} className="whitespace-nowrap">
+          <Button variant="outline" size="sm" onClick={handleGenerateShareCode} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Share2 size={16} className="mr-2" /> Share
           </Button>
-          <Button variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="whitespace-nowrap">
+          <Button variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('extract_slip')} title={isFeatureDisabled('extract_slip') ? "Temporarily disabled for maintenance" : ""}>
             <FileText size={16} className="mr-2" /> Import Result Slip
           </Button>
         </div>

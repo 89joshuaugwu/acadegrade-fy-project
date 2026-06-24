@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { cn } from '@/lib/utils/cn';
 import { updateDocument } from '@/lib/firebase/firestore';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
@@ -20,6 +21,8 @@ const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 export default function SettingsPage() {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { isFeatureDisabled } = usePlatformSettings();
+  const disableEditProfile = isFeatureDisabled('edit_profile');
   
   // Profile State
   const [fullName, setFullName] = useState('');
@@ -273,22 +276,23 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} />
+              <Input label="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} disabled={disableEditProfile} />
               <Input label="Matric Number" value={profile?.matric || ''} disabled hint="Contact admin to change matric" />
-              <Input label="Department" value={department} onChange={e => setDepartment(e.target.value)} />
-              <Input label="Programme" value={programme} onChange={e => setProgramme(e.target.value)} />
+              <Input label="Department" value={department} onChange={e => setDepartment(e.target.value)} disabled={disableEditProfile} />
+              <Input label="Programme" value={programme} onChange={e => setProgramme(e.target.value)} disabled={disableEditProfile} />
               <div className="flex flex-col gap-1.5 sm:col-span-2">
                 <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">Current Level</label>
                 <Select 
                   options={STUDENT_LEVELS.map(l => ({ value: l.toString(), label: `${l}L` }))}
                   value={level.toString()}
                   onChange={(val) => setLevel(parseInt(val))}
+                  disabled={disableEditProfile}
                 />
               </div>
             </div>
 
             <div className="mt-6 flex justify-end">
-              <Button onClick={handleSaveProfile} disabled={savingProfile}>
+              <Button onClick={handleSaveProfile} disabled={savingProfile || disableEditProfile} title={disableEditProfile ? "Profile editing is temporarily disabled for maintenance" : ""}>
                 <Save size={16} className="mr-2" /> {savingProfile ? 'Saving...' : 'Save Profile'}
               </Button>
             </div>

@@ -15,6 +15,8 @@ interface AppSettings {
   aiSystemPrompt?: string;
   announcementBanner?: string | null;
   maintenanceMode?: boolean;
+  disableSignups?: boolean;
+  disabledFeatures?: string[];
   gradeScale?: Array<{ grade: string; min: number; max: number; points: number }>;
 }
 
@@ -137,6 +139,43 @@ export default function AdminSettingsPage() {
       }
     } catch (err) { toast.error('Error updating setting.'); }
     finally { setSavingState(false); }
+  };
+
+  const handlePublishBanner = async () => {
+    setSavingBanner(true);
+    // saveSetting already sets state and shows a toast
+    try {
+      const token = await user!.getIdToken();
+      const res = await fetch('/api/admin/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ field: 'announcementBanner', value: settings.announcementBanner || null }),
+      });
+      
+      if (res.ok) {
+        toast.success('Announcement banner updated.');
+        // Trigger notification if there is a banner
+        if (settings.announcementBanner) {
+          await fetch('/api/notifications/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+              uid: 'all',
+              title: 'New Announcement',
+              message: settings.announcementBanner,
+              type: 'broadcast',
+              event: 'adminAnnouncement'
+            }),
+          });
+        }
+      } else {
+        toast.error('Failed to update banner.');
+      }
+    } catch (err) {
+      toast.error('Error updating banner.');
+    } finally {
+      setSavingBanner(false);
+    }
   };
 
   if (loading) {
@@ -271,7 +310,7 @@ export default function AdminSettingsPage() {
             <Button variant="outline" size="md" onClick={() => { setSettings({ ...settings, announcementBanner: '' }); saveSetting('announcementBanner', null, setSavingBanner); }}>
               Clear
             </Button>
-            <Button size="md" loading={savingBanner} onClick={() => saveSetting('announcementBanner', settings.announcementBanner || null, setSavingBanner)}>
+            <Button size="md" loading={savingBanner} onClick={handlePublishBanner}>
               Publish
             </Button>
           </div>
@@ -296,6 +335,51 @@ export default function AdminSettingsPage() {
             onCheckedChange={(checked) => saveSetting('maintenanceMode', checked, setSavingMaintenance)}
             disabled={savingMaintenance}
           />
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--acade-gold)]/5 border border-[var(--acade-gold)]/20 mt-4">
+          <div>
+            <h3 className="font-bold text-[var(--acade-text)]">Disable Sign Ups</h3>
+            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
+              When active, new users cannot register. Existing users can still log in.
+            </p>
+          </div>
+          <Switch
+            checked={settings.disableSignups || false}
+            onCheckedChange={(checked) => saveSetting('disableSignups', checked, setSavingMaintenance)}
+            disabled={savingMaintenance}
+          />
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-[var(--acade-border)]">
+          <h3 className="font-bold text-[var(--acade-text)] mb-2">Feature Maintenance</h3>
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
+            Disable specific features in the student dashboard during updates or testing.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[
+              { id: 'add_semester', label: 'Add Semester' },
+              { id: 'extract_slip', label: 'Extract Result Slip' },
+              { id: 'share_code', label: 'Share / Import Course Code' },
+              { id: 'edit_profile', label: 'Edit Profile Settings' },
+              { id: 'ai_insights', label: 'Generate AI Insights' }
+            ].map(feature => (
+              <div key={feature.id} className="flex items-center justify-between p-3 rounded-xl bg-[var(--acade-surface)] border border-[var(--acade-border)]">
+                <span className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">{feature.label}</span>
+                <Switch
+                  checked={settings.disabledFeatures?.includes(feature.id) || false}
+                  onCheckedChange={(checked) => {
+                    const current = settings.disabledFeatures || [];
+                    const next = checked 
+                      ? [...current, feature.id]
+                      : current.filter(id => id !== feature.id);
+                    saveSetting('disabledFeatures', next, setSavingMaintenance);
+                  }}
+                  disabled={savingMaintenance}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
 

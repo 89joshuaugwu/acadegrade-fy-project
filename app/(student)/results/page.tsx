@@ -12,6 +12,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { deleteDocument, queryCollection } from '@/lib/firebase/firestore';
 import type { SemesterWithId } from '@/types/semester';
 import type { CourseInput } from '@/types/course';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -141,7 +142,9 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
 
 export default function ResultsListPage() {
   const { semesters, loading } = useSemesters();
+  const { isFeatureDisabled } = usePlatformSettings();
   const shouldReduceMotion = useReducedMotion();
+  const disableAddSemester = isFeatureDisabled('add_semester');
 
   if (loading) {
     return (
@@ -162,8 +165,8 @@ export default function ResultsListPage() {
             Manage your academic records by semester.
           </p>
         </div>
-        <Link href={`/results/new`}>
-          <Button variant="primary" size="lg" className="w-full md:w-auto">
+        <Link href={disableAddSemester ? '#' : `/results/new`} onClick={(e) => disableAddSemester && e.preventDefault()}>
+          <Button variant="primary" size="lg" className="w-full md:w-auto" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
             <Plus size={18} className="mr-2" /> New Semester
           </Button>
         </Link>
@@ -184,8 +187,8 @@ export default function ResultsListPage() {
           <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] mb-6 max-w-sm">
             Add your first semester to start tracking your progress and unlocking AI insights.
           </p>
-          <Link href={`/results/new`}>
-            <Button variant="primary" size="lg">
+          <Link href={disableAddSemester ? '#' : `/results/new`} onClick={(e) => disableAddSemester && e.preventDefault()}>
+            <Button variant="primary" size="lg" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
               <Plus size={18} className="mr-2" /> Add Semester
             </Button>
           </Link>

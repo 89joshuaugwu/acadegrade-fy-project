@@ -38,9 +38,32 @@ export async function POST(request: NextRequest) {
 
     let fcmTokens: string[] = providedToken ? [providedToken] : [];
     let userEmail = '';
+    const tokenToUidMap = new Map<string, string>();
 
     // Fetch user doc if UID is provided
-    if (uid) {
+    if (uid === 'all') {
+      const usersSnapshot = await adminDb.collection('users').get();
+      usersSnapshot.forEach(doc => {
+        const data = doc.data();
+        // Respect user preferences for broadcasts
+        if (type === 'broadcast' && data.notificationPreferences?.adminBroadcasts === false) {
+          return; // Skip this user
+        }
+        
+        const dbTokens = data.fcmTokens || [];
+        if (dbTokens.length > 0) {
+          dbTokens.forEach((t: string) => {
+            fcmTokens.push(t);
+            tokenToUidMap.set(t, doc.id);
+          });
+        } else if (data.fcmToken) {
+          fcmTokens.push(data.fcmToken);
+          tokenToUidMap.set(data.fcmToken, doc.id);
+        }
+      });
+      // De-duplicate
+      fcmTokens = [...new Set(fcmTokens)];
+    } else if (uid) {
       const userDoc = await adminDb.collection('users').doc(uid).get();
       const dbTokens = userDoc.data()?.fcmTokens || [];
       if (dbTokens.length > 0) {
@@ -82,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Create the notification in Firestore (inbox)
-    if (uid) {
+    if (uid && uid !== 'all') {
       const notifRef = adminDb.collection(`notifications/${uid}/items`).doc();
       await notifRef.set({
         title,
@@ -118,70 +141,100 @@ export async function POST(request: NextRequest) {
         try {
           // De-duplicate tokens
           const uniqueTokens = [...new Set(fcmTokens)];
-          
-          const response = await adminMessaging.sendEachForMulticast({
-            tokens: uniqueTokens,
-            notification: {
-              title,
-              body: message,
-            },
-            data: {
-              type: type || 'info',
-              url: data?.url || '/notifications',
-            },
-            // Android-specific: high priority for immediate delivery
-            android: {
-              priority: 'high',
-              notification: {
-                channelId: 'acadegrade_default',
-                icon: 'ic_notification',
-                color: '#6366F1',
-              },
-            },
-            // Web push specific
-            webpush: {
-              headers: {
-                Urgency: 'high',
-              },
-              notification: {
-                icon: 'https://acadegrade.com/android-chrome-192x192.png',
-                badge: 'https://acadegrade.com/favicon-32x32.png',
-              },
-            },
-          });
-
-          // Clean up ONLY permanently invalid tokens.
-          // Do NOT remove on messaging/invalid-argument — that error can be caused
-          // by payload formatting issues, not necessarily a dead token.
           const tokensToRemove: string[] = [];
-          response.responses.forEach((resp, idx) => {
-            if (!resp.success) {
-              const errorCode = resp.error?.code;
-              console.warn(`[FCM] Send failed for token[${idx}] (${uniqueTokens[idx]?.substring(0, 20)}...): ${errorCode} — ${resp.error?.message}`);
-              // Only purge tokens that are definitively dead/unregistered
-              if (
-                errorCode === 'messaging/invalid-registration-token' ||
-                errorCode === 'messaging/registration-token-not-registered'
-              ) {
-                tokensToRemove.push(uniqueTokens[idx]);
+          let successCount = 0;
+          
+          // Firebase limits multicast to 500 tokens at a time
+          const chunkedTokens = [];
+          for (let i = 0; i < uniqueTokens.length; i += 500) {
+            chunkedTokens.push(uniqueTokens.slice(i, i + 500));
+          }
+
+          for (const chunk of chunkedTokens) {
+            const response = await adminMessaging.sendEachForMulticast({
+              tokens: chunk,
+              notification: {
+                title,
+                body: message,
+              },
+              data: {
+                type: type || 'info',
+                url: data?.url || '/notifications',
+              },
+              // Android-specific: high priority for immediate delivery
+              android: {
+                priority: 'high',
+                notification: {
+                  channelId: 'acadegrade_default',
+                  icon: 'ic_notification',
+                  color: '#6366F1',
+                },
+              },
+              // Web push specific
+              webpush: {
+                headers: {
+                  Urgency: 'high',
+                },
+                notification: {
+                  icon: 'https://acadegrade.com/android-chrome-192x192.png',
+                  badge: 'https://acadegrade.com/favicon-32x32.png',
+                },
+              },
+            });
+            
+            successCount += response.successCount;
+
+            // Clean up ONLY permanently invalid tokens.
+            // Do NOT remove on messaging/invalid-argument — that error can be caused
+            // by payload formatting issues, not necessarily a dead token.
+            response.responses.forEach((resp, idx) => {
+              if (!resp.success) {
+                const errorCode = resp.error?.code;
+                console.warn(`[FCM] Send failed for token[${idx}] (${chunk[idx]?.substring(0, 20)}...): ${errorCode} — ${resp.error?.message}`);
+                // Only purge tokens that are definitively dead/unregistered
+                if (
+                  errorCode === 'messaging/invalid-registration-token' ||
+                  errorCode === 'messaging/registration-token-not-registered'
+                ) {
+                  tokensToRemove.push(chunk[idx]);
+                }
               }
-            }
-          });
+            });
+          }
 
           // Remove stale tokens from user's Firestore document
-          if (tokensToRemove.length > 0 && uid) {
+          if (tokensToRemove.length > 0) {
             try {
               const { FieldValue } = await import('firebase-admin/firestore');
-              await adminDb.collection('users').doc(uid).update({
-                fcmTokens: FieldValue.arrayRemove(...tokensToRemove),
-              });
-              console.log(`Cleaned up ${tokensToRemove.length} stale FCM tokens for user ${uid}`);
+              if (uid === 'all') {
+                const uidToTokens = new Map<string, string[]>();
+                for (const t of tokensToRemove) {
+                  const u = tokenToUidMap.get(t);
+                  if (u) {
+                    if (!uidToTokens.has(u)) uidToTokens.set(u, []);
+                    uidToTokens.get(u)!.push(t);
+                  }
+                }
+                const batch = adminDb.batch();
+                for (const [u, tkns] of uidToTokens.entries()) {
+                  batch.update(adminDb.collection('users').doc(u), {
+                    fcmTokens: FieldValue.arrayRemove(...tkns)
+                  });
+                }
+                await batch.commit();
+                console.log(`Cleaned up ${tokensToRemove.length} stale FCM tokens for broadcast`);
+              } else if (uid) {
+                await adminDb.collection('users').doc(uid).update({
+                  fcmTokens: FieldValue.arrayRemove(...tokensToRemove),
+                });
+                console.log(`Cleaned up ${tokensToRemove.length} stale FCM tokens for user ${uid}`);
+              }
             } catch (cleanupErr) {
               console.error('Failed to clean up stale FCM tokens:', cleanupErr);
             }
           }
 
-          console.log(`FCM: ${response.successCount}/${uniqueTokens.length} delivered for user ${uid || 'unknown'}`);
+          console.log(`FCM: ${successCount}/${uniqueTokens.length} delivered for user ${uid || 'unknown'}`);
         } catch (fcmError) {
           console.error('FCM Send Error:', fcmError);
           // We do not fail the request if push fails

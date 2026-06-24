@@ -615,6 +615,7 @@ export default function RegisterWizard() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [signupsDisabled, setSignupsDisabled] = useState(false);
 
   const totalSteps = 5;
 
@@ -641,6 +642,8 @@ export default function RegisterWizard() {
         const doc = await getDocument<any>('config/settings');
         if (doc?.maintenanceMode) {
           router.replace('/maintenance');
+        } else if (doc?.disableSignups) {
+          setSignupsDisabled(true);
         }
       } catch (err) {}
     };
@@ -744,6 +747,37 @@ export default function RegisterWizard() {
   if (authLoading) {
     return <div className="min-h-screen bg-[var(--acade-void)]" />;
   }
+
+  if (signupsDisabled) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--acade-void)] text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)] relative overflow-hidden">
+        <div className="absolute inset-0 bg-[var(--acade-primary)]/5 mix-blend-overlay pointer-events-none" />
+        <div className="max-w-md w-full z-10 text-center space-y-6">
+          <div className="flex justify-center mb-6">
+            <Logo />
+          </div>
+          <div className="p-8 rounded-[2rem] bg-[var(--acade-surface)] border border-[var(--acade-border)] shadow-xl flex flex-col items-center">
+            <div className="size-16 rounded-full bg-[var(--acade-gold)]/10 flex items-center justify-center text-[var(--acade-gold)] mb-6">
+              <AlertCircle size={32} />
+            </div>
+            <h1 className="text-2xl font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-3">
+              Registration Closed
+            </h1>
+            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-8">
+              We are currently not accepting new sign-ups. Existing users can still log in to access their dashboards.
+            </p>
+            <Button fullWidth disabled className="mb-4">
+              Sign Up Disabled
+            </Button>
+            <Button variant="outline" fullWidth onClick={() => router.push('/login')}>
+              Go to Login
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (user && !isSuccess) return null;
 
   return (
