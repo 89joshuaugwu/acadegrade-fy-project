@@ -150,20 +150,21 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          // Clean up invalid/expired tokens
+          // Clean up ONLY permanently invalid tokens.
+          // Do NOT remove on messaging/invalid-argument — that error can be caused
+          // by payload formatting issues, not necessarily a dead token.
           const tokensToRemove: string[] = [];
           response.responses.forEach((resp, idx) => {
             if (!resp.success) {
               const errorCode = resp.error?.code;
-              // These error codes indicate the token is permanently invalid
+              console.warn(`[FCM] Send failed for token[${idx}] (${uniqueTokens[idx]?.substring(0, 20)}...): ${errorCode} — ${resp.error?.message}`);
+              // Only purge tokens that are definitively dead/unregistered
               if (
                 errorCode === 'messaging/invalid-registration-token' ||
-                errorCode === 'messaging/registration-token-not-registered' ||
-                errorCode === 'messaging/invalid-argument'
+                errorCode === 'messaging/registration-token-not-registered'
               ) {
                 tokensToRemove.push(uniqueTokens[idx]);
               }
-              console.warn(`FCM send failed for token ${idx}:`, resp.error?.code, resp.error?.message);
             }
           });
 
