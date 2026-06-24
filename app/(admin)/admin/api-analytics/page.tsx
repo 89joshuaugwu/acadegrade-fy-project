@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
   Activity, Zap, AlertTriangle, Clock, TrendingUp, Users, Server,
@@ -95,11 +95,14 @@ export default function ApiAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [range, setRange] = useState('week');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const fetchData = async (showToast = false) => {
+  const fetchData = useCallback(async (showToast = false) => {
     if (!user) return;
     if (showToast) setRefreshing(true);
-    else setLoading(true);
+    else if (!data) setLoading(true); // only show skeleton on first load
 
     try {
       const token = await user.getIdToken();
@@ -109,18 +112,32 @@ export default function ApiAnalyticsPage() {
       if (!res.ok) throw new Error('Failed');
       const json = await res.json();
       setData(json);
+      setLastUpdated(new Date());
       if (showToast) toast.success('Refreshed');
     } catch {
-      toast.error('Failed to load API analytics');
+      if (!data) toast.error('Failed to load API analytics');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [user, range, data]);
 
+  // Initial fetch + re-fetch on range change
   useEffect(() => {
     if (user) fetchData();
   }, [user, range]);
+
+  // Auto-polling every 30 seconds
+  useEffect(() => {
+    if (autoRefresh && user) {
+      intervalRef.current = setInterval(() => {
+        fetchData(false);
+      }, 30_000);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [autoRefresh, user, range]);
 
   /* ─── Derived Data ─── */
   const categoryChartData = useMemo(() => {
@@ -175,11 +192,43 @@ export default function ApiAnalyticsPage() {
             <Server size={28} className="text-[var(--acade-danger)]" />
             API Analytics
           </h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-            Monitor API usage, quotas, and detect abuse across all endpoints.
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+              Monitor API usage, quotas, and detect abuse across all endpoints.
+            </p>
+            {/* Live indicator */}
+            {autoRefresh && (
+              <span className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--acade-success)] font-medium shrink-0">
+                <span className="relative flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-success)] opacity-75" />
+                  <span className="relative inline-flex rounded-full size-2 bg-[var(--acade-success)]" />
+                </span>
+                LIVE
+              </span>
+            )}
+          </div>
+          {lastUpdated && (
+            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] mt-0.5">
+              Last updated: {lastUpdated.toLocaleTimeString()}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-3">
+          {/* Auto-refresh toggle */}
+          <button
+            type="button"
+            onClick={() => setAutoRefresh(prev => !prev)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[length:var(--text-xs)] font-medium transition-all",
+              autoRefresh
+                ? "border-[var(--acade-success)] bg-[var(--acade-success)]/10 text-[var(--acade-success)]"
+                : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)]"
+            )}
+            title={autoRefresh ? "Auto-refresh is ON (every 30s)" : "Auto-refresh is OFF"}
+          >
+            <RefreshCw size={12} className={autoRefresh ? 'animate-spin' : ''} style={autoRefresh ? { animationDuration: '3s' } : {}} />
+            {autoRefresh ? 'Auto' : 'Paused'}
+          </button>
           {/* Range Selector */}
           <div className="relative">
             <select
