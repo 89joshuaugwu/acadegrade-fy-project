@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Share2, Printer, Link2, Copy, Check, X } from 'lucide-react';
+import { Download, Share2, Printer, Link2, Copy, Check, X, ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +24,7 @@ export default function TranscriptPage() {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showPhoto, setShowPhoto] = useState(true);
 
   useEffect(() => {
     if (user) loadData();
@@ -63,7 +64,11 @@ export default function TranscriptPage() {
       const token = await user.getIdToken();
       const res = await fetch('/api/transcript/generate', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ showPhoto }),
       });
       
       if (!res.ok) {
@@ -100,7 +105,11 @@ export default function TranscriptPage() {
       const token = await user.getIdToken();
       const res = await fetch('/api/transcript/share', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ showPhoto }),
       });
 
       if (!res.ok) {
@@ -130,6 +139,9 @@ export default function TranscriptPage() {
       toast.error('Failed to copy');
     }
   };
+
+  // Resolve user photo URL — prioritise profile avatarUrl, fallback to Firebase Auth photoURL
+  const userPhotoUrl = profile?.avatarUrl || user?.photoURL || null;
 
   if (loading) {
     return (
@@ -170,6 +182,22 @@ export default function TranscriptPage() {
         </div>
         
         <div className="flex items-center gap-3">
+          {/* Photo Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowPhoto(prev => !prev)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[length:var(--text-xs)] font-medium transition-all",
+              showPhoto
+                ? "border-[var(--acade-primary)] bg-[var(--acade-primary)]/10 text-[var(--acade-primary)]"
+                : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)]"
+            )}
+            title={showPhoto ? "Click to hide your photo from the transcript" : "Click to show your photo on the transcript"}
+          >
+            <ImageIcon size={14} />
+            {showPhoto ? 'Photo On' : 'Photo Off'}
+          </button>
+
           <Button variant="outline" size="sm" onClick={handlePrint}>
             <Printer size={16} className="mr-2" />
             Print HTML
@@ -236,10 +264,18 @@ export default function TranscriptPage() {
       )}
 
       {/* Transcript Paper Preview */}
-      <div className="bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden">
+      <div className="transcript-paper bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden">
         
-        {/* Header */}
+        {/* Header with Logo */}
         <div className="text-center mb-6 sm:mb-8 border-b-2 border-black pb-4">
+          {/* AcadeGrade Logo */}
+          <div className="flex justify-center mb-3">
+            <img
+              src="/logo.png"
+              alt="AcadeGrade Logo"
+              className="w-10 h-10 object-contain"
+            />
+          </div>
           <h2 className="text-base sm:text-xl md:text-2xl font-bold font-serif mb-1 uppercase tracking-tight">
             Enugu State University of Science and Technology
           </h2>
@@ -249,16 +285,30 @@ export default function TranscriptPage() {
           </div>
         </div>
 
-        {/* Student Box */}
-        <div className="border-2 border-black p-4 mb-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-serif">
-          <div>
-            <p><span className="font-bold inline-block w-24">Name:</span> {profile?.fullName}</p>
-            <p className="mt-2"><span className="font-bold inline-block w-24">Matric No:</span> {profile?.matric || 'N/A'}</p>
-            <p className="mt-2"><span className="font-bold inline-block w-24">Level:</span> {profile?.currentLevel || 'N/A'}L</p>
-          </div>
-          <div>
-            <p><span className="font-bold inline-block w-28">Department:</span> {profile?.department || 'N/A'}</p>
-            <p className="mt-2"><span className="font-bold inline-block w-28">Programme:</span> {profile?.programme || 'N/A'}</p>
+        {/* Student Box with optional photo */}
+        <div className="border-2 border-black p-4 mb-8 flex gap-4 text-sm font-serif">
+          {/* Photo column */}
+          {showPhoto && userPhotoUrl && (
+            <div className="shrink-0">
+              <img
+                src={userPhotoUrl}
+                alt={profile?.fullName || 'Student'}
+                className="w-20 h-24 object-cover border-2 border-gray-400 bg-gray-100"
+                crossOrigin="anonymous"
+              />
+            </div>
+          )}
+          {/* Info columns */}
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p><span className="font-bold inline-block w-24">Name:</span> {profile?.fullName}</p>
+              <p className="mt-2"><span className="font-bold inline-block w-24">Matric No:</span> {profile?.matric || 'N/A'}</p>
+              <p className="mt-2"><span className="font-bold inline-block w-24">Level:</span> {profile?.currentLevel || 'N/A'}L</p>
+            </div>
+            <div>
+              <p><span className="font-bold inline-block w-28">Department:</span> {profile?.department || 'N/A'}</p>
+              <p className="mt-2"><span className="font-bold inline-block w-28">Programme:</span> {profile?.programme || 'N/A'}</p>
+            </div>
           </div>
         </div>
 
@@ -325,8 +375,13 @@ export default function TranscriptPage() {
           </div>
         </div>
 
-        <div className="mt-12 text-center text-xs text-gray-500 font-serif border-t border-gray-300 pt-4">
-          Generated by AcadeGrade · Not an official university document
+        {/* Footer with logo */}
+        <div className="mt-12 text-center text-xs text-gray-500 font-serif border-t border-gray-300 pt-4 flex flex-col items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <img src="/logo.png" alt="AcadeGrade" className="w-4 h-4 object-contain" />
+            <span className="font-semibold text-gray-600">AcadeGrade</span>
+          </div>
+          <span>Generated by AcadeGrade · Not an official university document</span>
         </div>
       </div>
       
@@ -338,10 +393,10 @@ export default function TranscriptPage() {
           .print\\:hidden {
             display: none !important;
           }
-          .bg-white.text-black.p-8, .bg-white.text-black.p-8 * {
+          .transcript-paper, .transcript-paper * {
             visibility: visible;
           }
-          .bg-white.text-black.p-8 {
+          .transcript-paper {
             position: absolute;
             left: 0;
             top: 0;

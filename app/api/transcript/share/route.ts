@@ -21,6 +21,15 @@ export async function POST(request: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
 
+    // Parse optional body for showPhoto preference
+    let showPhoto = true;
+    try {
+      const body = await request.json();
+      showPhoto = body.showPhoto !== false;
+    } catch {
+      // No body or invalid JSON — default to showing photo
+    }
+
     // Fetch user profile
     const userDoc = await adminDb.collection('users').doc(uid).get();
     const profile = userDoc.data() || {};
@@ -63,6 +72,8 @@ export async function POST(request: NextRequest) {
       department: profile.department || '',
       programme: profile.programme || '',
       currentLevel: profile.currentLevel || '',
+      avatarUrl: showPhoto ? (profile.avatarUrl || null) : null,
+      showPhoto,
       semesters,
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days

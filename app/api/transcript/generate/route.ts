@@ -16,6 +16,15 @@ export async function POST(req: Request) {
     const decodedToken = await adminAuth.verifyIdToken(token);
     const uid = decodedToken.uid;
 
+    // Parse request body for showPhoto preference
+    let showPhoto = true;
+    try {
+      const body = await req.json();
+      showPhoto = body.showPhoto !== false;
+    } catch {
+      // No body — default to showing photo
+    }
+
     // Fetch user
     const userDoc = await adminDb.collection('users').doc(uid).get();
     if (!userDoc.exists) {
@@ -43,10 +52,25 @@ export async function POST(req: Request) {
     const analyticsDoc = await adminDb.collection('analytics').doc(uid).get();
     const analytics = analyticsDoc.exists ? analyticsDoc.data() : null;
 
+    // Optionally fetch user avatar as base64 for PDF embedding
+    let avatarBase64: string | null = null;
+    if (showPhoto && userData.avatarUrl) {
+      try {
+        const imgRes = await fetch(userData.avatarUrl);
+        if (imgRes.ok) {
+          const buffer = await imgRes.arrayBuffer();
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          avatarBase64 = `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
+        }
+      } catch (imgErr) {
+        console.warn('Failed to fetch avatar for PDF:', imgErr);
+      }
+    }
+
     let doc;
     try {
       const { buildTranscript } = await import('@/lib/pdf/transcript');
-      doc = buildTranscript(userData, semesters, analytics as any);
+      doc = buildTranscript(userData, semesters, analytics as any, { showPhoto, avatarBase64 });
     } catch (pdfError: any) {
       console.error('jsPDF generation failed on server:', pdfError);
       return NextResponse.json({ 
