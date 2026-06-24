@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, adminRtdb, adminMessaging } from '@/lib/firebase/admin';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 
 /**
  * POST /api/notifications/send
@@ -11,6 +12,7 @@ import { adminAuth, adminDb, adminRtdb, adminMessaging } from '@/lib/firebase/ad
 // We can use a Bearer token or an internal API secret.
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const authHeader = request.headers.get('authorization');
     const isInternalCall = authHeader === `Bearer ${process.env.INTERNAL_API_SECRET}`;
 
@@ -242,9 +244,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    logApiCall({ endpoint: '/api/notifications/send', category: 'notification', uid: uid || null, status: 200, durationMs: timer(), provider: 'fcm' });
     return NextResponse.json({ success: true, message: 'Notification sent.' });
   } catch (error: any) {
     console.error('Send Notification Error:', error);
+    logApiCall({ endpoint: '/api/notifications/send', category: 'notification', uid: null, status: 500, durationMs: 0, provider: 'fcm', error: error?.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

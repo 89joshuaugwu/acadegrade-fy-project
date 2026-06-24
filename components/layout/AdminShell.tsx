@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Settings, LogOut, Shield } from 'lucide-react';
+import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Activity, Settings, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
@@ -15,6 +15,7 @@ const ADMIN_TABS = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/courses', label: 'Course Catalog', icon: BookOpen },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/admin/api-analytics', label: 'API Monitor', icon: Activity },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 

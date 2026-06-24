@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateFastResponse } from '@/lib/ai/manager';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const body = await request.json();
     const { currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad } = body;
 
@@ -37,6 +39,7 @@ export async function POST(request: NextRequest) {
       feasibilityNote = await generateFastResponse(prompt);
     }
 
+    logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid: null, status: 200, durationMs: timer(), provider: 'groq' });
     return NextResponse.json({
       requiredGPA,
       requiredAvgScore,
@@ -44,6 +47,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('WhatIf Error:', error);
+    logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid: null, status: 500, durationMs: 0, provider: 'groq', error: error?.message });
     return NextResponse.json({ error: 'Failed to calculate what-if scenario' }, { status: 500 });
   }
 }

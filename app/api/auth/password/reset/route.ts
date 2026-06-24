@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const { email, newPassword, code } = await request.json();
 
     if (!email || !newPassword || !code) {
@@ -65,10 +67,12 @@ export async function POST(request: NextRequest) {
     // Delete or invalidate the OTP so it can't be used again
     await otpRef.delete();
 
+    logApiCall({ endpoint: '/api/auth/password/reset', category: 'auth', uid: null, status: 200, durationMs: timer() });
     return NextResponse.json({ success: true, message: 'Password updated successfully' });
 
   } catch (error) {
     console.error('Password Reset Error:', error);
+    logApiCall({ endpoint: '/api/auth/password/reset', category: 'auth', uid: null, status: 500, durationMs: 0, error: String(error) });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDeepInsightJSON } from '@/lib/ai/manager';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 import type { InsightResponse } from '@/types/ai';
 
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -81,9 +83,11 @@ export async function POST(request: NextRequest) {
       }
     }, { merge: true });
 
+    logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'deepseek' });
     return NextResponse.json(insightData);
   } catch (error: any) {
     console.error('Insights Error:', error);
+    logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid: null, status: 500, durationMs: 0, provider: 'deepseek', error: error?.message });
     if (error.message && error.message.includes('429')) {
       return NextResponse.json({ error: 'AI quota temporarily reached. Please try again later.' }, { status: 429 });
     }

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { computeForecast, getTrendDirection } from '@/lib/ai/forecast';
 import { generateDeepInsight } from '@/lib/ai/manager';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     // ✅ FIX 1: Verify Firebase Auth token
     const authHeader = request.headers.get('Authorization');
     const token = authHeader?.replace('Bearer ', '');
@@ -101,10 +103,12 @@ export async function POST(request: NextRequest) {
       // Don't throw — just log. Client still gets the forecast.
     }
 
+    logApiCall({ endpoint: '/api/ai/forecast', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'deepseek' });
     return NextResponse.json(forecastData);
 
   } catch (error: any) {
     console.error('Forecast route error:', error);
+    logApiCall({ endpoint: '/api/ai/forecast', category: 'ai', uid: null, status: 500, durationMs: 0, provider: 'deepseek', error: error?.message });
     return NextResponse.json(
       { error: error?.message || 'Failed to generate forecast' },
       { status: 500 }

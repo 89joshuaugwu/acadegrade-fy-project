@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 // import { buildTranscript } from '@/lib/pdf/transcript';
 import type { User } from '@/types/user';
 import type { SemesterWithCourses } from '@/types/semester';
@@ -7,6 +8,7 @@ import type { CourseWithId } from '@/types/course';
 
 export async function POST(req: Request) {
   try {
+    const timer = apiTimer();
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -82,6 +84,7 @@ export async function POST(req: Request) {
     // Get array buffer
     const arrayBuffer = doc.output('arraybuffer');
 
+    logApiCall({ endpoint: '/api/transcript/generate', category: 'transcript', uid, status: 200, durationMs: timer() });
     return new NextResponse(arrayBuffer, {
       status: 200,
       headers: {
@@ -92,6 +95,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error('Transcript API Error:', error);
+    logApiCall({ endpoint: '/api/transcript/generate', category: 'transcript', uid: null, status: 500, durationMs: 0, error: error?.message });
     return NextResponse.json({ error: 'Failed to generate transcript' }, { status: 500 });
   }
 }

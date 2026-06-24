@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { sendOtpEmail, registrationOtpEmail, resetPasswordOtpEmail } from '@/lib/email/mailer';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 
 // 60 seconds cooldown
 const COOLDOWN_MS = 60 * 1000;
@@ -9,6 +10,7 @@ const EXPIRY_MS = 5 * 60 * 1000;
 
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const { email, type } = await request.json();
 
     if (!email || !type || !['registration', 'reset'].includes(type)) {
@@ -83,10 +85,12 @@ export async function POST(request: NextRequest) {
     
     await sendOtpEmail(normalizedEmail, subject, htmlBody);
 
+    logApiCall({ endpoint: '/api/auth/otp/send', category: 'otp', uid: null, status: 200, durationMs: timer(), provider: 'gmail' });
     return NextResponse.json({ success: true, message: 'OTP sent successfully' });
 
   } catch (error: any) {
     console.error('OTP Send Error:', error?.code, error?.message, error);
+    logApiCall({ endpoint: '/api/auth/otp/send', category: 'otp', uid: null, status: 500, durationMs: 0, provider: 'gmail', error: error?.message });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

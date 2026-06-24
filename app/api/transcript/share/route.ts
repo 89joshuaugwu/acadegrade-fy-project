@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 import crypto from 'crypto';
 
 /**
@@ -12,6 +13,7 @@ import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -82,15 +84,18 @@ export async function POST(request: NextRequest) {
     const origin = request.nextUrl.origin;
     const shareUrl = `${origin}/share/${shareId}`;
 
+    logApiCall({ endpoint: '/api/transcript/share', category: 'transcript', uid, status: 200, durationMs: timer() });
     return NextResponse.json({ shareId, shareUrl });
   } catch (error: any) {
     console.error('Share transcript error:', error);
+    logApiCall({ endpoint: '/api/transcript/share', category: 'transcript', uid: null, status: 500, durationMs: 0, error: error?.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const timer = apiTimer();
     const { searchParams } = request.nextUrl;
     const shareId = searchParams.get('id');
 
@@ -112,9 +117,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'This shared transcript has expired' }, { status: 410 });
     }
 
+    logApiCall({ endpoint: '/api/transcript/share', category: 'transcript', uid: null, status: 200, durationMs: timer() });
     return NextResponse.json({ transcript: data });
   } catch (error: any) {
     console.error('Get shared transcript error:', error);
+    logApiCall({ endpoint: '/api/transcript/share', category: 'transcript', uid: null, status: 500, durationMs: 0, error: error?.message });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

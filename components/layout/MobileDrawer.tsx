@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { Shield, Settings, Calculator, Bell, Info, LogOut, X, LayoutDashboard, BookOpen, BrainCircuit } from 'lucide-react';
+import { Shield, Settings, Calculator, Bell, Info, LogOut, X, LayoutDashboard, BookOpen, BrainCircuit, Activity } from 'lucide-react';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
 import { useAuth } from '@/hooks/useAuth';
@@ -154,6 +154,7 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
                   <DrawerLink href="/admin/users" icon={Shield} label="Users" onClick={onClose} />
                   <DrawerLink href="/admin/courses" icon={BookOpen} label="Course Catalog" onClick={onClose} />
                   <DrawerLink href="/admin/analytics" icon={BrainCircuit} label="Analytics" onClick={onClose} />
+                  <DrawerLink href="/admin/api-analytics" icon={Activity} label="API Monitor" onClick={onClose} />
                   <DrawerLink href="/admin/settings" icon={Settings} label="Settings" onClick={onClose} />
                 </>
               ) : (

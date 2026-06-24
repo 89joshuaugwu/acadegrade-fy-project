@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateMultimodalGeminiContent } from '@/lib/ai/manager';
+import { logApiCall, apiTimer } from '@/lib/api/logger';
 // pdf-parse is required dynamically inside the handler
 
 const PROMPT = `Extract course results from the provided academic result slip.
@@ -17,6 +18,7 @@ If the document contains no courses, return an empty array [].`;
 
 export async function POST(req: NextRequest) {
   try {
+    const timer = apiTimer();
     const { base64Data, mimeType } = await req.json();
 
     if (!base64Data || !mimeType) {
@@ -66,10 +68,12 @@ export async function POST(req: NextRequest) {
     }
 
     const courses = JSON.parse(geminiResponse);
+    logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid: null, status: 200, durationMs: timer(), provider: 'gemini' });
     return NextResponse.json({ courses });
 
   } catch (error: any) {
     console.error('Extract error:', error);
+    logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid: null, status: 500, durationMs: 0, provider: 'gemini', error: error?.message });
     return NextResponse.json({ error: error.message || 'Extraction failed' }, { status: 500 });
   }
 }
