@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import CountUp from 'react-countup';
-import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen } from 'lucide-react';
+import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +36,37 @@ export default function DashboardPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [coursesDone, setCoursesDone] = useState(0);
   const [atRiskCount, setAtRiskCount] = useState(0);
+  
+  // Advert state
+  const [activeAdvert, setActiveAdvert] = useState<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean } | null>(null);
+
+  // Fetch Advert
+  useEffect(() => {
+    const fetchAdvert = async () => {
+      try {
+        const config = await getDocument<any>('config/settings');
+        if (config?.advertBanners && Array.isArray(config.advertBanners)) {
+          const active = config.advertBanners.find((b: any) => b.isActive);
+          if (active) {
+            // Check local storage for 6-hour dismissal
+            const lastDismissed = localStorage.getItem(`advert_dismissed_${active.id}`);
+            const sixHours = 6 * 60 * 60 * 1000;
+            if (!lastDismissed || (Date.now() - Number(lastDismissed)) > sixHours) {
+              setActiveAdvert(active);
+            }
+          }
+        }
+      } catch (err) { console.error('Failed to load advert', err); }
+    };
+    fetchAdvert();
+  }, []);
+
+  const handleDismissAdvert = () => {
+    if (activeAdvert) {
+      localStorage.setItem(`advert_dismissed_${activeAdvert.id}`, Date.now().toString());
+      setActiveAdvert(null);
+    }
+  };
 
   // Sync state with user preference on mount
   useEffect(() => {
@@ -412,6 +443,50 @@ export default function DashboardPage() {
 
         </div>
       </div>
+
+      {/* SPONSORED ADVERT MODAL */}
+      <AnimatePresence>
+        {activeAdvert && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <div className="relative w-full max-w-lg bg-[var(--acade-deep)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--acade-border)]">
+              {/* Close Button */}
+              <button
+                onClick={handleDismissAdvert}
+                className="absolute top-3 right-3 z-10 p-2 bg-black/50 text-white rounded-full hover:bg-black/80 transition-colors backdrop-blur-md"
+                aria-label="Close advert"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Advert Content */}
+              {activeAdvert.linkUrl ? (
+                <a href={activeAdvert.linkUrl} target="_blank" rel="noopener noreferrer" className="block w-full" onClick={handleDismissAdvert}>
+                  <img
+                    src={activeAdvert.imageUrl}
+                    alt="Sponsored Advert"
+                    className="w-full h-auto max-h-[70vh] object-cover"
+                  />
+                </a>
+              ) : (
+                <img
+                  src={activeAdvert.imageUrl}
+                  alt="Sponsored Advert"
+                  className="w-full h-auto max-h-[70vh] object-cover"
+                />
+              )}
+              
+              <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded-md">
+                <span className="text-[10px] font-bold tracking-widest text-white/80 uppercase">Sponsored</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

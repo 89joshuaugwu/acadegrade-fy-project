@@ -18,6 +18,7 @@ interface AppSettings {
   disableSignups?: boolean;
   disabledFeatures?: string[];
   gradeScale?: Array<{ grade: string; min: number; max: number; points: number }>;
+  advertBanners?: Array<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean }>;
 }
 
 const DEFAULT_GRADE_SCALE = [
@@ -35,6 +36,7 @@ interface AboutPageData {
   academicContextExtra: string;
   builderName: string;
   builderInitials: string;
+  builderImageUrl?: string;
   builderBio: string;
   githubUrl: string;
   repoUrl: string;
@@ -49,6 +51,7 @@ const DEFAULT_ABOUT: AboutPageData = {
   academicContextExtra: 'Beyond standard CGPA calculation, this platform introduces AI-driven forecasts, PWA offline capabilities, strict role-based access control, and granular push notifications.',
   builderName: 'Joshuazaza',
   builderInitials: 'JZ',
+  builderImageUrl: '',
   builderBio: 'Software Engineer & Student.',
   githubUrl: 'https://github.com/89joshuaugwu',
   repoUrl: 'https://github.com/89joshuaugwu/acadegrade-fy-project',
@@ -139,6 +142,54 @@ export default function AdminSettingsPage() {
       }
     } catch (err) { toast.error('Error updating setting.'); }
     finally { setSavingState(false); }
+  };
+
+  const handleDeveloperImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const toastId = toast.loading('Uploading developer image...');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'acadegrade_avatars');
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/dgqukbs8n/image/upload`, {
+        method: 'POST', body: formData
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        setAboutData(prev => ({ ...prev, builderImageUrl: data.secure_url }));
+        toast.success('Image uploaded. Click Save to apply.', { id: toastId });
+      } else {
+        throw new Error('Failed');
+      }
+    } catch(err) {
+      toast.error('Upload failed', { id: toastId });
+    }
+  };
+
+  const handleAdvertImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const toastId = toast.loading('Uploading advert image...');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'acadegrade_avatars');
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/dgqukbs8n/image/upload`, {
+        method: 'POST', body: formData
+      });
+      const data = await res.json();
+      if (data.secure_url) {
+        const newBanners = [...(settings.advertBanners || [])];
+        newBanners[idx].imageUrl = data.secure_url;
+        setSettings({ ...settings, advertBanners: newBanners });
+        toast.success('Advert image uploaded. Remember to save.', { id: toastId });
+      } else {
+        throw new Error('Failed');
+      }
+    } catch(err) {
+      toast.error('Upload failed', { id: toastId });
+    }
   };
 
   const handlePublishBanner = async () => {
@@ -383,6 +434,105 @@ export default function AdminSettingsPage() {
         </div>
       </Card>
 
+      {/* Sponsored Adverts */}
+      <Card variant="default" padding="lg">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="text-[var(--acade-primary)]" size={20} />
+            <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Sponsored Adverts</h2>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              const newBanners = [...(settings.advertBanners || []), { id: Date.now().toString(), imageUrl: '', linkUrl: '', isActive: true }];
+              setSettings({ ...settings, advertBanners: newBanners });
+            }}
+          >
+            <Plus size={16} className="mr-2" /> Add Advert
+          </Button>
+        </div>
+        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-6">
+          Upload sponsored banners. The first active banner will be displayed to students on their dashboard until they dismiss it (hides for 6 hours).
+        </p>
+        <div className="space-y-6">
+          {(settings.advertBanners || []).map((banner, idx) => (
+            <div key={banner.id} className="p-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-[length:var(--text-sm)]">Advert #{idx + 1}</span>
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={banner.isActive}
+                    onCheckedChange={(checked) => {
+                      const newBanners = [...(settings.advertBanners || [])];
+                      newBanners[idx].isActive = checked;
+                      setSettings({ ...settings, advertBanners: newBanners });
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-[var(--acade-danger)]"
+                    onClick={() => {
+                      const newBanners = (settings.advertBanners || []).filter((_, i) => i !== idx);
+                      setSettings({ ...settings, advertBanners: newBanners });
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[length:var(--text-xs)] font-medium text-[var(--acade-text-muted)] mb-1">Image URL (Upload or Paste)</label>
+                  <div className="flex gap-2">
+                    <Input
+                      label=""
+                      placeholder="https://..."
+                      value={banner.imageUrl}
+                      onChange={(e) => {
+                        const newBanners = [...(settings.advertBanners || [])];
+                        newBanners[idx].imageUrl = e.target.value;
+                        setSettings({ ...settings, advertBanners: newBanners });
+                      }}
+                    />
+                    <label className="flex-shrink-0 flex items-center justify-center px-4 rounded-xl bg-[var(--acade-surface)] border border-[var(--acade-border)] text-sm font-medium hover:bg-[var(--acade-border-subtle)] cursor-pointer transition-colors">
+                      Upload
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => handleAdvertImageUpload(e, idx)} />
+                    </label>
+                  </div>
+                  {banner.imageUrl && (
+                    <div className="mt-2 h-20 w-full rounded-lg bg-cover bg-center border border-[var(--acade-border)]" style={{ backgroundImage: `url(${banner.imageUrl})` }} />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-[length:var(--text-xs)] font-medium text-[var(--acade-text-muted)] mb-1">Target Link (Optional)</label>
+                  <Input
+                    label=""
+                    placeholder="https://sponsor.com"
+                    value={banner.linkUrl}
+                    onChange={(e) => {
+                      const newBanners = [...(settings.advertBanners || [])];
+                      newBanners[idx].linkUrl = e.target.value;
+                      setSettings({ ...settings, advertBanners: newBanners });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          {!(settings.advertBanners?.length) && (
+            <div className="text-center p-6 border border-dashed border-[var(--acade-border)] rounded-xl text-[var(--acade-text-muted)]">
+              No sponsored adverts configured.
+            </div>
+          )}
+          <div className="flex justify-end pt-2">
+            <Button size="sm" onClick={() => saveSetting('advertBanners', settings.advertBanners || [], () => {})}>
+              <Save size={16} className="mr-2" /> Save Adverts
+            </Button>
+          </div>
+        </div>
+      </Card>
+
       {/* ─── About Page Content ─── */}
       <Card variant="default" padding="lg">
         <div className="flex items-center gap-3 mb-4">
@@ -426,11 +576,28 @@ export default function AdminSettingsPage() {
           </div>
 
           {/* Builder Info */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <Input label="Builder Name" value={aboutData.builderName} onChange={e => setAboutData({ ...aboutData, builderName: e.target.value })} />
-            <Input label="Builder Initials" value={aboutData.builderInitials} onChange={e => setAboutData({ ...aboutData, builderInitials: e.target.value })} />
             <Input label="Contact Email" value={aboutData.contactEmail} onChange={e => setAboutData({ ...aboutData, contactEmail: e.target.value })} />
           </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end mb-4">
+            <Input label="Builder Initials (Fallback)" value={aboutData.builderInitials} onChange={e => setAboutData({ ...aboutData, builderInitials: e.target.value })} />
+            
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] block">Developer Image</label>
+              <div className="flex items-center gap-4">
+                {aboutData.builderImageUrl && (
+                  <img src={aboutData.builderImageUrl} alt="Dev" className="w-10 h-10 rounded-full object-cover border border-[var(--acade-border)]" />
+                )}
+                <label className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors border border-[var(--acade-border)] bg-transparent hover:bg-[var(--acade-deep)] h-10 px-4 cursor-pointer">
+                  Upload Image
+                  <input type="file" className="hidden" accept="image/*" onChange={handleDeveloperImageUpload} />
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Builder Bio</label>
             <textarea

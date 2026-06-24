@@ -21,6 +21,7 @@ export async function GET() {
             'Beyond standard CGPA calculation, this platform introduces AI-driven forecasts, PWA offline capabilities, strict role-based access control, and granular push notifications to deliver a highly robust educational tool.',
           builderName: 'Joshuazaza',
           builderInitials: 'JZ',
+          builderImageUrl: '',
           builderBio:
             'Software Engineer & Student. Focused on creating impactful, scalable, and beautifully designed web applications.',
           githubUrl: 'https://github.com/89joshuaugwu',

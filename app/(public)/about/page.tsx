@@ -29,6 +29,7 @@ interface AboutData {
   academicContextExtra: string;
   builderName: string;
   builderInitials: string;
+  builderImageUrl?: string;
   builderBio: string;
   githubUrl: string;
   repoUrl: string;
@@ -172,9 +173,17 @@ export default function AboutPage() {
                 The Developer
               </h2>
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--acade-primary)] to-[var(--acade-primary-glow)] flex items-center justify-center text-white font-bold text-xl shrink-0">
-                  {data.builderInitials}
-                </div>
+                {data.builderImageUrl ? (
+                  <img
+                    src={data.builderImageUrl}
+                    alt={data.builderName}
+                    className="w-16 h-16 rounded-full object-cover shadow-sm shrink-0 border border-[var(--acade-border)]"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--acade-primary)] to-[var(--acade-primary-glow)] flex items-center justify-center text-white font-bold text-xl shrink-0">
+                    {data.builderInitials}
+                  </div>
+                )}
                 <div>
                   <h3 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">
                     {data.builderName}
