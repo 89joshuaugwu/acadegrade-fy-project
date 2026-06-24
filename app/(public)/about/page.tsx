@@ -169,7 +169,7 @@ export default function AboutPage() {
           >
             <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-8 shadow-sm">
               <h2 className="text-[length:var(--text-2xl)] font-bold mb-4 font-[family-name:var(--font-bricolage)]">
-                The Builder
+                The Developer
               </h2>
               <div className="flex items-start gap-4">
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--acade-primary)] to-[var(--acade-primary-glow)] flex items-center justify-center text-white font-bold text-xl shrink-0">

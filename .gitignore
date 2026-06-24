@@ -56,8 +56,12 @@ desktop.ini
 .sixth
 .agents
 .agent
-.cursorules
+
 acadegrade_apis.txt
 acadegrade-firebase-adminsdk.json
 chatwithai.txt
 openrouterai.txt
+MCPserversprompt.txt
+DESIGN.md
+PROMPT.md
+

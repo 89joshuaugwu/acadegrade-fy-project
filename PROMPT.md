@@ -1011,38 +1011,3 @@ OUTPUT: Production-ready AcadeGrade v2 deployed at acadegrade.vercel.app.
 
 *PROMPT.md v1.0 · AcadeGrade v2 · Joshuazaza · ESUT CS 2026*  
 *Use this with DESIGN.md as your complete build reference.*
-
-
-
-
-so proceed with prompt phase 11 remeber all your skills, mcp servers @contextScopeItemMention, etc and proceed with prompt phase 11 below:
-## Phase 11 — Quick Calculator & About
-
-```
-ACADEGRADE V2 — PHASE 11: QUICK CALCULATOR & ABOUT
-
-FILES:
-
-1. app/(public)/calculator/page.tsx — NO-LOGIN QUICK CALCULATOR:
-   'use client'
-   
-   - Add courses: code (text), units (1-6 select), input mode toggle (Grade / Score)
-   - Grade mode: select A|B|C|D|E|F per course
-   - Score mode: number input 0-100 per course
-   - Real-time CGPA + PI display as user adds/changes courses
-   - Mini CGPAArc showing live CGPA (size="md", animateOnMount=false, updates on change)
-   - DegreeClassBadge updating live
-   - [Add Course] + [Clear All] + [Save to Account → /login]
-   - Shareable link: encode courses as URL query params → share button
-   - No Firebase, no API calls — pure client-side calculation using lib/cgpa/calculator.ts
-
-2. app/(public)/about/page.tsx:
-   - About AcadeGrade
-   - About Joshuazaza (builder attribution)
-   - Tech stack (visual display)
-   - CSC 499 academic context
-   - Links to GitHub (if public) and deployed site
-   - Contact section
-```
-
----
