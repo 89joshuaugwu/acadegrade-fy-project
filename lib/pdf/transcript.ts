@@ -265,8 +265,45 @@ export function buildTranscript(
   doc.setFont('helvetica', 'normal');
   doc.text('CGPA', gaugeCX, gaugeCY + 5, { align: 'center' });
 
-  // Text info to the right of the gauge
-  const infoX = gaugeCX + gaugeR + 10;
+  // -- PI GAUGE ARC --
+  const piGaugeCX = gaugeCX + gaugeR * 2 + 12;
+  const piNum = parseFloat(cumulativePI);
+  // Background arc (gray)
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(2.5);
+  for (let i = 0; i < arcSteps; i++) {
+    const a1 = startAngle + (endAngle - startAngle) * (i / arcSteps);
+    const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / arcSteps);
+    doc.line(
+      piGaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
+      piGaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
+    );
+  }
+  // Foreground arc (gold #f59e0b for PI)
+  const piFillRatio = Math.min(piNum / 5, 1);
+  const piFillEnd = startAngle + (endAngle - startAngle) * piFillRatio;
+  doc.setDrawColor(245, 158, 11);
+  doc.setLineWidth(3);
+  const piFillSteps = Math.floor(arcSteps * piFillRatio);
+  for (let i = 0; i < piFillSteps; i++) {
+    const a1 = startAngle + (piFillEnd - startAngle) * (i / piFillSteps);
+    const a2 = startAngle + (piFillEnd - startAngle) * ((i + 1) / piFillSteps);
+    doc.line(
+      piGaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
+      piGaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
+    );
+  }
+  // PI number in center
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text(cumulativePI, piGaugeCX, gaugeCY + 1, { align: 'center' });
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('PI', piGaugeCX, gaugeCY + 5, { align: 'center' });
+
+  // Text info to the right of both gauges
+  const infoX = piGaugeCX + gaugeR + 10;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
   doc.text('CUMULATIVE SUMMARY', infoX, currentY + 8);
