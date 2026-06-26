@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { GenerativeArtScene } from '@/components/ui/GenerativeHero';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -70,62 +71,6 @@ const steps = [
 const aiMockText = `Based on your academic trajectory, you're maintaining a strong 2:1 standing with a CGPA of 4.23. Your PI of 4.41 shows consistent high-scoring performance beyond what letter grades reveal.\n\nStrengths: Consistent A grades in core Computer Science courses. Your programming modules show particular excellence.\n\nRecommendation: Focus on MTH 301 and PHY 202 where scores dipped below 65%. A targeted 10% improvement in these courses could push your CGPA above the First Class threshold of 4.50.`;
 
 /* ════════════════════════════════════════════════════
-   STARFIELD CANVAS
-   ════════════════════════════════════════════════════ */
-function useStarfield(canvasRef: React.RefObject<HTMLCanvasElement | null>, enabled: boolean) {
-  useEffect(() => {
-    if (!enabled) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-    const stars: { x: number; y: number; r: number; speed: number; alpha: number }[] = [];
-
-    function resize() {
-      canvas!.width = window.innerWidth;
-      canvas!.height = window.innerHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    for (let i = 0; i < 80; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        r: 0.5 + Math.random() * 1.5,
-        speed: 0.15 + Math.random() * 0.35,
-        alpha: 0.3 + Math.random() * 0.5,
-      });
-    }
-
-    function draw() {
-      ctx!.clearRect(0, 0, canvas!.width, canvas!.height);
-      for (const s of stars) {
-        s.y -= s.speed;
-        if (s.y < -5) {
-          s.y = canvas!.height + 5;
-          s.x = Math.random() * canvas!.width;
-        }
-        ctx!.beginPath();
-        ctx!.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx!.fillStyle = `rgba(99,102,241,${s.alpha})`;
-        ctx!.fill();
-      }
-      animId = requestAnimationFrame(draw);
-    }
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
-    };
-  }, [canvasRef, enabled]);
-}
-
-/* ════════════════════════════════════════════════════
    TYPING ANIMATION HOOK
    ════════════════════════════════════════════════════ */
 function useTypingAnimation(text: string, speed: number = 18, startDelay: number = 500) {
@@ -156,10 +101,7 @@ function useTypingAnimation(text: string, speed: number = 18, startDelay: number
    ════════════════════════════════════════════════════ */
 export default function LandingPage() {
   const shouldReduceMotion = useReducedMotion();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [wordIndex, setWordIndex] = useState(0);
-
-  useStarfield(canvasRef, !shouldReduceMotion);
 
   // Cycle hero words
   useEffect(() => {
@@ -195,19 +137,12 @@ export default function LandingPage() {
 
       {/* ═══════════ SECTION 1 — HERO ═══════════ */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-5 pt-20 pb-16">
-        {/* Starfield canvas */}
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          aria-hidden="true"
-        />
-
-        {/* Radial glow behind arc */}
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full opacity-20 pointer-events-none"
-          style={{ background: 'radial-gradient(circle, var(--acade-primary) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
+        
+        {/* 3D Generative Art Background */}
+        <GenerativeArtScene enabled={!shouldReduceMotion} />
+        
+        {/* Gradient overlay to ensure text is readable against the 3D canvas */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--acade-background)] via-[var(--acade-background)]/60 to-transparent z-0 pointer-events-none" />
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-3xl mx-auto">
           {/* Cycling headline */}

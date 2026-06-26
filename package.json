@@ -14,6 +14,7 @@
     "@hookform/resolvers": "5.4.0",
     "@serwist/next": "^9.5.11",
     "@tailwindcss/postcss": "^4.3.1",
+    "@types/three": "^0.185.0",
     "date-fns": "4.4.0",
     "firebase": "^12.14.0",
     "firebase-admin": "13.0.0",
@@ -39,6 +40,7 @@
     "simple-statistics": "7.9.0",
     "swr": "^2.4.2",
     "tailwindcss": "4.3.1",
+    "three": "^0.185.0",
     "zod": "4.4.3"
   },
   "devDependencies": {
