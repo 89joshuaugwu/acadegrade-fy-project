@@ -1,47 +1,10 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
 import type { SemesterSummary } from '@/types/semester';
-
-const LazyResponsiveContainer = dynamic(
-  () => import('recharts').then((m) => m.ResponsiveContainer),
-  { ssr: false }
-);
-const LazyComposedChart = dynamic(
-  () => import('recharts').then((m) => m.ComposedChart),
-  { ssr: false }
-);
-const LazyArea = dynamic(
-  () => import('recharts').then((m) => m.Area),
-  { ssr: false }
-);
-const LazyLine = dynamic(
-  () => import('recharts').then((m) => m.Line),
-  { ssr: false }
-);
-const LazyXAxis = dynamic(
-  () => import('recharts').then((m) => m.XAxis),
-  { ssr: false }
-);
-const LazyYAxis = dynamic(
-  () => import('recharts').then((m) => m.YAxis),
-  { ssr: false }
-);
-const LazyTooltip = dynamic(
-  () => import('recharts').then((m) => m.Tooltip),
-  { ssr: false }
-);
-const LazyCartesianGrid = dynamic(
-  () => import('recharts').then((m) => m.CartesianGrid),
-  { ssr: false }
-);
-const LazyReferenceArea = dynamic(
-  () => import('recharts').then((m) => m.ReferenceArea),
-  { ssr: false }
-);
 
 interface TrendChartProps {
   semesters: SemesterSummary[];
@@ -52,30 +15,95 @@ interface TrendChartProps {
 
 export function TrendChart({ semesters, metric, showForecast = false, forecastPoints = [] }: TrendChartProps) {
   const shouldReduceMotion = useReducedMotion();
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const data = useMemo(() => {
-    // Format historical
     const history = semesters.map((s, idx) => ({
       name: s.label,
       idx,
-      cgpa: s.gpa,
-      pi: s.pi,
+      cgpa: s.gpa || 0,
+      pi: s.pi || 0,
       isForecast: false,
     }));
 
-    // Add forecast if requested
     const forecast = showForecast && forecastPoints.length > 0
       ? forecastPoints.map((f, idx) => ({
           name: f.label,
           idx: history.length + idx,
-          cgpa: f.cgpa,
-          pi: f.pi,
+          cgpa: f.cgpa || 0,
+          pi: f.pi || 0,
           isForecast: true,
         }))
       : [];
 
     return [...history, ...forecast];
   }, [semesters, showForecast, forecastPoints]);
+
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  // Constants for pure SVG rendering
+  const width = 800;
+  const height = 320;
+  const padding = { top: 40, right: 30, bottom: 40, left: 30 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+
+  // Scales
+  const getX = (index: number) => {
+    if (data.length <= 1) return padding.left + chartWidth / 2;
+    return padding.left + (index / (data.length - 1)) * chartWidth;
+  };
+  const getY = (val: number) => padding.top + (1 - val / 5) * chartHeight;
+
+  // Monotone bezier curve generator
+  const generateSmoothPath = (points: { x: number; y: number }[]) => {
+    if (points.length === 0) return '';
+    let d = `M ${points[0].x},${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      const cp1x = prev.x + (curr.x - prev.x) / 2;
+      const cp1y = prev.y;
+      const cp2x = prev.x + (curr.x - prev.x) / 2;
+      const cp2y = curr.y;
+      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${curr.x},${curr.y}`;
+    }
+    return d;
+  };
+
+  const generateAreaPath = (points: { x: number; y: number }[]) => {
+    if (points.length === 0) return '';
+    const linePath = generateSmoothPath(points);
+    return `${linePath} L ${points[points.length - 1].x},${height - padding.bottom} L ${points[0].x},${height - padding.bottom} Z`;
+  };
+
+  // Generate points sets
+  const cgpaPoints = data.map((d, i) => ({ x: getX(i), y: getY(d.cgpa) }));
+  const piPoints = data.map((d, i) => ({ x: getX(i), y: getY(d.pi) }));
+
+  const showCGPA = metric === 'cgpa' || metric === 'both';
+  const showPI = metric === 'pi' || metric === 'both';
+
+  // Magnetic Snapping Logic
+  const handlePointerMove = (e: React.PointerEvent<SVGRectElement>) => {
+    if (!svgRef.current || data.length === 0) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    
+    // Calculate relative x coordinate taking into account the SVG's viewBox scaling
+    const scaleX = width / rect.width;
+    const relativeX = (e.clientX - rect.left) * scaleX;
+    
+    // Find closest index
+    let index = Math.round(((relativeX - padding.left) / chartWidth) * (data.length - 1));
+    index = Math.max(0, Math.min(data.length - 1, index));
+    setHoveredIndex(index);
+  };
+
+  const handlePointerLeave = () => {
+    setHoveredIndex(null);
+  };
+
+  const activeData = hoveredIndex !== null ? data[hoveredIndex] : data[data.length - 1];
 
   if (data.length === 0) {
     return (
@@ -85,161 +113,278 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
     );
   }
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const isForecast = payload[0].payload.isForecast;
-      return (
-        <div className="bg-[var(--acade-deep)]/90 backdrop-blur-md border border-[var(--acade-border)] p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
-          <p className="text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-wider mb-3">
-            {label} {isForecast && <span className="text-[var(--acade-info)] ml-1">(Projected)</span>}
-          </p>
-          <div className="flex flex-col gap-2">
-            {payload.map((entry: any, index: number) => {
-              const isPi = entry.dataKey === 'pi';
-              return (
-                <div key={index} className="flex items-center justify-between gap-4 text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "w-3 h-3 rounded-full shadow-[0_0_8px]",
-                      isPi ? "bg-[var(--acade-gold)] shadow-[var(--acade-gold)]" : "bg-[var(--acade-primary)] shadow-[var(--acade-primary)]"
-                    )} />
-                    <span className="text-[var(--acade-text-muted)] uppercase text-xs font-bold">{entry.dataKey}:</span>
-                  </div>
-                  <span className="font-bold text-[length:var(--text-lg)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
-                    {Number(entry.value).toFixed(2)}
-                  </span>
+  return (
+    <div className="w-full relative flex flex-col gap-6">
+      {/* Real-time Magnetic Odometer Headers */}
+      <div className="flex items-end justify-between px-2">
+        <div className="flex flex-col">
+          <span className="text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-widest mb-1 transition-colors">
+            {activeData?.name} {activeData?.isForecast && <span className="text-[var(--acade-gold)] ml-1">(Projected)</span>}
+          </span>
+          <div className="flex items-baseline gap-6">
+            {showCGPA && (
+              <div className="flex flex-col">
+                <span className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums transition-all">
+                  {activeData?.cgpa.toFixed(2)}
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]" />
+                  <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-medium">CGPA</span>
                 </div>
-              );
-            })}
+              </div>
+            )}
+            {showPI && (
+              <div className="flex flex-col">
+                <span className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums transition-all">
+                  {activeData?.pi.toFixed(2)}
+                </span>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="w-2 h-2 rounded-full bg-[var(--acade-gold)] shadow-[0_0_8px_var(--acade-gold)]" />
+                  <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-medium">PI</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      );
-    }
-    return null;
-  };
+      </div>
 
-  const showCGPA = metric === 'cgpa' || metric === 'both';
-  const showPI = metric === 'pi' || metric === 'both';
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <div className="w-full h-64 md:h-80 bg-[var(--acade-deep)] animate-pulse rounded-xl" />;
-  }
-
-  return (
-    <div className="w-full h-64 md:h-80 relative">
-      <div className="absolute inset-0">
-      <LazyResponsiveContainer width="100%" height="100%">
-        <LazyComposedChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+      {/* Pure SVG + Framer Motion Render Engine */}
+      <div className="w-full h-64 md:h-80 relative select-none touch-none">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-full overflow-visible"
+          preserveAspectRatio="none"
+        >
           <defs>
-            <linearGradient id="lineCgpa" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--acade-primary)">
-                <animate attributeName="stop-color" values="var(--acade-primary);#8b5cf6;var(--acade-primary)" dur="4s" repeatCount="indefinite" />
+            {/* Viewport-Aware Dynamic Gradient */}
+            <linearGradient id="viewportGradientCgpa" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--acade-success)" />
+              <stop offset="30%" stopColor="var(--acade-primary)" />
+              <stop offset="100%" stopColor="var(--acade-danger)" />
+            </linearGradient>
+
+            <linearGradient id="areaGradientCgpa" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.6} />
+              <stop offset="100%" stopColor="var(--acade-primary)" stopOpacity={0.0} />
+            </linearGradient>
+            
+            <linearGradient id="lineGradientPi" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--acade-gold)">
+                <animate attributeName="stop-color" values="var(--acade-gold);#fbbf24;var(--acade-gold)" dur="3s" repeatCount="indefinite" />
               </stop>
-              <stop offset="100%" stopColor="#8b5cf6">
-                <animate attributeName="stop-color" values="#8b5cf6;var(--acade-primary);#8b5cf6" dur="4s" repeatCount="indefinite" />
+              <stop offset="100%" stopColor="#fbbf24">
+                <animate attributeName="stop-color" values="#fbbf24;var(--acade-gold);#fbbf24" dur="3s" repeatCount="indefinite" />
               </stop>
             </linearGradient>
 
-            <linearGradient id="colorCgpa" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--acade-primary)" stopOpacity={0.6}/>
-              <stop offset="95%" stopColor="var(--acade-primary)" stopOpacity={0.05}/>
-            </linearGradient>
+            <filter id="neonGlowCgpa" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="var(--acade-primary)" floodOpacity="0.8" />
+            </filter>
             
-            <linearGradient id="colorPi" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--acade-gold)" stopOpacity={0.4}/>
-              <stop offset="95%" stopColor="var(--acade-gold)" stopOpacity={0}/>
-            </linearGradient>
+            <filter id="neonGlowPi" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="var(--acade-gold)" floodOpacity="0.8" />
+            </filter>
 
-            <filter id="glowCgpa" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="var(--acade-primary)" floodOpacity="0.6"/>
-            </filter>
-            
-            <filter id="glowPi" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="var(--acade-gold)" floodOpacity="0.6"/>
-            </filter>
+            <pattern id="forecastHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="10" stroke="var(--acade-text-faint)" strokeWidth="1" strokeOpacity="0.3" />
+            </pattern>
           </defs>
-          <LazyCartesianGrid strokeDasharray="3 3" stroke="var(--acade-border-subtle)" vertical={false} />
-          <LazyXAxis 
-            dataKey="name" 
-            stroke="var(--acade-text-faint)" 
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            dy={10}
-            tickFormatter={(val) => {
-              // Extract just the level/sem for smaller screens e.g. "100L S1"
-              if (typeof val === 'string') {
-                const match = val.match(/(\d{3}L).*(First|Second)/i);
-                if (match) return `${match[1]} ${match[2] === 'First' ? 'S1' : 'S2'}`;
-              }
-              return val;
-            }}
-          />
-          <LazyYAxis 
-            domain={[0, 5]} 
-            stroke="var(--acade-text-faint)" 
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(val) => val.toFixed(1)}
-            dx={-10}
-          />
-          <LazyTooltip 
-            content={<CustomTooltip />} 
-            cursor={{ stroke: 'var(--acade-border)', strokeWidth: 1, strokeDasharray: '4 4' }}
-          />
-          
-          {showForecast && (
-            <LazyReferenceArea 
-              x1={data[semesters.length - 1]?.name} 
-              x2={data[data.length - 1]?.name} 
-              fill="var(--acade-info)" 
-              fillOpacity={0.05} 
+
+          {/* Background Grid */}
+          <g className="grid-lines">
+            {[0, 1, 2, 3, 4, 5].map((val) => {
+              const y = getY(val);
+              return (
+                <g key={`grid-${val}`}>
+                  <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--acade-border-subtle)" strokeDasharray="4 4" />
+                  <text x={padding.left - 10} y={y} fill="var(--acade-text-faint)" fontSize="12" fontWeight="500" textAnchor="end" dominantBaseline="middle" fontFamily="var(--font-geist-mono)">
+                    {val.toFixed(1)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+
+          {/* Forecast Zone Highlight */}
+          {showForecast && history.length > 0 && (
+            <rect
+              x={getX(semesters.length - 1)}
+              y={padding.top}
+              width={getX(data.length - 1) - getX(semesters.length - 1)}
+              height={chartHeight}
+              fill="url(#forecastHatch)"
             />
           )}
 
-          {/* Historical lines */}
+          {/* Historical Area (CGPA) */}
           {showCGPA && (
-            <LazyArea 
-              type="monotone" 
-              dataKey="cgpa" 
-              stroke="url(#lineCgpa)" 
-              fillOpacity={1}
-              fill="url(#colorCgpa)"
-              strokeWidth={4}
-              filter="url(#glowCgpa)"
-              dot={{ r: 5, strokeWidth: 2, fill: 'var(--acade-deep)', stroke: 'var(--acade-primary)' }}
-              activeDot={{ r: 8, strokeWidth: 3, fill: 'var(--acade-primary)', stroke: 'var(--acade-surface)' }}
-              isAnimationActive={!shouldReduceMotion}
-              animationBegin={100}
-              animationDuration={1500}
-              animationEasing="ease-in-out"
+            <motion.path
+              d={generateAreaPath(cgpaPoints)}
+              fill="url(#areaGradientCgpa)"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1.5, ease: "easeOut" }}
             />
           )}
+
+          {/* Viewport-Aware Smooth Line (CGPA) */}
+          {showCGPA && (
+            <motion.path
+              d={generateSmoothPath(cgpaPoints)}
+              fill="none"
+              stroke="url(#viewportGradientCgpa)"
+              strokeWidth="4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              filter="url(#neonGlowCgpa)"
+              initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+            />
+          )}
+
+          {/* Animated Projected Line (PI) */}
           {showPI && (
-            <LazyLine 
-              type="monotone" 
-              dataKey="pi" 
-              stroke="var(--acade-gold)" 
-              strokeWidth={3}
-              strokeDasharray={showCGPA ? "6 6" : undefined}
-              filter="url(#glowPi)"
-              dot={!showCGPA ? { r: 5, strokeWidth: 2, fill: 'var(--acade-deep)' } : false}
-              activeDot={{ r: 8, strokeWidth: 3, fill: 'var(--acade-gold)', stroke: 'var(--acade-deep)' }}
-              isAnimationActive={!shouldReduceMotion}
-              animationBegin={400}
-              animationDuration={1500}
-              animationEasing="ease-out"
+            <motion.path
+              d={generateSmoothPath(piPoints)}
+              fill="none"
+              stroke="url(#lineGradientPi)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeDasharray={showCGPA ? "8 8" : "none"}
+              filter="url(#neonGlowPi)"
+              initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 2, ease: "easeInOut", delay: showCGPA ? 0.5 : 0 }}
             />
           )}
-        </LazyComposedChart>
-      </LazyResponsiveContainer>
+
+          {/* Data Points */}
+          {data.map((d, i) => (
+            <g key={`points-${i}`}>
+              {showCGPA && (
+                <motion.circle
+                  cx={cgpaPoints[i].x}
+                  cy={cgpaPoints[i].y}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: hoveredIndex === i ? 2 : 1, 
+                    opacity: 1,
+                    fill: hoveredIndex === i ? 'var(--acade-surface)' : 'var(--acade-deep)'
+                  }}
+                  transition={{ 
+                    scale: { type: "spring", stiffness: 400, damping: 20 },
+                    opacity: { duration: 0.5, delay: 1 + (i * 0.05) }
+                  }}
+                  r="5"
+                  stroke="var(--acade-primary)"
+                  strokeWidth="3"
+                  className="pointer-events-none"
+                />
+              )}
+              {showPI && (
+                <motion.circle
+                  cx={piPoints[i].x}
+                  cy={piPoints[i].y}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: hoveredIndex === i ? 2 : 1, 
+                    opacity: 1,
+                    fill: hoveredIndex === i ? 'var(--acade-surface)' : 'var(--acade-deep)'
+                  }}
+                  transition={{ 
+                    scale: { type: "spring", stiffness: 400, damping: 20 },
+                    opacity: { duration: 0.5, delay: (showCGPA ? 1.5 : 1) + (i * 0.05) }
+                  }}
+                  r="4"
+                  stroke="var(--acade-gold)"
+                  strokeWidth="3"
+                  className="pointer-events-none"
+                />
+              )}
+            </g>
+          ))}
+
+          {/* Magnetic Crosshair */}
+          <AnimatePresence>
+            {hoveredIndex !== null && (
+              <motion.g
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="pointer-events-none"
+              >
+                {/* Laser Line */}
+                <motion.line
+                  x1={getX(hoveredIndex)}
+                  y1={padding.top}
+                  x2={getX(hoveredIndex)}
+                  y2={height - padding.bottom}
+                  stroke="var(--acade-primary)"
+                  strokeDasharray="4 4"
+                  strokeWidth="2"
+                  animate={{ x1: getX(hoveredIndex), x2: getX(hoveredIndex) }}
+                  transition={{ type: "spring", stiffness: 600, damping: 30 }}
+                />
+                
+                {/* Ripple Shockwave */}
+                {showCGPA && (
+                  <motion.circle
+                    cx={cgpaPoints[hoveredIndex].x}
+                    cy={cgpaPoints[hoveredIndex].y}
+                    animate={{ 
+                      r: [10, 24], 
+                      opacity: [0.8, 0],
+                      cx: cgpaPoints[hoveredIndex].x,
+                      cy: cgpaPoints[hoveredIndex].y
+                    }}
+                    transition={{ 
+                      r: { duration: 1, repeat: Infinity, ease: "easeOut" },
+                      opacity: { duration: 1, repeat: Infinity, ease: "easeOut" },
+                      cx: { type: "spring", stiffness: 600, damping: 30 },
+                      cy: { type: "spring", stiffness: 600, damping: 30 }
+                    }}
+                    fill="var(--acade-primary)"
+                  />
+                )}
+                {showPI && (
+                  <motion.circle
+                    cx={piPoints[hoveredIndex].x}
+                    cy={piPoints[hoveredIndex].y}
+                    animate={{ 
+                      r: [8, 20], 
+                      opacity: [0.8, 0],
+                      cx: piPoints[hoveredIndex].x,
+                      cy: piPoints[hoveredIndex].y
+                    }}
+                    transition={{ 
+                      r: { duration: 1, repeat: Infinity, ease: "easeOut" },
+                      opacity: { duration: 1, repeat: Infinity, ease: "easeOut" },
+                      cx: { type: "spring", stiffness: 600, damping: 30 },
+                      cy: { type: "spring", stiffness: 600, damping: 30 }
+                    }}
+                    fill="var(--acade-gold)"
+                  />
+                )}
+              </motion.g>
+            )}
+          </AnimatePresence>
+
+          {/* Invisible Interaction Layer */}
+          <rect
+            x={padding.left}
+            y={padding.top}
+            width={chartWidth}
+            height={chartHeight}
+            fill="transparent"
+            onPointerMove={handlePointerMove}
+            onPointerLeave={handlePointerLeave}
+            className="cursor-crosshair touch-none"
+          />
+        </svg>
       </div>
     </div>
   );
