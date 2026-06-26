@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
 import { Bell, CheckCircle2, AlertTriangle, Lightbulb, Info, Check } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useAuth } from '@/hooks/useAuth';
+import { updateDocument } from '@/lib/firebase/firestore';
+import { setRTDB } from '@/lib/firebase/rtdb';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
 import { formatDistanceToNow } from 'date-fns';
@@ -12,6 +15,7 @@ import { formatDistanceToNow } from 'date-fns';
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
   const { unreadCount, notifications, loading } = useNotifications();
   const shouldReduceMotion = useReducedMotion();
 
@@ -46,12 +50,15 @@ export function NotificationDropdown() {
   }, [isOpen]);
 
   const handleMarkAllRead = async () => {
-    if (!notifications) return;
+    if (!notifications || !user) return;
     try {
       const unread = notifications.filter(n => !n.read);
-      // We would need the user uid, but we don't have it directly in this file
-      // Wait, let's just log it or pass it.
-      console.log('Marking all read. Backend sync requires user ID.');
+      if (unread.length === 0) return;
+      
+      await Promise.all(
+        unread.map(n => updateDocument(`notifications/${user.uid}/items/${n.id}`, { read: true }))
+      );
+      await setRTDB(`notif_counts/${user.uid}/unread`, 0);
     } catch (e) {
       console.error(e);
     }
@@ -92,7 +99,7 @@ export function NotificationDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute right-0 mt-2 w-80 bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl z-50 overflow-hidden origin-top-right"
+            className="absolute -right-2 sm:right-0 mt-2 w-[calc(100vw-32px)] max-w-[360px] sm:w-80 bg-[var(--acade-deep)]/95 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] z-50 overflow-hidden origin-top-right"
           >
             <div className="flex items-center justify-between p-4 border-b border-[var(--acade-border)]">
               <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">

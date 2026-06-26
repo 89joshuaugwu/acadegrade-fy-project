@@ -286,13 +286,33 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="size-12 relative animate-pulse flex items-center justify-center">
-          <Image src="/acadegradeailogo.png" alt="AcadeMind" width={40} height={40} className="object-contain" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 relative overflow-hidden rounded-3xl border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]">
+        {/* Futuristic Scanning Overlay */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <motion.div 
+            animate={{ y: ["-100%", "500%"] }}
+            transition={{ duration: 3, ease: "linear", repeat: Infinity }}
+            className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent via-[var(--acade-primary)]/5 to-[var(--acade-primary)]/20 border-b-2 border-[var(--acade-primary)]/80 shadow-[0_10px_30px_rgba(99,102,241,0.3)]" 
+          />
+          {/* Subtle grid pattern background */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
         </div>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-bold animate-pulse">
-          AcadeMind is analyzing your records...
-        </p>
+        
+        <div className="relative z-10">
+          <div className="absolute inset-0 rounded-full blur-2xl bg-[var(--acade-primary)]/30 animate-pulse" />
+          <div className="size-24 relative flex items-center justify-center rounded-full bg-[var(--acade-deep)] border border-[var(--acade-primary)]/40 shadow-[0_0_40px_rgba(99,102,241,0.2)]">
+            <Image src="/acadegradeailogo.png" alt="AcadeMind" width={60} height={60} className="object-contain animate-pulse" />
+          </div>
+        </div>
+        
+        <div className="text-center z-10 mt-2">
+          <h3 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-primary-glow)] font-[family-name:var(--font-geist-mono)] tracking-widest uppercase">
+            AcadeMind Synthesizing
+          </h3>
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium mt-2 animate-pulse font-[family-name:var(--font-geist-mono)]">
+            Analyzing academic records...
+          </p>
+        </div>
       </div>
     );
   }

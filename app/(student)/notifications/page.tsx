@@ -117,12 +117,18 @@ export default function NotificationsPage() {
         ) : (
           <div className="divide-y divide-[var(--acade-border-subtle)]">
             <AnimatePresence initial={false}>
-              {notifications.map((notif) => (
+              {notifications.map((notif, index) => (
                 <motion.div
                   key={notif.id}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
+                  initial={{ opacity: 0, rotateX: -60, y: -20, transformOrigin: "top" }}
+                  animate={{ opacity: 1, rotateX: 0, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, height: 0 }}
+                  transition={{ 
+                    duration: 0.5, 
+                    delay: index * 0.08, 
+                    type: 'spring', 
+                    damping: 20 
+                  }}
                   onClick={() => !notif.read && handleMarkAsRead(notif.id)}
                   className={cn(
                     "p-4 sm:p-6 transition-colors flex gap-4 cursor-pointer",
