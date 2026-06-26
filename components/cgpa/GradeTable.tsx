@@ -141,7 +141,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
         <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
-            <tr className="border-b border-[var(--acade-border)] text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-bold uppercase font-[family-name:var(--font-dm-sans)]">
+            <tr className="border-b border-[var(--acade-border)] text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-bold uppercase font-[family-name:var(--font-dm-sans)] bg-[var(--acade-deep)]/50">
               <th className="p-3 w-10">#</th>
               <th className="p-3 w-32">Code</th>
               <th className="p-3">Title</th>
@@ -172,7 +172,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     }
                     exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className="border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)] transition-colors group"
+                    className="border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-primary)]/5 hover:shadow-[inset_0_0_20px_rgba(99,102,241,0.05)] transition-all duration-300 group"
                   >
                     <td className="p-3 text-[length:var(--text-sm)] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
                       {idx + 1}

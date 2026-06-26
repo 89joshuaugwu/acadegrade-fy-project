@@ -50,7 +50,7 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
   };
 
   return (
-    <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden mb-4">
+    <div className="relative bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-[16px] shadow-[0_4px_20px_rgba(0,0,0,0.2)] mb-4 overflow-hidden transition-all duration-300 hover:border-[var(--acade-primary)]/30 hover:shadow-[0_0_30px_rgba(99,102,241,0.1)] group">
       {/* Header (Clickable) */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -80,7 +80,13 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
             </span>
           </div>
           {!semester.isComplete && (
-            <Badge variant="ongoing" className="ml-2 animate-pulse">Ongoing</Badge>
+            <div className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-warning)] opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--acade-warning)]"></span>
+              </span>
+              <span className="text-[10px] font-bold text-[var(--acade-warning)] uppercase tracking-wider">Ongoing</span>
+            </div>
           )}
         </div>
         <motion.div
@@ -99,6 +105,7 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
             initial={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
             animate={shouldReduceMotion ? { opacity: 1 } : { height: 'auto', opacity: 1 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className="overflow-hidden"
           >
             <div className="p-4 md:p-5 border-t border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]/50">
