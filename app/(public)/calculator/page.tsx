@@ -7,6 +7,7 @@ import { Calculator, Plus, Trash2, Share2, Save, ArrowRight, Settings2 } from 'l
 
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
+import { useAuth } from '@/hooks/useAuth';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -43,6 +44,8 @@ function QuickCalculatorInner() {
   const [inputMode, setInputMode] = useState<'grade' | 'score'>('grade');
   const [isCopied, setIsCopied] = useState(false);
   const [initialised, setInitialised] = useState(false);
+  const { user } = useAuth();
+  const [showAuthAlert, setShowAuthAlert] = useState(false);
 
   // Hydrate from URL once on mount
   useEffect(() => {
@@ -142,13 +145,29 @@ function QuickCalculatorInner() {
   };
 
   const handleShare = async () => {
+    if (!user) {
+      setShowAuthAlert(true);
+      return;
+    }
+
     const url = window.location.href;
     try {
-      await navigator.clipboard.writeText(url);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for non-secure contexts
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy', err);
+      alert('Failed to copy link to clipboard. You can manually copy the URL from your browser address bar.');
     }
   };
 
@@ -355,6 +374,42 @@ function QuickCalculatorInner() {
           </Button>
         </div>
       </motion.div>
+
+      {/* Auth Alert Modal */}
+      <AnimatePresence>
+        {showAuthAlert && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--acade-primary)]/10 rounded-bl-full pointer-events-none" />
+              <h3 className="text-2xl font-bold font-[family-name:var(--font-bricolage)] text-white mb-2">Account Required</h3>
+              <p className="text-[var(--acade-text-muted)] mb-6 text-sm">
+                Please login or create an account to share and save your results permanently.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button variant="primary" fullWidth onClick={() => window.location.href = '/register'}>
+                  Create an Account
+                </Button>
+                <Button variant="outline" fullWidth onClick={() => window.location.href = '/login'}>
+                  Login
+                </Button>
+                <Button variant="ghost" fullWidth onClick={() => setShowAuthAlert(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
