@@ -8,6 +8,8 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  // @ts-ignore
+  allowedDevOrigins: ['192.168.0.134'],
   serverExternalPackages: ['firebase-admin'],
   async headers() {
     return [
