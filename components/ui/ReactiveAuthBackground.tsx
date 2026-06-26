@@ -66,6 +66,9 @@ export function ReactiveAuthBackground() {
           ctx.fill();
       });
 
+      // Reset global alpha so ripples are bright and visible
+      ctx.globalAlpha = 1.0;
+
       // Draw Typing Ripples (Data shockwaves)
       for (let i = ripples.length - 1; i >= 0; i--) {
         const r = ripples[i];
@@ -93,13 +96,13 @@ export function ReactiveAuthBackground() {
         // Ignore if key is undefined or meta keys (Shift, Ctrl, Alt, etc)
         if (!e.key || (e.key.length !== 1 && e.key !== 'Backspace' && e.key !== 'Enter')) return;
 
-        // Spawn a data ripple starting near the vertical center
+        // Spawn a massive bright ripple!
         ripples.push({
             x: (window.innerWidth / 2) + (Math.random() * 400 - 200),
             y: (window.innerHeight / 2) + (Math.random() * 200 - 100),
             radius: 10,
-            speed: Math.random() * 3 + 4,
-            alpha: 0.5
+            speed: Math.random() * 4 + 6, // Much faster expansion
+            alpha: 1.0 // Fully opaque at start
         });
     };
 
