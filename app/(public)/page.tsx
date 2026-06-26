@@ -184,7 +184,7 @@ export default function LandingPage() {
             className="relative"
           >
             <div className="absolute inset-0 -m-6 rounded-full bg-[var(--acade-primary)]/8 animate-[pulse-glow_3s_ease-in-out_infinite] pointer-events-none" />
-            <CGPAArc cgpa={4.72} pi={4.81} size="md" animateOnMount showParticles={false} />
+            <CGPAArc cgpa={4.63} pi={3.79} size="md" animateOnMount showParticles={false} />
           </motion.div>
         </div>
       </section>
