@@ -99,23 +99,32 @@ export function ParticleNetworkHero({ enabled }: { enabled: boolean }) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Reset transform to ensure clearRect clears the absolute physical pixels
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Re-apply the DPR scaling for drawing
+    const dpr = window.devicePixelRatio || 1;
+    ctx.scale(dpr, dpr);
 
     // Subtle Radial Glow
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
+    // Since we scaled by dpr, we must use logical coordinates
+    const logicalWidth = canvas.width / dpr;
+    const logicalHeight = canvas.height / dpr;
+    const centerX = logicalWidth / 2;
+    const centerY = logicalHeight / 2;
     const pulseSpeed = 0.0005;
     const pulseOpacity = Math.sin(time * pulseSpeed) * 0.02 + 0.05; 
     
     const gradient = ctx.createRadialGradient(
         centerX, centerY, 0, 
-        centerX, centerY, Math.max(canvas.width, canvas.height) * 0.8
+        centerX, centerY, Math.max(logicalWidth, logicalHeight) * 0.8
     );
     gradient.addColorStop(0, `rgba(79, 70, 229, ${pulseOpacity})`); // AcadeGrade Indigo
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
     
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
     // Draw Background Particles
     const bgParticles = backgroundParticlesRef.current;
@@ -125,10 +134,10 @@ export function ParticleNetworkHero({ enabled }: { enabled: boolean }) {
       p.x += p.vx;
       p.y += p.vy;
       
-      if (p.x < 0) p.x = canvas.width;
-      if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height;
-      if (p.y > canvas.height) p.y = 0;
+      if (p.x < 0) p.x = logicalWidth;
+      if (p.x > logicalWidth) p.x = 0;
+      if (p.y < 0) p.y = logicalHeight;
+      if (p.y > logicalHeight) p.y = 0;
 
       const twinkle = Math.sin(time * 0.002 + p.phase) * 0.5 + 0.5;
       ctx.globalAlpha = p.alpha * (0.3 + 0.7 * twinkle);
@@ -221,7 +230,9 @@ export function ParticleNetworkHero({ enabled }: { enabled: boolean }) {
         canvasRef.current.style.height = `${height}px`;
 
         const ctx = canvasRef.current.getContext('2d');
-        if (ctx) ctx.scale(dpr, dpr);
+        if (ctx) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset before anything else
+        }
 
         initParticles(width, height);
       }
