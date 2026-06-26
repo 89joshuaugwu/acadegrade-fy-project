@@ -99,8 +99,11 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
     setHoveredIndex(index);
   };
 
-  const handlePointerLeave = () => {
-    setHoveredIndex(null);
+  const handlePointerLeave = (e: React.PointerEvent<SVGRectElement>) => {
+    // Only clear on leave if it's a mouse. On touch devices, keep the last tapped point active.
+    if (e.pointerType === 'mouse') {
+      setHoveredIndex(null);
+    }
   };
 
   const activeData = hoveredIndex !== null ? data[hoveredIndex] : data[data.length - 1];
@@ -381,8 +384,9 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             height={chartHeight}
             fill="transparent"
             onPointerMove={handlePointerMove}
+            onPointerDown={handlePointerMove}
             onPointerLeave={handlePointerLeave}
-            className="cursor-crosshair touch-none"
+            className="cursor-crosshair touch-pan-y"
           />
         </svg>
       </div>
