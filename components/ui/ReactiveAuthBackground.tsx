@@ -90,8 +90,8 @@ export function ReactiveAuthBackground() {
     animate();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-        // Ignore meta keys (Shift, Ctrl, Alt, etc)
-        if (e.key.length !== 1 && e.key !== 'Backspace' && e.key !== 'Enter') return;
+        // Ignore if key is undefined or meta keys (Shift, Ctrl, Alt, etc)
+        if (!e.key || (e.key.length !== 1 && e.key !== 'Backspace' && e.key !== 'Enter')) return;
 
         // Spawn a data ripple starting near the vertical center
         ripples.push({
