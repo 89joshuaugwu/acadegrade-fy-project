@@ -9,6 +9,7 @@ import { PublicFooter } from '@/components/layout/PublicShell';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { CGPAArc } from '@/components/cgpa/CGPAArc';
 
 interface SharedCourse {
   id: string;
@@ -176,10 +177,15 @@ export default function ShareTranscriptPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden"
+            className="bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden relative"
           >
+            {/* Holographic Watermark */}
+            <div className="absolute inset-0 pointer-events-none print:hidden z-0 overflow-hidden mix-blend-multiply opacity-50">
+               <div className="w-full h-full holographic-seal" />
+            </div>
+
             {/* Header with Logo */}
-            <div className="text-center mb-6 sm:mb-8 border-b-2 border-black pb-4">
+            <div className="text-center mb-6 sm:mb-8 border-b-2 border-black pb-4 relative z-10">
               {/* AcadeGrade Logo */}
               <div className="flex justify-center mb-3">
                 <img
@@ -200,7 +206,7 @@ export default function ShareTranscriptPage() {
             </div>
 
             {/* Student Info */}
-            <div className="border-2 border-black p-4 mb-8 flex gap-4 text-sm font-serif">
+            <div className="border-2 border-black p-4 mb-8 flex gap-4 text-sm font-serif relative z-10 bg-white/60 backdrop-blur-sm print:bg-transparent">
               {/* Photo column */}
               {transcript.showPhoto && transcript.avatarUrl && (
                 <div className="shrink-0">
@@ -242,7 +248,7 @@ export default function ShareTranscriptPage() {
             </div>
 
             {/* Semesters */}
-            <div className="space-y-8 font-serif">
+            <div className="space-y-8 font-serif relative z-10">
               {transcript.semesters.map(sem => (
                 <div key={sem.id} className="break-inside-avoid">
                   <h3 className="font-bold text-sm bg-gray-200 px-2 py-1 mb-2 border border-gray-400">
@@ -311,26 +317,32 @@ export default function ShareTranscriptPage() {
             </div>
 
             {/* Cumulative */}
-            <div className="mt-8 border-2 border-black p-4 text-sm font-serif break-inside-avoid">
+            <div className="mt-8 border-2 border-black p-4 text-sm font-serif break-inside-avoid relative z-10 bg-white/70 backdrop-blur-md print:bg-transparent">
               <h3 className="font-bold text-base mb-3 border-b border-gray-400 pb-1">
                 CUMULATIVE SUMMARY
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p>
-                    <span className="font-bold inline-block w-40">Cumulative CGPA:</span>{' '}
-                    <span className="font-bold text-lg">{cgpa}</span> / 5.00
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-bold inline-block w-40">Total Credits Earned:</span>{' '}
-                    {totalCredits}
-                  </p>
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="shrink-0 scale-90 sm:scale-100 print:hidden">
+                   {/* Dramatic CGPA Reveal! */}
+                   <CGPAArc cgpa={cgpaNum} pi={Math.max(0, cgpaNum - 0.5)} size="sm" animateOnMount />
                 </div>
-                <div>
-                  <p>
-                    <span className="font-bold inline-block w-44">Projected Degree Class:</span>{' '}
-                    {degreeClass}
-                  </p>
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                  <div>
+                    <p>
+                      <span className="font-bold inline-block w-40">Cumulative CGPA:</span>{' '}
+                      <span className="font-bold text-lg">{cgpa}</span> / 5.00
+                    </p>
+                    <p className="mt-1">
+                      <span className="font-bold inline-block w-40">Total Credits Earned:</span>{' '}
+                      {totalCredits}
+                    </p>
+                  </div>
+                  <div>
+                    <p>
+                      <span className="font-bold inline-block w-44">Projected Degree Class:</span>{' '}
+                      <span className="font-bold text-[var(--acade-primary)] print:text-black">{degreeClass}</span>
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -346,10 +358,27 @@ export default function ShareTranscriptPage() {
         </div>
       </div>
 
-      {/* Print styles */}
+      {/* Print & Holographic styles */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
+        @keyframes shimmer {
+          0% { background-position: -200% center; }
+          100% { background-position: 200% center; }
+        }
+        .holographic-seal {
+          background: linear-gradient(
+            110deg,
+            transparent 20%,
+            rgba(79, 70, 229, 0.15) 30%,
+            rgba(245, 158, 11, 0.25) 40%,
+            rgba(79, 70, 229, 0.15) 50%,
+            transparent 60%
+          );
+          background-size: 200% 100%;
+          animation: shimmer 8s infinite linear;
+        }
+
         @media print {
           body * { visibility: hidden; }
           .print\\:hidden { display: none !important; }
