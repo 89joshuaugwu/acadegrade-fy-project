@@ -147,10 +147,15 @@ export function NotificationDropdown() {
                             </span>
                           )}
                         </div>
-                        <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] line-clamp-2 leading-relaxed">
+                        <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] line-clamp-2 leading-relaxed pr-4">
                           {notif.message}
                         </p>
                       </div>
+                      {!notif.read && (
+                        <div className="shrink-0 flex items-center self-center ml-1">
+                          <div className="w-2 h-2 rounded-full bg-[var(--acade-primary)] shadow-[0_0_6px_var(--acade-primary)]" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
