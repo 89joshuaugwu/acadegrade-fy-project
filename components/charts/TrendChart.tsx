@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { cn } from '@/lib/utils/cn';
 import type { SemesterSummary } from '@/types/semester';
 
 const LazyResponsiveContainer = dynamic(
@@ -89,19 +90,29 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
     if (active && payload && payload.length) {
       const isForecast = payload[0].payload.isForecast;
       return (
-        <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] p-3 rounded-xl shadow-xl">
-          <p className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] mb-2 font-[family-name:var(--font-bricolage)]">
+        <div className="bg-[var(--acade-deep)]/90 backdrop-blur-md border border-[var(--acade-border)] p-4 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.5)]">
+          <p className="text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-wider mb-3">
             {label} {isForecast && <span className="text-[var(--acade-info)] ml-1">(Projected)</span>}
           </p>
-          {payload.map((entry: any, index: number) => (
-            <div key={index} className="flex items-center gap-2 text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
-              <span className="text-[var(--acade-text-muted)] uppercase text-xs font-bold">{entry.dataKey}:</span>
-              <span className="font-bold text-[var(--acade-text)]" style={{ color: entry.color }}>
-                {Number(entry.value).toFixed(2)}
-              </span>
-            </div>
-          ))}
+          <div className="flex flex-col gap-2">
+            {payload.map((entry: any, index: number) => {
+              const isPi = entry.dataKey === 'pi';
+              return (
+                <div key={index} className="flex items-center justify-between gap-4 text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]">
+                  <div className="flex items-center gap-2">
+                    <div className={cn(
+                      "w-3 h-3 rounded-full shadow-[0_0_8px]",
+                      isPi ? "bg-[var(--acade-gold)] shadow-[var(--acade-gold)]" : "bg-[var(--acade-primary)] shadow-[var(--acade-primary)]"
+                    )} />
+                    <span className="text-[var(--acade-text-muted)] uppercase text-xs font-bold">{entry.dataKey}:</span>
+                  </div>
+                  <span className="font-bold text-[length:var(--text-lg)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
+                    {Number(entry.value).toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       );
     }
@@ -126,14 +137,32 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
       <LazyResponsiveContainer width="100%" height="100%">
         <LazyComposedChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
           <defs>
-            <linearGradient id="colorCgpa" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="var(--acade-primary)" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="var(--acade-primary)" stopOpacity={0}/>
+            <linearGradient id="lineCgpa" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--acade-primary)">
+                <animate attributeName="stop-color" values="var(--acade-primary);#8b5cf6;var(--acade-primary)" dur="4s" repeatCount="indefinite" />
+              </stop>
+              <stop offset="100%" stopColor="#8b5cf6">
+                <animate attributeName="stop-color" values="#8b5cf6;var(--acade-primary);#8b5cf6" dur="4s" repeatCount="indefinite" />
+              </stop>
             </linearGradient>
+
+            <linearGradient id="colorCgpa" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="var(--acade-primary)" stopOpacity={0.6}/>
+              <stop offset="95%" stopColor="var(--acade-primary)" stopOpacity={0.05}/>
+            </linearGradient>
+            
             <linearGradient id="colorPi" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="var(--acade-gold)" stopOpacity={0.4}/>
               <stop offset="95%" stopColor="var(--acade-gold)" stopOpacity={0}/>
             </linearGradient>
+
+            <filter id="glowCgpa" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="var(--acade-primary)" floodOpacity="0.6"/>
+            </filter>
+            
+            <filter id="glowPi" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="var(--acade-gold)" floodOpacity="0.6"/>
+            </filter>
           </defs>
           <LazyCartesianGrid strokeDasharray="3 3" stroke="var(--acade-border-subtle)" vertical={false} />
           <LazyXAxis 
@@ -180,15 +209,17 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             <LazyArea 
               type="monotone" 
               dataKey="cgpa" 
-              stroke="var(--acade-primary)" 
+              stroke="url(#lineCgpa)" 
               fillOpacity={1}
               fill="url(#colorCgpa)"
-              strokeWidth={3}
-              dot={{ r: 4, strokeWidth: 2, fill: 'var(--acade-deep)', stroke: 'var(--acade-primary)' }}
-              activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--acade-primary-glow)' }}
+              strokeWidth={4}
+              filter="url(#glowCgpa)"
+              dot={{ r: 5, strokeWidth: 2, fill: 'var(--acade-deep)', stroke: 'var(--acade-primary)' }}
+              activeDot={{ r: 8, strokeWidth: 3, fill: 'var(--acade-primary)', stroke: 'var(--acade-surface)' }}
               isAnimationActive={!shouldReduceMotion}
               animationBegin={100}
-              animationDuration={1200}
+              animationDuration={1500}
+              animationEasing="ease-in-out"
             />
           )}
           {showPI && (
@@ -196,13 +227,15 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
               type="monotone" 
               dataKey="pi" 
               stroke="var(--acade-gold)" 
-              strokeWidth={showCGPA ? 2 : 3}
-              strokeDasharray={showCGPA ? "4 4" : undefined}
-              dot={!showCGPA ? { r: 4, strokeWidth: 2, fill: 'var(--acade-deep)' } : false}
-              activeDot={{ r: 6, strokeWidth: 0, fill: 'var(--acade-gold-hover)' }}
+              strokeWidth={3}
+              strokeDasharray={showCGPA ? "6 6" : undefined}
+              filter="url(#glowPi)"
+              dot={!showCGPA ? { r: 5, strokeWidth: 2, fill: 'var(--acade-deep)' } : false}
+              activeDot={{ r: 8, strokeWidth: 3, fill: 'var(--acade-gold)', stroke: 'var(--acade-deep)' }}
               isAnimationActive={!shouldReduceMotion}
               animationBegin={400}
-              animationDuration={1200}
+              animationDuration={1500}
+              animationEasing="ease-out"
             />
           )}
         </LazyComposedChart>

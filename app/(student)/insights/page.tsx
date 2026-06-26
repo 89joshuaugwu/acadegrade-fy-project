@@ -62,6 +62,25 @@ export default function InsightsPage() {
   const [cooldownText, setCooldownText] = useState<string | null>(null);
   const [isCooldownActive, setIsCooldownActive] = useState(false);
 
+  // Sync state with user preference on mount/update
+  useEffect(() => {
+    if (profile?.gradeMode) {
+      setProjectionMode(profile.gradeMode as 'pi' | 'cgpa');
+    }
+  }, [profile?.gradeMode]);
+
+  // Handle grade mode toggle sync
+  const handleModeChange = async (mode: 'pi' | 'cgpa') => {
+    setProjectionMode(mode);
+    if (user?.uid) {
+      try {
+        await updateDocument(`users/${user.uid}`, { gradeMode: mode });
+      } catch (e) {
+        console.error('Failed to save preference', e);
+      }
+    }
+  };
+
   useEffect(() => {
     if (user) {
       loadData();
@@ -334,7 +353,7 @@ export default function InsightsPage() {
                 {/* Mobile-responsive Toggle */}
                 <div className="flex bg-[var(--acade-deep)] p-1 rounded-lg border border-[var(--acade-border-subtle)] w-full md:w-auto">
                   <button
-                    onClick={() => setProjectionMode('pi')}
+                    onClick={() => handleModeChange('pi')}
                     className={cn(
                       "flex-1 md:flex-none px-4 py-1.5 rounded-md text-[length:var(--text-xs)] font-bold transition-colors text-center",
                       projectionMode === 'pi' ? "bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm border border-[var(--acade-border-subtle)]" : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text-faint)]"
@@ -343,7 +362,7 @@ export default function InsightsPage() {
                     PI
                   </button>
                   <button
-                    onClick={() => setProjectionMode('cgpa')}
+                    onClick={() => handleModeChange('cgpa')}
                     className={cn(
                       "flex-1 md:flex-none px-4 py-1.5 rounded-md text-[length:var(--text-xs)] font-bold transition-colors text-center",
                       projectionMode === 'cgpa' ? "bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm border border-[var(--acade-border-subtle)]" : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text-faint)]"
