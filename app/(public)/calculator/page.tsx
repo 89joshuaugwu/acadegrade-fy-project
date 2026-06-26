@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
+import { LiveAcademicGraph } from '@/components/ui/LiveAcademicGraph';
 import { computeCourseMetrics, computeSemesterGPA } from '@/lib/cgpa/calculator';
 import type { CourseInput, Grade } from '@/types/course';
 import { cn } from '@/lib/utils/cn';
@@ -303,12 +304,19 @@ function QuickCalculatorInner() {
         animate={{ opacity: 1, x: 0 }}
         className="lg:col-span-4 lg:sticky lg:top-24 space-y-4"
       >
-        <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/5 rounded-bl-full pointer-events-none" />
+        <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden min-h-[360px]">
+          {/* Real-time 3D Data Visualization */}
+          <div className="absolute inset-0 z-0 opacity-80 pointer-events-none mix-blend-screen" style={{ maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)' }}>
+             <LiveAcademicGraph courses={courses} inputMode={inputMode} cgpa={metrics.gpa} />
+          </div>
 
-          <h3 className="text-[length:var(--text-lg)] font-bold mb-6">Live Result</h3>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/5 rounded-bl-full pointer-events-none z-0" />
 
-          <CGPAArc cgpa={metrics.gpa} pi={metrics.pi} size="md" animateOnMount={false} />
+          <h3 className="text-[length:var(--text-lg)] font-bold mb-6 relative z-10">Live Result</h3>
+
+          <div className="relative z-10">
+             <CGPAArc cgpa={metrics.gpa} pi={metrics.pi} size="md" animateOnMount={false} />
+          </div>
 
           <div className="grid grid-cols-2 gap-4 w-full mt-6">
             <div className="bg-[var(--acade-deep)] rounded-xl p-3 border border-[var(--acade-border-subtle)]">
