@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,8 +21,8 @@ const navLinks = [
   { label: 'Calculator', href: '/calculator' },
 ];
 
-function Navbar({ className }: NavbarProps) {
-    const { user, loading } = useAuth();
+export function Navbar({ className }: NavbarProps) {
+  const { user, loading } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [hoveredPath, setHoveredPath] = useState<string | null>(null);
@@ -32,7 +31,6 @@ function Navbar({ className }: NavbarProps) {
   useEffect(() => {
     const sentinel = document.getElementById('hero-sentinel');
     if (!sentinel) {
-      // On pages without a hero section, always show the opaque background
       setScrolled(true);
       return;
     }
@@ -44,7 +42,6 @@ function Navbar({ className }: NavbarProps) {
     return () => observer.disconnect();
   }, []);
 
-  // Lock body scroll when mobile menu open
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -62,10 +59,10 @@ function Navbar({ className }: NavbarProps) {
         )}
         style={{ zIndex: 'var(--z-sticky)' } as React.CSSProperties}
       >
-        {/* Logo */}
+        {/* Original AcadeGrade Logo */}
         <Logo href="/" size="md" />
 
-        {/* Desktop nav */}
+        {/* Desktop Nav with Hover Pill Effect */}
         <div className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <div
@@ -109,7 +106,7 @@ function Navbar({ className }: NavbarProps) {
           )}
         </div>
 
-        {/* Mobile hamburger */}
+        {/* Mobile Hamburger */}
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="md:hidden size-12 flex items-center justify-center text-[var(--acade-text)]"
@@ -119,7 +116,7 @@ function Navbar({ className }: NavbarProps) {
         </button>
       </nav>
 
-      {/* Mobile fullscreen overlay */}
+      {/* Mobile Fullscreen Overlay with 3D Fold-Out Animation */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -182,5 +179,3 @@ function Navbar({ className }: NavbarProps) {
     </>
   );
 }
-
-export { Navbar };
