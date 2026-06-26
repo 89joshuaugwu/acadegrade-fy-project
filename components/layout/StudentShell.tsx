@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut, X, AlertTriangle } from 'lucide-react';
@@ -102,9 +103,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--acade-void)] flex flex-col md:flex-row">
-      {/* Mobile Header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 h-16 bg-[var(--acade-deep)]/80 backdrop-blur-md border-b border-[var(--acade-border)] md:hidden">
+    <div className="min-h-screen bg-[var(--acade-void)] flex flex-col lg:flex-row">
+      {/* Mobile & Tablet Header */}
+      <header className="sticky top-0 z-30 flex items-center justify-between px-4 h-16 bg-[var(--acade-deep)]/80 backdrop-blur-md border-b border-[var(--acade-border)] lg:hidden">
         <Logo size="sm" />
         <div className="flex items-center gap-1">
           <NotificationDropdown />
@@ -119,7 +120,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-[240px] fixed inset-y-0 left-0 bg-[var(--acade-deep)] border-r border-[var(--acade-border)] z-40 overflow-y-auto">
+      <aside className="hidden lg:flex flex-col w-[240px] fixed inset-y-0 left-0 bg-[var(--acade-deep)]/90 backdrop-blur-xl border-r border-[var(--acade-border)] z-40 overflow-y-auto">
         <div className="p-6">
           <Logo size="md" className="mb-8" />
 
@@ -149,13 +150,20 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                   key={tab.href}
                   href={tab.href}
                   className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]",
+                    "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
                     active
-                      ? "bg-[var(--acade-primary)]/10 text-[var(--acade-primary)] border border-[var(--acade-primary)]/20 shadow-[0_0_15px_rgba(99,102,241,0.05)]"
+                      ? "text-[var(--acade-primary)]"
                       : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
                   )}
                 >
-                  <div className="relative">
+                  {active && (
+                    <motion.div
+                      layoutId="sidebar-pill"
+                      className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
+                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    />
+                  )}
+                  <div className="relative z-10">
                     <Icon size={20} className={active ? "text-[var(--acade-primary-glow)]" : ""} />
                     {tab.label === 'Insights' && insightsStale && (
                       <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
@@ -164,7 +172,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                       </span>
                     )}
                   </div>
-                  {tab.label}
+                  <span className="relative z-10">{tab.label}</span>
                 </Link>
               );
             })}
@@ -176,18 +184,25 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             <Link
               href="/notifications"
               className={cn(
-                "flex items-center justify-between px-4 py-3 rounded-xl transition-all font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]",
+                "relative flex items-center justify-between px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
                 isActive('/notifications')
-                  ? "bg-[var(--acade-primary)]/10 text-[var(--acade-primary)] border border-[var(--acade-primary)]/20"
+                  ? "text-[var(--acade-primary)]"
                   : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
               )}
             >
-              <div className="flex items-center gap-3">
+              {isActive('/notifications') && (
+                <motion.div
+                  layoutId="sidebar-pill"
+                  className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                />
+              )}
+              <div className="relative z-10 flex items-center gap-3">
                 <Bell size={20} className={isActive('/notifications') ? "text-[var(--acade-primary-glow)]" : ""} />
                 Notifications
               </div>
               {unreadCount > 0 && (
-                <span className="bg-[var(--acade-primary)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                <span className="relative z-10 bg-[var(--acade-primary)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -197,14 +212,21 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           <Link
             href="/settings"
             className={cn(
-              "flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]",
+              "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
               isActive('/settings')
-                ? "bg-[var(--acade-primary)]/10 text-[var(--acade-primary)] border border-[var(--acade-primary)]/20"
+                ? "text-[var(--acade-primary)]"
                 : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
             )}
           >
-            <Settings size={20} className={isActive('/settings') ? "text-[var(--acade-primary-glow)]" : ""} />
-            Settings
+            {isActive('/settings') && (
+              <motion.div
+                layoutId="sidebar-pill"
+                className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
+                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+              />
+            )}
+            <Settings size={20} className={cn("relative z-10", isActive('/settings') ? "text-[var(--acade-primary-glow)]" : "")} />
+            <span className="relative z-10">Settings</span>
           </Link>
           
           <button
@@ -218,7 +240,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-[240px] pb-[80px] md:pb-0 relative min-h-screen">
+      <main className="flex-1 lg:ml-[240px] pb-[80px] lg:pb-0 relative min-h-screen">
         {announcement && (
           <div className="bg-[var(--acade-gold)]/10 border-b border-[var(--acade-gold)]/20 px-4 py-3 flex items-start sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3 text-[var(--acade-gold)]">
@@ -232,7 +254,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         )}
-        <div className="max-w-6xl mx-auto p-4 md:p-8 w-full h-full">
+        <div className="max-w-6xl mx-auto p-4 lg:p-8 w-full h-full">
           {children}
         </div>
       </main>

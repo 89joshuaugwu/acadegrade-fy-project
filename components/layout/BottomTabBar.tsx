@@ -29,7 +29,7 @@ export function BottomTabBar() {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--acade-deep)] border-t border-[var(--acade-border)] pb-safe md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--acade-deep)]/80 backdrop-blur-xl border-t border-[var(--acade-border)] pb-safe lg:hidden">
       <div className="flex items-center justify-around h-16 px-2">
         {TABS.map((tab) => {
           const active = isActive(tab.href);
@@ -39,27 +39,27 @@ export function BottomTabBar() {
             <Link
               key={tab.href}
               href={tab.href}
-              className="relative flex flex-col items-center justify-center w-full h-full gap-1 tap-highlight-transparent"
+              className="relative flex flex-col items-center justify-center w-full h-full gap-1 tap-highlight-transparent group"
               aria-label={tab.label}
               aria-current={active ? 'page' : undefined}
             >
               {active && !shouldReduceMotion && (
                 <motion.div
-                  layoutId="bottom-tab-indicator"
-                  className="absolute top-0 w-8 h-0.5 bg-[var(--acade-primary)] rounded-b-full shadow-[0_2px_8px_rgba(99,102,241,0.5)]"
-                  transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                  layoutId="bottom-tab-pill"
+                  className="absolute inset-y-1 inset-x-2 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-2xl shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               )}
               {active && shouldReduceMotion && (
-                <div className="absolute top-0 w-8 h-0.5 bg-[var(--acade-primary)] rounded-b-full" />
+                <div className="absolute inset-y-1 inset-x-2 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-2xl" />
               )}
               
-              <div className="relative">
+              <div className="relative z-10">
                 <Icon
                   size={20}
                   className={cn(
-                    'transition-colors duration-200',
-                    active ? 'text-[var(--acade-primary)] fill-[var(--acade-primary)]/20' : 'text-[var(--acade-text-muted)]'
+                    'transition-colors duration-300',
+                    active ? 'text-[var(--acade-primary)] fill-[var(--acade-primary)]/20 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-[var(--acade-text-muted)] group-hover:text-[var(--acade-text)]'
                   )}
                   strokeWidth={active ? 2.5 : 2}
                 />
@@ -72,8 +72,8 @@ export function BottomTabBar() {
               </div>
               <span
                 className={cn(
-                  'text-[length:var(--text-xs)] font-medium font-[family-name:var(--font-dm-sans)] transition-colors duration-200',
-                  active ? 'text-[var(--acade-primary)]' : 'text-[var(--acade-text-muted)]'
+                  'relative z-10 text-[length:var(--text-[10px])] font-bold font-[family-name:var(--font-dm-sans)] transition-colors duration-300',
+                  active ? 'text-[var(--acade-primary)]' : 'text-[var(--acade-text-muted)] group-hover:text-[var(--acade-text)]'
                 )}
               >
                 {tab.label}
