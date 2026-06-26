@@ -75,17 +75,21 @@ export default function ShareTranscriptPage() {
 
 
 
-  // Calculate cumulative
+  // Calculate cumulative CGPA & PI
   let totalCredits = 0;
   let totalPoints = 0;
+  let totalPIPoints = 0;
   if (transcript) {
     transcript.semesters.forEach(s => {
       totalCredits += s.creditLoaded || 0;
       totalPoints += (s.gpa || 0) * (s.creditLoaded || 0);
+      totalPIPoints += (s.pi || 0) * (s.creditLoaded || 0);
     });
   }
   const cgpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '0.00';
+  const cumulativePI = totalCredits > 0 ? (totalPIPoints / totalCredits).toFixed(2) : '0.00';
   const cgpaNum = parseFloat(cgpa);
+  const piNum = parseFloat(cumulativePI);
   let degreeClass = '';
   if (cgpaNum >= 4.5) degreeClass = 'First Class Honours';
   else if (cgpaNum >= 3.5) degreeClass = 'Second Class Honours (Upper Division)';
@@ -255,19 +259,68 @@ export default function ShareTranscriptPage() {
         currentY = 20;
     }
 
+    // -- CGPA GAUGE ARC in PDF --
+    const gaugeBoxH = 50;
     doc.setDrawColor(0);
-    doc.rect(14, currentY, pageWidth - 28, 25);
+    doc.rect(14, currentY, pageWidth - 28, gaugeBoxH);
+
+    // Draw the arc gauge
+    const gaugeCX = 38;
+    const gaugeCY = currentY + gaugeBoxH / 2 + 2;
+    const gaugeR = 14;
+    // Background arc (gray)
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(2.5);
+    const arcSteps = 60;
+    const startAngle = Math.PI * 0.75;
+    const endAngle = Math.PI * 2.25;
+    for (let i = 0; i < arcSteps; i++) {
+      const a1 = startAngle + (endAngle - startAngle) * (i / arcSteps);
+      const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / arcSteps);
+      doc.line(
+        gaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
+        gaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
+      );
+    }
+    // Foreground arc (indigo fill based on CGPA)
+    const fillRatio = Math.min(cgpaNum / 5, 1);
+    const fillEnd = startAngle + (endAngle - startAngle) * fillRatio;
+    doc.setDrawColor(79, 70, 229);
+    doc.setLineWidth(3);
+    const fillSteps = Math.floor(arcSteps * fillRatio);
+    for (let i = 0; i < fillSteps; i++) {
+      const a1 = startAngle + (fillEnd - startAngle) * (i / fillSteps);
+      const a2 = startAngle + (fillEnd - startAngle) * ((i + 1) / fillSteps);
+      doc.line(
+        gaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
+        gaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
+      );
+    }
+    // CGPA number in center
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.text(cgpa, gaugeCX, gaugeCY + 1, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('CGPA', gaugeCX, gaugeCY + 5, { align: 'center' });
+
+    // Text info to the right of the gauge
+    const infoX = gaugeCX + gaugeR + 10;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.text('CUMULATIVE SUMMARY', 18, currentY + 7);
+    doc.text('CUMULATIVE SUMMARY', infoX, currentY + 8);
 
     doc.setFontSize(10);
-    doc.text(`Cumulative CGPA: ${cgpa} / 5.00`, 18, currentY + 15);
-    doc.text(`Total Credits Earned: ${totalCredits}`, 18, currentY + 21);
+    doc.text(`Cumulative CGPA: ${cgpa} / 5.00`, infoX, currentY + 16);
+    doc.text(`Cumulative PI: ${cumulativePI} / 5.00`, infoX, currentY + 22);
+    doc.text(`Total Credits Earned: ${totalCredits}`, infoX, currentY + 28);
 
-    doc.text('Projected Degree Class:', pageWidth / 2, currentY + 15);
+    doc.text('Projected Degree Class:', infoX, currentY + 36);
     doc.setFont('helvetica', 'normal');
-    doc.text(degreeClass, pageWidth / 2, currentY + 21);
+    doc.text(degreeClass, infoX, currentY + 42);
+
+    doc.setLineWidth(0.2);
 
     // -- FOOTER & PAGE NUMBERS --
     const pageCount = (doc as any).internal.getNumberOfPages();
@@ -538,13 +591,17 @@ export default function ShareTranscriptPage() {
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <div className="shrink-0 scale-90 sm:scale-100 print:hidden">
                    {/* Dramatic CGPA Reveal! */}
-                   <CGPAArc cgpa={cgpaNum} pi={Math.max(0, cgpaNum - 0.5)} size="sm" animateOnMount />
+                   <CGPAArc cgpa={cgpaNum} pi={piNum} size="sm" animateOnMount />
                 </div>
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                   <div>
                     <p>
                       <span className="font-bold inline-block w-40">Cumulative CGPA:</span>{' '}
                       <span className="font-bold text-lg">{cgpa}</span> / 5.00
+                    </p>
+                    <p className="mt-1">
+                      <span className="font-bold inline-block w-40">Cumulative PI:</span>{' '}
+                      <span className="font-bold text-lg">{cumulativePI}</span> / 5.00
                     </p>
                     <p className="mt-1">
                       <span className="font-bold inline-block w-40">Total Credits Earned:</span>{' '}

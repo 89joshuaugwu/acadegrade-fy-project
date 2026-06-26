@@ -194,16 +194,20 @@ export default function TranscriptPage() {
     );
   }
 
-  // Calculate Cumulative
+  // Calculate Cumulative CGPA & PI
   let totalCredits = 0;
   let totalPoints = 0;
+  let totalPIPoints = 0;
   semesters.forEach(s => {
     totalCredits += s.creditLoaded || 0;
     totalPoints += (s.gpa || 0) * (s.creditLoaded || 0);
+    totalPIPoints += (s.pi || 0) * (s.creditLoaded || 0);
   });
   const cgpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : '0.00';
+  const cumulativePI = totalCredits > 0 ? (totalPIPoints / totalCredits).toFixed(2) : '0.00';
   
   const cgpaNum = parseFloat(cgpa);
+  const piNum = parseFloat(cumulativePI);
   let degreeClass = '';
   if (cgpaNum >= 4.5) degreeClass = 'First Class Honours';
   else if (cgpaNum >= 3.5) degreeClass = 'Second Class Honours (Upper Division)';
@@ -485,11 +489,12 @@ export default function TranscriptPage() {
           <h3 className="font-bold text-base mb-3 border-b border-gray-400 pb-1">CUMULATIVE SUMMARY</h3>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             <div className="shrink-0 scale-90 sm:scale-100 print:hidden">
-               <CGPAArc cgpa={cgpaNum} pi={Math.max(0, cgpaNum - 0.5)} size="sm" animateOnMount />
+               <CGPAArc cgpa={cgpaNum} pi={piNum} size="sm" animateOnMount />
             </div>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               <div>
                 <p><span className="font-bold inline-block w-40">Cumulative CGPA:</span> <span className="font-bold text-lg">{cgpa}</span> / 5.00</p>
+                <p className="mt-1"><span className="font-bold inline-block w-40">Cumulative PI:</span> <span className="font-bold text-lg">{cumulativePI}</span> / 5.00</p>
                 <p className="mt-1"><span className="font-bold inline-block w-40">Total Credits Earned:</span> {totalCredits}</p>
               </div>
               <div>
