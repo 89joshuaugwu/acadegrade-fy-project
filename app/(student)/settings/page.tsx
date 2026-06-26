@@ -251,21 +251,21 @@ export default function SettingsPage() {
         <div className="md:col-span-2 space-y-8">
           
           {/* PROFILE SECTION */}
-          <section id="section-profile" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
+          <section id="section-profile" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Public Profile</h2>
             
             <div className="flex items-center gap-6 mb-8">
-              <div className="relative group">
+              <div className="relative group cursor-pointer w-24 h-24" onClick={() => fileInputRef.current?.click()}>
                 <img 
                   src={avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user?.uid} 
                   alt="Avatar" 
-                  className="w-24 h-24 rounded-full object-cover border-4 border-[var(--acade-deep)]"
+                  className="w-full h-full rounded-full object-cover border-4 border-[var(--acade-deep)] shadow-lg transition-transform duration-300 group-hover:scale-105"
                 />
                 <button 
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute inset-0 bg-[var(--acade-primary)]/80 backdrop-blur-sm rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-95 group-hover:scale-105"
                 >
-                  <Camera size={24} className="text-white" />
+                  <Camera size={24} className="text-white mb-1" />
+                  <span className="text-[10px] text-white font-bold tracking-wider uppercase">Upload</span>
                 </button>
                 <input type="file" hidden ref={fileInputRef} onChange={handleAvatarUpload} accept="image/*" />
               </div>
@@ -299,7 +299,7 @@ export default function SettingsPage() {
           </section>
 
           {/* ACADEMIC SETUP SECTION */}
-          <section id="section-academic" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
+          <section id="section-academic" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Academic Setup</h2>
             
             <div className="space-y-6">
@@ -328,7 +328,7 @@ export default function SettingsPage() {
           </section>
 
           {/* NOTIFICATIONS SECTION */}
-          <section id="section-notifications" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
+          <section id="section-notifications" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Bell size={20} /> Notifications
             </h2>
@@ -362,7 +362,7 @@ export default function SettingsPage() {
           </section>
 
           {/* SECURITY & DANGER SECTION */}
-          <section id="section-security" className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24">
+          <section id="section-security" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Shield size={20} /> Security & Data
             </h2>
