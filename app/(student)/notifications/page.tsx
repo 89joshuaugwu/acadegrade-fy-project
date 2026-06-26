@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useAuth } from '@/hooks/useAuth';
-import { queryCollection, updateDocument } from '@/lib/firebase/firestore';
+import { queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
 import { setRTDB } from '@/lib/firebase/rtdb';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils/cn';
@@ -76,6 +76,19 @@ export default function NotificationsPage() {
     await setRTDB(`notif_counts/${user.uid}/unread`, 0);
   };
 
+  const handleClearAll = async () => {
+    if (!user || notifications.length === 0) return;
+    try {
+      await Promise.all(
+        notifications.map(n => deleteDocument(`notifications/${user.uid}/items/${n.id}`))
+      );
+      setNotifications([]);
+      await setRTDB(`notif_counts/${user.uid}/unread`, 0);
+    } catch (err) {
+      console.error('Failed to clear notifications:', err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -98,11 +111,18 @@ export default function NotificationsPage() {
           </p>
         </div>
         
-        {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
-            <CheckCheck size={16} className="mr-2" /> Mark all as read
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {unreadCount > 0 && (
+            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+              <CheckCheck size={16} className="mr-2" /> Mark all read
+            </Button>
+          )}
+          {notifications.length > 0 && (
+            <Button variant="danger" size="sm" onClick={handleClearAll} className="bg-[var(--acade-danger-dim)] text-[var(--acade-danger)] hover:bg-[var(--acade-danger)] hover:text-white border-transparent">
+              <Trash2 size={16} className="mr-2" /> Clear all
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden shadow-sm">
@@ -116,7 +136,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="divide-y divide-[var(--acade-border-subtle)]">
-            <AnimatePresence initial={false}>
+            <AnimatePresence>
               {notifications.map((notif, index) => (
                 <motion.div
                   key={notif.id}
