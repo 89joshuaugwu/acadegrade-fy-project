@@ -179,13 +179,13 @@ export function buildTranscript(
       { content: 'SEMESTER SUMMARY', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
       { content: sem.creditLoaded.toString(), styles: { fontStyle: 'bold' } },
       { content: '', colSpan: 5 },
-      { content: (sem.pi || 0).toString(), styles: { fontStyle: 'bold' } }
+      { content: (sem.pi || 0).toFixed(2), styles: { fontStyle: 'bold' } }
     ]);
 
     autoTable(doc, {
       startY: currentY,
       head: [[
-        { content: sem.label, colSpan: 9, styles: { halign: 'left', fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold' } }
+        { content: `${sem.label}${sem.session ? ` (${sem.session})` : ''}`, colSpan: 9, styles: { halign: 'left', fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold' } }
       ], [
         'Code', 'Title', 'Units', 'CA', 'Exam', 'Total', 'Grade', 'GP', 'PI'
       ]],

@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="transcript.pdf"'
+        'Content-Disposition': `attachment; filename="${(userData.fullName || 'Student').replace(/[^a-zA-Z0-9 ]/g, '').replace(/\s+/g, '_')}_Transcript.pdf"`
       }
     });
 
