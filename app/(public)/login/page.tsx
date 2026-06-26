@@ -16,8 +16,9 @@ import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-
 import { Logo } from '@/components/ui';
+import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
+import { HolographicCard } from '@/components/ui/HolographicCard';
 
 /* ─── Validation Schema ─── */
 const loginSchema = z.object({
@@ -141,12 +142,8 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
-      {/* Background glow */}
-      <div
-        className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, var(--acade-primary) 0%, transparent 70%)' }}
-        aria-hidden="true"
-      />
+      {/* Keystroke Reactive Background */}
+      <ReactiveAuthBackground />
 
       <motion.div
         {...fadeUp}
@@ -166,13 +163,10 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <motion.div
+        <HolographicCard
           animate={shakeForm && !shouldReduceMotion ? { x: [0, -8, 8, -5, 5, -2, 2, 0] } : {}}
           transition={{ duration: 0.5 }}
-          className={cn(
-            'bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-6 md:p-8',
-            'shadow-[0_0_40px_rgba(99,102,241,0.06)]'
-          )}
+          className="mb-6"
         >
           {/* Google Sign-In */}
           <Button
@@ -247,7 +241,7 @@ export default function LoginPage() {
               Sign In <ArrowRight size={18} />
             </Button>
           </form>
-        </motion.div>
+        </HolographicCard>
 
         {/* Footer */}
         <p className="text-center mt-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">

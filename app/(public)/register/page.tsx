@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Logo } from '@/components/ui';
+import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
+import { HolographicCard } from '@/components/ui/HolographicCard';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -896,12 +898,8 @@ export default function RegisterWizard() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
-      {/* Background glow */}
-      <div
-        className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, var(--acade-primary) 0%, transparent 70%)' }}
-        aria-hidden="true"
-      />
+      {/* Keystroke Reactive Background */}
+      <ReactiveAuthBackground />
 
       {/* Confetti container (Pure CSS) */}
       {isSuccess && !shouldReduceMotion && (
@@ -944,13 +942,10 @@ export default function RegisterWizard() {
           </div>
         )}
 
-        <motion.div
+        <HolographicCard
           initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={cn(
-            'bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-6 md:p-8',
-            'shadow-[0_0_40px_rgba(99,102,241,0.06)] overflow-hidden relative'
-          )}
+          className="relative"
         >
           {isSubmitting && (
             <div className="absolute inset-0 bg-[var(--acade-deep)]/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-center">
@@ -1001,10 +996,9 @@ export default function RegisterWizard() {
               </AnimatePresence>
             </form>
           </FormProvider>
+        </HolographicCard>
 
-        </motion.div>
-
-        {/* Login Link */}
+        {/* Footer Link */}
         {!isSuccess && (
           <p className="text-center mt-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
             Already have an account?{' '}
