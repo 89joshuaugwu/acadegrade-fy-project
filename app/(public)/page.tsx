@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { GenerativeArtScene } from '@/components/ui/GenerativeHero';
 import { ParticleNetworkHero } from '@/components/ui/ParticleHero';
+import { AcademicGraphHero } from '@/components/ui/AcademicGraphHero';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -139,8 +140,8 @@ export default function LandingPage() {
       {/* ═══════════ SECTION 1 — HERO ═══════════ */}
       <section className="relative min-h-screen flex flex-col items-center justify-center px-5 pt-20 pb-16">
         
-        {/* Anti-Gravity Particle Network Physics Engine */}
-        <ParticleNetworkHero enabled={!shouldReduceMotion} />
+        {/* Custom AcadeGrade 3D Academic Graph Component */}
+        <AcademicGraphHero enabled={!shouldReduceMotion} />
         
         {/* Gradient overlay to ensure text is readable against the canvas */}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--acade-background)] via-[var(--acade-background)]/60 to-transparent z-0 pointer-events-none" />
