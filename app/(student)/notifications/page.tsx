@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
+import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2, Lightbulb } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -14,10 +15,13 @@ import type { NotificationWithId } from '@/types/analytics';
 
 const ICONS = {
   info: <Info size={20} className="text-[var(--acade-primary)]" />,
+  system: <Info size={20} className="text-[var(--acade-primary)]" />,
   success: <CheckCircle2 size={20} className="text-[var(--acade-success)]" />,
+  achievement: <CheckCircle2 size={20} className="text-[var(--acade-success)]" />,
   warning: <AlertTriangle size={20} className="text-[var(--acade-warning)]" />,
   error: <AlertTriangle size={20} className="text-[var(--acade-danger)]" />,
   ai: <Sparkles size={20} className="text-[var(--acade-gold)]" />,
+  tip: <Lightbulb size={20} className="text-[var(--acade-gold)]" />,
 };
 
 export default function NotificationsPage() {
