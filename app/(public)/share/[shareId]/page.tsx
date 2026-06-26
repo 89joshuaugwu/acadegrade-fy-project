@@ -167,9 +167,14 @@ export default function ShareTranscriptPage() {
                 {transcript.studentName}&apos;s academic results — shared via AcadeGrade
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={handlePrint}>
-              <Download size={16} className="mr-2" /> Print / Save
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={handlePrint}>
+                <FileText size={16} className="mr-2" /> Print
+              </Button>
+              <Button variant="primary" size="sm" onClick={handlePrint}>
+                <Download size={16} className="mr-2" /> Download PDF
+              </Button>
+            </div>
           </motion.div>
 
           {/* Transcript Paper */}

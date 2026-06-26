@@ -366,7 +366,13 @@ function QuickCalculatorInner() {
           <Button
             variant="primary"
             className="w-full gap-2 py-6 rounded-2xl shadow-[0_0_20px_var(--acade-primary-glow)]"
-            onClick={() => router.push('/login')}
+            onClick={() => {
+               if (!user) {
+                  setShowAuthAlert(true);
+               } else {
+                  router.push('/dashboard');
+               }
+            }}
           >
             <Save size={18} />
             Save to Profile
