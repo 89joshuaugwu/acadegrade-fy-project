@@ -66,5 +66,10 @@ service cloud.firestore {
       allow update: if (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])) || isAdmin();
       allow delete: if isAdmin();
     }
+    
+    // 7. Shared Transcripts
+    match /shared_transcripts/{docId} {
+      allow read, delete: if isOwner(resource.data.uid);
+    }
   }
 }

@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { queryCollection } from '@/lib/firebase/firestore';
+import { queryCollection, deleteDocument, where } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils/cn';
 
@@ -25,6 +25,7 @@ export default function TranscriptPage() {
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPhoto, setShowPhoto] = useState(true);
+  const [sharedLinks, setSharedLinks] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) loadData();
@@ -48,6 +49,19 @@ export default function TranscriptPage() {
       });
       
       setSemesters(semsWithCourses);
+
+      // Load active shared links
+      try {
+        const links = await queryCollection<any>('shared_transcripts', where('uid', '==', user.uid));
+        // filter out expired locally just in case
+        const activeLinks = links.filter(link => {
+          const expiresAt = link.expiresAt?.toDate?.() || link.expiresAt;
+          return new Date(expiresAt) > new Date();
+        });
+        setSharedLinks(activeLinks);
+      } catch (e) {
+        console.error('Failed to load shared links', e);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to load transcript data');
@@ -140,6 +154,27 @@ export default function TranscriptPage() {
     }
   };
 
+  const handleCopyLinkText = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success('Link copied!');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
+  const handleDeleteShare = async (id: string) => {
+    if (!confirm('Delete this shared transcript?')) return;
+    try {
+      await deleteDocument(`shared_transcripts/${id}`);
+      setSharedLinks(prev => prev.filter(link => link.id !== id));
+      toast.success('Shared transcript deleted');
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to delete shared transcript');
+    }
+  };
+
   // Resolve user photo URL — prioritise profile avatarUrl, fallback to Firebase Auth photoURL
   const userPhotoUrl = profile?.avatarUrl || user?.photoURL || null;
 
@@ -212,6 +247,42 @@ export default function TranscriptPage() {
           </Button>
         </div>
       </div>
+
+      {/* Active Shared Links */}
+      {sharedLinks.length > 0 && (
+        <div className="mb-8 print:hidden bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl p-4">
+          <h3 className="text-[length:var(--text-sm)] font-bold mb-3 flex items-center gap-2">
+            <Link2 size={16} className="text-[var(--acade-primary)]" />
+            Active Shared Transcripts
+          </h3>
+          <div className="space-y-2">
+            {sharedLinks.map(link => {
+              const url = `${window.location.origin}/share/${link.id}`;
+              const expiresAt = link.expiresAt?.toDate?.() || new Date(link.expiresAt);
+              return (
+                <div key={link.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--acade-deep)] p-3 rounded-lg border border-[var(--acade-border-subtle)]">
+                  <div className="flex-1 truncate">
+                    <div className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-1">
+                      Expires: {new Date(expiresAt).toLocaleDateString()}
+                    </div>
+                    <a href={url} target="_blank" rel="noreferrer" className="text-[length:var(--text-sm)] font-mono text-[var(--acade-text)] hover:text-[var(--acade-primary)] truncate block">
+                      {url}
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => handleCopyLinkText(url)}>
+                      <Copy size={14} />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteShare(link.id)} className="text-[var(--acade-danger)]">
+                      <X size={14} />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Share Link Modal */}
       {shareModalOpen && shareUrl && (
