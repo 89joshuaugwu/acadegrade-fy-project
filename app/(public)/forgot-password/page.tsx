@@ -12,6 +12,8 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Logo } from '@/components/ui';
+import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
+import { HolographicCard } from '@/components/ui/HolographicCard';
 
 type ForgotStep = 'email' | 'otp' | 'newPassword' | 'success';
 
@@ -154,12 +156,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
-      {/* Background glow */}
-      <div
-        className="fixed top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, var(--acade-primary) 0%, transparent 70%)' }}
-        aria-hidden="true"
-      />
+      {/* Keystroke Reactive Background */}
+      <ReactiveAuthBackground />
 
       <motion.div {...fadeUp} className="relative w-full max-w-md">
         {/* Logo */}
@@ -176,12 +174,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Card */}
-        <div
-          className={cn(
-            'bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-6 md:p-8',
-            'shadow-[0_0_40px_rgba(99,102,241,0.06)]'
-          )}
-        >
+        <HolographicCard>
           <AnimatePresence mode="wait">
             {/* ── STEP: EMAIL ── */}
             {step === 'email' && (
@@ -381,7 +374,7 @@ export default function ForgotPasswordPage() {
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </HolographicCard>
 
         {/* Footer */}
         {step !== 'success' && (

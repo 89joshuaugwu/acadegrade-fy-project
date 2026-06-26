@@ -8,9 +8,11 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 interface HolographicCardProps extends HTMLMotionProps<'div'> {
   children: React.ReactNode;
   className?: string;
+  innerClassName?: string;
+  glass?: boolean;
 }
 
-export function HolographicCard({ children, className, ...props }: HolographicCardProps) {
+export function HolographicCard({ children, className, innerClassName, glass = false, ...props }: HolographicCardProps) {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const shouldReduceMotion = useReducedMotion();
@@ -31,7 +33,8 @@ export function HolographicCard({ children, className, ...props }: HolographicCa
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        'relative overflow-hidden bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-6 md:p-8 shadow-[0_0_40px_rgba(99,102,241,0.06)]',
+        'relative overflow-hidden border border-[var(--acade-border)] rounded-2xl shadow-[0_0_40px_rgba(99,102,241,0.06)]',
+        glass ? 'bg-[var(--acade-deep)]/40 backdrop-blur-xl border-[var(--acade-border)]/50' : 'bg-[var(--acade-deep)] p-6 md:p-8',
         className
       )}
     >
@@ -47,7 +50,7 @@ export function HolographicCard({ children, className, ...props }: HolographicCa
       )}
       
       {/* Content wrapper to stay above the glare */}
-      <div className="relative z-10 w-full h-full">
+      <div className={cn("relative z-10 w-full h-full", innerClassName)}>
         {children}
       </div>
     </motion.div>

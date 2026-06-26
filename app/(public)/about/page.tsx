@@ -7,6 +7,10 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Logo } from '@/components/ui/Logo';
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
+import { KnowledgeCoreBackground } from '@/components/ui/KnowledgeCoreBackground';
+import { HolographicCard } from '@/components/ui/HolographicCard';
+import { HolographicIDCard } from '@/components/ui/HolographicIDCard';
+import { OrbitingTechStack } from '@/components/ui/OrbitingTechStack';
 
 /** Map tech name → icon */
 const TECH_ICONS: Record<string, React.ReactNode> = {
@@ -82,11 +86,10 @@ export default function AboutPage() {
       <Navbar />
 
       <div className="min-h-screen pt-24 pb-20 px-4 relative overflow-hidden">
-        {/* Background blobs */}
-        <div className="absolute top-40 left-10 w-72 h-72 bg-[var(--acade-primary)]/10 rounded-full blur-[100px] -z-10" />
-        <div className="absolute bottom-40 right-10 w-96 h-96 bg-[var(--acade-gold)]/10 rounded-full blur-[120px] -z-10" />
+        {/* The 3D Knowledge Core Interactive Centerpiece */}
+        <KnowledgeCoreBackground />
 
-        <div className="max-w-4xl mx-auto space-y-16">
+        <div className="max-w-4xl mx-auto space-y-16 relative z-10">
           {/* ─── Header ─── */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -110,26 +113,26 @@ export default function AboutPage() {
           </motion.div>
 
           {/* ─── Academic Context ─── */}
-          <motion.section
+          <HolographicCard
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-8 md:p-10 shadow-sm relative overflow-hidden group hover:border-[var(--acade-primary)]/30 transition-colors"
+            className="p-8 md:p-10 relative overflow-hidden group hover:border-[var(--acade-primary)]/50 transition-colors"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/5 rounded-bl-full pointer-events-none" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/10 rounded-bl-full pointer-events-none" />
             <h2 className="text-[length:var(--text-2xl)] font-bold mb-4 font-[family-name:var(--font-bricolage)] flex items-center gap-2">
               <GraduationCap className="text-[var(--acade-primary)]" />
               Academic Context (CSC 499)
             </h2>
-            <p className="text-[var(--acade-text-muted)] text-[length:var(--text-base)] leading-relaxed mb-4">
+            <p className="text-[var(--acade-text-muted)] text-[length:var(--text-base)] leading-relaxed mb-4 relative z-10">
               {data.academicContext}
             </p>
             {data.academicContextExtra && (
-              <p className="text-[var(--acade-text-muted)] text-[length:var(--text-base)] leading-relaxed">
+              <p className="text-[var(--acade-text-muted)] text-[length:var(--text-base)] leading-relaxed relative z-10">
                 {data.academicContextExtra}
               </p>
             )}
-          </motion.section>
+          </HolographicCard>
 
           {/* ─── Tech Stack ─── */}
           <motion.section
@@ -141,22 +144,27 @@ export default function AboutPage() {
             <h2 className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-bricolage)] text-center">
               Technology Stack
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {data.techStack.map(tech => (
-                <div
+            <div className="hidden md:block">
+              <OrbitingTechStack techStack={data.techStack} />
+            </div>
+
+            {/* Mobile Fallback Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
+              {data.techStack.map((tech) => (
+                <HolographicCard
                   key={tech.name}
-                  className="bg-[var(--acade-surface)] border border-[var(--acade-border-subtle)] rounded-2xl p-6 flex flex-col items-center text-center gap-4 hover:border-[var(--acade-border)] hover:bg-[var(--acade-deep)] transition-all"
+                  className="flex flex-col items-center text-center gap-4 p-6"
                 >
-                  <div className="p-3 bg-[var(--acade-deep)] rounded-xl text-[var(--acade-primary)]">
+                  <div className="p-3 bg-[var(--acade-deep)]/80 rounded-xl text-[var(--acade-primary)] shadow-[0_0_15px_rgba(79,70,229,0.2)]">
                     {getIcon(tech.name)}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-[length:var(--text-lg)]">{tech.name}</h3>
+                  <div className="relative z-10">
+                    <h3 className="font-bold text-[length:var(--text-lg)] text-white">{tech.name}</h3>
                     <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
                       {tech.description}
                     </p>
                   </div>
-                </div>
+                </HolographicCard>
               ))}
             </div>
           </motion.section>
@@ -166,9 +174,9 @@ export default function AboutPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20"
           >
-            <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-8 shadow-sm">
+            <HolographicIDCard className="p-8 shadow-sm">
               <h2 className="text-[length:var(--text-2xl)] font-bold mb-4 font-[family-name:var(--font-bricolage)]">
                 The Developer
               </h2>
@@ -203,9 +211,9 @@ export default function AboutPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </HolographicIDCard>
 
-            <div className="bg-gradient-to-br from-[var(--acade-deep)] to-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-8 shadow-sm flex flex-col justify-center">
+            <HolographicIDCard className="p-8 shadow-sm flex flex-col justify-center">
               <h2 className="text-[length:var(--text-2xl)] font-bold mb-2 font-[family-name:var(--font-bricolage)]">
                 Project Links
               </h2>
@@ -242,7 +250,7 @@ export default function AboutPage() {
                   </a>
                 )}
               </div>
-            </div>
+            </HolographicIDCard>
           </motion.section>
         </div>
       </div>
