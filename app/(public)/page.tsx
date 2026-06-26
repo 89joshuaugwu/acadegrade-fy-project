@@ -428,7 +428,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-dm-sans)]">
-            © 2026 AcadeGrade · Built by Joshuazaza · CSC 499 · ESUT, Agbani
+            © {new Date().getFullYear()} AcadeGrade
           </p>
         </div>
       </footer>
