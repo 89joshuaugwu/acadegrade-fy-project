@@ -11,8 +11,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { GenerativeArtScene } from '@/components/ui/GenerativeHero';
-import { ParticleNetworkHero } from '@/components/ui/ParticleHero';
 import { AcademicGraphHero } from '@/components/ui/AcademicGraphHero';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
