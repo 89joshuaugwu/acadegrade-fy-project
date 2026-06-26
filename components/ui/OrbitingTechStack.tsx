@@ -28,8 +28,8 @@ interface TechNode {
 export function OrbitingTechStack({ techStack }: { techStack: TechNode[] }) {
   const shouldReduceMotion = useReducedMotion();
   
-  // Mobile responsive radiuses
-  const radius = 220; 
+  // Desktop responsive radiuses
+  const radius = 240; 
 
   if (shouldReduceMotion) {
       // Fallback for reduced motion is just the normal 2D grid
@@ -70,7 +70,7 @@ export function OrbitingTechStack({ techStack }: { techStack: TechNode[] }) {
       <motion.div
         animate={{ rotate: 360 }}
         transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-        className="absolute w-[440px] h-[440px]"
+        className="absolute w-[600px] h-[600px]"
       >
         {techStack.map((tech, i) => {
           const angle = (i / techStack.length) * 360;
@@ -84,13 +84,11 @@ export function OrbitingTechStack({ techStack }: { techStack: TechNode[] }) {
             >
               {/* Counter-rotate the card itself so the text remains upright while orbiting */}
               <motion.div
-                animate={{ rotate: -360 }}
+                animate={{ rotate: [-angle, -angle - 360] }}
                 transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-                // Initial rotation offsets the container's angle so it starts upright perfectly
-                style={{ rotate: -angle }}
                 className={cn(
-                  "w-52 bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)]/50 rounded-2xl p-4 flex flex-col items-center text-center gap-2",
-                  "shadow-[0_0_30px_rgba(79,70,229,0.15)] hover:border-[var(--acade-primary)] hover:scale-110 hover:shadow-[0_0_40px_rgba(79,70,229,0.3)] transition-all cursor-default"
+                  "w-48 bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)]/50 rounded-2xl p-4 flex flex-col items-center text-center gap-2",
+                  "shadow-[0_0_30px_rgba(79,70,229,0.15)] hover:border-[var(--acade-primary)] hover:scale-105 hover:shadow-[0_0_40px_rgba(79,70,229,0.3)] transition-all cursor-default"
                 )}
               >
                 <div className="p-2.5 bg-[var(--acade-surface)] rounded-xl text-[var(--acade-primary)] shadow-inner">
