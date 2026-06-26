@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/Badge';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { DegreeClassBadge } from '@/components/cgpa/DegreeClassBadge';
 import { TrendChart } from '@/components/charts/TrendChart';
+import { HolographicCard } from '@/components/ui/HolographicCard';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -248,13 +249,13 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: idx * 0.1 }}
           >
-            <Card variant="default" padding="md" className="h-full flex flex-col justify-between">
+            <HolographicCard className="h-full p-4 md:p-5" innerClassName="flex flex-col justify-between h-full">
               <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
                 {stat.label}
               </span>
               <div className={cn(
                 "text-[length:var(--text-2xl)] md:text-[length:var(--text-3xl)] font-bold mt-2 font-[family-name:var(--font-geist-mono)]",
-                stat.highlight ? "text-[var(--acade-danger)]" : "text-[var(--acade-text)]"
+                stat.highlight ? "text-[var(--acade-danger)] drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]" : "text-[var(--acade-text)]"
               )}>
                 <CountUp 
                   end={stat.value} 
@@ -264,7 +265,7 @@ export default function DashboardPage() {
                 />
                 {stat.suffix && <span className="text-[length:var(--text-lg)] text-[var(--acade-text-faint)] ml-1">{stat.suffix}</span>}
               </div>
-            </Card>
+            </HolographicCard>
           </motion.div>
         ))}
       </div>
@@ -299,55 +300,61 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <Card variant="glass" padding="lg" className="border-[var(--acade-primary)]/20 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/10 rounded-full blur-3xl" />
+            <div className="relative rounded-2xl overflow-hidden p-[1px] shadow-[0_0_30px_rgba(99,102,241,0.05)]">
+              {/* Animated background breathing border */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--acade-primary)]/40 via-[var(--acade-deep)] to-[var(--acade-primary)]/40 animate-[pulse_4s_ease-in-out_infinite]" />
               
-              <div className="flex items-center justify-between mb-4 relative z-10">
-                <div className="flex items-center gap-2 text-[var(--acade-primary-glow)] font-bold font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)]">
-                  <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="rounded-md object-contain" />
-                  AcadeMind Insight
-                  {insightsStale && (
-                    <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/20 text-[var(--acade-warning)] text-[10px] uppercase tracking-wider font-bold">
-                      <AlertTriangle size={10} /> Stale
-                    </span>
+              {/* Inner card content */}
+              <div className="relative bg-[var(--acade-deep)]/90 backdrop-blur-xl h-full w-full rounded-[15px] p-6 md:p-8 overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/10 rounded-full blur-3xl" />
+                
+                <div className="flex items-center justify-between mb-4 relative z-10">
+                  <div className="flex items-center gap-2 text-[var(--acade-primary-glow)] font-bold font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)]">
+                    <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="rounded-md object-contain" />
+                    AcadeMind Insight
+                    {insightsStale && (
+                      <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/20 text-[var(--acade-warning)] text-[10px] uppercase tracking-wider font-bold">
+                        <AlertTriangle size={10} /> Stale
+                      </span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={fetchAiSummary}
+                    disabled={aiLoading}
+                    className="p-2 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors rounded-full hover:bg-[var(--acade-overlay)] disabled:opacity-50"
+                    aria-label="Refresh Insight"
+                  >
+                    <RefreshCw size={16} className={cn(aiLoading && "animate-spin")} />
+                  </button>
+                </div>
+
+                <div className="relative z-10 min-h-[60px]">
+                  {aiLoading ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="h-4 bg-[var(--acade-border)] rounded w-full animate-pulse" />
+                      <div className="h-4 bg-[var(--acade-border)] rounded w-5/6 animate-pulse" />
+                      <div className="h-4 bg-[var(--acade-border)] rounded w-4/6 animate-pulse" />
+                    </div>
+                  ) : (
+                    <p className="text-[length:var(--text-sm)] md:text-[length:var(--text-base)] text-[var(--acade-text)] leading-relaxed font-[family-name:var(--font-dm-sans)]">
+                      {aiSummary || "Add more results to generate personalized insights."}
+                    </p>
                   )}
                 </div>
-                <button 
-                  onClick={fetchAiSummary}
-                  disabled={aiLoading}
-                  className="p-2 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors rounded-full hover:bg-[var(--acade-overlay)] disabled:opacity-50"
-                  aria-label="Refresh Insight"
-                >
-                  <RefreshCw size={16} className={cn(aiLoading && "animate-spin")} />
-                </button>
-              </div>
 
-              <div className="relative z-10 min-h-[60px]">
-                {aiLoading ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="h-4 bg-[var(--acade-border)] rounded w-full animate-pulse" />
-                    <div className="h-4 bg-[var(--acade-border)] rounded w-5/6 animate-pulse" />
-                    <div className="h-4 bg-[var(--acade-border)] rounded w-4/6 animate-pulse" />
-                  </div>
-                ) : (
-                  <p className="text-[length:var(--text-sm)] md:text-[length:var(--text-base)] text-[var(--acade-text)] leading-relaxed font-[family-name:var(--font-dm-sans)]">
-                    {aiSummary || "Add more results to generate personalized insights."}
-                  </p>
-                )}
+                <div className="mt-6 flex items-center justify-between relative z-10">
+                  <span className="text-[10px] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
+                    POWERED BY ACADEMIND
+                  </span>
+                  <Link 
+                    href="/insights"
+                    className="flex items-center gap-1 text-[length:var(--text-sm)] font-bold text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors"
+                  >
+                    Degree Outlook <ChevronRight size={16} />
+                  </Link>
+                </div>
               </div>
-
-              <div className="mt-6 flex items-center justify-between relative z-10">
-                <span className="text-[10px] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
-                  POWERED BY ACADEMIND
-                </span>
-                <Link 
-                  href="/insights"
-                  className="flex items-center gap-1 text-[length:var(--text-sm)] font-bold text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors"
-                >
-                  Degree Outlook <ChevronRight size={16} />
-                </Link>
-              </div>
-            </Card>
+            </div>
           </motion.div>
         </div>
 
