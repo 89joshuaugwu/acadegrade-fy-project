@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Share2, Printer, Link2, Copy, Check, X, ImageIcon } from 'lucide-react';
+import { Download, Share2, Printer, Link2, Copy, Check, X, ImageIcon, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,7 @@ export default function TranscriptPage() {
   const [downloading, setDownloading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showPhoto, setShowPhoto] = useState(true);
@@ -163,8 +164,14 @@ export default function TranscriptPage() {
     }
   };
 
-  const handleDeleteShare = async (id: string) => {
-    if (!confirm('Delete this shared transcript?')) return;
+  const handleDeleteShare = (id: string) => {
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDeleteShare = async () => {
+    if (!deleteConfirmId) return;
+    const id = deleteConfirmId;
+    setDeleteConfirmId(null);
     try {
       await deleteDocument(`shared_transcripts/${id}`);
       setSharedLinks(prev => prev.filter(link => link.id !== id));
@@ -327,6 +334,45 @@ export default function TranscriptPage() {
                 <Button variant="primary" size="sm" onClick={handleCopyLink} className="shrink-0 gap-1.5">
                   {copied ? <Check size={14} /> : <Copy size={14} />}
                   {copied ? 'Copied' : 'Copy'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden" style={{ zIndex: 9999 }}>
+          <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+            <button
+              onClick={() => setDeleteConfirmId(null)}
+              className="absolute top-4 right-4 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-full bg-[var(--acade-danger)]/10 flex items-center justify-center mx-auto">
+                <AlertTriangle size={24} className="text-[var(--acade-danger)]" />
+              </div>
+              <div>
+                <h3 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
+                  Delete Shared Link?
+                </h3>
+                <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-2">
+                  This transcript will be permanently unshared. Anyone with the link will no longer have access.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmId(null)}>
+                  Cancel
+                </Button>
+                <Button 
+                  className="flex-1 bg-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/90 text-white border-transparent"
+                  onClick={confirmDeleteShare}
+                >
+                  Delete Link
                 </Button>
               </div>
             </div>
