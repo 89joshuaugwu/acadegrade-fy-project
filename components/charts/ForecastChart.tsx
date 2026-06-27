@@ -165,35 +165,19 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
             {/* Viewport-Aware Dynamic Gradient */}
             <linearGradient id="viewportGradientForecast" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--acade-success)" />
-              <stop offset="30%" stopColor="var(--acade-primary)" />
+              <stop offset="50%" stopColor="var(--acade-primary)" />
               <stop offset="100%" stopColor="var(--acade-danger)" />
             </linearGradient>
 
             <linearGradient id="areaGradientForecast" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.6} />
+              <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.4} />
               <stop offset="100%" stopColor="var(--acade-primary)" stopOpacity={0.0} />
             </linearGradient>
             
             <linearGradient id="lineGradientProj" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--acade-gold)">
-                <animate attributeName="stop-color" values="var(--acade-gold);#fbbf24;var(--acade-gold)" dur="3s" repeatCount="indefinite" />
-              </stop>
-              <stop offset="100%" stopColor="#fbbf24">
-                <animate attributeName="stop-color" values="#fbbf24;var(--acade-gold);#fbbf24" dur="3s" repeatCount="indefinite" />
-              </stop>
+              <stop offset="0%" stopColor="var(--acade-gold)" />
+              <stop offset="100%" stopColor="#fbbf24" />
             </linearGradient>
-
-            <filter id="neonGlowForecast" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="var(--acade-primary)" floodOpacity="0.8" />
-            </filter>
-            
-            <filter id="neonGlowProj" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="var(--acade-gold)" floodOpacity="0.8" />
-            </filter>
-
-            <pattern id="forecastHatchLine" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-              <line x1="0" y1="0" x2="0" y2="10" stroke="var(--acade-gold)" strokeWidth="1.5" strokeOpacity="0.15" />
-            </pattern>
           </defs>
 
           {/* Background Grid */}
@@ -218,7 +202,8 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
               y={padding.top}
               width={getX(data.length - 1) - getX(lastHistoryIndex)}
               height={chartHeight}
-              fill="url(#forecastHatchLine)"
+              fill="var(--acade-gold)"
+              fillOpacity={0.05}
             />
           )}
 
@@ -257,7 +242,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
             strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
-            filter="url(#neonGlowForecast)"
+            style={{ filter: "drop-shadow(0px 4px 6px rgba(99,102,241,0.6))" }}
             initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 2, ease: "easeInOut" }}
@@ -273,7 +258,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeDasharray="8 8"
-              filter="url(#neonGlowProj)"
+              style={{ filter: "drop-shadow(0px 4px 6px rgba(245,158,11,0.6))" }}
               initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
               animate={{ pathLength: 1 }}
               transition={{ duration: 2, ease: "easeInOut", delay: 1 }}

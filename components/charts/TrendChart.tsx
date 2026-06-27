@@ -160,41 +160,27 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
           preserveAspectRatio="none"
         >
           <defs>
-            {/* Viewport-Aware Dynamic Gradient */}
             <linearGradient id="viewportGradientCgpa" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--acade-success)" />
-              <stop offset="30%" stopColor="var(--acade-primary)" />
+              <stop offset="50%" stopColor="var(--acade-primary)" />
               <stop offset="100%" stopColor="var(--acade-danger)" />
             </linearGradient>
 
-            <linearGradient id="areaGradientCgpa" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.6} />
-              <stop offset="100%" stopColor="var(--acade-primary)" stopOpacity={0.0} />
-            </linearGradient>
-            
-            <linearGradient id="lineGradientPi" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--acade-gold)">
-                <animate attributeName="stop-color" values="var(--acade-gold);#fbbf24;var(--acade-gold)" dur="3s" repeatCount="indefinite" />
-              </stop>
-              <stop offset="100%" stopColor="#fbbf24">
-                <animate attributeName="stop-color" values="#fbbf24;var(--acade-gold);#fbbf24" dur="3s" repeatCount="indefinite" />
-              </stop>
+            <linearGradient id="viewportGradientPi" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--acade-gold)" />
+              <stop offset="100%" stopColor="#fbbf24" />
             </linearGradient>
 
-            <filter id="neonGlowCgpa" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="var(--acade-primary)" floodOpacity="0.8" />
-            </filter>
-            
-            <filter id="neonGlowPi" x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="var(--acade-gold)" floodOpacity="0.8" />
-            </filter>
+            <linearGradient id="areaGradientCgpa" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.4} />
+              <stop offset="100%" stopColor="var(--acade-primary)" stopOpacity={0.0} />
+            </linearGradient>
 
             <pattern id="forecastHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
               <line x1="0" y1="0" x2="0" y2="10" stroke="var(--acade-text-faint)" strokeWidth="1" strokeOpacity="0.3" />
             </pattern>
           </defs>
 
-          {/* Background Grid */}
           <g className="grid-lines">
             {[0, 1, 2, 3, 4, 5].map((val) => {
               const y = getY(val);
@@ -209,8 +195,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             })}
           </g>
 
-          {/* Forecast Zone Highlight */}
-          {showForecast && history.length > 0 && (
+          {showForecast && semesters.length > 0 && (
             <rect
               x={getX(semesters.length - 1)}
               y={padding.top}
@@ -220,7 +205,6 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             />
           )}
 
-          {/* Historical Area (CGPA) */}
           {showCGPA && (
             <motion.path
               d={generateAreaPath(cgpaPoints)}
@@ -231,8 +215,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             />
           )}
 
-          {/* Viewport-Aware Smooth Line (CGPA) */}
-          {showCGPA && (
+          {(metric === 'cgpa' || metric === 'both') && (
             <motion.path
               d={generateSmoothPath(cgpaPoints)}
               fill="none"
@@ -240,31 +223,28 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              filter="url(#neonGlowCgpa)"
+              style={{ filter: "drop-shadow(0px 4px 6px rgba(99,102,241,0.6))" }}
               initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
               animate={{ pathLength: 1 }}
               transition={{ duration: 2, ease: "easeInOut" }}
             />
           )}
 
-          {/* Animated Projected Line (PI) */}
-          {showPI && (
+          {(metric === 'pi' || metric === 'both') && (
             <motion.path
               d={generateSmoothPath(piPoints)}
               fill="none"
-              stroke="url(#lineGradientPi)"
-              strokeWidth="3"
+              stroke="url(#viewportGradientPi)"
+              strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeDasharray={showCGPA ? "8 8" : "none"}
-              filter="url(#neonGlowPi)"
+              style={{ filter: "drop-shadow(0px 4px 6px rgba(245,158,11,0.6))" }}
               initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
               animate={{ pathLength: 1 }}
-              transition={{ duration: 2, ease: "easeInOut", delay: showCGPA ? 0.5 : 0 }}
+              transition={{ duration: 2, ease: "easeInOut", delay: metric === 'both' ? 0.5 : 0 }}
             />
           )}
 
-          {/* Data Points */}
           {data.map((d, i) => (
             <g key={`points-${i}`}>
               {showCGPA && (
