@@ -505,7 +505,7 @@ export default function ShareTranscriptPage() {
             </div>
 
             {/* Student Info */}
-            <div className="border-2 border-black p-4 mb-8 flex gap-4 text-sm font-serif relative z-10 bg-white/60 backdrop-blur-sm print:bg-transparent">
+            <div className="border-2 border-black p-4 mb-8 flex flex-col sm:flex-row gap-4 text-sm font-serif relative z-10 bg-white/60 backdrop-blur-sm print:bg-transparent">
               {/* Photo column */}
               {transcript.showPhoto && transcript.avatarUrl && (
                 <div className="shrink-0">
@@ -553,7 +553,7 @@ export default function ShareTranscriptPage() {
                   <h3 className="font-bold text-sm bg-gray-200 px-2 py-1 mb-2 border border-gray-400">
                     {sem.label} ({sem.session})
                   </h3>
-                  <div className="overflow-x-auto pb-2">
+                  <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
                     <table className="w-full min-w-[600px] text-xs text-left border-collapse border border-gray-400">
                       <thead className="bg-gray-100">
                         <tr>
@@ -624,7 +624,7 @@ export default function ShareTranscriptPage() {
               <h3 className="font-bold text-base mb-3 border-b border-gray-400 pb-1">
                 CUMULATIVE SUMMARY
               </h3>
-              <div className="flex flex-col sm:flex-row items-center gap-6">
+              <div className="flex flex-col md:flex-row items-center gap-6">
                 <div className="shrink-0 scale-90 sm:scale-100 print:hidden">
                    {/* Dramatic CGPA Reveal! */}
                    <CGPAArc cgpa={cgpaNum} pi={piNum} size="sm" animateOnMount />
