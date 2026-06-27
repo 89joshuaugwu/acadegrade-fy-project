@@ -228,7 +228,7 @@ export default function TranscriptPage() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full overflow-x-auto pb-2 sm:w-auto sm:overflow-visible sm:pb-0 scrollbar-hide">
           {/* Photo Toggle */}
           <button
             type="button"
