@@ -135,8 +135,8 @@ export function StudentTour() {
   let tooltipStyle: React.CSSProperties = {
     top: '50%',
     left: '50%',
-    transform: 'translate(-50%, -50%)',
   };
+  let transform = { x: "-50%", y: "-50%" };
 
   if (targetRect && step.position !== 'center') {
     const spacing = 16;
@@ -161,12 +161,12 @@ export function StudentTour() {
         tooltipStyle = {
           top: topPos,
           left: clampedLeft,
-          transform: 'translateX(-50%)',
         };
+        transform = { x: "-50%", y: "0%" };
         // If bottom overflows window, flip to top
         if (topPos > window.innerHeight - 200) {
            tooltipStyle.top = targetRect.top - spacing;
-           tooltipStyle.transform = 'translate(-50%, -100%)';
+           transform = { x: "-50%", y: "-100%" };
         }
         break;
       }
@@ -175,12 +175,12 @@ export function StudentTour() {
         tooltipStyle = {
           top: topPos,
           left: clampedLeft,
-          transform: 'translate(-50%, -100%)',
         };
+        transform = { x: "-50%", y: "-100%" };
         // If top overflows window, flip to bottom
         if (topPos < 100) {
            tooltipStyle.top = targetRect.bottom + spacing;
-           tooltipStyle.transform = 'translateX(-50%)';
+           transform = { x: "-50%", y: "0%" };
         }
         break;
       }
@@ -188,15 +188,15 @@ export function StudentTour() {
         tooltipStyle = {
           top: targetRect.top + targetRect.height / 2,
           left: targetRect.left - spacing,
-          transform: 'translate(-100%, -50%)',
         };
+        transform = { x: "-100%", y: "-50%" };
         break;
       case 'right':
         tooltipStyle = {
           top: targetRect.top + targetRect.height / 2,
           left: targetRect.right + spacing,
-          transform: 'translate(0, -50%)',
         };
+        transform = { x: "0%", y: "-50%" };
         break;
     }
   }
@@ -210,19 +210,24 @@ export function StudentTour() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-[var(--acade-void)]/80 backdrop-blur-sm"
+            className="absolute inset-0 transition-colors duration-500"
+            style={
+              step.position === 'center'
+                ? { backgroundColor: 'rgba(7, 9, 15, 0.8)', backdropFilter: 'blur(4px)' }
+                : { pointerEvents: 'none' } // Let clicks pass through the dimmed area
+            }
           >
             {/* Spotlight Cutout via Box Shadow */}
             {targetRect && step.position !== 'center' && (
               <div 
                 className="absolute transition-all duration-500 ease-in-out border-2 border-[var(--acade-primary)]/80 pointer-events-none"
                 style={{
-                  top: targetRect.top - 12,
-                  left: targetRect.left - 12,
-                  width: targetRect.width + 24,
-                  height: targetRect.height + 24,
-                  borderRadius: '20px',
-                  boxShadow: '0 0 0 9999px rgba(7, 9, 15, 0.7), 0 0 20px var(--acade-primary-glow) inset, 0 0 30px var(--acade-primary-glow)'
+                  top: targetRect.top - 8,
+                  left: targetRect.left - 8,
+                  width: targetRect.width + 16,
+                  height: targetRect.height + 16,
+                  borderRadius: '16px',
+                  boxShadow: '0 0 0 9999px rgba(7, 9, 15, 0.8), 0 0 20px var(--acade-primary-glow) inset, 0 0 30px var(--acade-primary-glow)'
                 }}
               />
             )}
@@ -230,9 +235,8 @@ export function StudentTour() {
 
           {/* Tooltip Card */}
           <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9, ...transform }}
+            animate={{ opacity: 1, scale: 1, ...transform }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="absolute z-[101] w-[320px] max-w-[calc(100vw-32px)] bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl overflow-hidden"
