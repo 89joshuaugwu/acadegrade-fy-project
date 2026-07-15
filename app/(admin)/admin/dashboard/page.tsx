@@ -8,7 +8,10 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
 import toast from 'react-hot-toast';
 
 interface AdminStats {
@@ -26,6 +29,7 @@ export default function AdminDashboardPage() {
   const shouldReduceMotion = useReducedMotion();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [resettingTour, setResettingTour] = useState(false);
 
   useEffect(() => {
     if (user) loadStats();
@@ -47,6 +51,25 @@ export default function AdminDashboardPage() {
       toast.error('Error loading dashboard data.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetAllOnboarding = async () => {
+    if (!confirm('Are you sure you want to reset onboarding for ALL users? This is a test feature.')) return;
+    setResettingTour(true);
+    try {
+      const usersRef = collection(db, 'users');
+      const snapshot = await getDocs(usersRef);
+      const updatePromises = snapshot.docs.map(userDoc => 
+        updateDoc(doc(db, 'users', userDoc.id), { tourCompleted: false })
+      );
+      await Promise.all(updatePromises);
+      toast.success(`Reset onboarding for ${snapshot.size} users.`);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to reset onboarding. Check console or Firestore rules.');
+    } finally {
+      setResettingTour(false);
     }
   };
 
@@ -89,13 +112,23 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div>
-        <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] tracking-tight">
-          Admin Dashboard
-        </h1>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1 font-[family-name:var(--font-dm-sans)]">
-          Platform overview and performance metrics.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] tracking-tight">
+            Admin Dashboard
+          </h1>
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1 font-[family-name:var(--font-dm-sans)]">
+            Platform overview and performance metrics.
+          </p>
+        </div>
+        
+        <Button 
+          variant="danger" 
+          onClick={handleResetAllOnboarding} 
+          disabled={resettingTour}
+        >
+          {resettingTour ? 'Resetting...' : 'Reset All Onboarding (Test)'}
+        </Button>
       </div>
 
       {/* Stat Cards */}
