@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { useProfile } from '@/hooks/useProfile';
-import { ChevronRight, X, Sparkles } from 'lucide-react';
-import { cn } from '@/lib/utils/cn';
+import { ChevronRight, X, Sparkles, MousePointerClick } from 'lucide-react';
 
 type Position = 'top' | 'bottom' | 'left' | 'right' | 'center';
 
@@ -13,53 +13,85 @@ interface TourStep {
   title: string;
   description: string;
   position: Position;
+  interactive?: boolean;
 }
-
-const TOUR_STEPS: TourStep[] = [
-  {
-    targetId: 'tour-grade-table',
-    title: 'Manual Entry',
-    description: "You can manually enter your courses, units, and scores here. The table will automatically calculate your GPA and PI.",
-    position: 'top',
-  },
-  {
-    targetId: 'tour-import-slip',
-    title: 'AI Result Extraction',
-    description: 'Save time by importing your result slip! Click this button to upload a PDF or image, and our AI will extract all courses and scores instantly.',
-    position: 'bottom',
-  },
-  {
-    targetId: 'tour-share-code',
-    title: 'Share Course List',
-    description: 'Share your course list with classmates using a unique 6-character code. (Scores are kept private).',
-    position: 'bottom',
-  },
-  {
-    targetId: 'tour-import-code',
-    title: 'Import Courses',
-    description: 'Got a code from a friend? Import their course list instantly so you don\'t have to type them out again!',
-    position: 'bottom',
-  },
-];
 
 export function ResultsTour() {
   const { profile, completeResultsTour } = useProfile();
+  const pathname = usePathname();
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
+
+  // Define steps dynamically based on pathname
+  let TOUR_STEPS: TourStep[] = [];
   
-  // Show tour if profile is loaded and resultsTourCompleted is falsy
-  const showTour = profile !== null && profile.resultsTourCompleted !== true;
+  if (pathname === '/results') {
+    TOUR_STEPS = [
+      {
+        targetId: 'tour-new-semester',
+        title: 'Start Here',
+        description: 'Click this button to add a new semester and start tracking your academic journey.',
+        position: 'bottom',
+        interactive: true,
+      }
+    ];
+  } else if (pathname === '/results/new') {
+    TOUR_STEPS = [
+      {
+        targetId: 'tour-create-semester',
+        title: 'Create Semester',
+        description: 'Fill in your semester details and click here to create it. We\'ll set up your grade table immediately!',
+        position: 'top',
+        interactive: true,
+      }
+    ];
+  } else if (pathname?.startsWith('/results/')) {
+    TOUR_STEPS = [
+      {
+        targetId: 'tour-grade-table',
+        title: 'Manual Entry',
+        description: "You can manually enter your courses, units, and scores here. The table will automatically calculate your GPA and PI.",
+        position: 'top',
+      },
+      {
+        targetId: 'tour-import-slip',
+        title: 'AI Result Extraction',
+        description: 'Save time by importing your result slip! Click this button to upload a PDF or image, and our AI will extract all courses and scores instantly.',
+        position: 'bottom',
+      },
+      {
+        targetId: 'tour-share-code',
+        title: 'Share Course List',
+        description: 'Share your course list with classmates using a unique 6-character code. (Scores are kept private).',
+        position: 'bottom',
+      },
+      {
+        targetId: 'tour-import-code',
+        title: 'Import Courses',
+        description: 'Got a code from a friend? Import their course list instantly so you don\'t have to type them out again!',
+        position: 'bottom',
+      },
+    ];
+  }
+
+  // Show tour if profile is loaded, resultsTourCompleted is falsy, and we have steps for this page
+  const showTour = profile !== null && profile.resultsTourCompleted !== true && TOUR_STEPS.length > 0;
 
   useEffect(() => {
     setIsClient(true);
     setWindowWidth(window.innerWidth);
   }, []);
 
+  // Reset step to 0 when pathname changes, so the new page's tour starts from the beginning
+  useEffect(() => {
+    setCurrentStep(0);
+  }, [pathname]);
+
   // Scroll to target when step changes
   useEffect(() => {
-    if (!showTour || !isClient) return;
+    if (!showTour || !isClient || !TOUR_STEPS[currentStep]) return;
     const step = TOUR_STEPS[currentStep];
     if (step.position !== 'center') {
       setTimeout(() => {
@@ -69,14 +101,16 @@ export function ResultsTour() {
         }
       }, 100);
     }
-  }, [currentStep, showTour, isClient]);
+  }, [currentStep, showTour, isClient, TOUR_STEPS]);
 
   useEffect(() => {
-    if (!showTour) return;
+    if (!showTour || !TOUR_STEPS[currentStep]) return;
 
     const updateRect = () => {
       setWindowWidth(window.innerWidth);
       const step = TOUR_STEPS[currentStep];
+      if (!step) return;
+
       if (step.position === 'center') {
         setTargetRect(null);
         return;
@@ -101,9 +135,9 @@ export function ResultsTour() {
       window.removeEventListener('scroll', updateRect, true);
       clearInterval(interval);
     };
-  }, [currentStep, showTour]);
+  }, [currentStep, showTour, TOUR_STEPS]);
 
-  if (!isClient || !showTour) return null;
+  if (!isClient || !showTour || !TOUR_STEPS[currentStep]) return null;
 
   const step = TOUR_STEPS[currentStep];
   const isLastStep = currentStep === TOUR_STEPS.length - 1;
@@ -213,6 +247,7 @@ export function ResultsTour() {
 
           {/* Tooltip Card */}
           <motion.div
+            key={`${pathname}-${currentStep}`}
             initial={{ opacity: 0, scale: 0.9, ...transform }}
             animate={{ opacity: 1, scale: 1, ...transform }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -220,16 +255,6 @@ export function ResultsTour() {
             className="absolute z-[101] w-[320px] max-w-[calc(100vw-32px)] bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
             style={tooltipStyle}
           >
-            {/* Progress bar */}
-            <div className="h-1 w-full bg-[var(--acade-deep)]">
-              <motion.div 
-                className="h-full bg-[var(--acade-primary)]"
-                initial={{ width: 0 }}
-                animate={{ width: `${((currentStep + 1) / TOUR_STEPS.length) * 100}%` }}
-                transition={{ duration: 0.3 }}
-              />
-            </div>
-
             <div className="p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -253,24 +278,33 @@ export function ResultsTour() {
               </p>
 
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
-                  Step {currentStep + 1} of {TOUR_STEPS.length}
-                </span>
+                {!step.interactive && (
+                  <span className="text-xs font-medium text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
+                    Step {currentStep + 1} of {TOUR_STEPS.length}
+                  </span>
+                )}
+                {step.interactive && (
+                  <span className="text-xs font-bold text-[var(--acade-warning)] font-[family-name:var(--font-geist-mono)] flex items-center gap-1">
+                    <MousePointerClick size={14} /> Action Required
+                  </span>
+                )}
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-auto">
                   <button
                     onClick={handleSkip}
                     className="text-xs font-medium text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors px-3 py-2"
                   >
-                    Skip
+                    Skip Tour
                   </button>
-                  <button
-                    onClick={handleNext}
-                    className="flex items-center gap-1 bg-[var(--acade-primary)] hover:bg-[var(--acade-primary-hover)] text-white text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-[0_0_15px_var(--acade-primary-glow)] hover:shadow-[0_0_25px_var(--acade-primary-glow)]"
-                  >
-                    {isLastStep ? 'Finish' : 'Next'}
-                    {!isLastStep && <ChevronRight size={16} />}
-                  </button>
+                  {!step.interactive && (
+                    <button
+                      onClick={handleNext}
+                      className="flex items-center gap-1 bg-[var(--acade-primary)] hover:bg-[var(--acade-primary-hover)] text-white text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-[0_0_15px_var(--acade-primary-glow)] hover:shadow-[0_0_25px_var(--acade-primary-glow)]"
+                    >
+                      {isLastStep ? 'Finish' : 'Next'}
+                      {!isLastStep && <ChevronRight size={16} />}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

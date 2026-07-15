@@ -17,6 +17,7 @@ import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { GradeTable } from '@/components/cgpa/GradeTable';
+import { ResultsTour } from '@/components/onboarding/ResultsTour';
 import { Modal } from '@/components/ui/Modal';
 
 function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
@@ -163,6 +164,7 @@ export default function ResultsListPage() {
 
   return (
     <div className="max-w-5xl mx-auto pb-10">
+      <ResultsTour />
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
@@ -173,7 +175,7 @@ export default function ResultsListPage() {
           </p>
         </div>
         <Link href={disableAddSemester ? '#' : `/results/new`} onClick={(e) => disableAddSemester && e.preventDefault()}>
-          <Button variant="primary" size="lg" className="w-full md:w-auto" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
+          <Button id="tour-new-semester" variant="primary" size="lg" className="w-full md:w-auto" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
             <Plus size={18} className="mr-2" /> New Semester
           </Button>
         </Link>
@@ -195,7 +197,7 @@ export default function ResultsListPage() {
             Add your first semester to start tracking your progress and unlocking AI insights.
           </p>
           <Link href={disableAddSemester ? '#' : `/results/new`} onClick={(e) => disableAddSemester && e.preventDefault()}>
-            <Button variant="primary" size="lg" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
+            <Button id="tour-new-semester" variant="primary" size="lg" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
               <Plus size={18} className="mr-2" /> Add Semester
             </Button>
           </Link>

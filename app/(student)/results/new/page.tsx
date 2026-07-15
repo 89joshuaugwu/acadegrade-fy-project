@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
+import { ResultsTour } from '@/components/onboarding/ResultsTour';
 
 export default function NewSemesterPage() {
   const router = useRouter();
@@ -61,6 +62,7 @@ export default function NewSemesterPage() {
 
   return (
     <div className="max-w-2xl mx-auto pb-10">
+      <ResultsTour />
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="sm" onClick={() => router.back()} className="px-2">
           <ArrowLeft size={20} />
@@ -105,7 +107,7 @@ export default function NewSemesterPage() {
               onChange={(e) => setSession(e.target.value)}
             />
 
-            <Button variant="primary" size="lg" onClick={handleCreate} disabled={loading} className="mt-4">
+            <Button id="tour-create-semester" variant="primary" size="lg" onClick={handleCreate} disabled={loading} className="mt-4">
               {loading ? 'Creating...' : 'Create Semester'}
             </Button>
           </div>
