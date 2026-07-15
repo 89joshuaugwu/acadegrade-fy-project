@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/Badge';
 import { GradeTable } from '@/components/cgpa/GradeTable';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { ResultsTour } from '@/components/onboarding/ResultsTour';
 
 const generateRandomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -322,7 +323,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   if (!semester) return null;
 
   return (
-    <div className="max-w-5xl mx-auto pb-10">
+    <div className="max-w-5xl mx-auto pb-10 relative">
+      <ResultsTour />
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="px-2">
@@ -342,19 +344,20 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-          <Button variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
+          <Button id="tour-import-code" variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Download size={16} className="mr-2" /> Import Code
           </Button>
-          <Button variant="outline" size="sm" onClick={handleGenerateShareCode} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
+          <Button id="tour-share-code" variant="outline" size="sm" onClick={handleGenerateShareCode} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Share2 size={16} className="mr-2" /> Share
           </Button>
-          <Button variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('extract_slip')} title={isFeatureDisabled('extract_slip') ? "Temporarily disabled for maintenance" : ""}>
+          <Button id="tour-import-slip" variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('extract_slip')} title={isFeatureDisabled('extract_slip') ? "Temporarily disabled for maintenance" : ""}>
             <FileText size={16} className="mr-2" /> Import Result Slip
           </Button>
         </div>
       </div>
 
       <motion.div
+        id="tour-grade-table"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden p-4 md:p-6"

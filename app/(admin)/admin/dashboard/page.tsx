@@ -55,13 +55,15 @@ export default function AdminDashboardPage() {
   };
 
   const handleResetAllOnboarding = async () => {
-    if (!confirm('Are you sure you want to reset onboarding for ALL users? This is a test feature.')) return;
     setResettingTour(true);
     try {
       const usersRef = collection(db, 'users');
       const snapshot = await getDocs(usersRef);
       const updatePromises = snapshot.docs.map(userDoc => 
-        updateDoc(doc(db, 'users', userDoc.id), { tourCompleted: false })
+        updateDoc(doc(db, 'users', userDoc.id), { 
+          tourCompleted: false,
+          resultsTourCompleted: false 
+        })
       );
       await Promise.all(updatePromises);
       toast.success(`Reset onboarding for ${snapshot.size} users.`);

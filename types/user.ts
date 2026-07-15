@@ -34,6 +34,7 @@ export interface User {
     adminBroadcasts?: boolean;
   };
   tourCompleted?: boolean;
+  resultsTourCompleted?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
