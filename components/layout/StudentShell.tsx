@@ -17,6 +17,7 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
 import { NotificationDropdown } from './NotificationDropdown';
+import { StudentTour } from '@/components/onboarding/StudentTour';
 import { Logo } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
 
@@ -141,7 +142,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          <nav className="flex flex-col gap-1.5">
+          <nav id="tour-sidebar-nav" className="flex flex-col gap-1.5">
             {TABS.map((tab) => {
               const active = isActive(tab.href);
               const Icon = tab.icon;
@@ -261,6 +262,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
       <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} isAdmin={false} />
       <BottomTabBar />
+      <StudentTour />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
-import { subscribeToDocument } from '@/lib/firebase/firestore';
+import { subscribeToDocument, updateDocument } from '@/lib/firebase/firestore';
 import type { UserWithId } from '@/types/user';
 
 export function useProfile() {
@@ -21,5 +21,14 @@ export function useProfile() {
     return unsubscribe;
   }, [uid]);
 
-  return { profile };
+  const completeTour = async () => {
+    if (!uid) return;
+    try {
+      await updateDocument(`users/${uid}`, { tourCompleted: true });
+    } catch (error) {
+      console.error('Failed to update tour completion status', error);
+    }
+  };
+
+  return { profile, completeTour };
 }

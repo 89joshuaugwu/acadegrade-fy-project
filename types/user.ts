@@ -33,6 +33,7 @@ export interface User {
     aiInsights?: boolean;
     adminBroadcasts?: boolean;
   };
+  tourCompleted?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

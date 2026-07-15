@@ -194,7 +194,7 @@ export default function DashboardPage() {
           />
           
           <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-            <div className="flex-1 text-center md:text-left flex flex-col items-center md:items-start order-2 md:order-1">
+            <div id="tour-welcome" className="flex-1 text-center md:text-left flex flex-col items-center md:items-start order-2 md:order-1">
               <h1 className="text-[length:var(--text-3xl)] md:text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-2">
                 Good {timeOfDay}, {profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
               </h1>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                   : "Here is a quick overview of your academic standing."}
               </p>
               
-              <div className="flex items-center gap-4">
+              <div id="tour-metrics-toggle" className="flex items-center gap-4">
                 <Toggle 
                   checked={isPIMode} 
                   onChange={handleModeChange} 
@@ -218,7 +218,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="shrink-0 order-1 md:order-2">
+            <div id="tour-cgpa-arc" className="shrink-0 order-1 md:order-2">
               <CGPAArc 
                 cgpa={cgpa} 
                 pi={pi} 
@@ -236,7 +236,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* QUICK STATS ROW */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div id="tour-quick-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: 'Total Credits', value: totalCredits, suffix: ' CU' },
           { label: 'Current Sem', value: currentSemGPA, decimals: 2 },
