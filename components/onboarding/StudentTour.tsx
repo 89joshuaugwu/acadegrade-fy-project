@@ -156,30 +156,34 @@ export function StudentTour() {
     const clampedLeft = Math.max(minLeft, Math.min(targetCenterLeft, maxLeft));
 
     switch (resolvedPosition) {
-      case 'bottom':
+      case 'bottom': {
+        const topPos = targetRect.bottom + spacing;
         tooltipStyle = {
-          top: targetRect.bottom + spacing,
+          top: topPos,
           left: clampedLeft,
           transform: 'translateX(-50%)',
         };
         // If bottom overflows window, flip to top
-        if (tooltipStyle.top > window.innerHeight - 200) {
+        if (topPos > window.innerHeight - 200) {
            tooltipStyle.top = targetRect.top - spacing;
            tooltipStyle.transform = 'translate(-50%, -100%)';
         }
         break;
-      case 'top':
+      }
+      case 'top': {
+        const topPos = targetRect.top - spacing;
         tooltipStyle = {
-          top: targetRect.top - spacing,
+          top: topPos,
           left: clampedLeft,
           transform: 'translate(-50%, -100%)',
         };
         // If top overflows window, flip to bottom
-        if (tooltipStyle.top < 100) {
+        if (topPos < 100) {
            tooltipStyle.top = targetRect.bottom + spacing;
            tooltipStyle.transform = 'translateX(-50%)';
         }
         break;
+      }
       case 'left':
         tooltipStyle = {
           top: targetRect.top + targetRect.height / 2,
