@@ -9,7 +9,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
 const TABS = [
-  { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/results', label: 'Results', icon: BookOpen },
   { href: '/insights', label: 'Insights', icon: BrainCircuit },
   { href: '/transcript', label: 'Transcript', icon: FileText },
@@ -39,6 +39,7 @@ export function BottomTabBar() {
             <Link
               key={tab.href}
               href={tab.href}
+              id={`tour-mobile-nav-${tab.label.toLowerCase()}`}
               className="relative flex flex-col items-center justify-center w-full h-full gap-1 tap-highlight-transparent group"
               aria-label={tab.label}
               aria-current={active ? 'page' : undefined}

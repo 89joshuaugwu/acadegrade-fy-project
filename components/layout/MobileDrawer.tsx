@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Shield, Settings, Calculator, Bell, Info, LogOut, X, LayoutDashboard, BookOpen, BrainCircuit, Activity } from 'lucide-react';
 import { signOut } from '@/lib/firebase/auth';
@@ -159,9 +160,9 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
                 </>
               ) : (
                 <>
-                  <DrawerLink href="/settings" icon={Settings} label="Settings" onClick={onClose} />
+                  <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
                   <DrawerLink href="/calculator" icon={Calculator} label="Quick Calculator" onClick={onClose} />
-                  <DrawerLink href="/notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
+                  <DrawerLink href="/notifications" id="tour-mobile-nav-notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
                   <DrawerLink href="/about" icon={Info} label="About" onClick={onClose} />
                 </>
               )}
@@ -175,6 +176,7 @@ export function MobileDrawer({ isOpen, onClose, isAdmin = false }: MobileDrawerP
                 </div>
               )}
               <button
+                id="tour-mobile-nav-logout"
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center gap-2 p-3 rounded-xl text-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] transition-colors font-semibold text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)]"
               >
@@ -194,19 +196,30 @@ function DrawerLink({
   icon: Icon, 
   label, 
   badge,
+  id,
   onClick 
 }: { 
   href: string; 
   icon: React.ElementType; 
   label: string; 
   badge?: number;
+  id?: string;
   onClick: () => void;
 }) {
+  const pathname = usePathname();
+  const active = pathname === href;
+
   return (
     <Link 
       href={href} 
+      id={id}
       onClick={onClick}
-      className="flex items-center gap-3 p-3 rounded-xl text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] transition-colors font-medium text-[length:var(--text-base)] font-[family-name:var(--font-dm-sans)]"
+      className={cn(
+        "flex items-center gap-3 p-3 rounded-xl transition-colors font-medium text-[length:var(--text-base)] font-[family-name:var(--font-dm-sans)]",
+        active 
+          ? "bg-[var(--acade-primary)]/10 text-[var(--acade-primary)]" 
+          : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)]"
+      )}
     >
       <Icon size={20} />
       <span className="flex-1">{label}</span>

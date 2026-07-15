@@ -111,6 +111,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-1">
           <NotificationDropdown />
           <button
+            id="tour-mobile-hamburger-btn"
             onClick={() => setDrawerOpen(true)}
             className="p-2 rounded-full text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] transition-colors"
             aria-label="Open menu"
@@ -150,6 +151,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  id={`tour-desktop-nav-${tab.label.toLowerCase()}`}
                   className={cn(
                     "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
                     active
@@ -184,6 +186,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           <div className="mb-2">
             <Link
               href="/notifications"
+              id="tour-desktop-nav-notifications"
               className={cn(
                 "relative flex items-center justify-between px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
                 isActive('/notifications')
@@ -212,6 +215,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           
           <Link
             href="/settings"
+            id="tour-desktop-nav-settings"
             className={cn(
               "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
               isActive('/settings')
@@ -231,6 +235,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           </Link>
           
           <button
+            id="tour-desktop-nav-logout"
             onClick={handleSignOut}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] text-left w-full mt-2"
           >

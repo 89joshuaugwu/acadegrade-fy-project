@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { useProfile } from '@/hooks/useProfile';
@@ -14,40 +14,8 @@ interface TourStep {
   title: string;
   description: string;
   position: Position;
+  interactive?: boolean;
 }
-
-const TOUR_STEPS: TourStep[] = [
-  {
-    targetId: 'tour-welcome',
-    title: 'Welcome to AcadeGrade!',
-    description: "Let's take a quick tour to help you get the most out of your academic dashboard. We'll show you how to track your progress and uncover insights.",
-    position: 'center',
-  },
-  {
-    targetId: 'tour-cgpa-arc',
-    title: 'Your Performance at a Glance',
-    description: 'This arc displays your primary academic metrics. The outer ring represents your active metric, and the inner ring shows the secondary one.',
-    position: 'left',
-  },
-  {
-    targetId: 'tour-metrics-toggle',
-    title: 'Dual Metric System',
-    description: 'Toggle between your official CGPA (letter-graded) and Performance Index (PI) which measures your raw weighted percentage score.',
-    position: 'bottom',
-  },
-  {
-    targetId: 'tour-quick-stats',
-    title: 'Quick Stats',
-    description: 'Keep an eye on your total credits, current semester performance, and immediately spot if you have any courses at risk.',
-    position: 'top',
-  },
-  {
-    targetId: 'tour-sidebar-nav',
-    title: 'Navigate Your Journey',
-    description: 'Head to Results to add new semesters, or check Insights for AI-powered analysis of your academic trajectory. You\'re all set!',
-    position: 'right',
-  },
-];
 
 export function StudentTour() {
   const { profile, completeTour } = useProfile();
@@ -64,6 +32,63 @@ export function StudentTour() {
     setIsClient(true);
     setWindowWidth(window.innerWidth);
   }, []);
+
+  const TOUR_STEPS: TourStep[] = useMemo(() => {
+    const isDesktop = windowWidth >= 1024;
+    const baseSteps: TourStep[] = [
+      { targetId: 'tour-welcome', title: 'Welcome to AcadeGrade!', description: "Let's take a quick tour to help you get the most out of your academic dashboard.", position: 'center' },
+      { targetId: 'tour-cgpa-arc', title: 'Your Performance at a Glance', description: 'This arc displays your primary academic metrics. The outer ring represents your active metric, and the inner ring shows the secondary one.', position: 'left' },
+      { targetId: 'tour-metrics-toggle', title: 'Dual Metric System', description: 'Toggle between your official CGPA (letter-graded) and Performance Index (PI) which measures your raw weighted percentage score.', position: 'bottom' },
+      { targetId: 'tour-quick-stats', title: 'Quick Stats', description: 'Keep an eye on your total credits, current semester performance, and immediately spot if you have any courses at risk.', position: 'top' },
+    ];
+
+    if (windowWidth === 0) return baseSteps;
+
+    if (isDesktop) {
+      baseSteps.push(
+        { targetId: 'tour-desktop-nav-dashboard', title: 'Dashboard', description: 'Your home base for all academic metrics.', position: 'right' },
+        { targetId: 'tour-desktop-nav-results', title: 'Results', description: 'Add and manage your semester results here.', position: 'right' },
+        { targetId: 'tour-desktop-nav-insights', title: 'Insights', description: 'Check Insights for AI-powered analysis of your academic trajectory.', position: 'right' },
+        { targetId: 'tour-desktop-nav-transcript', title: 'Transcript', description: 'View and export your complete academic history.', position: 'right' },
+        { targetId: 'tour-desktop-nav-notifications', title: 'Notifications', description: 'Stay updated on important announcements.', position: 'right' },
+        { targetId: 'tour-desktop-nav-settings', title: 'Settings', description: 'Customize your profile and preferences.', position: 'right' },
+        { targetId: 'tour-desktop-nav-logout', title: 'Sign Out', description: 'Securely log out when you are done. You are all set!', position: 'right' }
+      );
+    } else {
+      baseSteps.push(
+        { targetId: 'tour-mobile-nav-dashboard', title: 'Dashboard', description: 'Your home base.', position: 'top' },
+        { targetId: 'tour-mobile-nav-results', title: 'Results', description: 'Add and manage your semester results.', position: 'top' },
+        { targetId: 'tour-mobile-nav-insights', title: 'Insights', description: 'AI-powered academic insights.', position: 'top' },
+        { targetId: 'tour-mobile-nav-transcript', title: 'Transcript', description: 'Full academic history.', position: 'top' },
+        { targetId: 'tour-mobile-hamburger-btn', title: 'More Options', description: 'Click the Menu icon to access your notifications and settings.', position: 'bottom', interactive: true },
+        { targetId: 'tour-mobile-nav-notifications', title: 'Notifications', description: 'Stay updated on important announcements.', position: 'bottom' },
+        { targetId: 'tour-mobile-nav-settings', title: 'Settings', description: 'Customize your profile and preferences.', position: 'bottom' },
+        { targetId: 'tour-mobile-nav-logout', title: 'Sign Out', description: 'Securely log out when you are done. You are all set!', position: 'top' }
+      );
+    }
+    return baseSteps;
+  }, [windowWidth]);
+
+  // Handle interactive clicks
+  useEffect(() => {
+    if (!showTour || !isClient || !TOUR_STEPS.length) return;
+    const step = TOUR_STEPS[currentStep];
+    
+    if (step?.interactive) {
+      const element = document.getElementById(step.targetId);
+      if (element) {
+        const handleClick = () => {
+          if (currentStep === TOUR_STEPS.length - 1) {
+            completeTour();
+          } else {
+            setCurrentStep((s) => s + 1);
+          }
+        };
+        element.addEventListener('click', handleClick);
+        return () => element.removeEventListener('click', handleClick);
+      }
+    }
+  }, [currentStep, showTour, isClient, TOUR_STEPS, completeTour]);
 
   // Scroll to target when step changes
   useEffect(() => {
@@ -205,8 +230,8 @@ export function StudentTour() {
 
   return (
     <AnimatePresence>
-      {showTour && (
-        <div className="fixed inset-0 z-[100] pointer-events-auto">
+      {showTour && TOUR_STEPS.length > 0 && (
+        <div className="fixed inset-0 z-[100] pointer-events-none">
           {/* Full screen backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -237,11 +262,12 @@ export function StudentTour() {
 
           {/* Tooltip Card */}
           <motion.div
+            key={`${pathname}-${currentStep}`}
             initial={{ opacity: 0, scale: 0.9, ...transform }}
             animate={{ opacity: 1, scale: 1, ...transform }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute z-[101] w-[320px] max-w-[calc(100vw-32px)] bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl overflow-hidden"
+            className="absolute z-[101] w-[320px] max-w-[calc(100vw-32px)] bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl overflow-hidden pointer-events-auto"
             style={tooltipStyle}
           >
             {/* Progress bar */}
@@ -287,13 +313,15 @@ export function StudentTour() {
                   >
                     Skip
                   </button>
-                  <button
-                    onClick={handleNext}
-                    className="flex items-center gap-1 bg-[var(--acade-primary)] hover:bg-[var(--acade-primary-hover)] text-white px-4 py-1.5 rounded-lg text-[length:var(--text-sm)] font-medium transition-colors shadow-[0_0_15px_rgba(99,102,241,0.3)]"
-                  >
-                    {isLastStep ? 'Finish' : 'Next'}
-                    {!isLastStep && <ChevronRight size={16} className="-mr-1" />}
-                  </button>
+                  {!step.interactive && (
+                    <button
+                      onClick={handleNext}
+                      className="flex items-center gap-1 bg-[var(--acade-primary)] hover:bg-[var(--acade-primary-hover)] text-white px-4 py-1.5 rounded-lg text-[length:var(--text-sm)] font-medium transition-colors shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                    >
+                      {isLastStep ? 'Finish' : 'Next'}
+                      {!isLastStep && <ChevronRight size={16} className="-mr-1" />}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

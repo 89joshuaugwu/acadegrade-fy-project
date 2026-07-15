@@ -216,7 +216,7 @@ export function ResultsTour() {
   return (
     <AnimatePresence>
       {showTour && (
-        <div className="fixed inset-0 z-[100] pointer-events-auto">
+        <div className="fixed inset-0 z-[100] pointer-events-none">
           {/* Full screen backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -252,7 +252,7 @@ export function ResultsTour() {
             animate={{ opacity: 1, scale: 1, ...transform }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="absolute z-[101] w-[320px] max-w-[calc(100vw-32px)] bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            className="absolute z-[101] w-[320px] max-w-[calc(100vw-32px)] bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl overflow-hidden flex flex-col pointer-events-auto"
             style={tooltipStyle}
           >
             <div className="p-5">
