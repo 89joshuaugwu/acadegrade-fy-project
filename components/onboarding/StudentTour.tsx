@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { useProfile } from '@/hooks/useProfile';
 import { ChevronRight, X, Sparkles } from 'lucide-react';
@@ -50,13 +51,14 @@ const TOUR_STEPS: TourStep[] = [
 
 export function StudentTour() {
   const { profile, completeTour } = useProfile();
+  const pathname = usePathname();
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [windowWidth, setWindowWidth] = useState(0);
   
-  // Show tour if profile is loaded and tourCompleted is falsy
-  const showTour = profile !== null && profile.tourCompleted !== true;
+  // Show tour if profile is loaded, tourCompleted is falsy, and we are on the dashboard
+  const showTour = profile !== null && profile.tourCompleted !== true && pathname === '/dashboard';
 
   useEffect(() => {
     setIsClient(true);
