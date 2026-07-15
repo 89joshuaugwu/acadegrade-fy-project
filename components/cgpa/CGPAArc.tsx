@@ -296,9 +296,11 @@ function CGPAArc({
     return () => cleanup?.();
   }, [fireParticles]);
 
-  // CGPA always gets gold/orange, PI always gets the grade-based color
+  // Both metrics use grade-based colors from their own values
+  const cgpaColor = getMetricColor(clampedCGPA);
   const piColor = getMetricColor(clampedPI);
-  const cgpaGoldColor = 'var(--acade-gold)';
+  const primaryColor = primaryMetric === 'cgpa' ? cgpaColor : piColor;
+  const secondaryColor = primaryMetric === 'cgpa' ? piColor : cgpaColor;
 
   return (
     <div className={cn('flex flex-col items-center gap-3', className)}>
@@ -310,13 +312,13 @@ function CGPAArc({
           role="img"
         >
           <defs>
-            <linearGradient id={`pi-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={piColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={piColor} stopOpacity="1" />
+            <linearGradient id={`primary-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={primaryColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={primaryColor} stopOpacity="1" />
             </linearGradient>
-            <linearGradient id={`cgpa-gold-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={cgpaGoldColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={cgpaGoldColor} stopOpacity="1" />
+            <linearGradient id={`secondary-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={secondaryColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={secondaryColor} stopOpacity="1" />
             </linearGradient>
             <filter id={`arc-glow-${size}`}>
               <feGaussianBlur stdDeviation="2" result="blur" />
@@ -349,7 +351,7 @@ function CGPAArc({
           <motion.path
             d={fullInnerPath}
             fill="none"
-            stroke={primaryMetric === 'cgpa' ? `url(#pi-grad-${size})` : `url(#cgpa-gold-grad-${size})`}
+            stroke={`url(#secondary-grad-${size})`}
             strokeWidth={config.innerStroke}
             strokeLinecap="round"
             strokeDasharray={innerCircumference}
@@ -361,7 +363,7 @@ function CGPAArc({
           <motion.path
             d={fullArcPath}
             fill="none"
-            stroke={primaryMetric === 'cgpa' ? `url(#cgpa-gold-grad-${size})` : `url(#pi-grad-${size})`}
+            stroke={`url(#primary-grad-${size})`}
             strokeWidth={config.outerStroke}
             strokeLinecap="round"
             strokeDasharray={outerCircumference}
@@ -391,7 +393,7 @@ function CGPAArc({
                   ? 'text-[length:var(--cgpa-num)]'
                   : 'text-[length:var(--text-3xl)]'
               )}
-              style={{ color: primaryMetric === 'cgpa' ? cgpaGoldColor : piColor }}
+              style={{ color: primaryColor }}
             >
               {animateOnMount && !shouldReduceMotion ? (
                 <CountUp
