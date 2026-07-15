@@ -63,6 +63,21 @@ export function StudentTour() {
     setWindowWidth(window.innerWidth);
   }, []);
 
+  // Scroll to target when step changes
+  useEffect(() => {
+    if (!showTour || !isClient) return;
+    const step = TOUR_STEPS[currentStep];
+    if (step.position !== 'center') {
+      // Add a tiny delay to ensure element is mounted
+      setTimeout(() => {
+        const element = document.getElementById(step.targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [currentStep, showTour, isClient]);
+
   useEffect(() => {
     if (!showTour) return;
 
@@ -123,58 +138,62 @@ export function StudentTour() {
     transform: 'translate(-50%, -50%)',
   };
 
-  // Check if we are on mobile to force bottom or center positioning
-  const isMobile = windowWidth < 768;
-
   if (targetRect && step.position !== 'center') {
     const spacing = 16;
+    const tooltipWidth = 320;
+    const padding = 16;
     
-    // On mobile, often better to just float the tooltip at the bottom if the target is high, or vice versa
-    if (isMobile) {
-      if (targetRect.top > window.innerHeight / 2) {
-         tooltipStyle = {
-           top: 24,
-           left: '50%',
-           transform: 'translateX(-50%)',
-         };
-      } else {
-         tooltipStyle = {
-           bottom: 24,
-           left: '50%',
-           transform: 'translateX(-50%)',
-         };
-      }
-    } else {
-      switch (step.position) {
-        case 'bottom':
-          tooltipStyle = {
-            top: targetRect.bottom + spacing,
-            left: targetRect.left + targetRect.width / 2,
-            transform: 'translateX(-50%)',
-          };
-          break;
-        case 'top':
-          tooltipStyle = {
-            top: targetRect.top - spacing,
-            left: targetRect.left + targetRect.width / 2,
-            transform: 'translate(-50%, -100%)',
-          };
-          break;
-        case 'left':
-          tooltipStyle = {
-            top: targetRect.top + targetRect.height / 2,
-            left: targetRect.left - spacing,
-            transform: 'translate(-100%, -50%)',
-          };
-          break;
-        case 'right':
-          tooltipStyle = {
-            top: targetRect.top + targetRect.height / 2,
-            left: targetRect.right + spacing,
-            transform: 'translate(0, -50%)',
-          };
-          break;
-      }
+    let resolvedPosition = step.position;
+    // On mobile screens, force top/bottom positioning because left/right will overflow
+    if (windowWidth < 768 && (resolvedPosition === 'left' || resolvedPosition === 'right')) {
+      resolvedPosition = targetRect.top > window.innerHeight / 2 ? 'top' : 'bottom';
+    }
+
+    // Calculate clamped left position for top/bottom to prevent horizontal overflow
+    const targetCenterLeft = targetRect.left + targetRect.width / 2;
+    const maxLeft = windowWidth - padding - tooltipWidth / 2;
+    const minLeft = padding + tooltipWidth / 2;
+    const clampedLeft = Math.max(minLeft, Math.min(targetCenterLeft, maxLeft));
+
+    switch (resolvedPosition) {
+      case 'bottom':
+        tooltipStyle = {
+          top: targetRect.bottom + spacing,
+          left: clampedLeft,
+          transform: 'translateX(-50%)',
+        };
+        // If bottom overflows window, flip to top
+        if (tooltipStyle.top > window.innerHeight - 200) {
+           tooltipStyle.top = targetRect.top - spacing;
+           tooltipStyle.transform = 'translate(-50%, -100%)';
+        }
+        break;
+      case 'top':
+        tooltipStyle = {
+          top: targetRect.top - spacing,
+          left: clampedLeft,
+          transform: 'translate(-50%, -100%)',
+        };
+        // If top overflows window, flip to bottom
+        if (tooltipStyle.top < 100) {
+           tooltipStyle.top = targetRect.bottom + spacing;
+           tooltipStyle.transform = 'translateX(-50%)';
+        }
+        break;
+      case 'left':
+        tooltipStyle = {
+          top: targetRect.top + targetRect.height / 2,
+          left: targetRect.left - spacing,
+          transform: 'translate(-100%, -50%)',
+        };
+        break;
+      case 'right':
+        tooltipStyle = {
+          top: targetRect.top + targetRect.height / 2,
+          left: targetRect.right + spacing,
+          transform: 'translate(0, -50%)',
+        };
+        break;
     }
   }
 
