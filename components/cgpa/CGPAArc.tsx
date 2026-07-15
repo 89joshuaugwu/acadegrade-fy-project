@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback } from 'react';
-import { motion, useSpring, useTransform } from 'motion/react';
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { motion, useSpring, useTransform, AnimatePresence } from 'motion/react';
 import CountUp from 'react-countup';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -50,13 +50,84 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
-/** Map CGPA 0-5 to a gradient color */
-function getCGPAColor(cgpa: number): string {
-  if (cgpa >= 4.5) return 'var(--grade-a)';     // First class — green
-  if (cgpa >= 3.5) return 'var(--grade-b)';     // 2:1 — indigo
-  if (cgpa >= 2.4) return 'var(--grade-c)';     // 2:2 — amber
-  if (cgpa >= 1.5) return 'var(--grade-d)';     // Third — orange
+/** Map a 0-5 metric value to a gradient color */
+function getMetricColor(value: number): string {
+  if (value >= 4.5) return 'var(--grade-a)';     // First class — green
+  if (value >= 3.5) return 'var(--grade-b)';     // 2:1 — indigo
+  if (value >= 2.4) return 'var(--grade-c)';     // 2:2 — amber
+  if (value >= 1.5) return 'var(--grade-d)';     // Third — orange
   return 'var(--grade-e)';                       // Below — red
+}
+
+/** PI Info Tooltip Component */
+function PITooltip({ size }: { size: ArcSize }) {
+  const [show, setShow] = useState(false);
+
+  if (size === 'sm') return null;
+
+  return (
+    <span className="relative inline-flex items-center ml-1">
+      <button
+        type="button"
+        aria-label="What is Performance Index?"
+        className={cn(
+          'inline-flex items-center justify-center rounded-full',
+          'text-[var(--acade-text-faint)] hover:text-[var(--acade-gold)]',
+          'transition-colors duration-200 cursor-help',
+          size === 'lg' ? 'w-4 h-4 text-[11px]' : 'w-3.5 h-3.5 text-[10px]'
+        )}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        onFocus={() => setShow(true)}
+        onBlur={() => setShow(false)}
+        onClick={() => setShow((v) => !v)}
+      >
+        ℹ️
+      </button>
+      <AnimatePresence>
+        {show && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className={cn(
+              'absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2',
+              'w-[260px] p-3 rounded-xl',
+              'bg-[var(--acade-surface)] border border-[var(--acade-border)]',
+              'shadow-[0_8px_32px_rgba(0,0,0,0.5)]',
+              'text-[length:var(--text-xs)] leading-relaxed',
+              'text-[var(--acade-text-muted)]',
+              'font-[family-name:var(--font-dm-sans)]',
+              'pointer-events-none'
+            )}
+          >
+            <span className="font-semibold text-[var(--acade-text)]">
+              Performance Index (PI)
+            </span>{' '}
+            measures your raw continuous academic mastery. While CGPA rounds your
+            grades into letters, PI represents your actual weighted percentage
+            score on a 5.0 scale{' '}
+            <span className="text-[var(--acade-gold)] font-medium">
+              (e.g., a 3.04 PI means your overall average raw score is 60.8%)
+            </span>
+            .
+            {/* Tooltip arrow */}
+            <span
+              className="absolute top-full left-1/2 -translate-x-1/2 -mt-px"
+              style={{
+                width: 0,
+                height: 0,
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderTop: '6px solid var(--acade-border)',
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </span>
+  );
 }
 
 /**
@@ -225,7 +296,9 @@ function CGPAArc({
     return () => cleanup?.();
   }, [fireParticles]);
 
-  const cgpaColor = getCGPAColor(clampedCGPA);
+  // CGPA always gets gold/orange, PI always gets the grade-based color
+  const piColor = getMetricColor(clampedPI);
+  const cgpaGoldColor = 'var(--acade-gold)';
 
   return (
     <div className={cn('flex flex-col items-center gap-3', className)}>
@@ -237,9 +310,13 @@ function CGPAArc({
           role="img"
         >
           <defs>
-            <linearGradient id={`cgpa-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={cgpaColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={cgpaColor} stopOpacity="1" />
+            <linearGradient id={`pi-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={piColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={piColor} stopOpacity="1" />
+            </linearGradient>
+            <linearGradient id={`cgpa-gold-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={cgpaGoldColor} stopOpacity="0.9" />
+              <stop offset="100%" stopColor={cgpaGoldColor} stopOpacity="1" />
             </linearGradient>
             <filter id={`arc-glow-${size}`}>
               <feGaussianBlur stdDeviation="2" result="blur" />
@@ -272,7 +349,7 @@ function CGPAArc({
           <motion.path
             d={fullInnerPath}
             fill="none"
-            stroke={primaryMetric === 'cgpa' ? 'var(--acade-gold)' : `url(#cgpa-grad-${size})`}
+            stroke={primaryMetric === 'cgpa' ? `url(#pi-grad-${size})` : `url(#cgpa-gold-grad-${size})`}
             strokeWidth={config.innerStroke}
             strokeLinecap="round"
             strokeDasharray={innerCircumference}
@@ -284,7 +361,7 @@ function CGPAArc({
           <motion.path
             d={fullArcPath}
             fill="none"
-            stroke={primaryMetric === 'cgpa' ? `url(#cgpa-grad-${size})` : 'var(--acade-gold)'}
+            stroke={primaryMetric === 'cgpa' ? `url(#cgpa-gold-grad-${size})` : `url(#pi-grad-${size})`}
             strokeWidth={config.outerStroke}
             strokeLinecap="round"
             strokeDasharray={outerCircumference}
@@ -314,7 +391,7 @@ function CGPAArc({
                   ? 'text-[length:var(--cgpa-num)]'
                   : 'text-[length:var(--text-3xl)]'
               )}
-              style={{ color: primaryMetric === 'cgpa' ? cgpaColor : 'var(--acade-gold)' }}
+              style={{ color: primaryMetric === 'cgpa' ? cgpaGoldColor : piColor }}
             >
               {animateOnMount && !shouldReduceMotion ? (
                 <CountUp
@@ -329,13 +406,16 @@ function CGPAArc({
             </span>
             <span
               className={cn(
-                'font-[family-name:var(--font-geist-mono)] text-[var(--acade-text-muted)] tabular-nums mt-1',
+                'font-[family-name:var(--font-geist-mono)] text-[var(--acade-text-muted)] tabular-nums mt-1 inline-flex items-center',
                 size === 'lg'
                   ? 'text-[length:var(--text-sm)]'
                   : 'text-[length:var(--text-xs)]'
               )}
             >
-              {primaryMetric === 'cgpa' ? `PI: ${clampedPI.toFixed(2)}` : `CGPA: ${clampedCGPA.toFixed(2)}`}
+              {primaryMetric === 'cgpa'
+                ? <><span>PI: {clampedPI.toFixed(2)}</span><PITooltip size={size} /></>
+                : `CGPA: ${clampedCGPA.toFixed(2)}`
+              }
             </span>
           </div>
         )}
@@ -352,7 +432,10 @@ function CGPAArc({
 
       {/* Degree class badge below arc */}
       {size !== 'sm' && (
-        <DegreeClassBadge cgpa={clampedCGPA} animated={animateOnMount} />
+        <DegreeClassBadge
+          cgpa={primaryMetric === 'cgpa' ? clampedCGPA : clampedPI}
+          animated={animateOnMount}
+        />
       )}
     </div>
   );
