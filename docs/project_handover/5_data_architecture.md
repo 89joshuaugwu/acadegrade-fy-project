@@ -26,7 +26,7 @@ This document explains how data flows through the application, where it is store
 
 ## 3. Realtime Database (RTDB)
 - Used exclusively for ultra-fast, lightweight sync operations like **Unread Notification Counts**.
-- Path: `/users/{uid}/unreadCount`.
+- Path: `notif_counts/{uid}/unread` (corrected — an earlier version of this doc listed `/users/{uid}/unreadCount`, which doesn't match the actual code in `notifications/page.tsx`).
 
 ## 4. Authentication & Security
 - **Providers**: Firebase Authentication (Email/Password).

@@ -15,10 +15,11 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { updateDocument, getDocument, queryCollection } from '@/lib/firebase/firestore';
 import { cn } from '@/lib/utils/cn';
+import type { CourseWithId } from '@/types/course';
 
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { DegreeClassBadge } from '@/components/cgpa/DegreeClassBadge';
 import { TrendChart } from '@/components/charts/TrendChart';
@@ -37,6 +38,8 @@ export default function DashboardPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [coursesDone, setCoursesDone] = useState(0);
   const [atRiskCount, setAtRiskCount] = useState(0);
+  const [recentCourses, setRecentCourses] = useState<CourseWithId[]>([]);
+  const [recentSemesterLabel, setRecentSemesterLabel] = useState<string>('');
   
   // Advert state
   const [activeAdvert, setActiveAdvert] = useState<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean } | null>(null);
@@ -126,9 +129,23 @@ export default function DashboardPage() {
           total += courses.length;
           risk += courses.filter(c => (c.totalScore ?? 0) < 50).length;
         }
+
+        // Real "Recent Results": pull the actual courses from the most recently
+        // added semester (semesterHistory is sorted ascending by level/semester,
+        // so the last entry is the latest one) instead of hardcoded sample data.
+        const latestSemester = semesterHistory[semesterHistory.length - 1];
+        let latestCourses: CourseWithId[] = [];
+        if (latestSemester) {
+          latestCourses = await queryCollection<CourseWithId>(
+            `users/${user.uid}/semesters/${latestSemester.semesterId}/courses`
+          );
+        }
+
         if (isMounted) {
           setCoursesDone(total);
           setAtRiskCount(risk);
+          setRecentCourses(latestCourses.slice(0, 3));
+          setRecentSemesterLabel(latestSemester?.label || '');
         }
       } catch (err) {
         console.error('Failed to fetch courses data for stats', err);
@@ -408,33 +425,33 @@ export default function DashboardPage() {
                 </h3>
               </div>
               <div className="flex flex-col gap-3">
-                {semesterHistory.length > 0 ? (
+                {recentCourses.length > 0 ? (
                   <div className="flex flex-col gap-3">
-                     <div className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                         <div className="bg-[var(--acade-success)]/20 p-2 rounded-lg">
-                           <BookOpen size={16} className="text-[var(--acade-success)]" />
-                         </div>
-                         <div>
-                           <div className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">CSC 401</div>
-                           <div className="text-[10px] text-[var(--acade-text-faint)]">400L First Semester</div>
-                         </div>
-                       </div>
-                       <Badge variant="grade-a">A</Badge>
-                    </div>
-                    {/* Stubbed second item */}
-                    <div className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between">
-                       <div className="flex items-center gap-3">
-                         <div className="bg-[var(--acade-primary)]/20 p-2 rounded-lg">
-                           <BookOpen size={16} className="text-[var(--acade-primary)]" />
-                         </div>
-                         <div>
-                           <div className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">CSC 403</div>
-                           <div className="text-[10px] text-[var(--acade-text-faint)]">400L First Semester</div>
-                         </div>
-                       </div>
-                       <Badge variant="grade-b">B</Badge>
-                    </div>
+                    {recentCourses.map((course) => (
+                      <div
+                        key={course.id}
+                        className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[var(--acade-primary)]/20 p-2 rounded-lg">
+                            <BookOpen size={16} className="text-[var(--acade-primary)]" />
+                          </div>
+                          <div>
+                            <div className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">
+                              {course.code}
+                            </div>
+                            <div className="text-[10px] text-[var(--acade-text-faint)]">
+                              {recentSemesterLabel}
+                            </div>
+                          </div>
+                        </div>
+                        {course.grade ? (
+                          <Badge variant={getGradeBadgeVariant(course.grade)}>{course.grade}</Badge>
+                        ) : (
+                          <Badge variant="status">Pending</Badge>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="text-center py-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">

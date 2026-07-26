@@ -3,7 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Save, Bell, Shield, Trash2, KeyRound } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { updatePassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import {
+  updatePassword,
+  EmailAuthProvider,
+  GoogleAuthProvider,
+  reauthenticateWithCredential,
+  reauthenticateWithPopup,
+} from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -77,7 +83,12 @@ export default function SettingsPage() {
   
   // Delete State
   const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Google-SSO accounts have no password to re-authenticate with —
+  // they need a Google popup instead of a password field.
+  const isGoogleAccount = auth.currentUser?.providerData?.[0]?.providerId === 'google.com';
 
   // 1. Avatar Upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -196,15 +207,45 @@ export default function SettingsPage() {
   };
 
   // 6. Delete Account
+  // Full flow: re-authenticate (password or Google popup) -> call the
+  // server-side wipe (deletes semesters, courses, analytics, notifications,
+  // share codes, shared transcripts, the profile doc, and the RTDB counter)
+  // -> the server also deletes the Firebase Auth user via Admin SDK, which
+  // avoids the client "requires recent login" failure entirely.
   const handleDeleteAccount = async () => {
     if (!auth.currentUser) return;
     setDeleting(true);
     try {
-      await deleteUser(auth.currentUser);
-      toast.success('Account deleted');
+      // Step 1: Re-authenticate so Firebase accepts the deletion as fresh.
+      if (isGoogleAccount) {
+        await reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
+      } else {
+        if (!auth.currentUser.email) throw new Error('No email on this account to verify.');
+        if (!deletePassword) throw new Error('Please enter your password to confirm.');
+        const cred = EmailAuthProvider.credential(auth.currentUser.email, deletePassword);
+        await reauthenticateWithCredential(auth.currentUser, cred);
+      }
+
+      // Step 2: Ask the server to wipe every trace of this account's data,
+      // then delete the Auth user itself.
+      const idToken = await auth.currentUser.getIdToken(true);
+      const res = await fetch('/api/user/delete-account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || 'Failed to delete account');
+      }
+
+      toast.success('Account and all associated data deleted');
       window.location.href = '/';
     } catch (err: any) {
-      toast.error(err.message || 'Requires recent login. Please log out and back in first.');
+      toast.error(err.message || 'Failed to delete account. Please try again.');
     } finally {
       setDeleting(false);
     }
@@ -405,20 +446,48 @@ export default function SettingsPage() {
       </Modal>
 
       {/* Delete Modal */}
-      <Modal open={deleteModal} onClose={() => setDeleteModal(false)} title="Delete Account">
+      <Modal
+        open={deleteModal}
+        onClose={() => {
+          setDeleteModal(false);
+          setDeleteConfirm('');
+          setDeletePassword('');
+        }}
+        title="Delete Account"
+      >
         <div className="space-y-4">
           <p className="text-sm text-[var(--acade-text-muted)]">
-            This action cannot be undone. This will permanently delete your account, semesters, and AI analytics.
+            This action cannot be undone. This will permanently delete your account, semesters, courses,
+            AI analytics, notifications, and any share codes or shared transcripts you've created.
           </p>
           <div className="bg-[var(--acade-deep)] p-4 rounded-xl font-mono text-center font-bold tracking-widest text-[var(--acade-danger)]">
             DELETE
           </div>
-          <Input 
-            label="Type DELETE to confirm" 
-            value={deleteConfirm} 
-            onChange={e => setDeleteConfirm(e.target.value)} 
+          <Input
+            label="Type DELETE to confirm"
+            value={deleteConfirm}
+            onChange={e => setDeleteConfirm(e.target.value)}
           />
-          <Button variant="danger" fullWidth onClick={handleDeleteAccount} disabled={deleting || deleteConfirm !== 'DELETE'}>
+          {!isGoogleAccount && (
+            <Input
+              label="Confirm your password"
+              type="password"
+              value={deletePassword}
+              onChange={e => setDeletePassword(e.target.value)}
+              hint="Required to verify it's really you before we wipe your data."
+            />
+          )}
+          {isGoogleAccount && (
+            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
+              You'll be asked to confirm via a Google sign-in popup before deletion proceeds.
+            </p>
+          )}
+          <Button
+            variant="danger"
+            fullWidth
+            onClick={handleDeleteAccount}
+            disabled={deleting || deleteConfirm !== 'DELETE' || (!isGoogleAccount && !deletePassword)}
+          >
             {deleting ? 'Deleting...' : 'Permanently Delete'}
           </Button>
         </div>

@@ -15,7 +15,9 @@ This document outlines the core features available to authenticated students on 
 - **Smart Data Entry**:
   - **Manual Entry**: Adding Course Code, Units, and Grade/Score. Autocomplete pulls from the Admin's Global Course Catalog.
   - **AI Extraction (OCR)**: Via `/api/results/extract`. Users can upload an image or PDF of a physical result slip. The backend converts the file to a Base64 string and uses **Gemini 3.1 Flash-Lite Multimodal** to parse it into an array of courses automatically.
+  - **Course Share Codes**: Students can generate a 6-character code that encodes their course list (code, title, units — no scores) so classmates can import the same course structure instead of retyping it. See [12_undocumented_features_and_fixes.md](12_undocumented_features_and_fixes.md#1-course-share-codes-resultssemesterid) for the full mechanics.
 - **Real-time Recalculation**: The platform instantly recalculates the semester GPA, PI, and total degree CGPA whenever a course is added, edited, or deleted.
+- **Automatic degree-class-change alert**: On every insights load, if the recomputed CGPA crosses into a new degree class, a push + email notification fires automatically — no user action required. See doc 12 for details.
 
 ## 3. Automated Transcripts (`/transcript`)
 - **PDF Export (`/api/transcript/generate`)**: High-quality, dynamically generated PDF transcripts using `jspdf` and `jspdf-autotable`. The backend actively handles the PDF generation.

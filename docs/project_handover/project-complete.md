@@ -17,6 +17,8 @@ To keep the documentation organized and digestible, the system architecture has 
 8. **[Deployment & Maintenance](8_deployment_and_maintenance.md)**: Step-by-step Vercel deployment instructions, Firebase setup rules, and how to safely ignore known build warnings.
 9. **[Recent Updates & Monetization](9_recent_updates_and_monetization.md)**: Sponsored Advert banners, Developer image uploads, and dashboard ad delivery system.
 10. **[Rate Limiting & Abuse Prevention](10_rate_limiting_and_abuse_prevention.md)**: AI 12-hour cooldowns, Nodemailer OTP anti-spam limits, and global API protection.
+11. **[Actual AI Provider Strategy](11_ai_provider_strategy_actual.md)** ⚠️ *Corrects docs 6, 7 & 10*: DeepSeek was replaced with OpenRouter (+ Gemini fallback) after reliability issues, plus the multi-key rotation system across Groq/OpenRouter/Gemini. Read this instead of trusting the "DeepSeek" mentions elsewhere.
+12. **[Undocumented Features & Recent Fixes](12_undocumented_features_and_fixes.md)**: Course Share Codes, the automatic degree-class-change notification, the real per-feature kill-switch list, 30-day transcript link expiry — plus write-ups of the hardcoded dashboard data and the non-functional account deletion, both fixed in this pass.
 
 ---
 

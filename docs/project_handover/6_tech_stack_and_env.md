@@ -26,9 +26,10 @@ This document outlines the libraries, frameworks, and environment variables requ
 - **Nodemailer**: Used in the backend to send customized HTML emails via SMTP (Gmail) for OTPs and registration.
 
 ## 5. Artificial Intelligence Services
-- **Gemini (Google)**: Multimodal AI used specifically for **OCR (Optical Character Recognition)**. It analyzes images/PDFs of academic result slips to automatically extract course codes, titles, and grades.
-- **DeepSeek**: Large Language Model used to generate personalized, deep academic insights based on a student's semester history.
-- **Groq**: Extremely fast inference engine used for the "What-If" CGPA forecaster, calculating the mathematical feasibility of reaching target grades.
+> ⚠️ **Outdated — see [11_ai_provider_strategy_actual.md](11_ai_provider_strategy_actual.md) for what's actually wired up.** DeepSeek was dropped after reliability issues; OpenRouter (with a Gemini fallback) replaced it. Summary below is kept for historical context only.
+- **Gemini (Google)**: Multimodal AI used specifically for **OCR (Optical Character Recognition)**. It analyzes images/PDFs of academic result slips to automatically extract course codes, titles, and grades. Also serves as the final fallback for written insights/forecast if OpenRouter fails.
+- ~~DeepSeek~~ **OpenRouter**: Free-tier auto-router (`openrouter/free`, falling back to `meta-llama/llama-3.3-70b-instruct:free`) used to generate personalized, deep academic insights based on a student's semester history.
+- **Groq**: Extremely fast inference engine (`llama-3.3-70b-versatile`) used for the "What-If" CGPA forecaster, calculating the mathematical feasibility of reaching target grades.
 
 ---
 
