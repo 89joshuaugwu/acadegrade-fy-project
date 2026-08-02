@@ -119,7 +119,7 @@ export async function generateDeepInsight(prompt: string): Promise<string> {
     console.warn('OpenRouter Auto failed (Try 1). Retrying with direct model...', err1);
     try {
       // Try 2: Direct model fallback on OpenRouter
-      return await attemptOpenRouter('meta-llama/llama-3.3-70b-instruct:free');
+      return await attemptOpenRouter('google/gemma-4-31b-it:free');
     } catch (err2) {
       console.warn('OpenRouter completely failed (Try 2). Falling back to Gemini (Try 3)...', err2);
       // Try 3: Complete fallback to Google Gemini
@@ -214,6 +214,7 @@ export async function generateMultimodalGeminiContent(contents: any[], responseM
     if (responseMimeType) {
       config.responseMimeType = responseMimeType;
     }
+
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.1-flash-lite',
