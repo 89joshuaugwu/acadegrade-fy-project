@@ -61,3 +61,4 @@ export function extractJsonObjectAndParse<T = unknown>(raw: string, label = 'pay
     return { ok: false, error: msg, rawPreview: candidate.slice(0, 1000), rawLength: candidate.length };
   }
 }
+
