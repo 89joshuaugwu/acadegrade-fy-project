@@ -217,3 +217,4 @@ export async function generateMultimodalGeminiContent(contents: any[], responseM
     return response.text ?? '';
   }, 'Gemini');
 }
+
