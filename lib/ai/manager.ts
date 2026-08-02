@@ -1,6 +1,7 @@
 import Groq from 'groq-sdk';
 import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
+import { safeParseJSON, extractJsonObjectAndParse } from '@/lib/utils/safeParseJSON';
 
 // --- CONFIGURATION ---
 
@@ -161,7 +162,18 @@ export async function generateGeminiContent(prompt: string): Promise<string> {
 export async function generateGeminiJSON<T>(prompt: string): Promise<T> {
   const text = await generateGeminiContent(prompt);
   const cleaned = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(cleaned) as T;
+
+  // Try normal parse first with safe helper
+  const parsed = safeParseJSON<T>(cleaned, 'gemini-json');
+  if (parsed.ok) return parsed.value;
+
+  // Heuristic fallback: extract the first {...} block and try again
+  const extracted = extractJsonObjectAndParse<T>(cleaned, 'gemini-json-extract');
+  if (extracted.ok) return extracted.value;
+
+  // Nothing worked — log context and throw a descriptive error
+  console.error('[generateGeminiJSON] Failed to parse JSON from Gemini response', parsed, extracted);
+  throw new Error(`Failed to parse JSON from Gemini response: ${parsed.error}`);
 }
 
 /**
@@ -170,7 +182,18 @@ export async function generateGeminiJSON<T>(prompt: string): Promise<T> {
 export async function generateDeepInsightJSON<T>(prompt: string): Promise<T> {
   const text = await generateDeepInsight(prompt);
   const cleaned = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(cleaned) as T;
+
+  // Try normal parse first with safe helper
+  const parsed = safeParseJSON<T>(cleaned, 'deepseek-json');
+  if (parsed.ok) return parsed.value;
+
+  // Heuristic fallback: extract the first {...} block and try again
+  const extracted = extractJsonObjectAndParse<T>(cleaned, 'deepseek-json-extract');
+  if (extracted.ok) return extracted.value;
+
+  // Log context for debugging and throw
+  console.error('[generateDeepInsightJSON] Failed to parse JSON from DeepInsight response', parsed, extracted);
+  throw new Error(`Failed to parse JSON from DeepInsight response: ${parsed.error}`);
 }
 /**
  * GEMINI: Multimodal fallback.
