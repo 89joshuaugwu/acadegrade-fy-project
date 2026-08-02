@@ -104,7 +104,11 @@ export async function generateDeepInsight(prompt: string): Promise<string> {
         max_tokens: 1024,
       });
       currentOpenRouterIndex = indexRef.current;
-      return completion.choices[0]?.message?.content || '';
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error(`OpenRouter returned empty content for model ${modelSlug}`);
+      }
+      return content;
     }, 'OpenRouter');
   };
 
@@ -129,7 +133,10 @@ export async function generateDeepInsight(prompt: string): Promise<string> {
         contents: prompt,
         config: { maxOutputTokens: 1024, temperature: 0.65 },
       });
-      return response.text ?? '';
+      if (!response.text) {
+        throw new Error("Gemini returned empty content");
+      }
+      return response.text;
     }
   }
 }
