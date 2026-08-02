@@ -5,8 +5,11 @@ import { logApiCall, apiTimer } from '@/lib/api/logger';
 import type { InsightResponse } from '@/types/ai';
 
 export async function POST(request: NextRequest) {
+  const timer = apiTimer();
+  let uid: string | null = null;
+  let analyticsData: any = null;
+
   try {
-    const timer = apiTimer();
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -19,14 +22,14 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-    const uid = decodedToken.uid;
+    uid = decodedToken.uid;
 
     const body = await request.json();
     const { forceRegenerate, semesterData } = body;
 
     const analyticsRef = adminDb.collection('analytics').doc(uid);
     const analyticsDoc = await analyticsRef.get();
-    const analyticsData = analyticsDoc.data();
+    analyticsData = analyticsDoc.data();
 
     // Rate limiting: 24 hours
     if (!forceRegenerate && analyticsData?.lastInsight) {
@@ -52,8 +55,8 @@ export async function POST(request: NextRequest) {
     const settingsDoc = await adminDb.collection('config').doc('settings').get();
     const customPrompt = settingsDoc.data()?.aiSystemPrompt;
 
-    const basePrompt = customPrompt 
-      ? customPrompt 
+    const basePrompt = customPrompt
+      ? customPrompt
       : 'You are an expert academic advisor at a top Nigerian University.';
 
     const prompt = `
@@ -87,10 +90,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(insightData);
   } catch (error: any) {
     console.error('Insights Error:', error);
-    logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid: null, status: 500, durationMs: 0, provider: 'deepseek', error: error?.message });
-    if (error.message && error.message.includes('429')) {
+    logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid, status: 500, durationMs: timer(), provider: 'deepseek', error: error?.message });
+
+    if (error.message?.includes('429')) {
       return NextResponse.json({ error: 'AI quota temporarily reached. Please try again later.' }, { status: 429 });
     }
+
+    // Fallback: serve the last known-good insight instead of a bare error, if one exists
+    if (analyticsData?.lastInsight?.data) {
+      return NextResponse.json({
+        ...analyticsData.lastInsight.data,
+        stale: true,
+        staleMessage: 'Showing your last saved insight — live generation is temporarily unavailable.'
+      });
+    }
+
     return NextResponse.json({ error: 'Failed to generate insights' }, { status: 500 });
   }
 }
