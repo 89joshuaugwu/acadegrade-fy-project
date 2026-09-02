@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
-import { RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, BookOpen } from 'lucide-react';
+import { RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, BookOpen, Clock3 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
@@ -29,6 +29,13 @@ const TABS: { id: TabType; label: string }[] = [
   { id: 'risk', label: 'Risk Analysis' },
   { id: 'analysis', label: 'Written Analysis' }
 ];
+
+const RATE_LIMIT_GUIDANCE: Record<TabType, string> = {
+  forecast: 'Forecasts are cached for one hour. You can generate up to 2 new forecasts per hour and 8 per day.',
+  whatif: 'Adjust the calculator freely, then request guidance when ready: 3 AI requests per 5 minutes and 20 per day.',
+  risk: 'Risk Analysis reads your saved forecast and results, so opening this tab does not consume an AI request.',
+  analysis: 'Written Analysis remains cached and readable. Regeneration unlocks after 12 hours and is limited to 3 per day.',
+};
 
 interface AnalyticsDoc {
   forecast?: ForecastResponse & { lastUpdated: any; trendDirection: string; trendLabel: string };
@@ -656,6 +663,11 @@ export default function InsightsPage() {
             </button>
           );
         })}
+      </div>
+
+      <div className="mb-6 flex items-start gap-3 rounded-xl border border-[var(--acade-primary)]/25 bg-[var(--acade-primary)]/10 px-4 py-3">
+        <Clock3 size={16} className="mt-0.5 shrink-0 text-[var(--acade-primary)]" />
+        <p className="text-[length:var(--text-xs)] leading-relaxed text-[var(--acade-text-muted)]">{RATE_LIMIT_GUIDANCE[activeTab]}</p>
       </div>
 
       {/* Tab Content */}
