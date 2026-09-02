@@ -239,8 +239,11 @@ export default function InsightsPage() {
             const forecastData = await res.json();
             analyticsData = { ...analyticsData, forecast: forecastData };
           } else if (res.status === 429) {
+            const errorData = await res.json().catch(() => ({}));
+            const retryAfter = Number(res.headers.get('Retry-After') || errorData.retryAfterSeconds || 59);
             setRateLimitError(true);
-            setRateLimitCooldown(59);
+            setRateLimitCooldown(retryAfter);
+            toast.error(errorData.error || `Forecast limit reached. Try again in ${retryAfter}s.`);
           } else {
             const errText = await res.text();
             console.error('Forecast failed:', res.status, errText);
@@ -273,9 +276,11 @@ export default function InsightsPage() {
              await setDocument(`analytics/${user.uid}`, { insightsStale: false });
           }
         } else if (res.status === 429) {
+          const errorData = await res.json().catch(() => ({}));
+          const retryAfter = Number(res.headers.get('Retry-After') || errorData.retryAfterSeconds || 59);
           setRateLimitError(true);
-          setRateLimitCooldown(59);
-          if (forceRefresh) toast.error('AI quota reached. Serving cached insights.');
+          setRateLimitCooldown(retryAfter);
+          if (forceRefresh) toast.error(errorData.error || 'AI quota reached. Serving cached insights.');
         } else {
           const errText = await res.text();
           console.error('Insights failed:', res.status, errText);

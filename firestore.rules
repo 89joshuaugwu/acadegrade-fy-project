@@ -71,5 +71,11 @@ service cloud.firestore {
     match /shared_transcripts/{docId} {
       allow read, delete: if isOwner(resource.data.uid);
     }
+
+    // Server-only abuse-protection counters. Firebase Admin bypasses rules;
+    // no browser or mobile client may inspect or modify its own quota state.
+    match /_api_rate_limits/{docId} {
+      allow read, write: if false;
+    }
   }
 }

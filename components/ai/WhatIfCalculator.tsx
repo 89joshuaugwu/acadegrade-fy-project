@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Loader2, Target } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
+import { useAuth } from '@/hooks/useAuth';
 import toast from 'react-hot-toast';
 
 interface WhatIfCalculatorProps {
@@ -21,6 +22,7 @@ export function WhatIfCalculator({
   initialCreditLoad = 18,
 }: WhatIfCalculatorProps) {
   const shouldReduceMotion = useReducedMotion();
+  const { user } = useAuth();
   
   const [targetCGPA, setTargetCGPA] = useState(Math.min(5.0, currentCGPA + 0.2));
   const [remainingSemesters, setRemainingSemesters] = useState(initialRemainingSemesters);
@@ -55,7 +57,7 @@ export function WhatIfCalculator({
 
   // Debounced API call for AI note
   useEffect(() => {
-    if (cooldown > 0) return; // Skip if in cooldown
+    if (cooldown > 0 || !user) return; // Skip if in cooldown or auth is still resolving
 
     setCountdown(5);
     
@@ -75,15 +77,22 @@ export function WhatIfCalculator({
       setCountdown(null);
       setLoading(true);
       try {
+        const token = await user.getIdToken();
         const res = await fetch('/api/ai/whatif', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad })
         });
         
         if (!res.ok) {
-          if (res.status === 429) toast.error('Rate limited. Please wait.');
-          else console.error('WhatIf failed:', res.status);
+          const data = await res.json().catch(() => ({}));
+          if (res.status === 429) {
+            const retryAfter = Number(res.headers.get('Retry-After') || data.retryAfterSeconds || 30);
+            setCooldown(Math.max(1, retryAfter));
+            toast.error(data.error || `AI guidance limit reached. Try again in ${retryAfter}s.`);
+          } else {
+            toast.error(data.error || 'Could not generate AI guidance.');
+          }
           return;
         }
         
@@ -107,7 +116,7 @@ export function WhatIfCalculator({
       clearTimeout(timer);
       clearInterval(interval);
     };
-  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits]);
+  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, user]);
 
   return (
     <div className="bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.12)]">

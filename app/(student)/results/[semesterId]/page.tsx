@@ -180,6 +180,10 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!user) {
+      toast.error('Please sign in again before scanning a result.');
+      return;
+    }
 
     if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
       toast.error('Please upload an image or PDF file');
@@ -199,14 +203,21 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         reader.onerror = error => reject(error);
       });
 
+      const token = await user.getIdToken();
+
       const res = await fetch('/api/results/extract', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ base64Data, mimeType: file.type })
       });
 
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 429) {
+          const retryAfter = Number(res.headers.get('Retry-After') || err.retryAfterSeconds || 60);
+          toast.error(err.error || `Scan limit reached. Try again in ${retryAfter} seconds.`);
+          return;
+        }
         throw new Error(err.error || 'Extraction failed');
       }
 
