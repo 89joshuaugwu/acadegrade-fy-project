@@ -75,6 +75,8 @@ export default function SettingsPage() {
   // Modals
   const [passwordModal, setPasswordModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [pendingRecordMode, setPendingRecordMode] = useState<'fromScratch' | 'complete' | null>(null);
+  const [savingRecordMode, setSavingRecordMode] = useState(false);
   
   // Password State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -142,14 +144,24 @@ export default function SettingsPage() {
   };
 
   // 3. Save Toggles
-  const handleToggleRecordMode = async (mode: 'fromScratch' | 'complete') => {
-    if (!user) return;
-    const confirmChange = window.confirm("Switching record mode won't delete existing data, but will change how GPAs are calculated. Continue?");
-    if (!confirmChange) return;
-    
-    setRecordMode(mode);
-    await updateDocument(`users/${user.uid}`, { recordMode: mode });
-    toast.success('Record mode updated');
+  const handleToggleRecordMode = (mode: 'fromScratch' | 'complete') => {
+    if (!user || mode === recordMode) return;
+    setPendingRecordMode(mode);
+  };
+
+  const confirmRecordModeChange = async () => {
+    if (!user || !pendingRecordMode) return;
+    setSavingRecordMode(true);
+    try {
+      await updateDocument(`users/${user.uid}`, { recordMode: pendingRecordMode });
+      setRecordMode(pendingRecordMode);
+      setPendingRecordMode(null);
+      toast.success('Record mode updated');
+    } catch {
+      toast.error('Could not update record mode');
+    } finally {
+      setSavingRecordMode(false);
+    }
   };
 
   const handleToggleGradeMode = async (mode: 'cgpa' | 'pi') => {
@@ -433,6 +445,29 @@ export default function SettingsPage() {
 
         </div>
       </div>
+
+      {/* Record Mode Confirmation Modal */}
+      <Modal
+        open={pendingRecordMode !== null}
+        onClose={() => !savingRecordMode && setPendingRecordMode(null)}
+        title="Change record mode?"
+        description="Your existing semesters and courses will stay safe. This only changes how AcadeGrade builds future cumulative calculations."
+      >
+        <div className="mt-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4">
+          <p className="text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">
+            {pendingRecordMode === 'complete' ? 'Switch to Complete Record' : 'Switch to From Scratch'}
+          </p>
+          <p className="mt-1 text-[length:var(--text-xs)] leading-relaxed text-[var(--acade-text-muted)]">
+            {pendingRecordMode === 'complete'
+              ? 'Use this when you are entering an academic history that began before AcadeGrade.'
+              : 'Use this when AcadeGrade should calculate your record starting from your first saved semester.'}
+          </p>
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setPendingRecordMode(null)} disabled={savingRecordMode}>Keep current</Button>
+          <Button size="sm" onClick={confirmRecordModeChange} loading={savingRecordMode}>Confirm change</Button>
+        </div>
+      </Modal>
 
       {/* Password Modal */}
       <Modal open={passwordModal} onClose={() => setPasswordModal(false)} title="Change Password">

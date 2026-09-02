@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { Calculator, Plus, Trash2, Share2, Save, ArrowRight, Settings2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
@@ -167,7 +168,7 @@ function QuickCalculatorInner() {
       setTimeout(() => setIsCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy', err);
-      alert('Failed to copy link to clipboard. You can manually copy the URL from your browser address bar.');
+      toast.error('Could not copy the link. You can copy it directly from the browser address bar.');
     }
   };
 
