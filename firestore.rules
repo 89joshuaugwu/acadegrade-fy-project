@@ -1,0 +1,75 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+             (request.auth.token.email.lower() in get(/databases/$(database)/documents/config/admins).data.emails);
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      
+      // Subcollection: Semesters
+      match /semesters/{semesterId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+        
+        // Subcollection: Courses (within a semester)
+        match /courses/{courseId} {
+          allow read, write: if isOwner(userId) || isAdmin();
+        }
+      }
+    }
+    
+    // 2. Analytics Collection
+    match /analytics/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    // 3. Notifications Collection
+    match /notifications/{userId}/items/{notifId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    // 4. Configuration & Admins
+    match /config/settings {
+      allow read: if true; // All users need to read announcement banners, etc.
+      allow write: if isAdmin(); 
+    }
+    
+    match /config/admins {
+      allow read: if isAdmin(); // Only admins can read the admin list
+      allow write: if false; // Only manageable directly via Firebase Console
+    }
+    
+    // 5. Course Catalog
+    match /courseCatalog/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin(); 
+    }
+    
+    // 6. Share Codes
+    match /shareCodes/{codeId} {
+      allow read: if isAuthenticated() || isAdmin();
+      allow create: if isAuthenticated() || isAdmin();
+      allow update: if (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // 7. Shared Transcripts
+    match /shared_transcripts/{docId} {
+      allow read, delete: if isOwner(resource.data.uid);
+    }
+  }
+}

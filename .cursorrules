@@ -1,0 +1,27 @@
+﻿# AcadeGrade Frontend Architecture & Engineering Rules
+
+## frontend-developer & ui-skills
+- Act as a senior frontend architect. Write modular, clean components from scratch.
+- Absolute Rule: NEVER use shadcn, Radix UI, or external component libraries.
+- Ensure minimum 48px touch targets on ALL interactive elements for seamless mobile-first interactions.
+- Apply fluid typography utilizing clamp() for all font size values.
+- Check useReducedMotion() in every animated component layout to respect accessibility profiles.
+
+## nextjs-app-router-patterns
+- Strictly enforce Next.js App Router patterns (default to Server Components).
+- Client Components ('use client') must ONLY be applied when strictly handling hooks, browser APIs, or custom events.
+- All Firebase Admin SDK and Gemini interactions must remain SERVER-SIDE within app/api/ routes.
+- Implement smooth page state transitions utilizing streaming UI with Suspense boundaries.
+
+## tailwind-design-system
+- Adhere strictly to the design system configuration (Tailwind v4.3.1 CSS-first approach with @theme).
+- Strictly map colors to designated project tokens:
+  - Background: #07090F | Cards: #0E1322 | Surface: #141B2E
+  - Primary Indigo: #6366F1 | Gold Accent: #F59E0B | Border: #1F2B47
+  - Grade Performance Badges: Grade A = #22C55E, Grade B = Indigo #6366F1 (Never Green), Grade C = #F59E0B
+- Maintain clean, utility-first design structures across layout breakpoints.
+
+## typescript-pro
+- Strict type-safety compliance: absolute zero-tolerance policy for using 'any'.
+- Leverage Zod for thorough structural runtime schema validations on data transfers.
+- Utilize clean interfaces matching the project Firestore schemas.

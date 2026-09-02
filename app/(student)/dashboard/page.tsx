@@ -1,0 +1,516 @@
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'motion/react';
+import CountUp from 'react-countup';
+import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen, X } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useCGPA } from '@/hooks/useCGPA';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { updateDocument, getDocument, queryCollection } from '@/lib/firebase/firestore';
+import { cn } from '@/lib/utils/cn';
+import type { CourseWithId } from '@/types/course';
+
+import { Card } from '@/components/ui/Card';
+import { Toggle } from '@/components/ui/Toggle';
+import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
+import { CGPAArc } from '@/components/cgpa/CGPAArc';
+import { DegreeClassBadge } from '@/components/cgpa/DegreeClassBadge';
+import { TrendChart } from '@/components/charts/TrendChart';
+import { HolographicCard } from '@/components/ui/HolographicCard';
+
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { cgpa, pi, degreeClass, semesterHistory, totalCredits, totalCourses, loading: cgpaLoading } = useCGPA();
+  const shouldReduceMotion = useReducedMotion();
+  const { insightsStale } = useAnalytics();
+
+  // Primary mode state: false = CGPA, true = PI
+  const [isPIMode, setIsPIMode] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [coursesDone, setCoursesDone] = useState(0);
+  const [atRiskCount, setAtRiskCount] = useState(0);
+  const [recentCourses, setRecentCourses] = useState<CourseWithId[]>([]);
+  const [recentSemesterLabel, setRecentSemesterLabel] = useState<string>('');
+  
+  // Advert state
+  const [activeAdvert, setActiveAdvert] = useState<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean } | null>(null);
+
+  // Fetch Advert
+  useEffect(() => {
+    const fetchAdvert = async () => {
+      try {
+        const config = await getDocument<any>('config/settings');
+        if (config?.advertBanners && Array.isArray(config.advertBanners)) {
+          const active = config.advertBanners.find((b: any) => b.isActive);
+          if (active) {
+            // Check local storage for 6-hour dismissal
+            const lastDismissed = localStorage.getItem(`advert_dismissed_${active.id}`);
+            const sixHours = 6 * 60 * 60 * 1000;
+            if (!lastDismissed || (Date.now() - Number(lastDismissed)) > sixHours) {
+              setActiveAdvert(active);
+            }
+          }
+        }
+      } catch (err) { console.error('Failed to load advert', err); }
+    };
+    fetchAdvert();
+  }, []);
+
+  const handleDismissAdvert = () => {
+    if (activeAdvert) {
+      localStorage.setItem(`advert_dismissed_${activeAdvert.id}`, Date.now().toString());
+      setActiveAdvert(null);
+    }
+  };
+
+  // Sync state with user preference on mount
+  useEffect(() => {
+    if (profile?.gradeMode) {
+      setIsPIMode(profile.gradeMode === 'pi');
+    }
+  }, [profile?.gradeMode]);
+
+  // Handle grade mode toggle
+  const handleModeChange = async (checked: boolean) => {
+    setIsPIMode(checked);
+    if (user?.uid) {
+      try {
+        await updateDocument(`users/${user.uid}`, { gradeMode: checked ? 'pi' : 'cgpa' });
+      } catch (e) {
+        console.error('Failed to save preference', e);
+      }
+    }
+  };
+
+  // Fetch AI summary from Firestore cache
+  const fetchAiSummary = async () => {
+    if (!user) return;
+    setAiLoading(true);
+    try {
+      const analyticsData = await getDocument<any>(`analytics/${user.uid}`);
+      if (analyticsData?.lastInsight?.data?.degreeOutlook) {
+        setAiSummary(analyticsData.lastInsight.data.degreeOutlook);
+      } else {
+        setAiSummary("Visit the Insights Hub to generate your first personalized AI analysis.");
+      }
+    } catch (e) {
+      console.error('Failed to load insight', e);
+      setAiSummary("Failed to load insights. Please try again later.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAiSummary();
+  }, []);
+
+  // Fetch real course data for Quick Stats
+  useEffect(() => {
+    if (!user || semesterHistory.length === 0) return;
+
+    let isMounted = true;
+    const fetchCoursesData = async () => {
+      let total = 0;
+      let risk = 0;
+
+      try {
+        for (const sem of semesterHistory) {
+          const courses = await queryCollection<any>(`users/${user.uid}/semesters/${sem.semesterId}/courses`);
+          total += courses.length;
+          risk += courses.filter(c => (c.totalScore ?? 0) < 50).length;
+        }
+
+        // Real "Recent Results": pull the actual courses from the most recently
+        // added semester (semesterHistory is sorted ascending by level/semester,
+        // so the last entry is the latest one) instead of hardcoded sample data.
+        const latestSemester = semesterHistory[semesterHistory.length - 1];
+        let latestCourses: CourseWithId[] = [];
+        if (latestSemester) {
+          latestCourses = await queryCollection<CourseWithId>(
+            `users/${user.uid}/semesters/${latestSemester.semesterId}/courses`
+          );
+        }
+
+        if (isMounted) {
+          setCoursesDone(total);
+          setAtRiskCount(risk);
+          setRecentCourses(latestCourses.slice(0, 3));
+          setRecentSemesterLabel(latestSemester?.label || '');
+        }
+      } catch (err) {
+        console.error('Failed to fetch courses data for stats', err);
+      }
+    };
+
+    fetchCoursesData();
+    return () => { isMounted = false; };
+  }, [user, semesterHistory]);
+
+  // Web Share API
+  const handleShare = async () => {
+    const text = `I'm tracking my academic performance on AcadeGrade! My current ${isPIMode ? 'PI' : 'CGPA'} is ${isPIMode ? pi.toFixed(2) : cgpa.toFixed(2)}.`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My AcadeGrade Progress',
+          text,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.error('Error sharing', err);
+      }
+    } else {
+      navigator.clipboard.writeText(text);
+      toast.success('Progress copied to clipboard!');
+    }
+  };
+
+  // Stats calculation
+  const currentSemGPA = useMemo(() => {
+    if (semesterHistory.length === 0) return 0;
+    const lastSem = semesterHistory[semesterHistory.length - 1];
+    return isPIMode ? lastSem.pi : lastSem.gpa;
+  }, [semesterHistory, isPIMode]);
+
+  const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
+
+  if (cgpaLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 md:gap-8 max-w-7xl mx-auto pb-10">
+      
+      {/* HEADER ARC ROW */}
+      <motion.div
+        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card variant="glass" padding="lg" className="relative overflow-hidden group">
+          {/* Subtle background glow based on degree class */}
+          <div 
+            className="absolute inset-0 opacity-10 pointer-events-none transition-colors duration-1000"
+            style={{ 
+              background: `radial-gradient(circle at 50% -20%, ${degreeClass.colorToken} 0%, transparent 70%)` 
+            }} 
+          />
+          
+          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
+            <div id="tour-welcome" className="flex-1 text-center md:text-left flex flex-col items-center md:items-start order-2 md:order-1">
+              <h1 className="text-[length:var(--text-3xl)] md:text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-2">
+                Good {timeOfDay}, {profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
+              </h1>
+              <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] mb-6 max-w-md font-[family-name:var(--font-dm-sans)]">
+                {semesterHistory.length === 0 
+                  ? "Welcome to AcadeGrade! Add your first semester results to generate your insights."
+                  : "Here is a quick overview of your academic standing."}
+              </p>
+              
+              <div id="tour-metrics-toggle" className="flex items-center gap-4">
+                <Toggle 
+                  checked={isPIMode} 
+                  onChange={handleModeChange} 
+                  leftLabel="CGPA" 
+                  rightLabel="PI" 
+                />
+              </div>
+
+              <div className="mt-8">
+                <DegreeClassBadge cgpa={isPIMode ? pi : cgpa} animated={true} />
+              </div>
+            </div>
+
+            <div id="tour-cgpa-arc" className="shrink-0 order-1 md:order-2">
+              <CGPAArc 
+                cgpa={cgpa} 
+                pi={pi} 
+                size="lg" 
+                animateOnMount={true} 
+                showParticles={true} 
+                primaryMetric={isPIMode ? 'pi' : 'cgpa'}
+              />
+              <div className="mt-2 text-center text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
+                {isPIMode ? 'Primary: PI' : 'Primary: CGPA'}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* QUICK STATS ROW */}
+      <div id="tour-quick-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Credits', value: totalCredits, suffix: ' CU' },
+          { label: 'Current Sem', value: currentSemGPA, decimals: 2 },
+          { label: 'Courses Done', value: coursesDone },
+          { label: 'At Risk', value: atRiskCount, highlight: atRiskCount > 0 },
+        ].map((stat, idx) => (
+          <motion.div
+            key={stat.label}
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: idx * 0.1 }}
+          >
+            <HolographicCard className="h-full p-4 md:p-5" innerClassName="flex flex-col justify-between h-full">
+              <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
+                {stat.label}
+              </span>
+              <div className={cn(
+                "text-[length:var(--text-2xl)] md:text-[length:var(--text-3xl)] font-bold mt-2 font-[family-name:var(--font-geist-mono)]",
+                stat.highlight ? "text-[var(--acade-danger)] drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]" : "text-[var(--acade-text)]"
+              )}>
+                <CountUp 
+                  end={stat.value} 
+                  decimals={stat.decimals || 0} 
+                  duration={shouldReduceMotion ? 0 : 2} 
+                  separator=","
+                />
+                {stat.suffix && <span className="text-[length:var(--text-lg)] text-[var(--acade-text-faint)] ml-1">{stat.suffix}</span>}
+              </div>
+            </HolographicCard>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+        
+        {/* TREND CHART (Left Column on Desktop) */}
+        <div className="md:col-span-8 flex flex-col gap-6">
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Card variant="glass" padding="lg">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+                    Performance Trend
+                  </h2>
+                  <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
+                    Comparing Official CGPA vs True Mastery (PI)
+                  </p>
+                </div>
+              </div>
+              <TrendChart semesters={semesterHistory} metric="both" showForecast={false} />
+            </Card>
+          </motion.div>
+
+          {/* AI SUMMARY CARD */}
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="relative rounded-2xl overflow-hidden p-[1px] shadow-[0_0_30px_rgba(99,102,241,0.05)]">
+              {/* Animated background breathing border */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[var(--acade-primary)]/40 via-[var(--acade-deep)] to-[var(--acade-primary)]/40 animate-[pulse_4s_ease-in-out_infinite]" />
+              
+              {/* Inner card content */}
+              <div className="relative bg-[var(--acade-deep)]/90 backdrop-blur-xl h-full w-full rounded-[15px] p-6 md:p-8 overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/10 rounded-full blur-3xl" />
+                
+                <div className="flex items-center justify-between mb-4 relative z-10">
+                  <div className="flex items-center gap-2 text-[var(--acade-primary-glow)] font-bold font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)]">
+                    <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="rounded-md object-contain" />
+                    AcadeMind Insight
+                    {insightsStale && (
+                      <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/20 text-[var(--acade-warning)] text-[10px] uppercase tracking-wider font-bold">
+                        <AlertTriangle size={10} /> Stale
+                      </span>
+                    )}
+                  </div>
+                  <button 
+                    onClick={fetchAiSummary}
+                    disabled={aiLoading}
+                    className="p-2 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors rounded-full hover:bg-[var(--acade-overlay)] disabled:opacity-50"
+                    aria-label="Refresh Insight"
+                  >
+                    <RefreshCw size={16} className={cn(aiLoading && "animate-spin")} />
+                  </button>
+                </div>
+
+                <div className="relative z-10 min-h-[60px]">
+                  {aiLoading ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="h-4 bg-[var(--acade-border)] rounded w-full animate-pulse" />
+                      <div className="h-4 bg-[var(--acade-border)] rounded w-5/6 animate-pulse" />
+                      <div className="h-4 bg-[var(--acade-border)] rounded w-4/6 animate-pulse" />
+                    </div>
+                  ) : (
+                    <p className="text-[length:var(--text-sm)] md:text-[length:var(--text-base)] text-[var(--acade-text)] leading-relaxed font-[family-name:var(--font-dm-sans)]">
+                      {aiSummary || "Add more results to generate personalized insights."}
+                    </p>
+                  )}
+                </div>
+
+                <div className="mt-6 flex items-center justify-between relative z-10">
+                  <span className="text-[10px] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
+                    POWERED BY ACADEMIND
+                  </span>
+                  <Link 
+                    href="/insights"
+                    className="flex items-center gap-1 text-[length:var(--text-sm)] font-bold text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors"
+                  >
+                    Degree Outlook <ChevronRight size={16} />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* RIGHT COLUMN */}
+        <div className="md:col-span-4 flex flex-col gap-6">
+          
+          {/* QUICK ACTIONS */}
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Card variant="default" padding="md">
+              <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">
+                Quick Actions
+              </h3>
+              <div className="flex flex-col gap-2">
+                <Link href="/results" className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-primary)] hover:bg-[var(--acade-primary)]/5 transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
+                  <Plus size={18} className="text-[var(--acade-primary)]" />
+                  Add Results
+                </Link>
+                <Link href="/insights" className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-gold)] hover:bg-[var(--acade-gold)]/5 transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
+                  <BrainCircuit size={18} className="text-[var(--acade-gold)]" />
+                  View Insights
+                </Link>
+                <Link href="/transcript" className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
+                  <FileText size={18} className="text-[var(--acade-text-muted)]" />
+                  Export PDF
+                </Link>
+                <button 
+                  onClick={handleShare}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-success)] hover:bg-[var(--acade-success)]/5 transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)] w-full text-left"
+                >
+                  <Share size={18} className="text-[var(--acade-success)]" />
+                  Share Progress
+                </button>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* RECENT ACTIVITY STUB */}
+          <motion.div
+            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 }}
+          >
+            <Card variant="default" padding="md">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+                  Recent Results
+                </h3>
+              </div>
+              <div className="flex flex-col gap-3">
+                {recentCourses.length > 0 ? (
+                  <div className="flex flex-col gap-3">
+                    {recentCourses.map((course) => (
+                      <div
+                        key={course.id}
+                        className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="bg-[var(--acade-primary)]/20 p-2 rounded-lg">
+                            <BookOpen size={16} className="text-[var(--acade-primary)]" />
+                          </div>
+                          <div>
+                            <div className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">
+                              {course.code}
+                            </div>
+                            <div className="text-[10px] text-[var(--acade-text-faint)]">
+                              {recentSemesterLabel}
+                            </div>
+                          </div>
+                        </div>
+                        {course.grade ? (
+                          <Badge variant={getGradeBadgeVariant(course.grade)}>{course.grade}</Badge>
+                        ) : (
+                          <Badge variant="status">Pending</Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+                    No recent activity yet.
+                  </div>
+                )}
+                <Link href="/results" className="text-center text-[length:var(--text-sm)] font-semibold text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors mt-2">
+                  View all results →
+                </Link>
+              </div>
+            </Card>
+          </motion.div>
+
+        </div>
+      </div>
+
+      {/* SPONSORED ADVERT MODAL */}
+      <AnimatePresence>
+        {activeAdvert && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <div className="relative w-full max-w-lg bg-[var(--acade-deep)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--acade-border)]">
+              {/* Close Button */}
+              <button
+                onClick={handleDismissAdvert}
+                className="absolute top-3 right-3 z-10 p-2 bg-black/50 text-white rounded-full hover:bg-black/80 transition-colors backdrop-blur-md"
+                aria-label="Close advert"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Advert Content */}
+              {activeAdvert.linkUrl ? (
+                <a href={activeAdvert.linkUrl} target="_blank" rel="noopener noreferrer" className="block w-full" onClick={handleDismissAdvert}>
+                  <img
+                    src={activeAdvert.imageUrl}
+                    alt="Sponsored Advert"
+                    className="w-full h-auto max-h-[70vh] object-cover"
+                  />
+                </a>
+              ) : (
+                <img
+                  src={activeAdvert.imageUrl}
+                  alt="Sponsored Advert"
+                  className="w-full h-auto max-h-[70vh] object-cover"
+                />
+              )}
+              
+              <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded-md">
+                <span className="text-[10px] font-bold tracking-widest text-white/80 uppercase">Sponsored</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
