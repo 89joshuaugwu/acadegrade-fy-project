@@ -5,7 +5,11 @@ import { logApiCall, apiTimer } from '@/lib/api/logger';
 export async function POST(request: NextRequest) {
   try {
     const timer = apiTimer();
-    const { email, newPassword, code } = await request.json();
+    const payload = await request.json();
+    // Support the released mobile client, which used `otp`, while new builds
+    // use the same `code` field as the web registration and reset forms.
+    const { email, newPassword } = payload;
+    const code = payload.code ?? payload.otp;
 
     if (!email || !newPassword || !code) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

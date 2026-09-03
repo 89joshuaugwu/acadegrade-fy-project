@@ -5,7 +5,11 @@ import { logApiCall, apiTimer } from '@/lib/api/logger';
 export async function POST(request: NextRequest) {
   try {
     const timer = apiTimer();
-    const { email, type, code } = await request.json();
+    const payload = await request.json();
+    // `otp` was sent by the first mobile APK. Keep it as a short-term
+    // compatibility alias while all mobile clients move to the web contract.
+    const { email, type } = payload;
+    const code = payload.code ?? payload.otp;
 
     if (!email || !type || !code) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
