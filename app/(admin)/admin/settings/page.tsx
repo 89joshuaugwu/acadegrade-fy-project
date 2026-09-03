@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Settings2, Save, MessageSquare, AlertTriangle, Power, BookOpen, Info, Plus, Trash2 } from 'lucide-react';
+import { Settings2, Save, MessageSquare, AlertTriangle, Power, BookOpen, Info, Plus, Trash2, Smartphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -19,6 +19,7 @@ interface AppSettings {
   disabledFeatures?: string[];
   gradeScale?: Array<{ grade: string; min: number; max: number; points: number }>;
   advertBanners?: Array<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean }>;
+  mobileAppLinks?: { androidUrl?: string; iosUrl?: string };
 }
 
 const DEFAULT_GRADE_SCALE = [
@@ -29,6 +30,8 @@ const DEFAULT_GRADE_SCALE = [
   { grade: 'E', min: 40, max: 44, points: 1.0 },
   { grade: 'F', min: 0, max: 39, points: 0.0 },
 ];
+
+const DEFAULT_ANDROID_DOWNLOAD_URL = 'https://github.com/89joshuaugwu/AcadeGrade-APK/releases/download/v1.0.0/acadegrade.apk';
 
 interface AboutPageData {
   platformDescription: string;
@@ -73,6 +76,7 @@ export default function AdminSettingsPage() {
   const [savingBanner, setSavingBanner] = useState(false);
   const [savingMaintenance, setSavingMaintenance] = useState(false);
   const [savingGradeScale, setSavingGradeScale] = useState(false);
+  const [savingMobileApps, setSavingMobileApps] = useState(false);
 
   // About page state
   const [aboutData, setAboutData] = useState<AboutPageData>(DEFAULT_ABOUT);
@@ -91,7 +95,13 @@ export default function AdminSettingsPage() {
       const res = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
-        setSettings(data.settings);
+        setSettings({
+          ...data.settings,
+          mobileAppLinks: {
+            androidUrl: data.settings?.mobileAppLinks?.androidUrl || DEFAULT_ANDROID_DOWNLOAD_URL,
+            iosUrl: data.settings?.mobileAppLinks?.iosUrl || '',
+          },
+        });
       }
     } catch (err) { console.error(err); toast.error('Failed to load settings.'); }
     finally { setLoading(false); }
@@ -431,6 +441,38 @@ export default function AdminSettingsPage() {
               </div>
             ))}
           </div>
+        </div>
+      </Card>
+
+      {/* Mobile App Downloads */}
+      <Card variant="default" padding="lg">
+        <div className="flex items-center gap-3 mb-2">
+          <Smartphone className="text-[var(--acade-primary)]" size={20} />
+          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Mobile App Downloads</h2>
+        </div>
+        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-6">
+          These links appear on the public home page and sign-in/sign-up pages. Leave iOS blank to show “iOS coming soon”.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Android APK download URL"
+            type="url"
+            placeholder="https://github.com/.../acadegrade.apk"
+            value={settings.mobileAppLinks?.androidUrl || ''}
+            onChange={(event) => setSettings({ ...settings, mobileAppLinks: { ...settings.mobileAppLinks, androidUrl: event.target.value } })}
+          />
+          <Input
+            label="iOS App Store / TestFlight URL"
+            type="url"
+            placeholder="Leave blank until iOS is available"
+            value={settings.mobileAppLinks?.iosUrl || ''}
+            onChange={(event) => setSettings({ ...settings, mobileAppLinks: { ...settings.mobileAppLinks, iosUrl: event.target.value } })}
+          />
+        </div>
+        <div className="flex justify-end mt-5">
+          <Button size="sm" loading={savingMobileApps} onClick={() => saveSetting('mobileAppLinks', settings.mobileAppLinks || {}, setSavingMobileApps)}>
+            <Save size={16} className="mr-2" /> Save download links
+          </Button>
         </div>
       </Card>
 

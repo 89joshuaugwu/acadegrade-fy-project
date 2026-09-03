@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/Input';
 import { Logo } from '@/components/ui';
 import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
 import { HolographicCard } from '@/components/ui/HolographicCard';
+import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 
 /* ─── Validation Schema ─── */
 const loginSchema = z.object({
@@ -253,6 +254,7 @@ export default function LoginPage() {
             Sign up →
           </Link>
         </p>
+        <MobileAppDownload compact className="mt-4" />
       </motion.div>
 
 

@@ -27,6 +27,7 @@ import { Select } from '@/components/ui/Select';
 import { Logo } from '@/components/ui';
 import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
 import { HolographicCard } from '@/components/ui/HolographicCard';
+import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -1010,6 +1011,7 @@ export default function RegisterWizard() {
             </Link>
           </p>
         )}
+        {!isSuccess && <MobileAppDownload compact className="mt-4" />}
       </div>
     </main>
   );

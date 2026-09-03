@@ -17,6 +17,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { Navbar } from '@/components/layout/Navbar';
+import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 import { FEATURES, NIGERIAN_UNIVERSITIES } from '@/lib/utils/constants';
 
 /* ─── Lazy-load Recharts (SSR: false) ─── */
@@ -175,6 +176,7 @@ export default function LandingPage() {
               Try Calculator
             </Button>
           </div>
+          <MobileAppDownload className="mb-10" />
 
           {/* Demo CGPAArc */}
           <motion.div
