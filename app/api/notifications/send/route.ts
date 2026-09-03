@@ -166,11 +166,10 @@ export async function POST(request: NextRequest) {
               // Android-specific: high priority for immediate delivery
               android: {
                 priority: 'high',
-                notification: {
-                  channelId: 'acadegrade_default',
-                  icon: 'ic_notification',
-                  color: '#6366F1',
-                },
+                // Do not name a custom channel here: the Expo native build
+                // does not create `acadegrade_default`, and Android drops
+                // notifications addressed to a missing channel. Omitting it
+                // lets FCM use its guaranteed fallback channel instead.
               },
               // Web push specific
               webpush: {
