@@ -7,7 +7,7 @@ import Link from 'next/link';
 import {
   BrainCircuit, BarChart3, BookOpen, FileText,
   Calculator, TrendingUp, Bell, WifiOff, Library,
-  ArrowRight, Sparkles,
+  ArrowRight, Sparkles, Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -176,8 +176,6 @@ export default function LandingPage() {
               Try Calculator
             </Button>
           </div>
-          <MobileAppDownload className="mb-10" />
-
           {/* Demo CGPAArc */}
           <motion.div
             initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
@@ -189,6 +187,27 @@ export default function LandingPage() {
             <CGPAArc cgpa={4.63} pi={3.79} size="md" animateOnMount showParticles={false} />
           </motion.div>
         </div>
+      </section>
+
+      {/* Mobile availability is deliberately separate from the hero's primary CTA. */}
+      <section className="relative z-20 px-5 pb-10">
+        <motion.div
+          initial={shouldReduceMotion ? {} : { opacity: 0, y: 16 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          className="mx-auto flex max-w-4xl flex-col items-center gap-5 rounded-2xl border border-[var(--acade-primary)]/25 bg-[var(--acade-surface)]/90 px-6 py-6 text-center shadow-xl shadow-[var(--acade-primary)]/5 backdrop-blur sm:flex-row sm:justify-between sm:text-left"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--acade-primary)]/12 text-[var(--acade-primary)]">
+              <Smartphone size={21} />
+            </div>
+            <div>
+              <p className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">AcadeGrade is now on Android</p>
+              <p className="mt-0.5 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">Keep your grades, insights, and transcript close at hand.</p>
+            </div>
+          </div>
+          <MobileAppDownload />
+        </motion.div>
       </section>
 
       {/* ═══════════ SECTION 2 — MARQUEE ═══════════ */}
