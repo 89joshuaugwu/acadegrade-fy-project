@@ -37,6 +37,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Semester data is missing or exceeds the supported size.' }, { status: 400 });
     }
 
+    const rawAcademicContext = body.academicContext;
+    const academicContext = rawAcademicContext && typeof rawAcademicContext === 'object'
+      ? {
+          remainingSemesters: Math.max(0, Math.min(20, Number(rawAcademicContext.remainingSemesters) || 0)),
+          isGraduated: rawAcademicContext.isGraduated === true,
+          graduationSession: typeof rawAcademicContext.graduationSession === 'string'
+            ? rawAcademicContext.graduationSession.slice(0, 20)
+            : undefined,
+        }
+      : undefined;
+    const inputSignature = JSON.stringify({ semesterData, academicContext });
+
     const analyticsRef = adminDb.collection('analytics').doc(uid);
     const analyticsDoc = await analyticsRef.get();
     analyticsData = analyticsDoc.data();
@@ -44,7 +56,7 @@ export async function POST(request: NextRequest) {
     const ageMs = lastCallMs ? Date.now() - lastCallMs : Number.POSITIVE_INFINITY;
 
     // Normal loads use the last known result for 24 hours without consuming provider quota.
-    if (!forceRegenerate && analyticsData?.lastInsight?.data && ageMs < TWENTY_FOUR_HOURS_MS) {
+    if (!forceRegenerate && analyticsData?.lastInsight?.data && analyticsData?.lastInsight?.inputSignature === inputSignature && ageMs < TWENTY_FOUR_HOURS_MS) {
       return NextResponse.json(analyticsData.lastInsight.data, { headers: { 'X-AI-Cache': 'HIT' } });
     }
 
@@ -74,6 +86,17 @@ export async function POST(request: NextRequest) {
       Student Data:
       ${JSON.stringify(semesterData)}
 
+      Academic Timeline:
+      ${academicContext
+        ? `${academicContext.remainingSemesters} semester(s) remain. Graduation session: ${academicContext.graduationSession || 'not provided'}. Programme complete: ${academicContext.isGraduated ? 'yes' : 'no'}.`
+        : 'Timeline details were not provided.'}
+
+      ${academicContext?.isGraduated
+        ? 'This student has completed every planned semester. Provide a final academic review; do not predict or invent future semesters.'
+        : academicContext
+          ? `Keep all recommendations and trajectory statements within the ${academicContext.remainingSemesters} remaining semester(s). Do not project beyond graduation.`
+          : ''}
+
       Return EXACTLY this JSON structure, and nothing else (no markdown blocks, no formatting around it):
       {
         "strengths": ["string", "string"],
@@ -85,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     const insightData = await generateDeepInsightJSON<InsightResponse>(prompt);
     await analyticsRef.set({
-      lastInsight: { timestamp: new Date(), data: insightData },
+      lastInsight: { timestamp: new Date(), data: insightData, inputSignature },
       insightsStale: false,
     }, { merge: true });
 
