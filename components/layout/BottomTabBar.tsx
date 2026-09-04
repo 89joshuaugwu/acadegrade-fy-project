@@ -73,7 +73,7 @@ export function BottomTabBar() {
               </div>
               <span
                 className={cn(
-                  'relative z-10 text-[length:var(--text-[10px])] font-bold font-[family-name:var(--font-dm-sans)] transition-colors duration-300',
+                  'relative z-10 text-[10px] font-bold font-[family-name:var(--font-dm-sans)] transition-colors duration-300',
                   active ? 'text-[var(--acade-primary)]' : 'text-[var(--acade-text-muted)] group-hover:text-[var(--acade-text)]'
                 )}
               >
