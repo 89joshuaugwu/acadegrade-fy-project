@@ -26,6 +26,9 @@ export default function NewSemesterPage() {
   const [level, setLevel] = useState<number>(100);
   const [semesterNum, setSemesterNum] = useState<1 | 2>(1);
   const [session, setSession] = useState(new Date().getFullYear() + '/' + (new Date().getFullYear() + 1));
+  const programmeLevels = STUDENT_LEVELS.filter(
+    (studentLevel) => studentLevel <= (profile?.courseDuration || 10) * 100
+  );
 
   useEffect(() => {
     if (profile?.currentLevel) {
@@ -80,7 +83,7 @@ export default function NewSemesterPage() {
                 Level
               </label>
               <Select
-                options={STUDENT_LEVELS.map(l => ({ value: String(l), label: `${l} Level` }))}
+                options={programmeLevels.map(l => ({ value: String(l), label: `${l} Level` }))}
                 value={String(level)}
                 onChange={(val) => setLevel(Number(val))}
               />

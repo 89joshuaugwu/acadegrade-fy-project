@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -15,11 +15,18 @@ import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { signUpWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
-import { setDocument, getDocument, serverTimestamp } from '@/lib/firebase/firestore';
-import { DEFAULT_UNIVERSITY, STUDENT_LEVELS } from '@/lib/utils/constants';
+import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
+import { getDocument } from '@/lib/firebase/firestore';
+import { DEFAULT_UNIVERSITY } from '@/lib/utils/constants';
 import { NIGERIAN_UNIVERSITIES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES } from '@/lib/utils/academic-data';
-import type { StudentLevel, RecordMode, PastSemesterEntry } from '@/types/user';
+import type { StudentLevel, PastSemesterEntry } from '@/types/user';
+import { isStudentProfileComplete } from '@/lib/auth/profile';
+import {
+  buildAcademicSlots,
+  graduationSession,
+  inferCurrentLevel,
+  parseAcademicSession,
+} from '@/lib/academic/timeline';
 
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -32,11 +39,15 @@ import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
   authMethod: z.enum(['email', 'google']),
-  fullName: z.string().min(2, 'Name is too short'),
-  matric: z.string().min(4, 'Matric number is required'),
-  email: z.string().email('Valid email is required'),
-  password: z.string().optional(),
-  confirmPassword: z.string().optional(),
+  fullName: z.string().trim().min(2, 'Name is too short').max(100, 'Name is too long'),
+  matric: z.string().trim().min(4, 'Matric number is required').max(64, 'Matric number is too long').regex(
+    /^[A-Za-z0-9/._-]+(?:\s+[A-Za-z0-9/._-]+)*$/,
+    'Use only letters, numbers, /, -, _ or .'
+  ),
+  email: z.string().trim().toLowerCase().email('Valid email is required'),
+  password: z.string().max(128, 'Password is too long').optional(),
+  confirmPassword: z.string().max(128, 'Password is too long').optional(),
+  verificationToken: z.string().optional(),
 });
 const step1Schema = step1Base.refine((data) => {
   if (data.authMethod === 'email') {
@@ -57,12 +68,15 @@ const step1Schema = step1Base.refine((data) => {
 });
 
 const step2Base = z.object({
-  university: z.string().min(2, 'University is required'),
-  department: z.string().min(2, 'Department is required'),
-  programme: z.string().min(2, 'Programme is required'),
+  university: z.string().trim().min(2, 'University is required'),
+  department: z.string().trim().min(2, 'Department is required'),
+  programme: z.string().trim().min(2, 'Programme is required'),
   courseDuration: z.number().min(1).max(10),
-  currentLevel: z.number(),
-  entrySession: z.string().regex(/^\d{4}\/\d{4}$/, 'Must be format YYYY/YYYY (e.g. 2022/2023)'),
+  currentLevel: z.number().int().min(100).max(1000).refine((value) => value % 100 === 0, 'Choose a valid level'),
+  entrySession: z.string().trim().refine(
+    (value) => parseAcademicSession(value) !== null,
+    'Use consecutive years, for example 2022/2023'
+  ),
 });
 const step2Schema = step2Base;
 
@@ -87,7 +101,10 @@ const step4Base = z.object({
   pastSemesters: z.array(z.object({
     level: z.number(),
     semester: z.union([z.literal(1), z.literal(2)]),
-    session: z.string().regex(/^\d{4}\/\d{4}$/, 'Invalid session format'),
+    session: z.string().trim().refine(
+      (value) => parseAcademicSession(value) !== null,
+      'Use consecutive years, for example 2022/2023'
+    ),
     label: z.string()
   })).optional()
 });
@@ -126,54 +143,69 @@ const formSchema = step1Base
       message: "Specify semesters completed",
       path: ['semestersCompleted'],
     }
+  )
+  .refine(
+    (data) => data.currentLevel <= data.courseDuration * 100,
+    {
+      message: 'Current level exceeds the programme duration',
+      path: ['currentLevel'],
+    }
+  )
+  .refine(
+    (data) => data.recordMode !== 'complete' || (
+      (data.semestersCompleted || 0) <= Math.min(
+        data.courseDuration * 2,
+        (data.currentLevel / 100) * 2
+      )
+    ),
+    {
+      message: 'Completed semesters cannot extend beyond your current level',
+      path: ['semestersCompleted'],
+    }
+  )
+  .refine(
+    (data) => data.recordMode !== 'complete' || (
+      data.pastSemesters?.length === data.semestersCompleted
+    ),
+    {
+      message: 'Confirm every completed semester before continuing',
+      path: ['pastSemesters'],
+    }
   );
 
 type FormData = z.infer<typeof formSchema>;
+
+const REGISTRATION_DRAFT_KEY = 'acadegrade:registration-draft:v2';
+
+type SafeRegistrationDraft = {
+  step: number;
+  values: Partial<Omit<FormData, 'password' | 'confirmPassword' | 'verificationToken'>>;
+};
+
+function withoutRegistrationSecrets(values: unknown): SafeRegistrationDraft['values'] {
+  const source = values && typeof values === 'object'
+    ? values as Record<string, unknown>
+    : {};
+  const { password: _password, confirmPassword: _confirmPassword, verificationToken: _verificationToken, ...safe } = source;
+  return safe as SafeRegistrationDraft['values'];
+}
 
 /* ─── Helper to generate past semesters ─── */
 function generatePastSemesters(
   currentLevel: number,
   semestersCompleted: number,
-  entrySession: string
+  entrySession: string,
+  courseDuration: number
 ): PastSemesterEntry[] {
-  const result: PastSemesterEntry[] = [];
-  
-  // Try to parse the starting year of the entry session
-  const parts = entrySession.split('/');
-  let startYear = parseInt(parts[0], 10);
-  if (isNaN(startYear)) startYear = new Date().getFullYear();
-
-  let totalGenerated = 0;
-  let year = startYear;
-
-  // Support up to course duration (up to 1000L)
-  const levelsToGenerate = Array.from({length: 10}, (_, i) => (i + 1) * 100);
-
-  for (const level of levelsToGenerate) {
-    if (totalGenerated >= semestersCompleted) break;
-    
-    // Semester 1
-    result.push({
-      level: level as StudentLevel,
-      semester: 1,
-      session: `${year}/${year + 1}`,
-      label: `${level}L First Semester`,
-    });
-    totalGenerated++;
-    if (totalGenerated >= semestersCompleted) break;
-
-    // Semester 2
-    result.push({
-      level: level as StudentLevel,
-      semester: 2,
-      session: `${year}/${year + 1}`,
-      label: `${level}L Second Semester`,
-    });
-    totalGenerated++;
-
-    year++; // next level
-  }
-  return result;
+  return buildAcademicSlots(entrySession, courseDuration)
+    .filter((slot) => slot.level <= currentLevel)
+    .slice(0, semestersCompleted)
+    .map((slot) => ({
+      level: slot.level as StudentLevel,
+      semester: slot.semester,
+      session: slot.session,
+      label: slot.label,
+    }));
 }
 
 /* ════════════════════════════════════════════════════
@@ -183,6 +215,7 @@ function generatePastSemesters(
 // ----- STEP 1 -----
 function Step1Account({ onNext }: { onNext: () => void }) {
   const { register, trigger, getValues, setValue, watch, formState: { errors } } = useFormContext<FormData>();
+  const { user: signedInUser } = useAuth();
   const [showOtp, setShowOtp] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -204,6 +237,7 @@ function Step1Account({ onNext }: { onNext: () => void }) {
       const user = result.user;
       
       setValue('authMethod', 'google', { shouldValidate: true });
+      setValue('verificationToken', undefined);
       if (user.email) setValue('email', user.email, { shouldValidate: true });
       if (user.displayName) setValue('fullName', user.displayName, { shouldValidate: true });
       
@@ -233,6 +267,7 @@ function Step1Account({ onNext }: { onNext: () => void }) {
     setIsLoading(true);
     try {
       const email = getValues('email');
+      setValue('verificationToken', undefined);
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -279,6 +314,12 @@ function Step1Account({ onNext }: { onNext: () => void }) {
         return;
       }
       
+      if (!data.verificationToken) {
+        toast.error('Verification could not be secured. Please request a new code.');
+        return;
+      }
+
+      setValue('verificationToken', data.verificationToken, { shouldValidate: true });
       toast.success('Email verified successfully!');
       onNext();
     } catch (err) {
@@ -314,7 +355,10 @@ function Step1Account({ onNext }: { onNext: () => void }) {
         <div className="flex items-center justify-between mt-4">
           <button 
             type="button" 
-            onClick={() => setShowOtp(false)}
+            onClick={() => {
+              setShowOtp(false);
+              setValue('verificationToken', undefined);
+            }}
             className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hover:text-white transition-colors flex items-center gap-1"
           >
             <ArrowLeft size={14} /> Back
@@ -368,7 +412,7 @@ function Step1Account({ onNext }: { onNext: () => void }) {
 
       <Input label="Full Name" placeholder="joshuazaza" error={errors.fullName?.message} {...register('fullName')} />
       <Input label="Matric Number" placeholder="2022030200000" error={errors.matric?.message} {...register('matric')} />
-      <Input label="Email Address" type="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')} disabled={authMethod === 'google'} />
+      <Input label="Email Address" type="email" placeholder="you@university.edu" error={errors.email?.message} {...register('email')} disabled={authMethod === 'google' || Boolean(signedInUser?.email)} />
       
       {authMethod === 'email' && (
         <>
@@ -398,19 +442,15 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
   const durationVal = watch('courseDuration');
   const setValue = useFormContext<FormData>().setValue;
 
-  // Auto-calculate level when entry session changes
+  // Auto-calculate level using the September academic-year rollover shared
+  // with the mobile app.
   useEffect(() => {
-    if (entrySessionVal && /^\d{4}\/\d{4}$/.test(entrySessionVal)) {
-      const startYear = parseInt(entrySessionVal.split('/')[0]);
-      const currentYear = new Date().getFullYear();
-      let calculatedLevel = (currentYear - startYear) * 100 + 100;
-      
-      // Clamp between 100 and (duration * 100)
-      const maxLevel = (durationVal || 4) * 100;
-      if (calculatedLevel < 100) calculatedLevel = 100;
-      if (calculatedLevel > maxLevel) calculatedLevel = maxLevel;
-      
-      setValue('currentLevel', calculatedLevel, { shouldValidate: true });
+    if (parseAcademicSession(entrySessionVal) !== null) {
+      setValue(
+        'currentLevel',
+        inferCurrentLevel(entrySessionVal, durationVal || 4),
+        { shouldValidate: true }
+      );
     }
   }, [entrySessionVal, durationVal, setValue]);
 
@@ -457,6 +497,12 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
 
       <Input label="Entry Year/Session" placeholder="e.g. 2022/2023" error={errors.entrySession?.message} {...register('entrySession')} />
 
+      {parseAcademicSession(entrySessionVal) !== null && (
+        <p className="-mt-2 text-[length:var(--text-xs)] text-[var(--acade-text-faint)]">
+          Expected graduation: {graduationSession(entrySessionVal, durationVal || 4)}
+        </p>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Current Level (Auto-calculated, you can adjust)</label>
         <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-2">
@@ -498,22 +544,37 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
 }
 
 // ----- STEP 3 -----
-function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
+function Step3RecordMode({
+  onNext,
+  onSubmit,
+  onBack,
+}: {
+  onNext: () => void;
+  onSubmit: () => void | Promise<void>;
+  onBack: () => void;
+}) {
   const { trigger, watch, setValue, formState: { errors } } = useFormContext<FormData>();
   const shouldReduceMotion = useReducedMotion();
   
   const modeVal = watch('recordMode');
   const durationVal = watch('courseDuration') || 4;
-  const maxSemesters = durationVal * 2;
+  const currentLevel = watch('currentLevel') || 100;
+  const maxSemesters = Math.min(durationVal * 2, (currentLevel / 100) * 2);
   const semsCompleted = watch('semestersCompleted') || 1;
+
+  useEffect(() => {
+    if (modeVal === 'complete' && semsCompleted > maxSemesters) {
+      setValue('semestersCompleted', maxSemesters, { shouldValidate: true });
+    }
+  }, [maxSemesters, modeVal, semsCompleted, setValue]);
 
   const handleNext = async () => {
     const valid = await trigger(['recordMode', 'semestersCompleted']);
     if (valid) {
       if (modeVal === 'fromScratch') {
-        // Skip step 4 if from scratch
-        onNext(); 
-        onNext(); 
+        setValue('pastSemesters', []);
+        setValue('semestersCompleted', undefined);
+        await onSubmit();
       } else {
         // Go to step 4
         onNext();
@@ -531,7 +592,11 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
         <motion.div
           whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-          onClick={() => setValue('recordMode', 'fromScratch', { shouldValidate: true })}
+          onClick={() => {
+            setValue('recordMode', 'fromScratch', { shouldValidate: true });
+            setValue('pastSemesters', []);
+            setValue('semestersCompleted', undefined);
+          }}
           className={cn(
             'cursor-pointer rounded-2xl p-6 border-2 transition-all',
             modeVal === 'fromScratch'
@@ -553,7 +618,12 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
         <motion.div
           whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
           whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-          onClick={() => setValue('recordMode', 'complete', { shouldValidate: true })}
+          onClick={() => {
+            setValue('recordMode', 'complete', { shouldValidate: true });
+            if (!watch('semestersCompleted')) {
+              setValue('semestersCompleted', 1, { shouldValidate: true });
+            }
+          }}
           className={cn(
             'cursor-pointer rounded-2xl p-6 border-2 transition-all',
             modeVal === 'complete'
@@ -599,6 +669,11 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
                 onChange={(e) => setValue('semestersCompleted', parseInt(e.target.value), { shouldValidate: true })}
                 className="w-full accent-[var(--acade-gold)] h-2 bg-[var(--acade-deep)] rounded-lg appearance-none cursor-pointer"
               />
+              {errors.semestersCompleted && (
+                <p className="mt-2 text-[length:var(--text-xs)] text-[var(--acade-danger)]">
+                  {errors.semestersCompleted.message}
+                </p>
+              )}
             </div>
           </motion.div>
         )}
@@ -609,7 +684,7 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
           <ArrowLeft size={18} />
         </Button>
         <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
-          Continue <ArrowRight size={18} />
+          {modeVal === 'fromScratch' ? 'Create Account' : 'Continue'} <ArrowRight size={18} />
         </Button>
       </div>
     </div>
@@ -618,25 +693,26 @@ function Step3RecordMode({ onNext, onBack }: { onNext: () => void, onBack: () =>
 
 // ----- STEP 4 -----
 function Step4PastSemesters({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
-  const { watch, setValue } = useFormContext<FormData>();
+  const { watch, setValue, trigger, formState: { errors } } = useFormContext<FormData>();
   const shouldReduceMotion = useReducedMotion();
   
   const currentLevel = watch('currentLevel');
   const semestersCompleted = watch('semestersCompleted') || 1;
   const entrySession = watch('entrySession');
+  const courseDuration = watch('courseDuration') || 4;
   const pastSemesters = watch('pastSemesters') || [];
 
   // Generate if empty
   useEffect(() => {
     if (pastSemesters.length === 0 && currentLevel && entrySession) {
-      const generated = generatePastSemesters(currentLevel, semestersCompleted, entrySession);
+      const generated = generatePastSemesters(currentLevel, semestersCompleted, entrySession, courseDuration);
       setValue('pastSemesters', generated);
     }
-  }, [currentLevel, semestersCompleted, entrySession, pastSemesters, setValue]);
+  }, [currentLevel, semestersCompleted, entrySession, courseDuration, pastSemesters, setValue]);
 
-  const handleNext = () => {
-    // Basic validation could happen here
-    onNext();
+  const handleNext = async () => {
+    const valid = await trigger('pastSemesters');
+    if (valid) onNext();
   };
 
   return (
@@ -673,10 +749,21 @@ function Step4PastSemesters({ onNext, onBack }: { onNext: () => void, onBack: ()
                   onChange={(e) => {
                     const newArr = [...pastSemesters];
                     newArr[index].session = e.target.value;
-                    setValue('pastSemesters', newArr);
+                    setValue('pastSemesters', newArr, { shouldDirty: true, shouldValidate: true });
                   }}
-                  className="w-32 h-10 px-3 bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-lg text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] font-[family-name:var(--font-dm-sans)] text-center"
+                  aria-invalid={Boolean(errors.pastSemesters?.[index]?.session)}
+                  className={cn(
+                    'w-36 h-10 px-3 bg-[var(--acade-deep)] border rounded-lg text-[length:var(--text-sm)] focus:outline-none font-[family-name:var(--font-dm-sans)] text-center',
+                    errors.pastSemesters?.[index]?.session
+                      ? 'border-[var(--acade-danger)] focus:border-[var(--acade-danger)]'
+                      : 'border-[var(--acade-border)] focus:border-[var(--acade-primary)]'
+                  )}
                 />
+                {errors.pastSemesters?.[index]?.session && (
+                  <p className="mt-1 max-w-36 text-center text-[10px] leading-tight text-[var(--acade-danger)]">
+                    {errors.pastSemesters[index]?.session?.message}
+                  </p>
+                )}
               </div>
             </motion.div>
           ))}
@@ -714,7 +801,8 @@ export default function RegisterWizard() {
 
   const totalSteps = 5;
 
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
+  const draftRestored = useRef(false);
 
   const methods = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -727,21 +815,78 @@ export default function RegisterWizard() {
     }
   });
 
-  // Redirect if already logged in AND has a profile
+  // Redirect only when the Firestore student profile is actually complete.
   useEffect(() => {
-    if (!authLoading && user && profile) {
+    if (
+      !authLoading &&
+      !profileLoading &&
+      user &&
+      isStudentProfileComplete(profile) &&
+      !isSubmitting &&
+      !isSuccess
+    ) {
+      sessionStorage.removeItem(REGISTRATION_DRAFT_KEY);
       router.replace('/dashboard');
     }
-  }, [user, profile, authLoading, router]);
+  }, [user, profile, authLoading, profileLoading, isSubmitting, isSuccess, router]);
 
-  // Pre-fill if logged in via Google but no profile yet
+  // Restore non-secret progress. Passwords and OTP tickets are deliberately
+  // never written to browser storage.
   useEffect(() => {
-    if (!authLoading && user && !profile && methods.getValues('authMethod') !== 'google') {
-      methods.setValue('authMethod', 'google');
+    if (authLoading || profileLoading || draftRestored.current) return;
+    try {
+      const rawDraft = sessionStorage.getItem(REGISTRATION_DRAFT_KEY);
+      if (rawDraft) {
+        const draft = JSON.parse(rawDraft) as SafeRegistrationDraft;
+        const signedInWithGoogle = Boolean(user?.providerData.some(
+          (provider) => provider.providerId === 'google.com'
+        ));
+        methods.reset({
+          ...methods.getValues(),
+          ...(draft.values || {}),
+          authMethod: signedInWithGoogle ? 'google' : 'email',
+          password: '',
+          confirmPassword: '',
+          verificationToken: undefined,
+        });
+        setCurrentStep(signedInWithGoogle
+          ? Math.max(1, Math.min(4, Number(draft.step) || 1))
+          : 1);
+      }
+    } catch {
+      sessionStorage.removeItem(REGISTRATION_DRAFT_KEY);
+    } finally {
+      draftRestored.current = true;
+    }
+  }, [authLoading, profileLoading, user, methods]);
+
+  useEffect(() => {
+    if (!draftRestored.current || isSuccess) return;
+
+    const persistDraft = (values: unknown) => {
+      const draft: SafeRegistrationDraft = {
+        step: currentStep,
+        values: withoutRegistrationSecrets(values),
+      };
+      sessionStorage.setItem(REGISTRATION_DRAFT_KEY, JSON.stringify(draft));
+    };
+
+    persistDraft(methods.getValues());
+    const subscription = methods.watch((values) => persistDraft(values));
+    return () => subscription.unsubscribe();
+  }, [currentStep, isSuccess, methods]);
+
+  // Pre-fill the correct provider when an interrupted registration resumes.
+  useEffect(() => {
+    if (!authLoading && !profileLoading && user && !isStudentProfileComplete(profile)) {
+      const signedInWithGoogle = user.providerData.some(
+        (provider) => provider.providerId === 'google.com'
+      );
+      methods.setValue('authMethod', signedInWithGoogle ? 'google' : 'email');
       if (user.email) methods.setValue('email', user.email);
       if (user.displayName) methods.setValue('fullName', user.displayName);
     }
-  }, [user, profile, authLoading, methods]);
+  }, [user, profile, authLoading, profileLoading, methods]);
 
   useEffect(() => {
     const checkMaintenance = async () => {
@@ -761,83 +906,52 @@ export default function RegisterWizard() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      // 1. Firebase Auth Create User (if not already authenticated via Google)
-      let uid = user?.uid;
-      let userToken = '';
-      if (!user) {
-        const userCred = await signUpWithEmail(data.email, data.password!);
-        uid = userCred.user.uid;
-        userToken = await userCred.user.getIdToken();
-      } else {
-        userToken = await user.getIdToken();
+      if (data.authMethod === 'google' && !user) {
+        throw new Error('Your Google session expired. Continue with Google again.');
       }
 
-      if (!uid) throw new Error('Failed to obtain user ID');
-
-      // 2. Create User Document
-      await setDocument(`users/${uid}`, {
-        fullName: data.fullName,
-        email: data.email,
-        matric: data.matric,
-        department: data.department,
-        currentLevel: data.currentLevel,
-        programme: data.programme,
-        university: data.university,
-        avatarUrl: null,
-        recordMode: data.recordMode,
-        gradeMode: 'cgpa',
-        currentSession: data.entrySession, // We'll save it as currentSession in DB for compatibility, or change later
-        isAdmin: false,
-        disabled: false,
-        fcmTokens: [],
-      });
-
-      // 3. Pre-create Semesters if Complete Record mode
-      if (data.recordMode === 'complete' && data.pastSemesters) {
-        for (const [index, sem] of data.pastSemesters.entries()) {
-          const semId = `sem_${Date.now()}_${index}`;
-          await setDocument(`users/${uid}/semesters/${semId}`, {
-            label: sem.label,
-            session: sem.session,
-            level: sem.level,
-            semester: sem.semester,
-            gpa: 0,
-            pi: 0,
-            creditLoaded: 0,
-            isComplete: true, // past semesters are marked complete initially
-          });
-        }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (user) {
+        headers.Authorization = `Bearer ${await user.getIdToken()}`;
       }
 
-      // 4. Create dummy analytics document to prevent null errors later
-      await setDocument(`analytics/${uid}`, {
-        cgpa: 0,
-        pi: 0,
-        degreeClass: 'Fail',
-        totalCredits: 0,
-        semesterHistory: [],
-        regressionSlope: 0,
-        projectedCGPA: 0,
-        riskScore: 0,
-      });
-
-      // 5. Trigger Welcome Email
-      fetch('/api/notifications/send', {
+      const response = await fetch('/api/auth/register/finalize', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Assuming we use an internal secret or the user token
-          'Authorization': `Bearer ${userToken}`,
-        },
+        headers,
         body: JSON.stringify({
-          uid,
-          type: 'email',
-          event: 'welcome',
-          data: { name: data.fullName },
+          authMethod: data.authMethod,
+          verificationToken: data.verificationToken,
+          password: data.authMethod === 'email' ? data.password : undefined,
+          profile: {
+            fullName: data.fullName,
+            matric: data.matric,
+            email: data.email,
+            university: data.university,
+            department: data.department,
+            programme: data.programme,
+            courseDuration: data.courseDuration,
+            currentLevel: data.currentLevel,
+            entrySession: data.entrySession,
+            recordMode: data.recordMode,
+            semestersCompleted: data.recordMode === 'complete' ? data.semestersCompleted : 0,
+          },
+          pastSemesters: data.recordMode === 'complete' ? data.pastSemesters || [] : [],
         }),
-      }).catch(console.error);
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const registrationError = new Error(result.error || 'Failed to create account. Please try again.') as Error & { code?: string };
+        registrationError.code = result.code;
+        throw registrationError;
+      }
 
-      // Show Success step
+      if (data.authMethod === 'email') {
+        await signInWithEmail(data.email.trim().toLowerCase(), data.password!);
+      }
+
+      sessionStorage.removeItem(REGISTRATION_DRAFT_KEY);
       setIsSuccess(true);
       setCurrentStep(5);
       
@@ -848,24 +962,60 @@ export default function RegisterWizard() {
 
     } catch (err: unknown) {
       console.error(err);
-      toast.error(
-        err instanceof Error && err.message.includes('email-already-in-use')
-          ? 'An account with this email already exists.'
-          : 'Failed to create account. Please try again.'
-      );
-      // Go back to step 1 to let them change email
-      setCurrentStep(1);
+      const message = err instanceof Error ? err.message : 'Failed to create account. Please try again.';
+      toast.error(message);
+      const code = (err as { code?: string } | null)?.code;
+      if (code === 'verification-expired' || code === 'verification-mismatch') {
+        methods.setValue('verificationToken', undefined);
+        setCurrentStep(1);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (authLoading) {
+  const submitValidatedRegistration = methods.handleSubmit(onSubmit, (validationErrors) => {
+    toast.error('Please review the highlighted registration details.');
+    if (
+      validationErrors.fullName ||
+      validationErrors.matric ||
+      validationErrors.email ||
+      validationErrors.password ||
+      validationErrors.confirmPassword ||
+      validationErrors.verificationToken
+    ) {
+      setCurrentStep(1);
+    } else if (
+      validationErrors.university ||
+      validationErrors.department ||
+      validationErrors.programme ||
+      validationErrors.courseDuration ||
+      validationErrors.currentLevel ||
+      validationErrors.entrySession
+    ) {
+      setCurrentStep(2);
+    } else if (validationErrors.recordMode || validationErrors.semestersCompleted) {
+      setCurrentStep(3);
+    } else if (validationErrors.pastSemesters) {
+      setCurrentStep(4);
+    }
+  });
+
+  const submitRegistration = async () => {
+    if (methods.getValues('authMethod') === 'email' && !methods.getValues('verificationToken')) {
+      toast.error('Verify your email again before creating the account.');
+      setCurrentStep(1);
+      return;
+    }
+    await submitValidatedRegistration();
+  };
+
+  if (authLoading || (user && profileLoading)) {
     return <div className="min-h-screen bg-[var(--acade-void)]" />;
   }
 
   // We only hide the wizard if they are logged in AND have a profile completed
-  if (user && profile && !isSuccess) return null;
+  if (user && isStudentProfileComplete(profile) && !isSuccess) return null;
 
   if (signupsDisabled) {
     return (
@@ -972,13 +1122,17 @@ export default function RegisterWizard() {
                 )}
                 {currentStep === 3 && (
                   <motion.div key="step3" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
-                    <Step3RecordMode onNext={() => setCurrentStep(4)} onBack={() => setCurrentStep(2)} />
+                    <Step3RecordMode
+                      onNext={() => setCurrentStep(4)}
+                      onSubmit={submitRegistration}
+                      onBack={() => setCurrentStep(2)}
+                    />
                   </motion.div>
                 )}
                 {currentStep === 4 && (
                   <motion.div key="step4" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
                     {/* The next button on step 4 submits the form */}
-                    <Step4PastSemesters onNext={methods.handleSubmit(onSubmit)} onBack={() => setCurrentStep(3)} />
+                    <Step4PastSemesters onNext={submitRegistration} onBack={() => setCurrentStep(3)} />
                   </motion.div>
                 )}
                 {currentStep === 5 && (

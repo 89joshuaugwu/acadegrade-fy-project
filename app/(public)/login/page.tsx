@@ -14,6 +14,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
 import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
+import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Logo } from '@/components/ui';
@@ -55,12 +56,22 @@ export default function LoginPage() {
 
   const [shakeForm, setShakeForm] = useState(false);
 
-  // Redirect if already logged in
+  const routeAuthenticatedUser = useCallback(async (signedInUser: { uid: string }) => {
+    const profile = await getDocument(`users/${signedInUser.uid}`);
+    const profileComplete = isStudentProfileComplete(profile);
+    router.replace(profileComplete ? '/dashboard' : '/register');
+    return profileComplete;
+  }, [router]);
+
+  // Firebase Auth alone is not a completed AcadeGrade account.
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace('/dashboard');
+      routeAuthenticatedUser(user).catch(() => {
+        toast.error('Could not load your profile. Please try again.');
+        router.replace('/register');
+      });
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, routeAuthenticatedUser, router]);
 
   useEffect(() => {
     const checkMaintenance = async () => {
@@ -86,9 +97,9 @@ export default function LoginPage() {
     async (data: LoginFormData) => {
       setIsSubmitting(true);
       try {
-        await signInWithEmail(data.email, data.password);
-        toast.success('Welcome back!');
-        router.push('/dashboard');
+        const credential = await signInWithEmail(data.email.trim().toLowerCase(), data.password);
+        const profileComplete = await routeAuthenticatedUser(credential.user);
+        toast.success(profileComplete ? 'Welcome back!' : 'Finish setting up your profile to continue.');
       } catch (err: unknown) {
         const msg =
           err instanceof Error && err.message.includes('invalid')
@@ -102,16 +113,16 @@ export default function LoginPage() {
         setIsSubmitting(false);
       }
     },
-    [router, setError]
+    [routeAuthenticatedUser, setError]
   );
 
   /* ── Google Sign In ── */
   const handleGoogleSignIn = useCallback(async () => {
     setIsGoogleLoading(true);
     try {
-      await signInWithGoogle();
-      toast.success('Welcome!');
-      router.push('/dashboard');
+      const credential = await signInWithGoogle();
+      const profileComplete = await routeAuthenticatedUser(credential.user);
+      toast.success(profileComplete ? 'Welcome!' : 'Google verified. Complete your academic profile.');
     } catch (err: unknown) {
       const msg =
         err instanceof Error && err.message.includes('popup')
@@ -121,7 +132,7 @@ export default function LoginPage() {
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [router]);
+  }, [routeAuthenticatedUser]);
 
 
 

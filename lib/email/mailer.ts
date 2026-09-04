@@ -425,20 +425,18 @@ export async function sendEmail(to: string, subject: string, html: string) {
 /** Send an OTP email using the dedicated OTP transporter.
  *  Uses OTP_GMAIL_USER/OTP_GMAIL_PASS if set, otherwise falls back to GMAIL_USER/GMAIL_PASS. */
 export async function sendOtpEmail(to: string, subject: string, html: string) {
-  try {
-    const otpUser = process.env.OTP_GMAIL_USER || process.env.GMAIL_USER;
-    const otpPass = process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS;
-    if (!otpUser || !otpPass) {
-      console.warn('OTP email credentials missing. Skipping OTP email send to:', to);
-      return;
-    }
-    await otpTransporter.sendMail({
-      from: '"AcadeGrade Auth" <' + otpUser + '>',
-      to,
-      subject,
-      html,
-    });
-  } catch (error) {
-    console.error('Failed to send OTP email:', error);
+  const otpUser = process.env.OTP_GMAIL_USER || process.env.GMAIL_USER;
+  const otpPass = process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS;
+  if (!otpUser || !otpPass) {
+    throw new Error('OTP email credentials are not configured');
   }
+
+  // Delivery failures must reach the API route. Otherwise the UI reports a
+  // successful send even though no message left the server.
+  await otpTransporter.sendMail({
+    from: '"AcadeGrade Auth" <' + otpUser + '>',
+    to,
+    subject,
+    html,
+  });
 }

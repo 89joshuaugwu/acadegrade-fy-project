@@ -395,7 +395,13 @@ export default function InsightsPage() {
                       ? analytics.forecast.projectedPi || analytics.forecast.projected 
                       : analytics.forecast.projectedCgpa || analytics.forecast.projected}
                     labels={semesterLabels.length > 0 
-                      ? [...semesterLabels.slice(-3), 'Next Sem', currentLevel >= 400 ? 'Graduation' : 'Next Year']
+                      ? [
+                          ...semesterLabels.slice(-3),
+                          'Next Sem',
+                          currentLevel >= (profile?.courseDuration || 4) * 100
+                            ? 'Graduation'
+                            : 'Next Year',
+                        ]
                       : ['Past', 'Current', 'Next Sem', 'Next Year']
                     }
                     metricName={projectionMode === 'pi' ? 'PI' : 'CGPA'}

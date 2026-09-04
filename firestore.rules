@@ -77,5 +77,15 @@ service cloud.firestore {
     match /_api_rate_limits/{docId} {
       allow read, write: if false;
     }
+
+    // Registration tickets and normalized matric reservations are created and
+    // consumed only by Firebase Admin inside server routes.
+    match /_registration_tickets/{docId} {
+      allow read, write: if false;
+    }
+
+    match /_matric_numbers/{docId} {
+      allow read, write: if false;
+    }
   }
 }

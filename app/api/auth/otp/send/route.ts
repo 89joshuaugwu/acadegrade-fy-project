@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { sendOtpEmail, registrationOtpEmail, resetPasswordOtpEmail } from '@/lib/email/mailer';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
+import { isStudentProfileComplete } from '@/lib/auth/profile';
 
 // 60 seconds cooldown
 const COOLDOWN_MS = 60 * 1000;
@@ -13,18 +14,33 @@ export async function POST(request: NextRequest) {
     const timer = apiTimer();
     const { email, type } = await request.json();
 
-    if (!email || !type || !['registration', 'reset'].includes(type)) {
+    if (typeof email !== 'string' || !email.trim() || !['registration', 'reset'].includes(type)) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
+    }
 
     // Check if the user already exists for registration
     if (type === 'registration') {
+      const settings = await adminDb.collection('config').doc('settings').get();
+      if (settings.data()?.disableSignups === true) {
+        return NextResponse.json(
+          { error: 'New registrations are currently paused.' },
+          { status: 403 }
+        );
+      }
+
       try {
-        await adminAuth.getUserByEmail(normalizedEmail);
-        // If we get here, user exists
-        return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
+        const existingAccount = await adminAuth.getUserByEmail(normalizedEmail);
+        const existingProfile = await adminDb.collection('users').doc(existingAccount.uid).get();
+        if (isStudentProfileComplete(existingProfile.data())) {
+          return NextResponse.json({ error: 'Email already registered' }, { status: 400 });
+        }
+        // An Auth-only or partially written account can safely resume setup
+        // after proving access to the same email address.
       } catch (e: any) {
         if (e.code !== 'auth/user-not-found') {
           console.error('Registration email check failed:', e.code, e.message);
@@ -83,7 +99,18 @@ export async function POST(request: NextRequest) {
     const subject = type === 'registration' ? 'Verify your AcadeGrade Registration' : 'Reset your AcadeGrade Password';
     const htmlBody = type === 'registration' ? registrationOtpEmail(code) : resetPasswordOtpEmail(code);
     
-    await sendOtpEmail(normalizedEmail, subject, htmlBody);
+    try {
+      await sendOtpEmail(normalizedEmail, subject, htmlBody);
+    } catch (deliveryError) {
+      // Let the user retry immediately after a delivery/configuration failure.
+      await otpRef.delete().catch(() => undefined);
+      console.error('OTP delivery failed:', deliveryError);
+      logApiCall({ endpoint: '/api/auth/otp/send', category: 'otp', uid: null, status: 502, durationMs: timer(), provider: 'gmail', error: String(deliveryError) });
+      return NextResponse.json(
+        { error: 'We could not deliver the verification email. Please try again.' },
+        { status: 502 }
+      );
+    }
 
     logApiCall({ endpoint: '/api/auth/otp/send', category: 'otp', uid: null, status: 200, durationMs: timer(), provider: 'gmail' });
     return NextResponse.json({ success: true, message: 'OTP sent successfully' });

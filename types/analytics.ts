@@ -31,6 +31,7 @@ export type TrendDirection = 'improving' | 'stable' | 'declining';
 export interface PlatformSettings {
   announcementBanner: string | null;
   maintenanceMode: boolean;
+  disableSignups?: boolean;
   aiSystemPrompt: string;
   gradeScale: {
     minScore: number;

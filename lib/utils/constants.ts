@@ -73,7 +73,7 @@ export const DEGREE_CLASSES: DegreeClass[] = [
 ];
 
 /** Student levels in Nigerian universities */
-export const STUDENT_LEVELS = [100, 200, 300, 400, 500] as const;
+export const STUDENT_LEVELS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] as const;
 
 /** Grade color tokens for UI rendering */
 export const GRADE_COLORS: Record<Grade, string> = {

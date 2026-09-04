@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { StudentShell } from '@/components/layout/StudentShell';
 import { getDocument } from '@/lib/firebase/firestore';
+import { isStudentProfileComplete } from '@/lib/auth/profile';
 
 export default function StudentLayout({
   children,
@@ -12,6 +14,7 @@ export default function StudentLayout({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const router = useRouter();
   const [maintenanceCheckLoading, setMaintenanceCheckLoading] = useState(true);
 
@@ -37,8 +40,26 @@ export default function StudentLayout({
     }
   }, [user, loading, router, maintenanceCheckLoading]);
 
+  useEffect(() => {
+    if (
+      !loading &&
+      user &&
+      !profileLoading &&
+      !maintenanceCheckLoading &&
+      !isStudentProfileComplete(profile)
+    ) {
+      router.replace('/register');
+    }
+  }, [user, profile, loading, profileLoading, router, maintenanceCheckLoading]);
+
   // If loading auth or checking maintenance, show skeleton wrapper
-  if (loading || !user || maintenanceCheckLoading) {
+  if (
+    loading ||
+    !user ||
+    profileLoading ||
+    maintenanceCheckLoading ||
+    !isStudentProfileComplete(profile)
+  ) {
     return (
       <div className="min-h-screen bg-[var(--acade-void)] flex items-center justify-center">
         <div className="size-10 rounded-full border-2 border-[var(--acade-primary)] border-t-transparent animate-spin" />

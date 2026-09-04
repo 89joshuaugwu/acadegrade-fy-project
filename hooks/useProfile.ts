@@ -9,15 +9,25 @@ import toast from 'react-hot-toast';
 export function useProfile() {
   const { uid } = useAuth();
   const [profile, setProfile] = useState<UserWithId | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadedUid, setLoadedUid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!uid) {
       setProfile(null);
+      setLoading(false);
+      setLoadedUid(null);
       return;
     }
+    setProfile(null);
+    setLoading(true);
     const unsubscribe = subscribeToDocument<UserWithId>(
       `users/${uid}`,
-      (data) => setProfile(data)
+      (data) => {
+        setProfile(data);
+        setLoading(false);
+        setLoadedUid(uid);
+      }
     );
     return unsubscribe;
   }, [uid]);
@@ -51,5 +61,6 @@ export function useProfile() {
     }
   };
 
-  return { profile, updateProfile, completeTour, completeResultsTour };
+  const profileLoading = Boolean(uid) && (loading || loadedUid !== uid);
+  return { profile, loading: profileLoading, updateProfile, completeTour, completeResultsTour };
 }

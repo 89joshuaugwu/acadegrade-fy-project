@@ -1,7 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 
 /** Student level in Nigerian university system */
-export const STUDENT_LEVELS = [100, 200, 300, 400, 500] as const;
+export const STUDENT_LEVELS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] as const;
 export type StudentLevel = typeof STUDENT_LEVELS[number];
 
 /** Record mode determines how students enter their results */
@@ -23,6 +23,13 @@ export interface User {
   recordMode: RecordMode;
   gradeMode: GradeMode;
   currentSession: string;
+  entrySession?: string;
+  graduationSession?: string;
+  courseDuration?: number;
+  semestersCompleted?: number;
+  matricNormalized?: string;
+  setupComplete?: boolean;
+  setupCompletedAt?: Timestamp;
   isAdmin: boolean;
   disabled: boolean;
   fcmToken: string | null;
@@ -56,6 +63,9 @@ export interface RegisterFormData {
   programme: string;
   currentLevel: StudentLevel;
   currentSession: string;
+  entrySession?: string;
+  graduationSession?: string;
+  courseDuration: number;
   recordMode: RecordMode;
   semestersCompleted?: number;
 }
@@ -67,4 +77,3 @@ export interface PastSemesterEntry {
   session: string;
   label: string;
 }
-

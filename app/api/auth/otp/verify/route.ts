@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
+import { issueRegistrationTicket } from '@/lib/auth/registration-ticket';
+
+class OtpVerificationError extends Error {
+  constructor(message: string, readonly status = 400) {
+    super(message);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,56 +18,82 @@ export async function POST(request: NextRequest) {
     const { email, type } = payload;
     const code = payload.code ?? payload.otp;
 
-    if (!email || !type || !code) {
+    if (
+      typeof email !== 'string' ||
+      !email.trim() ||
+      !code ||
+      !['registration', 'reset'].includes(type)
+    ) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const normalizedCode = String(code).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) || !/^\d{6}$/.test(normalizedCode)) {
+      return NextResponse.json({ error: 'Invalid verification details' }, { status: 400 });
+    }
     const otpId = `${normalizedEmail}_${type}`;
     const otpRef = adminDb.collection('otps').doc(otpId);
-    
-    const doc = await otpRef.get();
-    if (!doc.exists) {
-      return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 });
-    }
 
-    const data = doc.data()!;
-    
-    // Check if used
-    if (data.used) {
-      return NextResponse.json({ error: 'OTP Already Used' }, { status: 400 });
-    }
+    const registrationTicket = type === 'registration'
+      ? issueRegistrationTicket(normalizedEmail)
+      : null;
 
-    // Check expiry
-    const now = Date.now();
-    const expiresAt = data.expiresAt.toMillis();
-    
-    if (now > expiresAt) {
-      // It's expired. Keep it as void, we will let a cron or TTL policy delete it later, 
-      // or we just leave it and overwrite it when they request a new one.
-      return NextResponse.json({ error: 'OTP Expired' }, { status: 400 });
-    }
+    const verificationFailure = await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(otpRef);
+      if (!doc.exists) throw new OtpVerificationError('Invalid OTP');
 
-    // Check attempts to prevent brute force
-    if (data.attempts >= 5) {
-      return NextResponse.json({ error: 'Too many failed attempts. Please request a new OTP.' }, { status: 400 });
-    }
+      const data = doc.data()!;
+      if (data.used) throw new OtpVerificationError('OTP already used');
 
-    // Check code match
-    if (data.code !== code) {
-      await otpRef.update({ attempts: data.attempts + 1 });
-      return NextResponse.json({ error: 'Invalid OTP' }, { status: 400 });
-    }
+      const expiresAt = data.expiresAt?.toMillis?.() ?? 0;
+      if (Date.now() > expiresAt) throw new OtpVerificationError('OTP expired');
 
-    // Valid! Mark as used
-    await otpRef.update({ used: true, verifiedAt: new Date() });
+      const attempts = Number(data.attempts) || 0;
+      if (attempts >= 5) {
+        throw new OtpVerificationError('Too many failed attempts. Please request a new OTP.');
+      }
+
+      if (String(data.code) !== normalizedCode) {
+        transaction.update(otpRef, { attempts: attempts + 1 });
+        return 'Invalid OTP';
+      }
+
+      const verifiedAt = new Date();
+      transaction.update(otpRef, { used: true, verifiedAt });
+
+      if (registrationTicket) {
+        const ticketRef = adminDb
+          .collection('_registration_tickets')
+          .doc(registrationTicket.payload.jti);
+        transaction.set(ticketRef, {
+          email: normalizedEmail,
+          createdAt: verifiedAt,
+          expiresAt: new Date(registrationTicket.payload.expiresAt),
+          used: false,
+        });
+      }
+      return null;
+    });
+
+    if (verificationFailure) {
+      throw new OtpVerificationError(verificationFailure);
+    }
 
     logApiCall({ endpoint: '/api/auth/otp/verify', category: 'otp', uid: null, status: 200, durationMs: timer() });
-    return NextResponse.json({ success: true, message: 'OTP verified successfully' });
+    return NextResponse.json({
+      success: true,
+      message: 'OTP verified successfully',
+      ...(registrationTicket ? { verificationToken: registrationTicket.token } : {}),
+    });
 
   } catch (error) {
     console.error('OTP Verify Error:', error);
-    logApiCall({ endpoint: '/api/auth/otp/verify', category: 'otp', uid: null, status: 500, durationMs: 0, error: String(error) });
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const status = error instanceof OtpVerificationError ? error.status : 500;
+    logApiCall({ endpoint: '/api/auth/otp/verify', category: 'otp', uid: null, status, durationMs: 0, error: String(error) });
+    return NextResponse.json(
+      { error: error instanceof OtpVerificationError ? error.message : 'Internal server error' },
+      { status }
+    );
   }
 }
