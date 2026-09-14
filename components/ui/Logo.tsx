@@ -23,44 +23,49 @@ export function Logo({ className, href = '/dashboard', onClick, size = 'md' }: L
   };
 
   const content = (
-    <div className={cn("flex items-center gap-2.5 group cursor-pointer", className)} onClick={onClick}>
-      {/* Icon Graphic */}
+    <span className={cn('group flex items-center gap-2.5', className)}>
       <div className={cn(
-        "relative flex items-center justify-center transition-transform duration-300 group-hover:scale-105 group-hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] rounded-lg",
+        'relative flex shrink-0 items-center justify-center rounded-lg',
         iconSizes[size]
       )}>
         <Image 
           src="/logo.png" 
-          alt="AcadeGrade Logo" 
+          alt="" 
           fill 
           className="object-contain" 
           priority 
         />
       </div>
 
-      {/* Text Wordmark */}
-      <div className="flex flex-col justify-center">
+      <span className="flex flex-col justify-center">
         <span 
           className={cn(
-            "font-[family-name:var(--font-bricolage)] font-extrabold tracking-tight leading-none",
-            "bg-gradient-to-r from-white via-indigo-100 to-[var(--acade-primary-glow)] text-transparent bg-clip-text",
-            "drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)] transition-all duration-300 group-hover:drop-shadow-[0_4px_8px_rgba(99,102,241,0.3)]",
+            'font-[family-name:var(--font-bricolage)] font-extrabold leading-none tracking-tight text-[var(--acade-text)]',
             sizeClasses[size]
           )}
         >
           AcadeGrade
         </span>
-      </div>
-    </div>
+      </span>
+    </span>
   );
 
   if (href) {
     return (
-      <Link href={href} className="focus:outline-none">
+      <Link
+        href={href}
+        onClick={onClick}
+        aria-label="AcadeGrade home"
+        className="inline-flex rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--acade-primary)]"
+      >
         {content}
       </Link>
     );
   }
 
-  return content;
+  return onClick ? (
+    <button type="button" onClick={onClick} className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--acade-primary)]">
+      {content}
+    </button>
+  ) : content;
 }

@@ -11,22 +11,29 @@ import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { getDocument } from '@/lib/firebase/firestore';
-import { requestNotificationPermission, onForegroundMessage, removeNotificationToken } from '@/lib/firebase/fcm';
+import { onForegroundMessage, removeNotificationToken } from '@/lib/firebase/fcm';
 import toast from 'react-hot-toast';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
 import { NotificationDropdown } from './NotificationDropdown';
 import { StudentTour } from '@/components/onboarding/StudentTour';
-import { Logo } from '@/components/ui';
+import { Logo, ThemeControl } from '@/components/ui';
+import { RouteAnnouncer } from '@/components/shared';
+import { getRouteMeta, isRouteActive, studentNavigation, type NavigationIcon } from '@/lib/ui/route-meta';
 import { cn } from '@/lib/utils/cn';
 
-const TABS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/results', label: 'Results', icon: BookOpen },
-  { href: '/insights', label: 'Insights', icon: BrainCircuit },
-  { href: '/transcript', label: 'Transcript', icon: FileText },
-];
+const STUDENT_ICONS: Record<NavigationIcon, React.ElementType> = {
+  dashboard: LayoutDashboard,
+  results: BookOpen,
+  insights: BrainCircuit,
+  transcript: FileText,
+  users: LayoutDashboard,
+  courses: BookOpen,
+  analytics: BrainCircuit,
+  activity: BrainCircuit,
+  settings: Settings,
+};
 
 export function StudentShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -35,6 +42,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const { unreadCount } = useNotifications();
   const { insightsStale } = useAnalytics();
   const pathname = usePathname();
+  const routeMeta = getRouteMeta(pathname);
   const [announcement, setAnnouncement] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,11 +63,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     fetchBanner();
   }, []);
 
-  // Request FCM Permission and Listen
+  // Listen for foreground messages. Permission is requested from Settings after an explicit action.
   useEffect(() => {
     if (user?.uid) {
-      requestNotificationPermission(user.uid).catch(console.error);
-
       const unsubscribe = onForegroundMessage((payload) => {
         if (payload?.notification) {
           toast(
@@ -97,23 +103,22 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isActive = (href: string) => {
-    if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href !== '/dashboard' && pathname.startsWith(href)) return true;
-    return false;
-  };
-
   return (
     <div className="min-h-screen bg-[var(--acade-void)] flex flex-col lg:flex-row">
+      <a href="#main-content" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-[var(--acade-primary)] px-4 py-3 text-[var(--acade-on-primary)] focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
+        Skip to content
+      </a>
+      <RouteAnnouncer title={routeMeta.title} />
       {/* Mobile & Tablet Header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between px-4 h-16 bg-[var(--acade-deep)]/80 backdrop-blur-md border-b border-[var(--acade-border)] lg:hidden">
+      <header className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
         <Logo size="sm" />
         <div className="flex items-center gap-1">
           <NotificationDropdown />
           <button
             id="tour-mobile-hamburger-btn"
             onClick={() => setDrawerOpen(true)}
-            className="p-2 rounded-full text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] transition-colors"
+            type="button"
+            className="flex size-12 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
             aria-label="Open menu"
           >
             <Menu size={24} />
@@ -122,12 +127,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex flex-col w-[240px] fixed inset-y-0 left-0 bg-[var(--acade-deep)]/90 backdrop-blur-xl border-r border-[var(--acade-border)] z-40 overflow-y-auto">
+      <aside aria-label="Student navigation" className="fixed inset-y-0 left-0 hidden w-[var(--student-rail-width)] flex-col overflow-y-auto border-r border-[var(--acade-border)] bg-[var(--acade-deep)] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
         <div className="p-6">
           <Logo size="md" className="mb-8" />
 
           {/* Profile snippet */}
-          <div className="flex flex-col items-center mb-8 bg-[var(--acade-surface)] p-4 rounded-2xl border border-[var(--acade-border-subtle)]">
+          <div className="mb-8 flex flex-col items-center rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-card)]">
             <div className="mb-3 rounded-full border-2 border-[var(--acade-primary)]/50 overflow-hidden size-16 shrink-0 relative flex items-center justify-center bg-[var(--acade-deep)]">
               {profile?.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
@@ -143,10 +148,10 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          <nav id="tour-sidebar-nav" className="flex flex-col gap-1.5">
-            {TABS.map((tab) => {
-              const active = isActive(tab.href);
-              const Icon = tab.icon;
+          <nav id="tour-sidebar-nav" aria-label="Primary" className="flex flex-col gap-1.5">
+            {studentNavigation.map((tab) => {
+              const active = isRouteActive(pathname, tab.href);
+              const Icon = STUDENT_ICONS[tab.icon];
               return (
                 <Link
                   key={tab.href}
@@ -156,22 +161,21 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                     "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
                     active
                       ? "text-[var(--acade-primary)]"
-                      : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
+                      : "border border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
                   )}
                 >
                   {active && (
                     <motion.div
                       layoutId="sidebar-pill"
-                      className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      className="absolute inset-0 rounded-xl border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                      transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                     />
                   )}
                   <div className="relative z-10">
                     <Icon size={20} className={active ? "text-[var(--acade-primary-glow)]" : ""} />
                     {tab.label === 'Insights' && insightsStale && (
                       <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-[var(--acade-deep)]"></span>
+                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full border-2 border-[var(--acade-deep)] bg-[var(--acade-danger)]"></span>
                       </span>
                     )}
                   </div>
@@ -189,12 +193,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               id="tour-desktop-nav-notifications"
               className={cn(
                 "relative flex items-center justify-between px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
-                isActive('/notifications')
+                isRouteActive(pathname, '/notifications')
                   ? "text-[var(--acade-primary)]"
                   : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
               )}
             >
-              {isActive('/notifications') && (
+              {isRouteActive(pathname, '/notifications') && (
                 <motion.div
                   layoutId="sidebar-pill"
                   className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
@@ -202,11 +206,11 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 />
               )}
               <div className="relative z-10 flex items-center gap-3">
-                <Bell size={20} className={isActive('/notifications') ? "text-[var(--acade-primary-glow)]" : ""} />
+                <Bell size={20} className={isRouteActive(pathname, '/notifications') ? "text-[var(--acade-primary-glow)]" : ""} />
                 Notifications
               </div>
               {unreadCount > 0 && (
-                <span className="relative z-10 bg-[var(--acade-primary)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                <span className="relative z-10 min-w-5 rounded-full bg-[var(--acade-primary)] px-2 py-0.5 text-center text-xs font-bold text-[var(--acade-on-primary)]">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -218,23 +222,25 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             id="tour-desktop-nav-settings"
             className={cn(
               "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
-              isActive('/settings')
+              isRouteActive(pathname, '/settings')
                 ? "text-[var(--acade-primary)]"
                 : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
             )}
           >
-            {isActive('/settings') && (
+            {isRouteActive(pathname, '/settings') && (
               <motion.div
                 layoutId="sidebar-pill"
                 className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
               />
             )}
-            <Settings size={20} className={cn("relative z-10", isActive('/settings') ? "text-[var(--acade-primary-glow)]" : "")} />
+            <Settings size={20} className={cn("relative z-10", isRouteActive(pathname, '/settings') ? "text-[var(--acade-primary-glow)]" : "")} />
             <span className="relative z-10">Settings</span>
           </Link>
           
+          <ThemeControl className="mb-2 w-full" />
           <button
+            type="button"
             id="tour-desktop-nav-logout"
             onClick={handleSignOut}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] text-left w-full mt-2"
@@ -246,7 +252,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:ml-[240px] pb-[80px] lg:pb-0 relative min-h-screen">
+      <main id="main-content" className="relative min-h-screen flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:ml-[var(--student-rail-width)] lg:pb-0">
         {announcement && (
           <div className="bg-[var(--acade-gold)]/10 border-b border-[var(--acade-gold)]/20 px-4 py-3 flex items-start sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3 text-[var(--acade-gold)]">
@@ -255,17 +261,23 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 {announcement}
               </p>
             </div>
-            <button onClick={dismissBanner} className="p-1 rounded-full text-[var(--acade-gold)] hover:bg-[var(--acade-gold)]/20 transition-colors shrink-0">
+            <button type="button" aria-label="Dismiss announcement" onClick={dismissBanner} className="flex size-12 shrink-0 items-center justify-center rounded-xl text-[var(--acade-gold)] transition-colors hover:bg-[var(--acade-gold-dim)]">
               <X size={16} />
             </button>
           </div>
         )}
-        <div className="max-w-6xl mx-auto p-4 lg:p-8 w-full h-full">
+        <div className="mx-auto h-full w-full max-w-[1200px] p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>
 
-      <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} isAdmin={false} />
+      <MobileDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        isAdmin={false}
+        profile={profile}
+        unreadCount={unreadCount}
+      />
       <BottomTabBar />
       <StudentTour />
     </div>

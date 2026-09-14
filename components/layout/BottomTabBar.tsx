@@ -7,33 +7,31 @@ import { LayoutDashboard, BookOpen, BrainCircuit, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { isRouteActive, studentNavigation, type NavigationIcon } from '@/lib/ui/route-meta';
 
-const TABS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/results', label: 'Results', icon: BookOpen },
-  { href: '/insights', label: 'Insights', icon: BrainCircuit },
-  { href: '/transcript', label: 'Transcript', icon: FileText },
-];
+const TAB_ICONS: Record<NavigationIcon, React.ElementType> = {
+  dashboard: LayoutDashboard,
+  results: BookOpen,
+  insights: BrainCircuit,
+  transcript: FileText,
+  users: LayoutDashboard,
+  courses: BookOpen,
+  analytics: BrainCircuit,
+  activity: BrainCircuit,
+  settings: LayoutDashboard,
+};
 
 export function BottomTabBar() {
   const pathname = usePathname();
   const shouldReduceMotion = useReducedMotion();
   const { insightsStale } = useAnalytics();
 
-  // Highlight 'Home' if on dashboard, etc.
-  // Using exact matches or startsWith based on the route
-  const isActive = (href: string) => {
-    if (href === '/dashboard' && pathname === '/dashboard') return true;
-    if (href !== '/dashboard' && pathname.startsWith(href)) return true;
-    return false;
-  };
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--acade-deep)]/80 backdrop-blur-xl border-t border-[var(--acade-border)] pb-safe lg:hidden">
-      <div className="flex items-center justify-around h-16 px-2">
-        {TABS.map((tab) => {
-          const active = isActive(tab.href);
-          const Icon = tab.icon;
+    <nav aria-label="Student tabs" className="fixed inset-x-0 bottom-0 border-t border-[var(--acade-border)] bg-[var(--acade-deep)]/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
+      <div className="mx-auto flex h-16 max-w-xl items-center justify-around px-2">
+        {studentNavigation.map((tab) => {
+          const active = isRouteActive(pathname, tab.href);
+          const Icon = TAB_ICONS[tab.icon];
 
           return (
             <Link
@@ -47,8 +45,8 @@ export function BottomTabBar() {
               {active && !shouldReduceMotion && (
                 <motion.div
                   layoutId="bottom-tab-pill"
-                  className="absolute inset-y-1 inset-x-2 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-2xl shadow-[0_0_15px_rgba(99,102,241,0.1)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="absolute inset-x-2 inset-y-1 rounded-2xl border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                  transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                 />
               )}
               {active && shouldReduceMotion && (
@@ -60,20 +58,19 @@ export function BottomTabBar() {
                   size={20}
                   className={cn(
                     'transition-colors duration-300',
-                    active ? 'text-[var(--acade-primary)] fill-[var(--acade-primary)]/20 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]' : 'text-[var(--acade-text-muted)] group-hover:text-[var(--acade-text)]'
+                    active ? 'fill-[var(--acade-primary)]/15 text-[var(--acade-primary)]' : 'text-[var(--acade-text-muted)] group-hover:text-[var(--acade-text)]'
                   )}
                   strokeWidth={active ? 2.5 : 2}
                 />
                 {tab.label === 'Insights' && insightsStale && (
                   <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 z-10">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-[var(--acade-deep)]"></span>
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full border-2 border-[var(--acade-deep)] bg-[var(--acade-danger)]"></span>
                   </span>
                 )}
               </div>
               <span
                 className={cn(
-                  'relative z-10 text-[10px] font-bold font-[family-name:var(--font-dm-sans)] transition-colors duration-300',
+                  'relative z-10 text-xs font-semibold font-[family-name:var(--font-dm-sans)] transition-colors duration-150',
                   active ? 'text-[var(--acade-primary)]' : 'text-[var(--acade-text-muted)] group-hover:text-[var(--acade-text)]'
                 )}
               >

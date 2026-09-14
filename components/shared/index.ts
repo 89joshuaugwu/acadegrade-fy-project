@@ -12,3 +12,6 @@ export type { ErrorStateProps } from './ErrorState';
 
 export { PageHeader } from './PageHeader';
 export type { PageHeaderProps } from './PageHeader';
+
+export { RouteAnnouncer } from './RouteAnnouncer';
+export type { RouteAnnouncerProps } from './RouteAnnouncer';
