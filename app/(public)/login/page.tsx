@@ -1,28 +1,24 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'motion/react';
+import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'motion/react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, LoaderCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { cn } from '@/lib/utils/cn';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { useAuth } from '@/hooks/useAuth';
-import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
-import { getDocument } from '@/lib/firebase/firestore';
-import { isStudentProfileComplete } from '@/lib/auth/profile';
+import { AuthDivider, AuthShell } from '@/components/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Logo } from '@/components/ui';
-import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
-import { HolographicCard } from '@/components/ui/HolographicCard';
 import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
+import { useAuth } from '@/hooks/useAuth';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { isStudentProfileComplete } from '@/lib/auth/profile';
+import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
+import { getDocument } from '@/lib/firebase/firestore';
 
-/* ─── Validation Schema ─── */
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
   password: z.string().min(1, 'Password is required'),
@@ -30,7 +26,6 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-/* ─── Google Icon (inline SVG) ─── */
 function GoogleIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
@@ -42,18 +37,12 @@ function GoogleIcon() {
   );
 }
 
-/* ════════════════════════════════════════════════════
-   LOGIN PAGE
-   ════════════════════════════════════════════════════ */
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const shouldReduceMotion = useReducedMotion();
-
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-
   const [shakeForm, setShakeForm] = useState(false);
 
   const routeAuthenticatedUser = useCallback(async (signedInUser: { uid: string }) => {
@@ -63,7 +52,6 @@ export default function LoginPage() {
     return profileComplete;
   }, [router]);
 
-  // Firebase Auth alone is not a completed AcadeGrade account.
   useEffect(() => {
     if (!authLoading && user) {
       routeAuthenticatedUser(user).catch(() => {
@@ -80,7 +68,7 @@ export default function LoginPage() {
         if (doc?.maintenanceMode) {
           router.replace('/maintenance');
         }
-      } catch (err) {}
+      } catch {}
     };
     checkMaintenance();
   }, [router]);
@@ -92,7 +80,6 @@ export default function LoginPage() {
     setError,
   } = useForm<LoginFormData>();
 
-  /* ── Email/Password Sign In ── */
   const onSubmit = useCallback(
     async (data: LoginFormData) => {
       setIsSubmitting(true);
@@ -116,7 +103,6 @@ export default function LoginPage() {
     [routeAuthenticatedUser, setError]
   );
 
-  /* ── Google Sign In ── */
   const handleGoogleSignIn = useCallback(async () => {
     setIsGoogleLoading(true);
     try {
@@ -134,141 +120,124 @@ export default function LoginPage() {
     }
   }, [routeAuthenticatedUser]);
 
-
-
-  // Show nothing while checking auth state
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--acade-void)]">
-        <div className="size-10 rounded-full border-2 border-[var(--acade-primary)] border-t-transparent animate-spin" />
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--acade-void)] px-4">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] px-5 py-4 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] shadow-[var(--shadow-card)]"
+        >
+          <LoaderCircle className="size-5 animate-spin text-[var(--acade-primary)]" aria-hidden="true" />
+          Checking your sign-in status…
+        </div>
       </div>
     );
   }
 
-  // Already logged in — waiting for redirect
   if (user) return null;
 
-  const fadeUp = shouldReduceMotion
-    ? {}
-    : { initial: { opacity: 0, y: 24, filter: 'blur(6px)' }, animate: { opacity: 1, y: 0, filter: 'blur(0px)' }, transition: { duration: 0.4 } };
-
   return (
-    <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
-      {/* Keystroke Reactive Background */}
-      <ReactiveAuthBackground />
-
+    <AuthShell
+      eyebrow="Student access"
+      title="Welcome back"
+      description="Sign in to continue tracking your academic progress."
+      proofTitle="Know where you stand before the next result"
+      proofDescription="Bring every semester into one dependable record, then use CGPA and PI together to understand your direction."
+      proofItems={[
+        'Resume from your latest academic record',
+        'Keep incomplete profile setup on the right path',
+        'Review results, forecasts, and transcripts in one place',
+      ]}
+      support={
+        <>
+          New to AcadeGrade? <Link href="/register">Create an account</Link>
+        </>
+      }
+    >
       <motion.div
-        {...fadeUp}
-        className="relative w-full max-w-md"
+        animate={shakeForm && !shouldReduceMotion ? { x: [0, -8, 8, -5, 5, -2, 2, 0] } : { x: 0 }}
+        transition={{ duration: 0.5 }}
       >
-        {/* Logo + Title */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="mb-6">
-            <Logo href="/" size="lg" />
-          </div>
-          <h1 className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] text-center">
-            Welcome Back
-          </h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mt-1.5">
-            Sign in to continue tracking your academic progress
-          </p>
-        </div>
-
-        {/* Card */}
-        <HolographicCard
-          animate={shakeForm && !shouldReduceMotion ? { x: [0, -8, 8, -5, 5, -2, 2, 0] } : {}}
-          transition={{ duration: 0.5 }}
-          className="mb-6"
+        <Button
+          variant="outline"
+          size="md"
+          fullWidth
+          loading={isGoogleLoading}
+          loadingLabel="Signing in with Google…"
+          onClick={handleGoogleSignIn}
         >
-          {/* Google Sign-In */}
-          <Button
-            variant="outline"
-            size="md"
-            fullWidth
-            loading={isGoogleLoading}
-            onClick={handleGoogleSignIn}
-            className="mb-5"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </Button>
+          <GoogleIcon />
+          Continue with Google
+        </Button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-[var(--acade-border)]" />
-            <span className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-dm-sans)] uppercase tracking-wider">
-              or
-            </span>
-            <div className="flex-1 h-px bg-[var(--acade-border)]" />
+        <AuthDivider className="my-5">Or sign in with email</AuthDivider>
+
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex flex-col gap-4"
+          aria-label="Sign in with email"
+          noValidate
+        >
+          <Input
+            label="Email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="you@university.edu"
+            error={errors.email?.message}
+            {...register('email', {
+              required: 'Email is required',
+              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
+            })}
+          />
+
+          <Input
+            label="Password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            error={errors.password?.message}
+            {...register('password', { required: 'Password is required' })}
+          />
+
+          <div className="flex justify-end">
+            <Link
+              href="/forgot-password"
+              className="flex min-h-12 items-center rounded-lg text-[length:var(--text-sm)] font-semibold text-[var(--acade-primary)] underline-offset-4 transition-colors hover:text-[var(--acade-primary-hover)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+            >
+              Forgot password?
+            </Link>
           </div>
 
-          {/* Email/Password Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-            <Input
-              label="Email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@university.edu"
-              error={errors.email?.message}
-              {...register('email', {
-                required: 'Email is required',
-                pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
-              })}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              error={errors.password?.message}
-              {...register('password', { required: 'Password is required' })}
-            />
-
-            {/* Forgot password */}
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-[length:var(--text-sm)] text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors font-[family-name:var(--font-dm-sans)] h-10 flex items-center"
+          <AnimatePresence initial={false}>
+            {errors.root && (
+              <motion.p
+                role="alert"
+                initial={shouldReduceMotion ? {} : { opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                className="overflow-hidden rounded-xl bg-[var(--acade-danger-dim)] px-4 py-3 text-[length:var(--text-sm)] text-[var(--acade-danger)]"
               >
-                Forgot password?
-              </Link>
-            </div>
+                {errors.root.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
 
-            {/* Root error */}
-            <AnimatePresence>
-              {errors.root && (
-                <motion.p
-                  initial={shouldReduceMotion ? {} : { opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                  className="text-[length:var(--text-sm)] text-[var(--acade-danger)] font-[family-name:var(--font-dm-sans)] text-center"
-                >
-                  {errors.root.message}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            <Button type="submit" variant="primary" size="lg" fullWidth loading={isSubmitting}>
-              Sign In <ArrowRight size={18} />
-            </Button>
-          </form>
-        </HolographicCard>
-
-        {/* Footer */}
-        <p className="text-center mt-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/register"
-            className="text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] font-semibold transition-colors"
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            fullWidth
+            loading={isSubmitting}
+            loadingLabel="Signing in…"
           >
-            Sign up →
-          </Link>
-        </p>
-        <MobileAppDownload compact className="mt-4" />
+            Sign in <ArrowRight size={18} aria-hidden="true" />
+          </Button>
+        </form>
+
+        <MobileAppDownload compact className="mt-5" />
       </motion.div>
-
-
-    </main>
+    </AuthShell>
   );
 }

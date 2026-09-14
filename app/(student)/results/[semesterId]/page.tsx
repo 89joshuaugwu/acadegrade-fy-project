@@ -7,7 +7,9 @@ import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, Che
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { getDocument, setDocument, queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
+import { getDocument, setDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
+import { commitSemesterRecord } from '@/lib/firebase/semester';
+import { prepareSemesterSave, SemesterSaveValidationError } from '@/lib/results/semester-save';
 import { increment } from 'firebase/firestore';
 import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
@@ -87,58 +89,19 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
     if (!user?.uid || !semester) return;
     setSaving(true);
     try {
-      let totalUnits = 0;
-      let totalGP = 0;
-      let totalPI = 0;
-
-      // Find which existing courses were deleted
-      const updatedIds = updatedCourses.map(c => c.id).filter(Boolean);
+      const prepared = prepareSemesterSave(updatedCourses);
+      const updatedIds = prepared.courses.map((course) => course.id).filter((id): id is string => Boolean(id));
       const coursesToDelete = initialCourses.filter(c => c.id && !updatedIds.includes(c.id));
-      
-      for (const course of coursesToDelete) {
-        if (course.id) {
-          await deleteDocument(`users/${user.uid}/semesters/${semesterId}/courses/${course.id}`);
-        }
-      }
 
-      for (const course of updatedCourses) {
-        const totalScore = (course.caScore || 0) + (course.examScore || 0);
-        const scale = GRADE_SCALE.find(g => totalScore >= g.minScore && totalScore <= g.maxScore) || GRADE_SCALE[GRADE_SCALE.length - 1];
-        
-        const courseData: Partial<Course> = {
-          code: course.code,
-          title: course.title,
-          units: course.units,
-          caScore: course.caScore,
-          examScore: course.examScore,
-          totalScore,
-          grade: scale.grade,
-          gradePoint: scale.gradePoint,
-          piPoint: (totalScore / 100) * 5,
-        };
-
-        totalUnits += course.units;
-        totalGP += scale.gradePoint * course.units;
-        totalPI += courseData.piPoint! * course.units;
-
-        // Use a stable ID if we had one, else generate new
-        const cid = course.id || Math.random().toString(36).substr(2, 9);
-        await setDocument(`users/${user.uid}/semesters/${semesterId}/courses/${cid}`, courseData);
-      }
-
-      const gpa = totalUnits > 0 ? totalGP / totalUnits : 0;
-      const pi = totalUnits > 0 ? totalPI / totalUnits : 0;
-
-      // 3. Update semester document
-      await updateDocument(`users/${user.uid}/semesters/${semesterId}`, {
-        gpa,
-        pi,
-        creditLoaded: totalUnits,
-        isComplete: true, // Mark complete on save
+      await commitSemesterRecord({
+        uid: user.uid,
+        semesterId,
+        courses: prepared.courses,
+        removedCourseIds: coursesToDelete.map((course) => course.id).filter((id): id is string => Boolean(id)),
+        summary: prepared.summary,
       });
 
-      // 4. Mark AI insights as stale so the user gets a red dot on the Insights tab
-      await setDocument(`analytics/${user.uid}`, { insightsStale: true });
+      const { gpa } = prepared.summary;
 
       // 5. Trigger Notifications
       const token = await user.getIdToken();
@@ -171,7 +134,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
       router.push('/results');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to save semester');
+      toast.error(err instanceof SemesterSaveValidationError ? err.message : 'Failed to save semester');
     } finally {
       setSaving(false);
     }
@@ -338,7 +301,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
       <ResultsTour />
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()} className="px-2">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/results')} className="px-2" aria-label="Back to results">
             <ArrowLeft size={20} />
           </Button>
           <div>

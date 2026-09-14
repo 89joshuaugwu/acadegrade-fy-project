@@ -1,261 +1,206 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { GitBranch, Globe, Mail, Code2, GraduationCap, Cpu, ShieldCheck, Zap, Database, Palette } from 'lucide-react';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Logo } from '@/components/ui/Logo';
+import { useCallback, useEffect, useState } from 'react';
+import { ArrowRight, BookOpenCheck, BrainCircuit, Mail, RefreshCw, ShieldCheck, Target } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
-import { KnowledgeCoreBackground } from '@/components/ui/KnowledgeCoreBackground';
-import { HolographicCard } from '@/components/ui/HolographicCard';
-import { HolographicIDCard } from '@/components/ui/HolographicIDCard';
-import { OrbitingTechStack } from '@/components/ui/OrbitingTechStack';
+import { PageTransition } from '@/components/shared/PageTransition';
+import { Button, LinkButton, Skeleton } from '@/components/ui';
+import { DEFAULT_ABOUT_CONTENT, type AboutContent } from '@/lib/about/content';
 
-/** Map tech name → icon */
-const TECH_ICONS: Record<string, React.ReactNode> = {
-  'Next.js': <Zap size={24} />,
-  React: <Code2 size={24} />,
-  Firebase: <ShieldCheck size={24} />,
-  'Tailwind CSS': <Palette size={24} />,
-  TypeScript: <Code2 size={24} />,
-  Firestore: <Database size={24} />,
-  Default: <Cpu size={24} />,
-};
-
-function getIcon(name: string) {
-  return TECH_ICONS[name] ?? TECH_ICONS.Default;
-}
-
-interface AboutData {
-  platformDescription: string;
-  academicContext: string;
-  academicContextExtra: string;
-  builderName: string;
-  builderInitials: string;
-  builderImageUrl?: string;
-  builderBio: string;
-  githubUrl: string;
-  repoUrl: string;
-  liveUrl: string;
-  contactEmail: string;
-  techStack: Array<{ name: string; description: string }>;
-}
+const principles = [
+  {
+    icon: BookOpenCheck,
+    title: 'One dependable record',
+    description: 'Keep semester results, courses, credits, and progress in a structure that remains easy to understand.',
+  },
+  {
+    icon: BrainCircuit,
+    title: 'Insight with context',
+    description: 'Use CGPA, raw-score performance, and trends together instead of relying on one number in isolation.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Private by default',
+    description: 'Your academic information stays tied to your account, with explicit controls whenever you choose to share it.',
+  },
+] as const;
 
 export default function AboutPage() {
-  const [data, setData] = useState<AboutData | null>(null);
+  const [data, setData] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/about')
-      .then(r => r.json())
-      .then(json => setData(json.about))
-      .catch(err => console.error('Failed to load about data', err))
-      .finally(() => setLoading(false));
+  const loadAbout = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(false);
+
+    try {
+      const response = await fetch('/api/about', { signal });
+      if (!response.ok) throw new Error('Unable to load About content.');
+      const payload = await response.json();
+      if (!signal?.aborted && payload?.about) setData(payload.about);
+    } catch (loadError) {
+      if (signal?.aborted) return;
+      console.error('Failed to load About content:', loadError);
+      setError(true);
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
   }, []);
 
-  if (loading) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen pt-24 pb-20 px-4">
-          <div className="max-w-4xl mx-auto space-y-10">
-            <Skeleton className="h-12 w-64 mx-auto" />
-            <Skeleton className="h-6 w-96 mx-auto" />
-            <Skeleton className="h-48 rounded-3xl" />
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <Skeleton key={i} className="h-36 rounded-2xl" />
-              ))}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Skeleton className="h-52 rounded-3xl" />
-              <Skeleton className="h-52 rounded-3xl" />
-            </div>
-          </div>
-        </div>
-        <PublicFooter />
-      </>
-    );
-  }
-
-  if (!data) return null;
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadAbout(controller.signal);
+    return () => controller.abort();
+  }, [loadAbout]);
 
   return (
-    <>
+    <div className="min-h-screen bg-[var(--acade-void)] text-[var(--acade-text)]">
       <Navbar />
-
-      <div className="min-h-screen pt-24 pb-20 px-4 relative overflow-hidden">
-        {/* The 3D Knowledge Core Interactive Centerpiece */}
-        <KnowledgeCoreBackground />
-
-        <div className="max-w-4xl mx-auto space-y-16 relative z-10">
-          {/* ─── Header ─── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center space-y-6"
-          >
-            {/* Use the actual Logo component */}
-            <div className="flex justify-center mb-4">
-              <Logo href="/" size="lg" />
-            </div>
-
-            <h1 className="text-[length:var(--text-4xl)] md:text-[length:var(--text-6xl)] font-bold font-[family-name:var(--font-bricolage)]">
-              About{' '}
-              <span className="bg-gradient-to-r from-white via-indigo-100 to-[var(--acade-primary-glow)] text-transparent bg-clip-text">
-                AcadeGrade
-              </span>
-            </h1>
-            <p className="text-[var(--acade-text-muted)] text-[length:var(--text-lg)] md:text-[length:var(--text-xl)] max-w-2xl mx-auto leading-relaxed">
-              {data.platformDescription}
-            </p>
-          </motion.div>
-
-          {/* ─── Academic Context ─── */}
-          <HolographicCard
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="p-8 md:p-10 relative overflow-hidden group hover:border-[var(--acade-primary)]/50 transition-colors"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/10 rounded-bl-full pointer-events-none" />
-            <h2 className="text-[length:var(--text-2xl)] font-bold mb-4 font-[family-name:var(--font-bricolage)] flex items-center gap-2">
-              <GraduationCap className="text-[var(--acade-primary)]" />
-              Academic Context (CSC 499)
-            </h2>
-            <p className="text-[var(--acade-text-muted)] text-[length:var(--text-base)] leading-relaxed mb-4 relative z-10">
-              {data.academicContext}
-            </p>
-            {data.academicContextExtra && (
-              <p className="text-[var(--acade-text-muted)] text-[length:var(--text-base)] leading-relaxed relative z-10">
-                {data.academicContextExtra}
-              </p>
-            )}
-          </HolographicCard>
-
-          {/* ─── Tech Stack ─── */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-6"
-          >
-            <h2 className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-bricolage)] text-center">
-              Technology Stack
-            </h2>
-            <div className="hidden md:block">
-              <OrbitingTechStack techStack={data.techStack} />
-            </div>
-
-            {/* Mobile Fallback Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
-              {data.techStack.map((tech) => (
-                <HolographicCard
-                  key={tech.name}
-                  className="flex flex-col items-center text-center gap-4 p-6"
-                >
-                  <div className="p-3 bg-[var(--acade-deep)]/80 rounded-xl text-[var(--acade-primary)] shadow-[0_0_15px_rgba(79,70,229,0.2)]">
-                    {getIcon(tech.name)}
-                  </div>
-                  <div className="relative z-10">
-                    <h3 className="font-bold text-[length:var(--text-lg)] text-white">{tech.name}</h3>
-                    <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-                      {tech.description}
-                    </p>
-                  </div>
-                </HolographicCard>
-              ))}
-            </div>
-          </motion.section>
-
-          {/* ─── Builder & Links ─── */}
-          <motion.section
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20"
-          >
-            <HolographicIDCard className="p-8 shadow-sm">
-              <h2 className="text-[length:var(--text-2xl)] font-bold mb-4 font-[family-name:var(--font-bricolage)]">
-                The Developer
-              </h2>
-              <div className="flex items-start gap-4">
-                {data.builderImageUrl ? (
-                  <img
-                    src={data.builderImageUrl}
-                    alt={data.builderName}
-                    className="w-16 h-16 rounded-full object-cover shadow-sm shrink-0 border border-[var(--acade-border)]"
-                  />
+      <PageTransition>
+        <main className="overflow-hidden pt-[var(--shell-header-height)]">
+          <section className="relative border-b border-[var(--acade-border-subtle)]">
+            <div aria-hidden="true" className="absolute inset-y-0 left-1/2 hidden w-px bg-[var(--acade-border-subtle)] lg:block" />
+            <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
+              <div className="lg:col-span-7">
+                <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
+                  About AcadeGrade
+                </p>
+                {loading ? (
+                  <>
+                    <Skeleton className="h-16 w-full max-w-2xl rounded-2xl" />
+                    <Skeleton className="mt-6 h-24 w-full max-w-xl rounded-2xl" />
+                  </>
                 ) : (
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--acade-primary)] to-[var(--acade-primary-glow)] flex items-center justify-center text-white font-bold text-xl shrink-0">
-                    {data.builderInitials}
-                  </div>
+                  <>
+                    <h1 className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.6rem,6vw,5rem)] font-bold leading-[1.02] tracking-[-0.05em]">
+                      {data.headline}
+                    </h1>
+                    <p className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
+                      {data.platformDescription}
+                    </p>
+                  </>
                 )}
-                <div>
-                  <h3 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">
-                    {data.builderName}
-                  </h3>
-                  <p className="text-[var(--acade-text-muted)] text-[length:var(--text-sm)] mt-1 mb-4 leading-relaxed">
-                    {data.builderBio}
-                  </p>
-                  {data.githubUrl && (
-                    <a
-                      href={data.githubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors border border-[var(--acade-border)] bg-transparent hover:bg-[var(--acade-deep)] h-9 px-4 py-2"
-                    >
-                      <GitBranch size={16} /> GitHub
-                    </a>
-                  )}
+
+                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                  <LinkButton href="/register" size="lg">
+                    Build your academic record <ArrowRight size={18} aria-hidden="true" />
+                  </LinkButton>
+                  <LinkButton href="/calculator" variant="outline" size="lg">
+                    Try the calculator
+                  </LinkButton>
                 </div>
-              </div>
-            </HolographicIDCard>
 
-            <HolographicIDCard className="p-8 shadow-sm flex flex-col justify-center">
-              <h2 className="text-[length:var(--text-2xl)] font-bold mb-2 font-[family-name:var(--font-bricolage)]">
-                Project Links
-              </h2>
-              <p className="text-[var(--acade-text-muted)] text-[length:var(--text-sm)] mb-6">
-                Explore the source code or contact for inquiries.
-              </p>
-              <div className="space-y-3">
-                {data.repoUrl && (
-                  <a
-                    href={data.repoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-start gap-2 rounded-xl text-sm font-medium transition-colors bg-[var(--acade-primary)] text-white hover:bg-[var(--acade-primary-glow)] h-10 px-4 py-2"
-                  >
-                    <GitBranch size={18} /> Source Repository
-                  </a>
-                )}
-                {data.liveUrl && (
-                  <a
-                    href={data.liveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-start gap-2 rounded-xl text-sm font-medium transition-colors border border-[var(--acade-border)] bg-transparent hover:bg-[var(--acade-deep)] h-10 px-4 py-2"
-                  >
-                    <Globe size={18} /> Live Deployment
-                  </a>
-                )}
-                {data.contactEmail && (
-                  <a
-                    href={`mailto:${data.contactEmail}`}
-                    className="w-full inline-flex items-center justify-start gap-2 rounded-xl text-sm font-medium transition-colors text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-deep)] h-10 px-4 py-2"
-                  >
-                    <Mail size={18} /> Contact Builder
-                  </a>
-                )}
+                {error ? (
+                  <div className="mt-6 flex max-w-xl items-center justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 text-sm text-[var(--acade-text-muted)]">
+                    <span>Showing our standard product information.</span>
+                    <Button variant="ghost" size="sm" onClick={() => void loadAbout()}>
+                      <RefreshCw size={15} aria-hidden="true" /> Retry
+                    </Button>
+                  </div>
+                ) : null}
               </div>
-            </HolographicIDCard>
-          </motion.section>
-        </div>
-      </div>
 
+              <div className="lg:col-span-5">
+                <DegreeSignal />
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="principles-title" className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+            <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">How we build</p>
+                <h2 id="principles-title" className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,4vw,3.3rem)] font-bold leading-[1.08] tracking-[-0.04em]">
+                  Clarity before complexity.
+                </h2>
+                <p className="mt-5 max-w-lg leading-7 text-[var(--acade-text-muted)]">
+                  Academic tools should reduce uncertainty. Every AcadeGrade feature is designed to make progress visible, calculations explainable, and the next decision easier.
+                </p>
+              </div>
+
+              <div className="divide-y divide-[var(--acade-border-subtle)] border-y border-[var(--acade-border-subtle)]">
+                {principles.map(({ icon: Icon, title, description }, index) => (
+                  <article key={title} className="grid gap-4 py-7 sm:grid-cols-[3rem_1fr] sm:gap-5">
+                    <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-primary)]">
+                      <Icon size={20} aria-hidden="true" />
+                    </div>
+                    <div>
+                      <div className="flex items-baseline justify-between gap-4">
+                        <h3 className="text-lg font-bold">{title}</h3>
+                        <span className="font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">0{index + 1}</span>
+                      </div>
+                      <p className="mt-2 max-w-xl leading-7 text-[var(--acade-text-muted)]">{description}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="border-y border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
+            <div className="mx-auto grid max-w-[1200px] gap-6 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20">
+              <article className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
+                <Target className="text-[var(--acade-primary)]" size={25} aria-hidden="true" />
+                <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">Our mission</p>
+                <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-2xl font-bold leading-tight sm:text-3xl">{data.mission}</h2>
+              </article>
+              <article className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
+                <ShieldCheck className="text-[var(--acade-success)]" size={25} aria-hidden="true" />
+                <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">Our commitment</p>
+                <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-2xl font-bold leading-tight sm:text-3xl">{data.trustStatement}</h2>
+              </article>
+            </div>
+          </section>
+
+          <section className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+            <div className="flex flex-col justify-between gap-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-primary)] p-7 text-[var(--acade-on-primary)] shadow-[var(--shadow-card)] sm:p-10 md:flex-row md:items-end">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.17em] opacity-75">Questions or partnerships</p>
+                <h2 className="mt-3 max-w-xl font-[family-name:var(--font-bricolage)] text-3xl font-bold leading-tight sm:text-4xl">
+                  Let&apos;s make academic progress easier to understand.
+                </h2>
+              </div>
+              <a
+                href={`mailto:${data.contactEmail}`}
+                className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--acade-surface)] px-6 font-semibold text-[var(--acade-text)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-on-primary)] motion-reduce:transform-none"
+              >
+                <Mail size={18} aria-hidden="true" /> Contact AcadeGrade
+              </a>
+            </div>
+          </section>
+        </main>
+      </PageTransition>
       <PublicFooter />
-    </>
+    </div>
+  );
+}
+
+function DegreeSignal() {
+  return (
+    <figure className="relative overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
+      <div className="mb-8 flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--acade-text-faint)]">Degree signal</p>
+          <p className="mt-1 text-lg font-bold">Progress, in context</p>
+        </div>
+        <span className="rounded-full bg-[var(--acade-primary-dim)] px-3 py-1.5 text-xs font-bold text-[var(--acade-primary)]">Private</span>
+      </div>
+      <svg viewBox="0 0 440 220" role="img" aria-labelledby="about-chart-title about-chart-desc" className="h-auto w-full">
+        <title id="about-chart-title">Illustrative degree progress</title>
+        <desc id="about-chart-desc">A steady academic progress line across four semesters.</desc>
+        {[48, 92, 136, 180].map((y) => (
+          <line key={y} x1="18" x2="422" y1={y} y2={y} stroke="var(--acade-border-subtle)" />
+        ))}
+        <path d="M24 178 C95 170 100 145 160 148 S244 112 292 109 S365 70 416 58" fill="none" stroke="var(--acade-primary)" strokeWidth="4" strokeLinecap="round" />
+        {[{ x: 24, y: 178 }, { x: 160, y: 148 }, { x: 292, y: 109 }, { x: 416, y: 58 }].map((point) => (
+          <circle key={point.x} cx={point.x} cy={point.y} r="6" fill="var(--acade-surface)" stroke="var(--acade-primary)" strokeWidth="4" />
+        ))}
+      </svg>
+      <figcaption className="mt-5 border-t border-[var(--acade-border-subtle)] pt-5 text-sm leading-6 text-[var(--acade-text-muted)]">
+        AcadeGrade turns semester records into a readable journey without replacing your institution&apos;s official transcript.
+      </figcaption>
+    </figure>
   );
 }

@@ -34,38 +34,19 @@ const DEFAULT_GRADE_SCALE = [
 const DEFAULT_ANDROID_DOWNLOAD_URL = 'https://github.com/89joshuaugwu/AcadeGrade-APK/releases/download/v1.0.0/acadegrade.apk';
 
 interface AboutPageData {
+  headline: string;
   platformDescription: string;
-  academicContext: string;
-  academicContextExtra: string;
-  builderName: string;
-  builderInitials: string;
-  builderImageUrl?: string;
-  builderBio: string;
-  githubUrl: string;
-  repoUrl: string;
-  liveUrl: string;
+  mission: string;
+  trustStatement: string;
   contactEmail: string;
-  techStack: Array<{ name: string; description: string }>;
 }
 
 const DEFAULT_ABOUT: AboutPageData = {
-  platformDescription: 'The next-generation academic tracking and predictive analytics platform built to help students monitor their progress effortlessly.',
-  academicContext: 'AcadeGrade is a comprehensive Final Year Project (FYP) fulfilling the requirements of the CSC 499 course.',
-  academicContextExtra: 'Beyond standard CGPA calculation, this platform introduces AI-driven forecasts, PWA offline capabilities, strict role-based access control, and granular push notifications.',
-  builderName: 'Joshuazaza',
-  builderInitials: 'JZ',
-  builderImageUrl: '',
-  builderBio: 'Software Engineer & Student.',
-  githubUrl: 'https://github.com/89joshuaugwu',
-  repoUrl: 'https://github.com/89joshuaugwu/acadegrade-fy-project',
-  liveUrl: 'https://acadegrade.vercel.app',
-  contactEmail: 'contact@joshuazaza.com',
-  techStack: [
-    { name: 'Next.js', description: 'App Router & Server Actions' },
-    { name: 'React', description: 'Client Components & UI' },
-    { name: 'Firebase', description: 'Auth, Firestore, Cloud Messaging' },
-    { name: 'Tailwind CSS', description: 'Utility-first styling system' },
-  ],
+  headline: 'Academic progress, made clear.',
+  platformDescription: 'AcadeGrade helps university students understand results, monitor degree progress, and make better academic decisions.',
+  mission: 'Our mission is to give every student a dependable, understandable view of their academic journey.',
+  trustStatement: 'Your academic records remain under your control. Sharing is explicit, revocable, and designed around privacy.',
+  contactEmail: 'support@acadegrade.com',
 };
 
 export default function AdminSettingsPage() {
@@ -124,7 +105,7 @@ export default function AdminSettingsPage() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ collection: 'config', doc: 'about', data: aboutData }),
+        body: JSON.stringify({ target: 'about', data: aboutData }),
       });
       if (res.ok) {
         toast.success('About page content updated!');
@@ -152,29 +133,6 @@ export default function AdminSettingsPage() {
       }
     } catch (err) { toast.error('Error updating setting.'); }
     finally { setSavingState(false); }
-  };
-
-  const handleDeveloperImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const toastId = toast.loading('Uploading developer image...');
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', 'acadegrade_avatars');
-    try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/dgqukbs8n/image/upload`, {
-        method: 'POST', body: formData
-      });
-      const data = await res.json();
-      if (data.secure_url) {
-        setAboutData(prev => ({ ...prev, builderImageUrl: data.secure_url }));
-        toast.success('Image uploaded. Click Save to apply.', { id: toastId });
-      } else {
-        throw new Error('Failed');
-      }
-    } catch(err) {
-      toast.error('Upload failed', { id: toastId });
-    }
   };
 
   const handleAdvertImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
@@ -582,10 +540,15 @@ export default function AdminSettingsPage() {
           <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">About Page Content</h2>
         </div>
         <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-6">
-          Edit the public About page. Changes are reflected immediately on the /about page.
+          Manage the public production story. Personal profiles, repository links and school-project copy are intentionally excluded.
         </p>
 
         <div className="space-y-6">
+          <Input
+            label="Headline"
+            value={aboutData.headline}
+            onChange={e => setAboutData({ ...aboutData, headline: e.target.value })}
+          />
           {/* Platform Description */}
           <div>
             <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Platform Description</label>
@@ -597,119 +560,33 @@ export default function AdminSettingsPage() {
             />
           </div>
 
-          {/* Academic Context */}
           <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Academic Context (Main)</label>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Mission</label>
             <textarea
-              value={aboutData.academicContext}
-              onChange={e => setAboutData({ ...aboutData, academicContext: e.target.value })}
+              value={aboutData.mission}
+              onChange={e => setAboutData({ ...aboutData, mission: e.target.value })}
               rows={3}
               className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
             />
           </div>
           <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Academic Context (Extra)</label>
+            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Trust and privacy statement</label>
             <textarea
-              value={aboutData.academicContextExtra}
-              onChange={e => setAboutData({ ...aboutData, academicContextExtra: e.target.value })}
+              value={aboutData.trustStatement}
+              onChange={e => setAboutData({ ...aboutData, trustStatement: e.target.value })}
               rows={3}
               className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
             />
           </div>
 
-          {/* Builder Info */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <Input label="Builder Name" value={aboutData.builderName} onChange={e => setAboutData({ ...aboutData, builderName: e.target.value })} />
-            <Input label="Contact Email" value={aboutData.contactEmail} onChange={e => setAboutData({ ...aboutData, contactEmail: e.target.value })} />
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end mb-4">
-            <Input label="Builder Initials (Fallback)" value={aboutData.builderInitials} onChange={e => setAboutData({ ...aboutData, builderInitials: e.target.value })} />
-            
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] block">Developer Image</label>
-              <div className="flex items-center gap-4">
-                {aboutData.builderImageUrl && (
-                  <img src={aboutData.builderImageUrl} alt="Dev" className="w-10 h-10 rounded-full object-cover border border-[var(--acade-border)]" />
-                )}
-                <label className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium transition-colors border border-[var(--acade-border)] bg-transparent hover:bg-[var(--acade-deep)] h-10 px-4 cursor-pointer">
-                  Upload Image
-                  <input type="file" className="hidden" accept="image/*" onChange={handleDeveloperImageUpload} />
-                </label>
-              </div>
-            </div>
-          </div>
+          <Input
+            label="Public contact email"
+            type="email"
+            value={aboutData.contactEmail}
+            onChange={e => setAboutData({ ...aboutData, contactEmail: e.target.value })}
+            hint="Used for product and support enquiries."
+          />
 
-          <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Builder Bio</label>
-            <textarea
-              value={aboutData.builderBio}
-              onChange={e => setAboutData({ ...aboutData, builderBio: e.target.value })}
-              rows={2}
-              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
-            />
-          </div>
-
-          {/* Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Input label="GitHub URL" value={aboutData.githubUrl} onChange={e => setAboutData({ ...aboutData, githubUrl: e.target.value })} />
-            <Input label="Repository URL" value={aboutData.repoUrl} onChange={e => setAboutData({ ...aboutData, repoUrl: e.target.value })} />
-            <Input label="Live Site URL" value={aboutData.liveUrl} onChange={e => setAboutData({ ...aboutData, liveUrl: e.target.value })} />
-          </div>
-
-          {/* Tech Stack */}
-          <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-3 block">Tech Stack</label>
-            <div className="space-y-3">
-              {aboutData.techStack.map((tech, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-3 items-end">
-                  <div className="col-span-4">
-                    <Input
-                      label={idx === 0 ? 'Name' : ''}
-                      value={tech.name}
-                      onChange={e => {
-                        const newStack = [...aboutData.techStack];
-                        newStack[idx] = { ...newStack[idx], name: e.target.value };
-                        setAboutData({ ...aboutData, techStack: newStack });
-                      }}
-                    />
-                  </div>
-                  <div className="col-span-7">
-                    <Input
-                      label={idx === 0 ? 'Description' : ''}
-                      value={tech.description}
-                      onChange={e => {
-                        const newStack = [...aboutData.techStack];
-                        newStack[idx] = { ...newStack[idx], description: e.target.value };
-                        setAboutData({ ...aboutData, techStack: newStack });
-                      }}
-                    />
-                  </div>
-                  <div className="col-span-1 flex justify-center pb-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-[var(--acade-danger)] px-2"
-                      onClick={() => {
-                        const newStack = aboutData.techStack.filter((_, i) => i !== idx);
-                        setAboutData({ ...aboutData, techStack: newStack });
-                      }}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setAboutData({ ...aboutData, techStack: [...aboutData.techStack, { name: '', description: '' }] })}
-              >
-                <Plus size={16} /> Add Tech
-              </Button>
-            </div>
-          </div>
         </div>
 
         <div className="flex justify-end mt-6 pt-4 border-t border-[var(--acade-border-subtle)]">

@@ -27,20 +27,31 @@ describe('parseAdminSettingsMutation', () => {
     });
   });
 
+  it('rejects grade scales with gaps or overlapping ranges', () => {
+    expect(() => parseAdminSettingsMutation({
+      field: 'gradeScale',
+      value: [
+        { grade: 'A', min: 70, max: 100, points: 5 },
+        { grade: 'B', min: 50, max: 68, points: 4 },
+        { grade: 'F', min: 0, max: 49, points: 0 },
+      ],
+    })).toThrow('Grade scale must cover every score from 0 to 100 exactly once');
+  });
+
+  it('rejects unsafe public URLs', () => {
+    expect(() => parseAdminSettingsMutation({
+      field: 'mobileAppLinks',
+      value: { androidUrl: 'javascript:alert(1)', iosUrl: '' },
+    })).toThrow('androidUrl must be an HTTPS URL');
+  });
+
   it('accepts the dedicated about-page target and rejects extra fields', () => {
     const about = {
+      headline: 'Academic progress, made clear.',
       platformDescription: 'Track academic performance with clarity.',
-      academicContext: 'A final-year academic project.',
-      academicContextExtra: 'Built for Nigerian university students.',
-      builderName: 'Joshua Ugwu',
-      builderInitials: 'JU',
-      builderImageUrl: '',
-      builderBio: 'Software engineer and student.',
-      githubUrl: 'https://github.com/example',
-      repoUrl: 'https://github.com/example/acadegrade',
-      liveUrl: 'https://acadegrade.example',
+      mission: 'Give every student a dependable view of their degree progress.',
+      trustStatement: 'Your academic records remain under your control.',
       contactEmail: 'hello@acadegrade.example',
-      techStack: [{ name: 'Next.js', description: 'Web application framework' }],
     };
 
     expect(parseAdminSettingsMutation({ target: 'about', data: about })).toEqual({

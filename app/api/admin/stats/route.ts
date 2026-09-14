@@ -31,7 +31,7 @@ export async function GET(request: Request) {
     let totalCGPA = 0;
     let totalPI = 0;
     let usersWithCGPA = 0;
-    const deptCounts: Record<string, { count: number; totalCGPA: number }> = {};
+    const deptCounts: Record<string, { count: number; usersWithCGPA: number; totalCGPA: number }> = {};
     const levelCounts: Record<string, number> = {};
     const cgpaBuckets: Record<string, number> = {};
     const degreeClassCounts: Record<string, number> = {
@@ -60,25 +60,18 @@ export async function GET(request: Request) {
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     let activeThisWeek = 0;
 
-    // Recent activity feed
-    const recentActivity: { user: string; action: string; timestamp: string }[] = [];
-
     for (const doc of usersSnap.docs) {
       const data = doc.data();
 
       // Department counts
       const dept = data.department || 'Unknown';
-      if (!deptCounts[dept]) deptCounts[dept] = { count: 0, totalCGPA: 0 };
+      if (!deptCounts[dept]) deptCounts[dept] = { count: 0, usersWithCGPA: 0, totalCGPA: 0 };
       deptCounts[dept].count++;
 
       // Level counts
       const level = `${data.currentLevel || 100}L`;
       levelCounts[level] = (levelCounts[level] || 0) + 1;
 
-      // CGPA/PI from analytics
-      const analyticsDoc = await adminDb.collection('analytics').doc(doc.id).get();
-      const analyticsData = analyticsDoc.data();
-      
       // Compute CGPA from semesters
       const semSnap = await adminDb.collection(`users/${doc.id}/semesters`).where('isComplete', '==', true).get();
       let userTotalPoints = 0;
@@ -101,6 +94,7 @@ export async function GET(request: Request) {
         usersWithCGPA++;
 
         deptCounts[dept].totalCGPA += userCGPA;
+        deptCounts[dept].usersWithCGPA++;
 
         // Bucket
         const bucketIndex = Math.min(Math.floor(userCGPA / 0.5), 9);
@@ -122,15 +116,11 @@ export async function GET(request: Request) {
       if (createdAt) {
         const dayKey = createdAt.toISOString().split('T')[0];
         signupsByDay[dayKey] = (signupsByDay[dayKey] || 0) + 1;
-
-        if (createdAt >= oneWeekAgo) {
-          activeThisWeek++;
-        }
       }
 
       // Last login tracking for active users
       const lastLogin = data.lastLogin?.toDate?.() || null;
-      if (lastLogin && lastLogin >= oneWeekAgo) {
+      if ((createdAt && createdAt >= oneWeekAgo) || (lastLogin && lastLogin >= oneWeekAgo)) {
         activeThisWeek++;
       }
     }
@@ -153,7 +143,7 @@ export async function GET(request: Request) {
       .map(([dept, data]) => ({
         department: dept,
         count: data.count,
-        avgCGPA: data.count > 0 ? data.totalCGPA / data.count : 0,
+        avgCGPA: data.usersWithCGPA > 0 ? data.totalCGPA / data.usersWithCGPA : 0,
       }))
       .sort((a, b) => b.count - a.count);
 

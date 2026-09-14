@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Download } from 'lucide-react';
+import { Download, Info } from 'lucide-react';
 import {
-  BarChart, Bar, ScatterChart, Scatter, PieChart, Pie, Cell,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
@@ -21,7 +21,6 @@ interface AnalyticsData {
   cgpaBuckets: Record<string, number>;
   degreeClassCounts: Record<string, number>;
   departmentBreakdown: { department: string; count: number; avgCGPA: number }[];
-  scatterData: { cgpa: number; pi: number }[];
 }
 
 const DEGREE_COLORS: Record<string, string> = {
@@ -54,13 +53,7 @@ export default function AdminAnalyticsPage() {
       const res = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const stats = await res.json();
-        // Build scatter data from the department breakdown (approximate for now)
-        const scatterData = stats.departmentBreakdown?.map((d: any) => ({
-          cgpa: d.avgCGPA,
-          pi: d.avgCGPA * (0.85 + Math.random() * 0.3), // Approximate PI
-          department: d.department,
-        })) || [];
-        setData({ ...stats, scatterData });
+        setData(stats);
       }
     } catch (err) { console.error(err); toast.error('Failed to load analytics.'); }
     finally { setLoading(false); }
@@ -138,22 +131,32 @@ export default function AdminAnalyticsPage() {
           </Card>
         </motion.div>
 
-        {/* PI vs CGPA Scatter Plot */}
+        {/* Platform metric averages — only values returned by the server are shown. */}
         <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">PI vs CGPA</h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">Scatter plot of performance metrics</p>
-            <div className="h-[300px] text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ScatterChart margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--acade-border-subtle)" />
-                  <XAxis type="number" dataKey="cgpa" name="CGPA" domain={[0, 5]} tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis type="number" dataKey="pi" name="PI" domain={[0, 5]} tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '8px', color: 'var(--acade-text)' }} cursor={{ strokeDasharray: '3 3' }} />
-                  <ReferenceLine x={0} y={0} stroke="transparent" />
-                  <Scatter data={data?.scatterData || []} fill="var(--acade-primary-glow)" />
-                </ScatterChart>
-              </ResponsiveContainer>
+            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">Platform Metric Averages</h2>
+            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-6">Calculated from completed semesters with recorded credits.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                { label: 'Average CGPA', value: data?.avgCGPA ?? 0, color: 'var(--acade-primary)' },
+                { label: 'Average PI', value: data?.avgPI ?? 0, color: 'var(--acade-gold)' },
+              ].map((metric) => (
+                <div key={metric.label} className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-5">
+                  <p className="text-xs font-semibold text-[var(--acade-text-muted)]">{metric.label}</p>
+                  <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-4xl font-bold text-[var(--acade-text)]">{metric.value.toFixed(2)}</p>
+                  <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--acade-overlay)]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.min(Math.max(metric.value / 5, 0), 1) * 100}%`, backgroundColor: metric.color }}
+                    />
+                  </div>
+                  <p className="mt-2 text-right font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">out of 5.00</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-3 rounded-xl bg-[var(--acade-info-dim)] p-4 text-sm leading-6 text-[var(--acade-text-muted)]">
+              <Info className="mt-0.5 size-4 shrink-0 text-[var(--acade-info)]" aria-hidden="true" />
+              <p>PI is shown only from stored semester calculations. AcadeGrade does not estimate missing PI values.</p>
             </div>
           </Card>
         </motion.div>

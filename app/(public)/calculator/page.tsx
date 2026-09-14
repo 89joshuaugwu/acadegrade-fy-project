@@ -1,23 +1,35 @@
 'use client';
 
-import { Suspense, useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'motion/react';
-import { Calculator, Plus, Trash2, Share2, Save, ArrowRight, Settings2 } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  ArrowRight,
+  BookOpenCheck,
+  Calculator,
+  LockKeyhole,
+  Plus,
+  Save,
+  Share2,
+  Sigma,
+  Trash2,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
+import { EmptyState } from '@/components/shared';
+import {
+  Button,
+  IconButton,
+  Input,
+  LinkButton,
+  Modal,
+  SegmentedControl,
+  Select,
+} from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
-
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { CGPAArc } from '@/components/cgpa/CGPAArc';
-import { LiveAcademicGraph } from '@/components/ui/LiveAcademicGraph';
 import { computeCourseMetrics, computeSemesterGPA } from '@/lib/cgpa/calculator';
 import type { CourseInput, Grade } from '@/types/course';
-import { cn } from '@/lib/utils/cn';
 
 interface QuickCourse {
   id: string;
@@ -27,77 +39,79 @@ interface QuickCourse {
   score?: number;
 }
 
+type InputMode = 'grade' | 'score';
+
 const GRADES: Grade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
 const UNITS = [1, 2, 3, 4, 5, 6];
+const MODE_OPTIONS = [
+  { value: 'grade', label: 'Letter grades' },
+  { value: 'score', label: 'Scores out of 100' },
+] satisfies { value: InputMode; label: string }[];
 
-let _idCounter = 0;
+let idCounter = 0;
 function nextId() {
-  return `qc-${Date.now()}-${_idCounter++}`;
+  return `qc-${Date.now()}-${idCounter++}`;
 }
 
-/** Inner component that uses useSearchParams — must be inside Suspense */
 function QuickCalculatorInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const [courses, setCourses] = useState<QuickCourse[]>([]);
-  const [inputMode, setInputMode] = useState<'grade' | 'score'>('grade');
+  const [inputMode, setInputMode] = useState<InputMode>('grade');
   const [isCopied, setIsCopied] = useState(false);
   const [initialised, setInitialised] = useState(false);
-  const { user } = useAuth();
   const [showAuthAlert, setShowAuthAlert] = useState(false);
 
-  // Hydrate from URL once on mount
   useEffect(() => {
     const encoded = searchParams.get('c');
     const mode = searchParams.get('m');
 
-    if (mode === 'score' || mode === 'grade') {
-      setInputMode(mode);
-    }
+    if (mode === 'score' || mode === 'grade') setInputMode(mode);
 
     if (encoded) {
       try {
         const decoded = JSON.parse(atob(encoded));
         if (Array.isArray(decoded)) {
-          setCourses(decoded.map((d: any) => ({
+          setCourses(decoded.map((course: { c?: string; u?: number; g?: Grade; s?: number }) => ({
             id: nextId(),
-            code: d.c || '',
-            units: d.u || 3,
-            grade: d.g as Grade | undefined,
-            score: d.s as number | undefined,
+            code: course.c || '',
+            units: course.u || 3,
+            grade: course.g,
+            score: course.s,
           })));
           setInitialised(true);
           return;
         }
-      } catch (e) {
-        console.error('Failed to parse courses from URL', e);
+      } catch (error) {
+        console.error('Failed to parse courses from URL', error);
       }
     }
 
-    // Start with 3 default courses
     setCourses([
       { id: nextId(), code: '', units: 3, grade: 'A' },
       { id: nextId(), code: '', units: 3, grade: 'B' },
       { id: nextId(), code: '', units: 2, grade: 'C' },
     ]);
     setInitialised(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // URL hydration intentionally happens once when this route mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const updateUrl = useCallback((newCourses: QuickCourse[], newMode: 'grade' | 'score') => {
+  const updateUrl = useCallback((newCourses: QuickCourse[], newMode: InputMode) => {
     try {
-      const minimalCourses = newCourses.map(c => ({
-        c: c.code,
-        u: c.units,
-        g: c.grade,
-        s: c.score,
+      const minimalCourses = newCourses.map((course) => ({
+        c: course.code,
+        u: course.units,
+        g: course.grade,
+        s: course.score,
       }));
       const encoded = btoa(JSON.stringify(minimalCourses));
       router.replace(`${pathname}?m=${newMode}&c=${encoded}`, { scroll: false });
     } catch {
-      // Ignore encoding errors
+      // The calculation remains usable if URL encoding is unavailable.
     }
   }, [pathname, router]);
 
@@ -115,13 +129,15 @@ function QuickCalculatorInner() {
   };
 
   const handleUpdateCourse = (id: string, updates: Partial<QuickCourse>) => {
-    const newCourses = courses.map(c => (c.id === id ? { ...c, ...updates } : c));
+    const newCourses = courses.map((course) => (
+      course.id === id ? { ...course, ...updates } : course
+    ));
     setCourses(newCourses);
     updateUrl(newCourses, inputMode);
   };
 
   const handleRemoveCourse = (id: string) => {
-    const newCourses = courses.filter(c => c.id !== id);
+    const newCourses = courses.filter((course) => course.id !== id);
     setCourses(newCourses);
     updateUrl(newCourses, inputMode);
   };
@@ -131,16 +147,15 @@ function QuickCalculatorInner() {
     router.replace(pathname, { scroll: false });
   };
 
-  const toggleInputMode = () => {
-    const newMode = inputMode === 'grade' ? 'score' : 'grade';
+  const handleInputModeChange = (newMode: InputMode) => {
+    if (newMode === inputMode) return;
+
     setInputMode(newMode);
-
-    const newCourses = courses.map(c => ({
-      ...c,
-      grade: newMode === 'grade' ? (c.grade || ('C' as Grade)) : undefined,
-      score: newMode === 'score' ? (c.score ?? 50) : undefined,
+    const newCourses = courses.map((course) => ({
+      ...course,
+      grade: newMode === 'grade' ? (course.grade || ('C' as Grade)) : undefined,
+      score: newMode === 'score' ? (course.score ?? 50) : undefined,
     }));
-
     setCourses(newCourses);
     updateUrl(newCourses, newMode);
   };
@@ -156,307 +171,330 @@ function QuickCalculatorInner() {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(url);
       } else {
-        // Fallback for non-secure contexts
-        const textArea = document.createElement("textarea");
+        const textArea = document.createElement('textarea');
         textArea.value = url;
         document.body.appendChild(textArea);
         textArea.select();
-        document.execCommand("copy");
+        document.execCommand('copy');
         document.body.removeChild(textArea);
       }
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy', err);
+    } catch (error) {
+      console.error('Failed to copy', error);
       toast.error('Could not copy the link. You can copy it directly from the browser address bar.');
     }
   };
 
-  // Compute live GPA / PI
   const metrics = useMemo(() => {
-    const validCourses = courses.filter(c =>
-      inputMode === 'grade' ? !!c.grade : c.score !== undefined && c.score !== null,
-    );
+    const validCourses = courses.filter((course) => (
+      inputMode === 'grade'
+        ? Boolean(course.grade)
+        : course.score !== undefined && course.score !== null
+    ));
 
-    const courseInputs: CourseInput[] = validCourses.map(c => ({
-      code: c.code || 'VAR',
+    const courseInputs: CourseInput[] = validCourses.map((course) => ({
+      code: course.code || 'VAR',
       title: '',
-      units: c.units,
-      grade: inputMode === 'grade' ? c.grade : undefined,
-      caScore: inputMode === 'score' && c.score !== undefined ? Math.min(30, c.score * 0.3) : null,
-      examScore: inputMode === 'score' && c.score !== undefined ? Math.max(0, c.score * 0.7) : null,
+      units: course.units,
+      grade: inputMode === 'grade' ? course.grade : undefined,
+      caScore: inputMode === 'score' && course.score !== undefined
+        ? Math.min(30, course.score * 0.3)
+        : null,
+      examScore: inputMode === 'score' && course.score !== undefined
+        ? Math.max(0, course.score * 0.7)
+        : null,
     }));
 
-    const computedCourses = courseInputs.map(computeCourseMetrics);
-    return computeSemesterGPA(computedCourses);
+    return computeSemesterGPA(courseInputs.map(computeCourseMetrics));
   }, [courses, inputMode]);
 
   if (!initialised) return null;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-      {/* ─── Main Calculator Form ─── */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="lg:col-span-8 bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-4 sm:p-6 shadow-sm"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-[length:var(--text-xl)] font-bold flex items-center gap-2">
-            Courses
-            <span className="bg-[var(--acade-deep)] text-[length:var(--text-xs)] px-2 py-1 rounded-full text-[var(--acade-text-muted)]">
-              {courses.length}
-            </span>
-          </h2>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={toggleInputMode}
-            className="gap-2"
-          >
-            <Settings2 size={16} />
-            Use {inputMode === 'grade' ? 'Scores (0-100)' : 'Grades (A-F)'}
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {/* Table header — hidden on small mobile */}
-          <div className="hidden sm:grid grid-cols-12 gap-4 px-4 text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">
-            <div className="col-span-4">Course Code</div>
-            <div className="col-span-3">Units</div>
-            <div className="col-span-4">{inputMode === 'grade' ? 'Grade' : 'Score'}</div>
-            <div className="col-span-1" />
-          </div>
-
-          <AnimatePresence initial={false}>
-            {courses.map((course, index) => (
-              <motion.div
-                key={course.id}
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-3 sm:gap-4 p-4 sm:p-2 bg-[var(--acade-deep)] sm:bg-transparent rounded-2xl sm:rounded-none border sm:border-0 border-[var(--acade-border-subtle)] items-center"
-              >
-                <div className="sm:col-span-4">
-                  <label className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] sm:hidden mb-1 block">
-                    Course Code
-                  </label>
-                  <Input
-                    placeholder={`Course ${index + 1}`}
-                    value={course.code}
-                    onChange={e => handleUpdateCourse(course.id, { code: e.target.value })}
-                    className="bg-[var(--acade-surface)]"
-                  />
+    <>
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-12 md:gap-6 lg:gap-8">
+        <section
+          aria-labelledby="course-record-title"
+          className="overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[var(--shadow-card)] md:col-span-7 lg:col-span-8"
+        >
+          <header className="border-b border-[var(--acade-border-subtle)] px-4 py-5 sm:px-6 sm:py-6">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 id="course-record-title" className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)] sm:text-2xl">
+                    Semester record
+                  </h2>
+                  <span className="rounded-full bg-[var(--acade-overlay)] px-2.5 py-1 font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-text-muted)]">
+                    {courses.length}
+                  </span>
                 </div>
+                <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
+                  Add each course once, then choose the result format you have.
+                </p>
+              </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-12 sm:col-span-7 gap-3 sm:gap-4">
-                  <div className="sm:col-span-5">
-                    <label className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] sm:hidden mb-1 block">
-                      Units
-                    </label>
-                    <Select
-                      options={UNITS.map(u => ({ label: `${u} Unit${u > 1 ? 's' : ''}`, value: String(u) }))}
-                      value={String(course.units)}
-                      onChange={v => handleUpdateCourse(course.id, { units: Number(v) })}
-                      className="bg-[var(--acade-surface)] w-full"
-                    />
-                  </div>
+              <SegmentedControl
+                aria-label="Result entry mode"
+                value={inputMode}
+                onValueChange={handleInputModeChange}
+                options={MODE_OPTIONS}
+                className="w-full lg:w-auto"
+              />
+            </div>
+          </header>
 
-                  <div className="sm:col-span-7">
-                    <label className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] sm:hidden mb-1 block">
-                      {inputMode === 'grade' ? 'Grade' : 'Score'}
-                    </label>
-                    {inputMode === 'grade' ? (
-                      <Select
-                        options={GRADES.map(g => ({ label: `Grade ${g}`, value: g }))}
-                        value={course.grade || 'A'}
-                        onChange={v => handleUpdateCourse(course.id, { grade: v as Grade })}
-                        className="bg-[var(--acade-surface)] w-full"
-                      />
-                    ) : (
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        placeholder="Score (0-100)"
-                        value={course.score ?? ''}
-                        onChange={e =>
-                          handleUpdateCourse(course.id, {
-                            score: e.target.value ? Number(e.target.value) : undefined,
-                          })
-                        }
-                        className="bg-[var(--acade-surface)] w-full"
-                      />
-                    )}
-                  </div>
-                </div>
-
-                <div className="sm:col-span-1 flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveCourse(course.id)}
-                    className="text-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/10 px-2"
-                    title="Remove course"
+          <div className="p-4 sm:p-6">
+            {courses.length === 0 ? (
+              <EmptyState
+                icon={<BookOpenCheck className="size-7" aria-hidden="true" />}
+                title="No courses in this calculation"
+                description="Add a course to start calculating your semester GPA and performance index."
+                action={{ label: 'Add a course', onClick: handleAddCourse }}
+                className="rounded-[var(--radius-surface)] border border-dashed border-[var(--acade-border)] bg-[var(--acade-deep)] py-12"
+              />
+            ) : (
+              <div className="space-y-4">
+                {courses.map((course, index) => (
+                  <fieldset
+                    key={course.id}
+                    className="relative rounded-[var(--radius-surface)] border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-4 sm:p-5 lg:grid lg:grid-cols-12 lg:items-end lg:gap-4"
                   >
-                    <Trash2 size={18} />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+                    <legend className="sr-only">Course {index + 1}</legend>
+                    <span className="mb-4 inline-flex size-8 items-center justify-center rounded-lg bg-[var(--acade-primary-dim)] font-[family-name:var(--font-geist-mono)] text-xs font-bold text-[var(--acade-primary)] lg:mb-2">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
 
-        <div className="flex flex-col sm:flex-row gap-3 mt-6 pt-6 border-t border-[var(--acade-border-subtle)]">
-          <Button onClick={handleAddCourse} className="gap-2 flex-1 sm:flex-none">
-            <Plus size={18} /> Add Course
-          </Button>
-          <Button variant="ghost" onClick={handleClearAll} className="text-[var(--acade-text-muted)] flex-1 sm:flex-none">
-            Clear All
-          </Button>
-        </div>
-      </motion.div>
+                    <div className="grid grid-cols-2 gap-4 lg:col-span-10 lg:grid-cols-10">
+                      <div className="col-span-2 lg:col-span-4">
+                        <Input
+                          label={`Course code ${index + 1}`}
+                          placeholder={`e.g. CSC ${411 + index}`}
+                          value={course.code}
+                          autoComplete="off"
+                          onChange={(event) => handleUpdateCourse(course.id, { code: event.target.value })}
+                        />
+                      </div>
 
-      {/* ─── Results Sticky Sidebar ─── */}
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="lg:col-span-4 lg:sticky lg:top-24 space-y-4"
-      >
-        <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-3xl p-6 shadow-sm flex flex-col items-center text-center relative overflow-hidden min-h-[360px]">
-          {/* Real-time 3D Data Visualization */}
-          <div className="absolute inset-0 z-0 opacity-80 pointer-events-none mix-blend-screen" style={{ maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)', WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)' }}>
-             <LiveAcademicGraph courses={courses} inputMode={inputMode} cgpa={metrics.gpa} />
-          </div>
+                      <div className="col-span-1 lg:col-span-3">
+                        <Select
+                          label={`Credit units ${index + 1}`}
+                          options={UNITS.map((unit) => ({
+                            label: `${unit} unit${unit > 1 ? 's' : ''}`,
+                            value: String(unit),
+                          }))}
+                          value={String(course.units)}
+                          onChange={(value) => handleUpdateCourse(course.id, { units: Number(value) })}
+                        />
+                      </div>
 
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/5 rounded-bl-full pointer-events-none z-0" />
+                      <div className="col-span-1 lg:col-span-3">
+                        {inputMode === 'grade' ? (
+                          <Select
+                            label={`Grade ${index + 1}`}
+                            options={GRADES.map((grade) => ({ label: `Grade ${grade}`, value: grade }))}
+                            value={course.grade || 'A'}
+                            onChange={(value) => handleUpdateCourse(course.id, { grade: value as Grade })}
+                          />
+                        ) : (
+                          <Input
+                            label={`Score for course ${index + 1}`}
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="0–100"
+                            value={course.score ?? ''}
+                            variant="score"
+                            onChange={(event) => handleUpdateCourse(course.id, {
+                              score: event.target.value ? Number(event.target.value) : undefined,
+                            })}
+                          />
+                        )}
+                      </div>
+                    </div>
 
-          <h3 className="text-[length:var(--text-lg)] font-bold mb-6 relative z-10">Live Result</h3>
-
-          <div className="relative z-10">
-             <CGPAArc cgpa={metrics.gpa} pi={metrics.pi} size="md" animateOnMount={false} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 w-full mt-6">
-            <div className="bg-[var(--acade-deep)] rounded-xl p-3 border border-[var(--acade-border-subtle)]">
-              <div className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] uppercase tracking-wider mb-1">
-                Total Units
+                    <div className="absolute right-3 top-3 lg:static lg:col-span-1 lg:flex lg:justify-end">
+                      <IconButton
+                        aria-label={`Remove course ${index + 1}`}
+                        variant="danger"
+                        onClick={() => handleRemoveCourse(course.id)}
+                      >
+                        <Trash2 className="size-5" aria-hidden="true" />
+                      </IconButton>
+                    </div>
+                  </fieldset>
+                ))}
               </div>
-              <div className="text-[length:var(--text-xl)] font-bold">{metrics.creditLoaded}</div>
-            </div>
-            <div className="bg-[var(--acade-deep)] rounded-xl p-3 border border-[var(--acade-border-subtle)]">
-              <div className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] uppercase tracking-wider mb-1">
-                Courses
+            )}
+
+            {courses.length > 0 && (
+              <div className="mt-6 flex flex-col gap-3 border-t border-[var(--acade-border-subtle)] pt-6 sm:flex-row sm:items-center">
+                <Button onClick={handleAddCourse} className="sm:min-w-40">
+                  <Plus className="size-4" aria-hidden="true" />
+                  Add a course
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleClearAll}
+                  aria-label="Clear all courses"
+                  className="sm:ml-auto"
+                >
+                  Clear all
+                </Button>
               </div>
-              <div className="text-[length:var(--text-xl)] font-bold">{metrics.courseCount}</div>
-            </div>
+            )}
           </div>
-        </div>
+        </section>
 
-        <div className="flex flex-col gap-3">
-          <Button
-            variant="outline"
-            className="w-full gap-2 py-6 rounded-2xl bg-[var(--acade-surface)] border-[var(--acade-primary)]/20 hover:border-[var(--acade-primary)]/50 transition-colors"
-            onClick={handleShare}
+        <aside className="space-y-4 md:col-span-5 md:sticky md:top-24 lg:col-span-4">
+          <section
+            role="status"
+            aria-label="Current calculation"
+            aria-live="polite"
+            className="overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[var(--shadow-card)]"
           >
-            <Share2 size={18} className="text-[var(--acade-primary)]" />
-            {isCopied ? 'Link Copied!' : 'Share Results'}
-          </Button>
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--acade-border-subtle)] px-5 py-5 sm:px-6">
+              <div>
+                <p className="text-xs font-semibold text-[var(--acade-primary)]">Live calculation</p>
+                <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
+                  Current result
+                </h2>
+              </div>
+              <div className="flex size-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
+                <Sigma className="size-5" aria-hidden="true" />
+              </div>
+            </div>
 
-          <Button
-            variant="primary"
-            className="w-full gap-2 py-6 rounded-2xl shadow-[0_0_20px_var(--acade-primary-glow)]"
-            onClick={() => {
-               if (!user) {
-                  setShowAuthAlert(true);
-               } else {
-                  router.push('/dashboard');
-               }
-            }}
-          >
-            <Save size={18} />
-            Save to Profile
-            <ArrowRight size={18} className="ml-2 opacity-50" />
-          </Button>
-        </div>
-      </motion.div>
+            <div className="grid grid-cols-2 divide-x divide-[var(--acade-border-subtle)] border-b border-[var(--acade-border-subtle)]">
+              <div className="p-5 sm:p-6">
+                <p className="text-xs font-semibold text-[var(--acade-text-faint)]">Semester GPA</p>
+                <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[clamp(2rem,7vw,3rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--acade-text)]">
+                  {metrics.gpa.toFixed(2)}
+                </p>
+                <p className="mt-2 text-xs text-[var(--acade-text-muted)]">Letter-grade result</p>
+              </div>
+              <div className="p-5 sm:p-6">
+                <p className="text-xs font-semibold text-[var(--acade-text-faint)]">PI</p>
+                <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[clamp(2rem,7vw,3rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--acade-gold)]">
+                  {metrics.pi.toFixed(2)}
+                </p>
+                <p className="mt-2 text-xs text-[var(--acade-text-muted)]">Performance signal</p>
+              </div>
+            </div>
 
-      {/* Auth Alert Modal */}
-      <AnimatePresence>
-        {showAuthAlert && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden"
+            <dl className="grid grid-cols-2 gap-px bg-[var(--acade-border-subtle)]">
+              <div className="bg-[var(--acade-deep)] px-5 py-4 sm:px-6">
+                <dt className="text-xs font-semibold text-[var(--acade-text-faint)]">Total credits</dt>
+                <dd className="mt-1 font-[family-name:var(--font-geist-mono)] text-xl font-semibold text-[var(--acade-text)]">{metrics.creditLoaded}</dd>
+              </div>
+              <div className="bg-[var(--acade-deep)] px-5 py-4 sm:px-6">
+                <dt className="text-xs font-semibold text-[var(--acade-text-faint)]">Courses</dt>
+                <dd className="mt-1 font-[family-name:var(--font-geist-mono)] text-xl font-semibold text-[var(--acade-text)]">{metrics.courseCount}</dd>
+              </div>
+            </dl>
+
+            <p className="border-t border-[var(--acade-border-subtle)] px-5 py-4 text-xs leading-5 text-[var(--acade-text-muted)] sm:px-6">
+              Calculated from the courses currently included. Use your institution’s official result for formal verification.
+            </p>
+          </section>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-1">
+            <Button variant="outline" fullWidth onClick={handleShare}>
+              <Share2 className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />
+              {isCopied ? 'Link copied' : 'Share calculation'}
+            </Button>
+            <Button
+              variant="primary"
+              fullWidth
+              onClick={() => {
+                if (!user) setShowAuthAlert(true);
+                else router.push('/dashboard');
+              }}
             >
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--acade-primary)]/10 rounded-bl-full pointer-events-none" />
-              <h3 className="text-2xl font-bold font-[family-name:var(--font-bricolage)] text-white mb-2">Account Required</h3>
-              <p className="text-[var(--acade-text-muted)] mb-6 text-sm">
-                Please login or create an account to share and save your results permanently.
-              </p>
-              <div className="flex flex-col gap-3">
-                <Button variant="primary" fullWidth onClick={() => window.location.href = '/register'}>
-                  Create an Account
-                </Button>
-                <Button variant="outline" fullWidth onClick={() => window.location.href = '/login'}>
-                  Login
-                </Button>
-                <Button variant="ghost" fullWidth onClick={() => setShowAuthAlert(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+              <Save className="size-4" aria-hidden="true" />
+              Save to profile
+              <ArrowRight className="size-4 opacity-70" aria-hidden="true" />
+            </Button>
+          </div>
+        </aside>
+      </div>
+
+      <Modal
+        open={showAuthAlert}
+        onClose={() => setShowAuthAlert(false)}
+        title="Create an account to continue"
+        description="Sign in or create an account before sharing this calculation or saving it to your academic record."
+        size="confirm"
+        presentation="sheet"
+      >
+        <div className="space-y-3">
+          <LinkButton href="/register" fullWidth onClick={() => setShowAuthAlert(false)}>
+            Create account
+          </LinkButton>
+          <LinkButton href="/login" variant="outline" fullWidth onClick={() => setShowAuthAlert(false)}>
+            Sign in
+          </LinkButton>
+          <Button variant="ghost" fullWidth onClick={() => setShowAuthAlert(false)}>
+            Not now
+          </Button>
+        </div>
+      </Modal>
+    </>
   );
 }
 
-/** Page wrapper — Suspense boundary required by useSearchParams */
 export default function QuickCalculatorPage() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen pt-24 pb-20 px-4">
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* Header */}
-          <div className="text-center space-y-4">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-16 h-16 bg-[var(--acade-primary-dim)] rounded-2xl flex items-center justify-center mx-auto mb-6"
-            >
-              <Calculator size={32} className="text-[var(--acade-primary)]" />
-            </motion.div>
-            <h1 className="text-[length:var(--text-4xl)] md:text-[length:var(--text-5xl)] font-bold font-[family-name:var(--font-bricolage)]">
-              Quick Calculator
-            </h1>
-            <p className="text-[var(--acade-text-muted)] text-[length:var(--text-lg)] max-w-2xl mx-auto">
-              Instantly calculate your CGPA and Performance Index. No account required.
-              Share your results or save them for later.
-            </p>
-          </div>
-
-          <Suspense
-            fallback={
-              <div className="flex items-center justify-center py-20">
-                <div className="w-8 h-8 border-2 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      <main
+        aria-labelledby="calculator-title"
+        className="min-h-screen bg-[var(--acade-void)] px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:px-8"
+      >
+        <div className="mx-auto max-w-[1200px]">
+          <header className="grid grid-cols-1 gap-7 border-b border-[var(--acade-border)] pb-10 md:grid-cols-12 md:items-end">
+            <div className="md:col-span-8">
+              <div className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--acade-primary)]">
+                <span className="flex size-9 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
+                  <Calculator className="size-4" aria-hidden="true" />
+                </span>
+                Academic calculation desk
               </div>
-            }
-          >
-            <QuickCalculatorInner />
-          </Suspense>
+              <h1
+                id="calculator-title"
+                className="max-w-[14ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,6vw,4rem)] font-bold leading-[1.05] tracking-[-0.04em] text-[var(--acade-text)]"
+              >
+                Quick CGPA calculator
+              </h1>
+              <p className="mt-5 max-w-[62ch] text-base leading-7 text-[var(--acade-text-muted)] sm:text-lg">
+                Build a semester result from letter grades or raw scores and inspect the GPA, PI, and credit basis as you work. No account is required to calculate.
+              </p>
+            </div>
+
+            <div className="flex gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 md:col-span-4 md:p-5">
+              <LockKeyhole className="mt-0.5 size-5 shrink-0 text-[var(--acade-success)]" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold text-[var(--acade-text)]">Calculate privately</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--acade-text-muted)]">
+                  Your current entries stay in this browser link until you choose to save or share.
+                </p>
+              </div>
+            </div>
+          </header>
+
+          <div className="mt-8">
+            <Suspense
+              fallback={
+                <div role="status" aria-label="Preparing calculator" className="flex min-h-64 items-center justify-center rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-8 text-sm font-medium text-[var(--acade-text-muted)]">
+                  Preparing calculator…
+                </div>
+              }
+            >
+              <QuickCalculatorInner />
+            </Suspense>
+          </div>
         </div>
-      </div>
+      </main>
       <PublicFooter />
     </>
   );

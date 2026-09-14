@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { parseAdminSettingsMutation, SettingsValidationError } from '@/lib/admin/settings-schema';
 
 /**
  * GET  /api/admin/settings — Read platform settings
@@ -32,33 +33,19 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     await verifyAdmin(request);
-    const body = await request.json();
-
-    // Support for writing entire documents (e.g. config/about)
-    if (body.collection && body.doc && body.data) {
-      await adminDb.collection(body.collection).doc(body.doc).set(
-        { ...body.data, updatedAt: new Date() },
-        { merge: true }
-      );
-      return NextResponse.json({ message: `Document "${body.collection}/${body.doc}" updated.` });
-    }
-
-    // Original field-level update for config/settings
-    const { field, value } = body;
-
-    if (!field) {
-      return NextResponse.json({ error: 'Missing field name' }, { status: 400 });
-    }
-
-    // Update the specific field in config/settings
-    await adminDb.collection('config').doc('settings').set(
-      { [field]: value, updatedAt: new Date() },
+    const mutation = parseAdminSettingsMutation(await request.json());
+    const documentName = mutation.target === 'about' ? 'about' : 'settings';
+    await adminDb.collection('config').doc(documentName).set(
+      { ...mutation.data, updatedAt: new Date() },
       { merge: true }
     );
-
-    return NextResponse.json({ message: `Setting "${field}" updated.` });
+    return NextResponse.json({ message: 'Settings updated.' });
   } catch (error: any) {
+    if (error instanceof SettingsValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
     const status = error.message === 'Unauthorized' ? 401 : error.message === 'Forbidden' ? 403 : 500;
-    return NextResponse.json({ error: error.message }, { status });
+    const message = status === 500 ? 'Unable to update settings.' : error.message;
+    return NextResponse.json({ error: message }, { status });
   }
 }

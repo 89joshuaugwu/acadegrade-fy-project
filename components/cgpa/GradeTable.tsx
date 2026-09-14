@@ -63,6 +63,9 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     setCourses(courses.map(c => {
       if (c.localId === id) {
         const updated = { ...c, [field]: value };
+        if ((field === 'caScore' || field === 'examScore') && value !== null) {
+          updated.grade = undefined;
+        }
         
         // Validate scores
         if (field === 'caScore' && value !== null && value > MAX_CA_SCORE) {
@@ -89,18 +92,20 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     setTimeout(() => setShakeId(null), 500);
   };
 
-  const computeRow = useCallback((ca: number | null, exam: number | null, isAR?: boolean) => {
+  const computeRow = useCallback((ca: number | null, exam: number | null, letterGrade?: Grade, isAR?: boolean) => {
     if (isAR) {
       return { totalScore: null, grade: 'AR', gradePoint: 0, piPoint: 0 };
     }
-    const totalScore = (ca || 0) + (exam || 0);
-    const scale = GRADE_SCALE.find(g => totalScore >= g.minScore && totalScore <= g.maxScore) || GRADE_SCALE[GRADE_SCALE.length - 1];
-    return {
-      totalScore,
-      grade: scale.grade,
-      gradePoint: scale.gradePoint,
-      piPoint: (totalScore / 100) * 5,
-    };
+    if (ca !== null && exam !== null) {
+      const totalScore = ca + exam;
+      const scale = GRADE_SCALE.find(g => totalScore >= g.minScore && totalScore <= g.maxScore) || GRADE_SCALE[GRADE_SCALE.length - 1];
+      return { totalScore, grade: scale.grade, gradePoint: scale.gradePoint, piPoint: (totalScore / 100) * 5 };
+    }
+    if (letterGrade) {
+      const gradePoint = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 }[letterGrade];
+      return { totalScore: null, grade: letterGrade, gradePoint, piPoint: gradePoint };
+    }
+    return { totalScore: null, grade: null, gradePoint: 0, piPoint: 0 };
   }, []);
 
   // Summary calculation
@@ -111,8 +116,8 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     const gradeCount: Record<Grade, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
 
     courses.forEach(c => {
-      const { grade, gradePoint, piPoint } = computeRow(c.caScore, c.examScore, c.isAR);
-      if (grade !== 'AR') {
+      const { grade, gradePoint, piPoint } = computeRow(c.caScore, c.examScore, c.grade, c.isAR);
+      if (grade && grade !== 'AR') {
         totalUnits += c.units;
         totalGP += gradePoint * c.units;
         totalPI += piPoint * c.units;
@@ -158,7 +163,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <tbody>
             <AnimatePresence initial={false}>
               {courses.map((course, idx) => {
-                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.grade, course.isAR);
                 const isShaking = shakeId === course.localId;
 
                 return (
@@ -258,24 +263,41 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     </td>
 
                     <td className="p-3 text-center">
-                      {grade === 'AR' ? (
+                      {course.isAR ? (
                         <Badge variant="ongoing">AR</Badge>
-                      ) : (
+                      ) : editable ? (
+                        <select
+                          aria-label={`Letter grade for ${course.code || `course ${idx + 1}`}`}
+                          value={grade ?? ''}
+                          onChange={(event) => {
+                            const nextGrade = event.target.value as Grade | '';
+                            setCourses(courses.map((candidate) => candidate.localId === course.localId
+                              ? { ...candidate, caScore: null, examScore: null, grade: nextGrade || undefined }
+                              : candidate));
+                          }}
+                          className="min-h-10 w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-center text-sm font-bold text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
+                        >
+                          <option value="">—</option>
+                          {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((option) => <option key={option} value={option}>{option}</option>)}
+                        </select>
+                      ) : grade ? (
                         <Badge variant={`grade-${grade.toLowerCase()}` as any}>
                           {grade}
                         </Badge>
+                      ) : (
+                        <span className="text-[var(--acade-text-faint)]">—</span>
                       )}
                     </td>
 
                     <td className="p-3 text-center">
                       <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">
-                        {grade === 'AR' ? '-' : gradePoint.toFixed(1)}
+                        {!grade || grade === 'AR' ? '-' : gradePoint.toFixed(1)}
                       </span>
                     </td>
 
                     <td className="p-3 text-center">
                       <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-gold)] font-[family-name:var(--font-geist-mono)]">
-                        {grade === 'AR' ? '-' : piPoint.toFixed(2)}
+                        {!grade || grade === 'AR' ? '-' : piPoint.toFixed(2)}
                       </span>
                     </td>
 
@@ -343,12 +365,11 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
             <span>F: {summary.gradeCount.F}</span>
           </div>
           <div className="h-2 w-full bg-[var(--acade-surface)] rounded-full flex overflow-hidden">
-            <div style={{ width: `${(summary.gradeCount.A / Math.max(1, courses.length)) * 100}%` }} className="h-full bg-[var(--acade-success)] transition-all duration-500" />
-            <div style={{ width: `${(summary.gradeCount.B / Math.max(1, courses.length)) * 100}%` }} className="h-full bg-[var(--acade-primary)] transition-all duration-500" />
-            <div style={{ width: `${(summary.gradeCount.C / Math.max(1, courses.length)) * 100}%` }} className="h-full bg-[var(--acade-warning)] transition-all duration-500" />
-            <div style={{ width: `${(summary.gradeCount.D / Math.max(1, courses.length)) * 100}%` }} className="h-full bg-[var(--acade-danger)]/70 transition-all duration-500" />
-            <div style={{ width: `${(summary.gradeCount.E / Math.max(1, courses.length)) * 100}%` }} className="h-full bg-[var(--acade-danger)]/90 transition-all duration-500" />
-            <div style={{ width: `${(summary.gradeCount.F / Math.max(1, courses.length)) * 100}%` }} className="h-full bg-[var(--acade-danger)] transition-all duration-500" />
+            {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((grade) => {
+              const gradedCount = Object.values(summary.gradeCount).reduce((total, count) => total + count, 0);
+              const colors: Record<Grade, string> = { A: 'var(--acade-success)', B: 'var(--acade-primary)', C: 'var(--acade-warning)', D: 'var(--grade-d)', E: 'var(--grade-e)', F: 'var(--acade-danger)' };
+              return <div key={grade} style={{ width: `${(summary.gradeCount[grade] / Math.max(1, gradedCount)) * 100}%`, backgroundColor: colors[grade] }} className="h-full transition-all duration-500" />;
+            })}
           </div>
         </div>
 

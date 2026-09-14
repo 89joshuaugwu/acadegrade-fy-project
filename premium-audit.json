@@ -1,0 +1,122 @@
+{
+  "findings": [
+    {
+      "category": "unresolved",
+      "file": "UX-CONTRACT.md",
+      "line": null,
+      "message": "The configured UX contract has no Canonical UI Map with the required columns.",
+      "remediation": "Add the exact Capability, Canonical owner, Source of truth, Allowed variants, and Verification columns.",
+      "ruleId": "canonical.map-missing",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(student)/results/page.tsx",
+      "line": 118,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(student)/settings/page.tsx",
+      "line": 317,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "components/ui/IconButton.tsx",
+      "line": 20,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "components/ui/Sheet.tsx",
+      "line": 40,
+      "message": "Enabled literal button has no detectable action or submit behavior.",
+      "remediation": "Connect the button to a real action, make it a submit button, or disable/remove it.",
+      "ruleId": "affordance.actionless-button",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(admin)/admin/login/page.tsx",
+      "line": 86,
+      "message": "Application-owned form does not declare its validation owner.",
+      "remediation": "Add noValidate/novalidate and implement the canonical validation contract.",
+      "ruleId": "form.novalidate-missing",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(admin)/admin/settings/page.tsx",
+      "line": 227,
+      "message": "Literal product textarea does not show evidence of the canonical resize-none rule.",
+      "remediation": "Use the shared Textarea owner or apply resize-none/resize: none with adequate height or auto-grow behavior.",
+      "ruleId": "form.textarea-resize-missing",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "components/ui/Textarea.tsx",
+      "line": 27,
+      "message": "Literal product textarea does not show evidence of the canonical resize-none rule.",
+      "remediation": "Use the shared Textarea owner or apply resize-none/resize: none with adequate height or auto-grow behavior.",
+      "ruleId": "form.textarea-resize-missing",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(admin)/admin/api-analytics/page.tsx",
+      "line": 234,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(admin)/admin/courses/page.tsx",
+      "line": 184,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(public)/calculator/page.tsx",
+      "line": 258,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    },
+    {
+      "category": "violation",
+      "file": "app/(student)/results/new/page.tsx",
+      "line": 85,
+      "message": "Native select conflicts with recorded Select/Listbox ownership: authored.",
+      "remediation": "Record Select/Listbox as native or reuse the authored canonical owner.",
+      "ruleId": "ownership.native-select-conflict",
+      "severity": "error"
+    }
+  ],
+  "mode": "strict",
+  "projectRoot": "C:\\Users\\joshu\\Projects\\Acadegrade\\acadegrade-web",
+  "schemaVersion": 1,
+  "summary": {
+    "errors": 12,
+    "total": 12,
+    "unresolved": 1,
+    "violations": 11,
+    "warnings": 0
+  }
+}
