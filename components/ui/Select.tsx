@@ -51,6 +51,7 @@ function Select({
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const id = useId();
+  const listboxId = `${id}-listbox`;
   const shouldReduceMotion = useReducedMotion();
 
   const selectedOption = options.find((o) => o.value === value);
@@ -60,6 +61,8 @@ function Select({
         o.label.toLowerCase().includes(search.toLowerCase())
       )
     : options;
+  const activeOption = highlightIndex >= 0 ? filtered[highlightIndex] : undefined;
+  const optionId = (optionValue: string) => `${listboxId}-option-${optionValue.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
   // Close on outside click
   useEffect(() => {
@@ -100,6 +103,8 @@ function Select({
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
           e.preventDefault();
           setIsOpen(true);
+          const selectedIndex = filtered.findIndex((option) => option.value === value);
+          setHighlightIndex(selectedIndex >= 0 ? selectedIndex : 0);
         }
         return;
       }
@@ -122,6 +127,14 @@ function Select({
             prev > 0 ? prev - 1 : filtered.length - 1
           );
           break;
+        case 'Home':
+          e.preventDefault();
+          setHighlightIndex(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          setHighlightIndex(filtered.length - 1);
+          break;
         case 'Enter':
           e.preventDefault();
           if (highlightIndex >= 0 && filtered[highlightIndex]) {
@@ -130,14 +143,15 @@ function Select({
           break;
       }
     },
-    [isOpen, filtered, highlightIndex, handleSelect]
+    [isOpen, filtered, highlightIndex, handleSelect, value]
   );
 
   // Scroll highlighted option into view
   useEffect(() => {
     if (highlightIndex >= 0 && listRef.current) {
       const items = listRef.current.querySelectorAll('[role="option"]');
-      items[highlightIndex]?.scrollIntoView({ block: 'nearest' });
+      const item = items[highlightIndex] as HTMLElement | undefined;
+      item?.scrollIntoView?.({ block: 'nearest' });
     }
   }, [highlightIndex]);
 
@@ -158,15 +172,24 @@ function Select({
           id={id}
           type="button"
           role="combobox"
+          aria-controls={listboxId}
           aria-expanded={isOpen}
           aria-haspopup="listbox"
+          aria-activedescendant={isOpen && activeOption ? optionId(activeOption.value) : undefined}
           aria-label={label ?? placeholder}
           disabled={disabled}
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            const nextOpen = !isOpen;
+            setIsOpen(nextOpen);
+            if (nextOpen) {
+              const selectedIndex = filtered.findIndex((option) => option.value === value);
+              setHighlightIndex(selectedIndex >= 0 ? selectedIndex : 0);
+            }
+          }}
           className={cn(
             'w-full h-12 px-4 rounded-xl flex items-center justify-between',
             'bg-[var(--acade-deep)] text-[var(--acade-text)]',
-            'border border-[var(--acade-border)]',
+            'border border-[var(--acade-control-border)]',
             'text-[length:var(--text-base)] font-[family-name:var(--font-dm-sans)]',
             'transition-colors duration-150 cursor-pointer',
             'focus:outline-none focus:border-[var(--acade-primary)] focus:ring-2 focus:ring-[var(--acade-primary)]/20',
@@ -216,6 +239,7 @@ function Select({
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search..."
+                      aria-label={`Search ${label ?? 'options'}`}
                       className={cn(
                         'w-full h-10 pl-9 pr-3 rounded-lg',
                         'bg-[var(--acade-deep)] text-[var(--acade-text)]',
@@ -231,6 +255,7 @@ function Select({
 
               {/* Options list */}
               <ul
+                id={listboxId}
                 ref={listRef}
                 role="listbox"
                 className="max-h-60 overflow-y-auto py-1"
@@ -243,6 +268,7 @@ function Select({
                   filtered.map((option, index) => (
                     <li
                       key={option.value}
+                      id={optionId(option.value)}
                       role="option"
                       aria-selected={option.value === value}
                       onClick={() => handleSelect(option.value)}
@@ -256,7 +282,7 @@ function Select({
                         index === highlightIndex && 'bg-[var(--acade-overlay)]'
                       )}
                     >
-                      <span>{option.label}</span>
+                      <span className="min-w-0 whitespace-normal text-left leading-5">{option.label}</span>
                       {option.value === value && (
                         <Check size={16} className="shrink-0 text-[var(--acade-primary)]" />
                       )}

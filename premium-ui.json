@@ -1,0 +1,24 @@
+{
+  "profile": "product-admin",
+  "sourceRoots": ["app", "components", "hooks", "lib"],
+  "locale": "en-NG",
+  "canonicalMap": "UX-CONTRACT.md",
+  "requiredCapabilities": ["Select/Listbox", "Form", "Scrollbar", "Toast", "CRUD"],
+  "ownership": {
+    "Select/Listbox": "authored",
+    "Form": "shared",
+    "Scrollbar": "global",
+    "Toast": "shared",
+    "CRUD": "route-and-service"
+  },
+  "requiredCommands": ["unit", "e2e", "accessibility", "build"],
+  "commands": {
+    "unit": "npm run test:unit",
+    "e2e": "npm run test:e2e",
+    "accessibility": "npm run test:a11y",
+    "build": "npm run build"
+  },
+  "evidence": {
+    "failurePaths": "tests/unit/academic-baseline.test.ts"
+  }
+}

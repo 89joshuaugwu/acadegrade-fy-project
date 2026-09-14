@@ -15,6 +15,7 @@
 
 ## tailwind-design-system
 - Adhere strictly to the design system configuration (Tailwind v4.3.1 CSS-first approach with @theme).
+- Treat `upgrade/03-design-system-spec.md` as the canonical light/dark/system token and component contract; Tailwind aliases must reference CSS variables rather than duplicate theme literals.
 - Strictly map colors to designated project tokens:
   - Background: #07090F | Cards: #0E1322 | Surface: #141B2E
   - Primary Indigo: #6366F1 | Gold Accent: #F59E0B | Border: #1F2B47

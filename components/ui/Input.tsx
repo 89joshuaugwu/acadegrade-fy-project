@@ -50,6 +50,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 
     const isPassword = type === 'password';
     const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
+    const describedBy = [hint && `${id}-hint`, error && `${id}-error`]
+      .filter(Boolean)
+      .join(' ') || undefined;
 
     return (
       <div className="flex flex-col gap-1.5 w-full">
@@ -89,7 +92,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               className
             )}
             aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
+            aria-describedby={describedBy}
             {...props}
           />
 
@@ -122,7 +125,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </AnimatePresence>
 
-        {hint && !error && (
+        {hint && (
           <p
             id={`${id}-hint`}
             className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-dm-sans)]"

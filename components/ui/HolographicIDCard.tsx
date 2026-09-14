@@ -25,6 +25,10 @@ export function HolographicIDCard({ children, className }: Props) {
   // Map mouse position to rotation degrees (tilt effect)
   const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ['10deg', '-10deg']);
   const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ['-10deg', '10deg']);
+  const glareBackground = useTransform(
+    () =>
+      `radial-gradient(circle at ${(x.get() + 0.5) * 100}% ${(y.get() + 0.5) * 100}%, rgba(255,255,255,0.06) 0%, transparent 60%)`
+  );
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!ref.current || shouldReduceMotion) return;
@@ -66,10 +70,7 @@ export function HolographicIDCard({ children, className }: Props) {
           <motion.div
             className="pointer-events-none absolute inset-0 rounded-3xl z-10"
             style={{
-              background: useTransform(
-                () =>
-                  `radial-gradient(circle at ${(x.get() + 0.5) * 100}% ${(y.get() + 0.5) * 100}%, rgba(255,255,255,0.06) 0%, transparent 60%)`
-              ),
+              background: glareBackground,
             }}
           />
         )}

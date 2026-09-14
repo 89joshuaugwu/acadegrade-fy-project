@@ -95,7 +95,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#6366F1',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F5F7FC' },
+    { media: '(prefers-color-scheme: dark)', color: '#080B16' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -117,14 +120,15 @@ export default function RootLayout({
         <ServiceWorkerKill />
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
           <AuthProvider>
             {children}
             <Toaster
               position="top-center"
+              containerStyle={{ zIndex: 'var(--z-toast)' }}
               toastOptions={{
                 duration: 4000,
                 style: {
@@ -134,6 +138,7 @@ export default function RootLayout({
                   borderRadius: '12px',
                   fontSize: 'var(--text-sm)',
                   fontFamily: 'var(--font-dm-sans)',
+                  boxShadow: 'var(--shadow-popover)',
                 },
                 success: {
                   iconTheme: {

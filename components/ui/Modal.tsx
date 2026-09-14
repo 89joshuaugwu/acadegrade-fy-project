@@ -1,40 +1,65 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'motion/react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { Button } from './Button';
+import { IconButton } from './IconButton';
+import { Input } from './Input';
 
-interface ModalProps {
+let bodyLockCount = 0;
+let previousBodyOverflow = '';
+
+function lockBodyScroll() {
+  if (bodyLockCount === 0) {
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  bodyLockCount += 1;
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    bodyLockCount = Math.max(0, bodyLockCount - 1);
+    if (bodyLockCount === 0) document.body.style.overflow = previousBodyOverflow;
+  };
+}
+
+function getFocusable(container: HTMLElement) {
+  return Array.from(container.querySelectorAll<HTMLElement>(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter((element) => element.getAttribute('aria-hidden') !== 'true');
+}
+
+export interface ModalProps {
   open: boolean;
   onClose: () => void;
   title: string;
   description?: string;
   children: React.ReactNode;
-  /** Renders a confirm-style modal with destructive red action button */
   confirm?: {
     label: string;
     onConfirm: () => void;
     loading?: boolean;
-    /** If set, user must type this text to enable the confirm button */
     requireText?: string;
   };
   className?: string;
+  size?: 'confirm' | 'form' | 'review';
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
+  presentation?: 'dialog' | 'sheet';
 }
 
-/**
- * Modal component — animated overlay with focus trap.
- *
- * Features:
- * - AnimatePresence scale 0.92→1 + opacity
- * - Backdrop blur + dark overlay
- * - Focus trap (ref + keydown Escape handler)
- * - Confirm variant with destructive red button
- * - Optional text confirmation for dangerous actions
- */
-function Modal({
+const sizeStyles = {
+  confirm: 'max-w-[440px]',
+  form: 'max-w-[560px]',
+  review: 'max-w-[880px]',
+};
+
+export function Modal({
   open,
   onClose,
   title,
@@ -42,162 +67,194 @@ function Modal({
   children,
   confirm,
   className,
+  size = confirm ? 'confirm' : 'form',
+  initialFocusRef,
+  presentation = 'dialog',
 }: ModalProps) {
   const shouldReduceMotion = useReducedMotion();
-  const modalRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const previousActiveElement = useRef<HTMLElement | null>(null);
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  const [confirmationText, setConfirmationText] = useState('');
+  const reactId = useId();
+  const titleId = `${reactId}-title`;
+  const descriptionId = `${reactId}-description`;
 
-  // Focus trap: Escape to close
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
-
-      // Trap focus within modal
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusable = modalRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last?.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first?.focus();
-          }
-        }
-      }
-    },
-    [onClose]
-  );
+  const dismiss = useCallback(() => {
+    setConfirmationText('');
+    onClose();
+  }, [onClose]);
 
   useEffect(() => {
-    if (open) {
-      previousActiveElement.current = document.activeElement as HTMLElement;
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
+    let root = document.getElementById('acadegrade-overlay-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'acadegrade-overlay-root';
+      document.body.appendChild(root);
+    }
+    setPortalRoot(root);
+  }, []);
 
-      // Focus the modal
-      requestAnimationFrame(() => {
-        modalRef.current?.focus();
-      });
+  useEffect(() => {
+    if (!open || !portalRoot) return;
+
+    previousActiveElement.current = document.activeElement as HTMLElement | null;
+    const unlock = lockBodyScroll();
+    const background = Array.from(document.body.children).filter(
+      (element) => element !== portalRoot
+    ) as HTMLElement[];
+    const previousAriaHidden = background.map((element) => element.getAttribute('aria-hidden'));
+    background.forEach((element) => {
+      element.inert = true;
+      element.setAttribute('aria-hidden', 'true');
+    });
+
+    const focusTimer = requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel) return;
+      const preferred = initialFocusRef?.current
+        ?? panel.querySelector<HTMLElement>('[data-autofocus], input:not([disabled]), textarea:not([disabled]), select:not([disabled])')
+        ?? getFocusable(panel)[0]
+        ?? panel;
+      preferred.focus();
+    });
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (!panelRef.current) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        dismiss();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusable(panelRef.current);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
 
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
+      cancelAnimationFrame(focusTimer);
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
-      previousActiveElement.current?.focus();
+      unlock();
+      background.forEach((element, index) => {
+        element.inert = false;
+        const oldValue = previousAriaHidden[index];
+        if (oldValue === null) element.removeAttribute('aria-hidden');
+        else element.setAttribute('aria-hidden', oldValue);
+      });
+      requestAnimationFrame(() => previousActiveElement.current?.focus());
     };
-  }, [open, handleKeyDown]);
+  }, [dismiss, initialFocusRef, open, portalRoot]);
 
-  return (
+  if (!portalRoot) return null;
+
+  const confirmationMatches = !confirm?.requireText
+    || confirmationText.trim() === confirm.requireText;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0" style={{ zIndex: 'var(--z-modal)' } as React.CSSProperties}>
-          {/* Backdrop */}
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
+        <div className="fixed inset-0" style={{ zIndex: 'var(--z-modal)' }}>
+          <motion.button
+            type="button"
+            tabIndex={-1}
+            data-overlay-backdrop
+            aria-label={`Close ${title}`}
+            initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={onClose}
-            aria-hidden="true"
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.16 }}
+            className="absolute inset-0 cursor-default bg-[var(--acade-scrim)]"
+            onClick={dismiss}
           />
 
-          {/* Modal panel */}
-          <div className="flex items-center justify-center min-h-full p-4">
+          <div className={cn(
+            'pointer-events-none flex min-h-full justify-center',
+            presentation === 'sheet' ? 'items-end p-0 sm:items-center sm:p-4' : 'items-center p-4'
+          )}>
             <motion.div
-              ref={modalRef}
+              ref={panelRef}
               role="dialog"
               aria-modal="true"
-              aria-label={title}
+              aria-labelledby={titleId}
+              aria-describedby={description ? descriptionId : undefined}
               tabIndex={-1}
-              initial={
-                shouldReduceMotion
-                  ? { opacity: 1 }
-                  : { opacity: 0, scale: 0.92, y: 10 }
-              }
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={
-                shouldReduceMotion
-                  ? { opacity: 0 }
-                  : { opacity: 0, scale: 0.95, y: 5 }
-              }
-              transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 25,
-                mass: 0.8,
-              }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.99 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 360, damping: 32 }}
               className={cn(
-                'relative w-full max-w-md',
-                'bg-[var(--acade-surface)] border border-[var(--acade-border)]',
-                'rounded-2xl p-6 shadow-2xl',
+                'pointer-events-auto relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden',
+                'rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[var(--shadow-popover)]',
                 'focus:outline-none',
+                sizeStyles[size],
+                presentation === 'sheet' && 'max-w-none rounded-b-none border-b-0 sm:max-w-[560px] sm:rounded-[var(--radius-dialog)] sm:border-b',
                 className
               )}
             >
-              {/* Close button */}
-              <button
-                onClick={onClose}
-                className={cn(
-                  'absolute top-4 right-4',
-                  'size-8 rounded-lg flex items-center justify-center',
-                  'text-[var(--acade-text-faint)] hover:text-[var(--acade-text)]',
-                  'hover:bg-[var(--acade-overlay)] transition-colors',
-                )}
-                aria-label="Close modal"
-              >
-                <X size={18} />
-              </button>
+              <header className="flex shrink-0 items-start gap-4 border-b border-[var(--acade-border-subtle)] px-5 py-4 md:px-6">
+                <div className="min-w-0 flex-1">
+                  <h2 id={titleId} className="text-xl font-semibold text-[var(--acade-text)] text-balance">
+                    {title}
+                  </h2>
+                  {description && (
+                    <p id={descriptionId} className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)] text-pretty">
+                      {description}
+                    </p>
+                  )}
+                </div>
+                <IconButton aria-label="Close modal" onClick={dismiss} className="-mr-2 -mt-2">
+                  <X className="size-5" aria-hidden="true" />
+                </IconButton>
+              </header>
 
-              {/* Header */}
-              <div className="mb-4 pr-8">
-                <h2 className="text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)] text-balance">
-                  {title}
-                </h2>
-                {description && (
-                  <p className="mt-1.5 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] text-pretty">
-                    {description}
-                  </p>
+              <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6">
+                {children}
+                {confirm?.requireText && (
+                  <div className="mt-5">
+                    <Input
+                      label={`Type ${confirm.requireText} to confirm`}
+                      value={confirmationText}
+                      onChange={(event) => setConfirmationText(event.target.value)}
+                      autoComplete="off"
+                    />
+                  </div>
                 )}
               </div>
 
-              {/* Content */}
-              <div>{children}</div>
-
-              {/* Confirm variant footer */}
               {confirm && (
-                <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[var(--acade-border)]">
-                  <Button variant="ghost" size="sm" onClick={onClose}>
-                    Cancel
-                  </Button>
+                <footer className="flex shrink-0 flex-col-reverse gap-3 border-t border-[var(--acade-border-subtle)] px-5 py-4 sm:flex-row sm:justify-end md:px-6">
+                  <Button variant="ghost" onClick={dismiss}>Cancel</Button>
                   <Button
                     variant="danger"
-                    size="sm"
                     onClick={confirm.onConfirm}
                     loading={confirm.loading}
+                    loadingLabel={`${confirm.label}…`}
+                    disabled={!confirmationMatches}
                   >
                     {confirm.label}
                   </Button>
-                </div>
+                </footer>
               )}
             </motion.div>
           </div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    portalRoot
   );
 }
-
-export { Modal };
-export type { ModalProps };
