@@ -464,12 +464,28 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 }
 
 @media (min-width: 1024px) and (min-height: 720px) {
+  .academic-proof-deck {
+    height: 25rem;
+  }
+
+  .academic-proof-deck[data-active-stage='2'] {
+    height: 26rem;
+  }
+
+  .academic-proof-deck[data-active-stage='3'] {
+    height: 29rem;
+  }
+
+  .academic-proof-deck[data-active-stage='4'] {
+    height: 34rem;
+  }
+
   .academic-proof-card {
     opacity: var(--deck-card-opacity);
     pointer-events: none;
     transform: translate3d(0, var(--deck-card-y), 0) scale(var(--deck-card-scale));
     transform-origin: center top;
-    will-change: transform, opacity;
+    will-change: transform;
   }
 
   .academic-proof-card:first-child {
@@ -574,10 +590,10 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   background-image:
     linear-gradient(color-mix(in srgb, var(--acade-void) 18%, transparent), color-mix(in srgb, var(--acade-void) 18%, transparent)),
     url('/light-background.png');
-  background-attachment: fixed;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
+  background-attachment: scroll;
+  background-position: center top;
+  background-repeat: repeat-y;
+  background-size: max(100vw, 75rem) auto;
 }
 
 .dark .public-atmosphere {
@@ -587,12 +603,12 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 }
 
 .public-atmosphere-section {
-  background-color: color-mix(in srgb, var(--acade-void) 84%, transparent);
+  background-color: color-mix(in srgb, var(--acade-void) 48%, transparent);
   backdrop-filter: blur(1px);
 }
 
 .dark .public-atmosphere-section {
-  background-color: color-mix(in srgb, var(--acade-void) 78%, transparent);
+  background-color: color-mix(in srgb, var(--acade-void) 58%, transparent);
 }
 
 @media (max-width: 767px) {

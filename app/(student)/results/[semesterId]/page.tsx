@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2 } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -37,6 +37,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const [semester, setSemester] = useState<Semester | null>(null);
   const [initialCourses, setInitialCourses] = useState<CourseInput[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
 
   // Modals state
@@ -61,6 +63,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
     }
 
     async function fetchData() {
+      setLoading(true);
+      setLoadError(false);
       try {
         const semData = await getDocument<Semester>(`users/${user!.uid}/semesters/${semesterId}`);
         if (!semData) {
@@ -76,6 +80,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           grade: c.grade || undefined
         })));
       } catch (err) {
+        setLoadError(true);
         toast.error('Failed to load semester data');
       } finally {
         setLoading(false);
@@ -83,7 +88,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
     }
 
     fetchData();
-  }, [user?.uid, semesterId, router]);
+  }, [user?.uid, semesterId, router, loadAttempt]);
 
   const handleSave = async (updatedCourses: CourseInput[]) => {
     if (!user?.uid || !semester) return;
@@ -290,6 +295,35 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-4 py-10">
+        <div
+          role="alert"
+          className="w-full rounded-[var(--radius-surface)] border border-[var(--acade-danger)]/35 bg-[var(--acade-danger-dim)] px-6 py-10 text-center md:px-10"
+        >
+          <AlertCircle className="mx-auto mb-4 size-7 text-[var(--acade-danger)]" aria-hidden="true" />
+          <h1 className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+            Semester could not be loaded
+          </h1>
+          <p className="mx-auto mt-3 max-w-lg text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
+            We could not retrieve this semester and its courses. Check your connection, then retry without losing your place.
+          </p>
+          <div className="mt-6 flex flex-col-reverse justify-center gap-3 sm:flex-row">
+            <Button variant="outline" onClick={() => router.push('/results')}>
+              <ArrowLeft className="size-4" aria-hidden="true" />
+              Back to Results
+            </Button>
+            <Button variant="primary" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>
+              <RefreshCw className="size-4" aria-hidden="true" />
+              Retry
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

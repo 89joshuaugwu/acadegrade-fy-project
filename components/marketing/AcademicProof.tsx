@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef } from 'react';
 import { LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
 
 const exampleCourses = [
@@ -13,7 +13,6 @@ const STAGE_RESTING_OFFSETS = [0, 64, 128, 192] as const;
 const STAGE_ENTER_POINTS = [0, 0.12, 0.35, 0.58] as const;
 const STAGE_ENTER_DURATION = 0.22;
 const ENTRY_OFFSET = 520;
-const DECK_HEIGHT_CLASSES = ['lg:h-[25rem]', 'lg:h-[26rem]', 'lg:h-[29rem]', 'lg:h-[34rem]'] as const;
 
 type DeckCardStyle = CSSProperties & {
   '--deck-card-y': string;
@@ -40,8 +39,8 @@ function getDeckCardStyle(index: number, progress: number): DeckCardStyle {
 
   return {
     '--deck-card-y': `${y.toFixed(2)}px`,
-    '--deck-card-opacity': reveal.toFixed(3),
-    '--deck-card-scale': (0.985 + reveal * 0.015).toFixed(3),
+    '--deck-card-opacity': index === 0 || reveal > 0 ? '1.000' : '0.000',
+    '--deck-card-scale': '1.000',
   };
 }
 
@@ -49,8 +48,6 @@ export function AcademicProof() {
   const sectionRef = useRef<HTMLElement>(null);
   const deckRef = useRef<HTMLOListElement>(null);
   const cardRefs = useRef<Array<HTMLLIElement | null>>([]);
-  const [activeStage, setActiveStage] = useState(0);
-
   useEffect(() => {
     let frame = 0;
     let targetProgress = 0;
@@ -71,8 +68,8 @@ export function AcademicProof() {
 
       // Grow the viewport as soon as the next card begins entering so its body is
       // never clipped inside the preceding stage's shorter frame.
-      const nextStage = [3, 2, 1].find((index) => getCardProgress(index, progress) >= 0.08) ?? 0;
-      setActiveStage((current) => current === nextStage ? current : nextStage);
+      const nextStage = [3, 2, 1].find((index) => getCardProgress(index, progress) > 0) ?? 0;
+      if (deckRef.current) deckRef.current.dataset.activeStage = String(nextStage + 1);
     };
 
     const render = (frameTime: number) => {
@@ -99,7 +96,7 @@ export function AcademicProof() {
 
       const bounds = section.getBoundingClientRect();
       const availableTravel = section.offsetHeight - deck.offsetHeight - 128;
-      const scrollSceneLength = Math.max(1, Math.min(window.innerHeight * 0.9, availableTravel));
+      const scrollSceneLength = Math.max(1, Math.min(window.innerHeight * 0.6, availableTravel));
       targetProgress = clamp((96 - bounds.top) / scrollSceneLength);
 
       if (!isAnimating) {
@@ -123,11 +120,11 @@ export function AcademicProof() {
       ref={sectionRef}
       id="features"
       aria-labelledby="academic-proof-title"
-      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[170vh]"
+      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[160vh]"
     >
-      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[170vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
-        <div className="lg:col-span-5">
-          <div className="academic-proof-copy lg:sticky lg:top-28">
+      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[160vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
+        <div className="academic-proof-copy lg:sticky lg:top-28 lg:col-span-5">
+          <div>
             <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
             <h2 id="academic-proof-title" className="mt-3 max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,4vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.04em] text-[var(--acade-text)]">
               A result becomes useful when its basis stays visible.
@@ -144,7 +141,7 @@ export function AcademicProof() {
           </div>
         </div>
 
-        <ol ref={deckRef} data-active-stage={activeStage + 1} aria-label="Illustrative calculation sequence" className={`academic-ledger-field academic-proof-deck min-w-0 space-y-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 transition-[height] duration-500 sm:p-5 lg:sticky lg:top-24 lg:col-span-7 lg:space-y-0 lg:overflow-hidden ${DECK_HEIGHT_CLASSES[activeStage]}`}>
+        <ol ref={deckRef} data-active-stage="1" aria-label="Illustrative calculation sequence" className="academic-ledger-field academic-proof-deck min-w-0 space-y-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 transition-[height] duration-300 sm:p-5 lg:sticky lg:top-24 lg:col-span-7 lg:space-y-0 lg:overflow-hidden">
           <li ref={(node) => { cardRefs.current[0] = node; }} data-stage="1" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-10" style={getDeckCardStyle(0, 0)}>
             <div className="flex items-start justify-between gap-4">
               <div>

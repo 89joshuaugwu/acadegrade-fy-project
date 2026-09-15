@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Download, Share2, Printer, Link2, Copy, Check, X, ImageIcon, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { useCallback, useEffect, useState } from 'react';
+import { Download, Share2, Printer, Link2, Copy, Check, X, ImageIcon, AlertTriangle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +10,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { queryCollection, deleteDocument, where } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
+import { EmptyState, ErrorState } from '@/components/shared';
 import { cn } from '@/lib/utils/cn';
 
 import type { SemesterWithId, SemesterWithCourses } from '@/types/semester';
@@ -19,7 +21,7 @@ export default function TranscriptPage() {
   const { profile } = useProfile();
   
   const [semesters, setSemesters] = useState<SemesterWithCourses[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [downloading, setDownloading] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -29,12 +31,10 @@ export default function TranscriptPage() {
   const [showPhoto, setShowPhoto] = useState(true);
   const [sharedLinks, setSharedLinks] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (user) loadData();
-  }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!user) return;
+
+    setLoadStatus('loading');
     try {
       const sems = await queryCollection<SemesterWithId>(`users/${user.uid}/semesters`);
       const semsWithCourses: SemesterWithCourses[] = [];
@@ -64,16 +64,22 @@ export default function TranscriptPage() {
       } catch (e) {
         console.error('Failed to load shared links', e);
       }
+      setLoadStatus('ready');
     } catch (err) {
       console.error(err);
+      setSemesters([]);
+      setSharedLinks([]);
+      setLoadStatus('error');
       toast.error('Failed to load transcript data');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) void loadData();
+  }, [loadData, user]);
 
   const handleDownload = async () => {
-    if (!user) return;
+    if (!user || loadStatus !== 'ready' || semesters.length === 0) return;
     setDownloading(true);
     const toastId = toast.loading('Generating PDF...');
     try {
@@ -111,11 +117,12 @@ export default function TranscriptPage() {
   };
 
   const handlePrint = () => {
+    if (loadStatus !== 'ready' || semesters.length === 0) return;
     window.print();
   };
 
   const handleShareLink = async () => {
-    if (!user) return;
+    if (!user || loadStatus !== 'ready' || semesters.length === 0) return;
     setSharing(true);
     try {
       const token = await user.getIdToken();
@@ -186,10 +193,61 @@ export default function TranscriptPage() {
   // Resolve user photo URL — prioritise profile avatarUrl, fallback to Firebase Auth photoURL
   const userPhotoUrl = profile?.avatarUrl || user?.photoURL || null;
 
-  if (loading) {
+  if (loadStatus === 'loading') {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="size-10 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      <div className="flex h-64 items-center justify-center" aria-busy="true" aria-label="Loading transcript">
+        <div className="size-10 animate-spin rounded-full border-4 border-[var(--acade-primary)] border-t-transparent" aria-hidden="true" />
+      </div>
+    );
+  }
+
+  if (loadStatus === 'error') {
+    return (
+      <div className="mx-auto max-w-4xl pb-10">
+        <div className="mb-8">
+          <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-danger)]">
+            Transcript unavailable
+          </p>
+          <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+            We couldn&apos;t load your transcript
+          </h1>
+        </div>
+        <ErrorState
+          title="Your academic record is temporarily unavailable"
+          description="The transcript preview and export tools are disabled until your completed semesters load successfully. Your saved results have not been changed."
+          retryLabel="Retry loading transcript"
+          onRetry={() => void loadData()}
+        />
+      </div>
+    );
+  }
+
+  if (semesters.length === 0) {
+    return (
+      <div className="mx-auto max-w-4xl pb-10">
+        <div className="mb-4">
+          <h1 className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+            Unofficial Transcript
+          </h1>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+            Your transcript will be created from semesters marked as complete.
+          </p>
+        </div>
+        <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)]">
+          <EmptyState
+            icon={<FileText className="size-8" aria-hidden="true" />}
+            title="No completed semesters yet"
+            description="Complete a semester in Results before previewing, printing, sharing, or downloading an unofficial transcript."
+          />
+          <div className="flex justify-center px-6 pb-10">
+            <Link
+              href="/results"
+              className="inline-flex h-12 items-center justify-center rounded-xl bg-[var(--acade-primary)] px-6 text-[length:var(--text-sm)] font-semibold text-[var(--acade-on-primary)] transition-colors hover:bg-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+            >
+              Go to Results
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

@@ -62,7 +62,7 @@ describe('AcadeGrade landing presentation', () => {
     expect(screen.getByText(/semester gpa = total quality points ÷ total credits/i)).toBeInTheDocument();
     const sequence = screen.getByRole('list', { name: /illustrative calculation sequence/i });
     const stages = Array.from(sequence.children);
-    expect(sequence).toHaveClass('academic-proof-deck', 'min-w-0', 'lg:sticky', 'lg:top-24', 'lg:h-[25rem]');
+    expect(sequence).toHaveClass('academic-proof-deck', 'min-w-0', 'lg:sticky', 'lg:top-24');
     expect(sequence).toHaveAttribute('data-active-stage', '1');
     expect(stages).toHaveLength(4);
     expect(stages.map((stage) => stage.getAttribute('data-stage'))).toEqual(['1', '2', '3', '4']);
