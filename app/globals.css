@@ -537,44 +537,25 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   box-shadow: var(--shadow-popover);
 }
 
-/* Public marketing atmosphere: a restrained version of the supplied violet / gold
-   wave artwork. It is token-based so it adapts to the selected light or dark theme. */
+/* Public marketing atmosphere uses the supplied theme-matched violet / gold artwork. */
 .public-atmosphere {
   position: relative;
   isolation: isolate;
   contain: paint;
   background-color: var(--acade-void);
   background-image:
-    radial-gradient(58rem 37rem at -12% -8%, color-mix(in srgb, var(--acade-primary) 19%, transparent) 0%, transparent 69%),
-    radial-gradient(48rem 38rem at 111% 10%, color-mix(in srgb, var(--acade-primary) 15%, transparent) 0%, transparent 71%),
-    radial-gradient(50rem 32rem at 106% 94%, color-mix(in srgb, var(--acade-gold) 12%, transparent) 0%, transparent 70%),
-    radial-gradient(52rem 35rem at -8% 96%, color-mix(in srgb, var(--acade-primary) 16%, transparent) 0%, transparent 71%),
-    linear-gradient(145deg, color-mix(in srgb, var(--acade-void) 84%, var(--acade-primary)) 0%, var(--acade-void) 42%, color-mix(in srgb, var(--acade-void) 88%, var(--acade-gold)) 100%);
+    linear-gradient(color-mix(in srgb, var(--acade-void) 18%, transparent), color-mix(in srgb, var(--acade-void) 18%, transparent)),
+    url('/light-background.png');
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
-.public-atmosphere::before,
-.public-atmosphere::after {
-  position: absolute;
-  z-index: 0;
-  width: min(60rem, 72vw);
-  height: min(42rem, 54vw);
-  border: 1px solid color-mix(in srgb, var(--acade-gold) 62%, transparent);
-  border-radius: 48% 52% 46% 54%;
-  content: '';
-  opacity: 0.5;
-  pointer-events: none;
-}
-
-.public-atmosphere::before {
-  top: -21rem;
-  left: -23rem;
-  transform: rotate(-18deg);
-}
-
-.public-atmosphere::after {
-  right: -25rem;
-  bottom: -18rem;
-  transform: rotate(17deg);
+.dark .public-atmosphere {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--acade-void) 24%, transparent), color-mix(in srgb, var(--acade-void) 24%, transparent)),
+    url('/dark-background.png');
 }
 
 .public-atmosphere > * {
@@ -583,27 +564,17 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 }
 
 .public-atmosphere-section {
-  background-color: color-mix(in srgb, var(--acade-void) 79%, transparent);
+  background-color: color-mix(in srgb, var(--acade-void) 84%, transparent);
+  backdrop-filter: blur(1px);
 }
 
 .dark .public-atmosphere-section {
-  background-color: color-mix(in srgb, var(--acade-void) 71%, transparent);
+  background-color: color-mix(in srgb, var(--acade-void) 78%, transparent);
 }
 
 @media (max-width: 767px) {
-  .public-atmosphere::before,
-  .public-atmosphere::after {
-    opacity: 0.34;
-  }
-
-  .public-atmosphere::before {
-    top: -16rem;
-    left: -30rem;
-  }
-
-  .public-atmosphere::after {
-    right: -34rem;
-    bottom: -15rem;
+  .public-atmosphere {
+    background-attachment: scroll;
   }
 }
 

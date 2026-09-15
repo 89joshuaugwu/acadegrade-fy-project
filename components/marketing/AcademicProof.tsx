@@ -1,7 +1,7 @@
 'use client';
 
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
-import { Calculator, LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
+import { LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
 
 const exampleCourses = [
   { code: 'CSC 415', title: 'Computer Graphics', score: 54, grade: 'C', units: 2, gradeClass: 'text-[var(--acade-gold)]' },
