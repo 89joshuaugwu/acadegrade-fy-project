@@ -8,7 +8,7 @@ Read `03`, `05`, and `06` first. All screens inherit their theme, responsive, ke
 
 Owners: `components/layout/Navbar.tsx`, `PublicShell.tsx`; consumers `/`, `/about`, `/calculator`, `/share/[shareId]`.
 
-Navbar: logo left, Features (`/#features`), How it works (`/#how-it-works`), Calculator, About; theme control; Sign in and Get started. Authenticated CTA reads Dashboard only for a complete profile, otherwise Finish setup. Mobile collapses navigation into the canonical drawer, with labeled close, Escape, focus trap, and focus return. Hash links must work when opened from About or Calculator, not target nonexistent local ids.
+Navbar: on desktop, use an inset floating capsule with logo left, Features (`/#features`), How it works (`/#how-it-works`), Calculator, About, theme control, Sign in, and one primary Get started action. The capsule may use a restrained violet/gold moving border highlight, but content contrast and focus visibility take priority over glow. Authenticated CTA reads Dashboard only for a complete profile, otherwise Finish setup. On mobile, use one compact floating branded top capsule with a clearly labeled hamburger button. The hamburger opens a compact modal menu containing Features, How it works, About, Calculator, theme, and account actions; it must provide a labeled close, Escape dismissal, focus trap, and focus return. Public pages must not render a persistent bottom navigation bar. Hash links must work when opened from About or Calculator, not target nonexistent local ids.
 
 Footer: concise product line, existing destinations, real contact channel if configured, app availability. Do not invent Privacy/Terms pages or dead links; published policies require real content and routes. Use one footer implementation. Keep authentication screens on a smaller AuthShell rather than mounting full marketing navigation around every form.
 
@@ -16,7 +16,7 @@ Footer: concise product line, existing destinations, real contact channel if con
 
 Owner: `components/layout/StudentShell.tsx`; guard `app/(student)/layout.tsx`.
 
-Desktop: 240px rail with brand, four primary destinations, notification count, settings, compact identity and sign-out. Top context bar holds page title/breadcrumb when supplied, theme, notifications, and account actions. No giant profile card competing with content. Small viewports retain bottom navigation and one compact header; drawer and bottom tabs must agree on active route. Use `aria-current="page"` for current destinations.
+Desktop: inset 240px rounded rail with brand, four primary destinations, notification count, settings, compact identity and sign-out. Top context bar holds page title/breadcrumb when supplied, theme, notifications, and account actions. No giant profile card competes with content. Small viewports retain a floating bottom dock for the same four primary destinations and one compact header. The mobile drawer is account-only: profile, notifications, settings, theme, and sign-out; it must not duplicate the four primary destinations or include public Quick Calculator/About links. Use `aria-current="page"` for current destinations.
 
 Announcements sit below context with a dismiss button and message-id-based dismissal. Notification permission is requested from a purposeful action, never automatically during shell mount. Add a recoverable auth/config error state; protect children until both identity and profile are valid.
 

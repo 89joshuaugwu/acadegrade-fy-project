@@ -226,7 +226,7 @@ body {
   background-color: var(--acade-void);
   color: var(--acade-text);
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -485,6 +485,58 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
+/* Public navigation capsule and mobile menu */
+@keyframes public-nav-capsule-border {
+  to {
+    background-position: 0 0, 200% 0;
+  }
+}
+
+.public-nav-shell {
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--acade-void) 92%, transparent), transparent);
+}
+
+.public-nav-capsule {
+  min-height: var(--shell-header-height);
+  position: relative;
+  isolation: isolate;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(var(--acade-deep), var(--acade-deep)) padding-box,
+    linear-gradient(100deg, var(--acade-primary), color-mix(in srgb, var(--acade-primary) 50%, var(--acade-gold)), var(--acade-gold), var(--acade-primary)) border-box;
+  background-size: 100% 100%, 200% 100%;
+  background-position: 0 0, 0 0;
+  box-shadow: var(--shadow-card);
+  animation: public-nav-capsule-border 12s linear infinite;
+}
+
+.public-nav-shell--scrolled .public-nav-capsule {
+  box-shadow: var(--shadow-popover);
+}
+
+.public-mobile-menu-link:focus-visible {
+  outline: 2px solid var(--acade-primary);
+  outline-offset: 2px;
+}
+
+.public-mobile-menu-link {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  border-radius: var(--radius-control);
+  padding: 0 0.75rem;
+  color: var(--acade-text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.public-mobile-menu-link:hover {
+  background: var(--acade-overlay);
+  color: var(--acade-primary);
+}
+
 /* ── Marquee for landing page ── */
 .marquee-container {
   mask-image: linear-gradient(
@@ -536,6 +588,10 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .public-nav-capsule {
+    animation: none;
   }
 }
 

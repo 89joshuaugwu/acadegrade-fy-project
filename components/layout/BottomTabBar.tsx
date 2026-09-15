@@ -28,8 +28,12 @@ export function BottomTabBar() {
   const { insightsStale } = useAnalytics();
 
   return (
-    <nav aria-label="Student tabs" className="fixed inset-x-0 bottom-0 border-t border-[var(--acade-border)] bg-[var(--acade-deep)]/96 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
-      <div className="mx-auto flex h-16 max-w-xl items-center justify-around px-2">
+    <nav
+      aria-label="Student tabs"
+      className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-deep)]/94 shadow-[0_18px_48px_rgba(2,6,23,0.28)] backdrop-blur-xl lg:hidden"
+      style={{ zIndex: 'var(--z-sticky)' }}
+    >
+      <div className="mx-auto grid min-h-[4.5rem] max-w-xl grid-cols-4 items-stretch p-1.5">
         {studentNavigation.map((tab) => {
           const active = isRouteActive(pathname, tab.href);
           const Icon = TAB_ICONS[tab.icon];
@@ -39,19 +43,19 @@ export function BottomTabBar() {
               key={tab.href}
               href={tab.href}
               id={`tour-mobile-nav-${tab.label.toLowerCase()}`}
-              className="relative flex flex-col items-center justify-center w-full h-full gap-1 tap-highlight-transparent group"
+              className="group relative flex min-h-11 w-full flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] tap-highlight-transparent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
               aria-label={tab.label}
               aria-current={active ? 'page' : undefined}
             >
               {active && !shouldReduceMotion && (
                 <motion.div
                   layoutId="bottom-tab-pill"
-                  className="absolute inset-x-2 inset-y-1 rounded-2xl border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                  className="absolute inset-0 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
                   transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                 />
               )}
               {active && shouldReduceMotion && (
-                <div className="absolute inset-y-1 inset-x-2 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-2xl" />
+                <div className="absolute inset-0 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary)]/10" />
               )}
               
               <div className="relative z-10">

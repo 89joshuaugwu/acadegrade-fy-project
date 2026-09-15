@@ -8,8 +8,6 @@ import {
   Bell,
   BookOpen,
   BrainCircuit,
-  Calculator,
-  Info,
   LayoutDashboard,
   LogOut,
   Megaphone,
@@ -22,7 +20,7 @@ import { removeNotificationToken } from '@/lib/firebase/fcm';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils/cn';
 import { Sheet, ThemeControl } from '@/components/ui';
-import { adminNavigation, isRouteActive, studentNavigation, type NavigationIcon } from '@/lib/ui/route-meta';
+import { adminNavigation, isRouteActive, type NavigationIcon } from '@/lib/ui/route-meta';
 import type { UserWithId } from '@/types/user';
 
 interface MobileDrawerProps {
@@ -102,24 +100,10 @@ export function MobileDrawer({
             })}
           </nav>
         ) : (
-          <>
-            <nav aria-label="Student primary navigation" className="grid gap-1">
-              {studentNavigation.map((item) => {
-                const Icon = ADMIN_ICONS[item.icon];
-                return <DrawerLink key={item.href} href={item.href} icon={Icon} label={item.label} onClick={onClose} />;
-              })}
-            </nav>
-
-            <nav aria-label="Student account navigation" className="mt-4 grid gap-1">
-              <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
-              <DrawerLink href="/notifications" id="tour-mobile-nav-notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
-            </nav>
-
-            <nav aria-label="Student tools navigation" className="mt-4 grid gap-1">
-              <DrawerLink href="/calculator" icon={Calculator} label="Quick calculator" onClick={onClose} />
-              <DrawerLink href="/about" icon={Info} label="About AcadeGrade" onClick={onClose} />
-            </nav>
-          </>
+          <nav aria-label="Student account navigation" className="grid gap-1">
+            <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
+            <DrawerLink href="/notifications" id="tour-mobile-nav-notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
+          </nav>
         )}
 
         <div className="mt-4 border-t border-[var(--acade-border-subtle)] pt-4">

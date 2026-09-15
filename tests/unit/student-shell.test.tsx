@@ -76,7 +76,8 @@ describe('student shell navigation', () => {
     renderShell();
 
     expect(screen.getByRole('complementary', { name: 'Student navigation' }))
-      .toHaveClass('w-[var(--student-rail-width)]');
+      .toHaveClass('w-[var(--student-rail-width)]', 'inset-y-4', 'left-4', 'rounded-[var(--radius-dialog)]');
+    expect(screen.getByRole('main')).toHaveClass('lg:ml-[calc(var(--student-rail-width)+2rem)]');
     expect(screen.getByRole('banner', { name: 'Student page context' }))
       .toHaveTextContent('Dashboard');
     expect(screen.getByText('Student content')).toBeInTheDocument();
@@ -94,5 +95,7 @@ describe('student shell navigation', () => {
       .toHaveTextContent('Semester result');
     expect(screen.getByRole('banner', { name: 'Student mobile header' }))
       .toHaveTextContent('Semester result');
+    expect(screen.getByRole('navigation', { name: 'Student tabs' }))
+      .toHaveClass('inset-x-3', 'rounded-[var(--radius-dialog)]');
   });
 });

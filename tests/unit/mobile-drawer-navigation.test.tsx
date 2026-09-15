@@ -16,7 +16,7 @@ vi.mock('@/lib/firebase/fcm', () => ({ removeNotificationToken: vi.fn() }));
 import { MobileDrawer } from '@/components/layout/MobileDrawer';
 
 describe('student mobile drawer', () => {
-  it('mirrors the four primary destinations and keeps account tools separate', () => {
+  it('keeps the drawer focused on account utilities without duplicating primary tabs', () => {
     render(
       <ThemeProvider attribute="class" defaultTheme="system">
         <MobileDrawer
@@ -29,15 +29,16 @@ describe('student mobile drawer', () => {
     );
 
     expect(screen.getByRole('dialog', { name: 'Student navigation' })).toBeInTheDocument();
-    const primary = screen.getByRole('navigation', { name: 'Student primary navigation' });
-    expect(primary).toContainElement(screen.getByRole('link', { name: 'Dashboard' }));
-    expect(primary).toContainElement(screen.getByRole('link', { name: 'Results' }));
-    expect(primary).toContainElement(screen.getByRole('link', { name: 'Insights' }));
-    expect(primary).toContainElement(screen.getByRole('link', { name: 'Transcript' }));
-    expect(screen.getByRole('link', { name: 'Results' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('navigation', { name: 'Student primary navigation' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Results' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Insights' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Transcript' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Quick calculator' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'About AcadeGrade' })).not.toBeInTheDocument();
 
-    const tools = screen.getByRole('navigation', { name: 'Student account navigation' });
-    expect(tools).toContainElement(screen.getByRole('link', { name: 'Settings' }));
-    expect(tools).toContainElement(screen.getByRole('link', { name: /Notifications/ }));
+    const account = screen.getByRole('navigation', { name: 'Student account navigation' });
+    expect(account).toContainElement(screen.getByRole('link', { name: 'Settings' }));
+    expect(account).toContainElement(screen.getByRole('link', { name: /Notifications/ }));
   });
 });

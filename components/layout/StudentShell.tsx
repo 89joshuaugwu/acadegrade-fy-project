@@ -134,7 +134,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside aria-label="Student navigation" className="fixed inset-y-0 left-0 hidden w-[var(--student-rail-width)] flex-col overflow-y-auto border-r border-[var(--acade-border)] bg-[var(--acade-deep)] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
+      <aside aria-label="Student navigation" className="fixed inset-y-4 left-4 hidden w-[var(--student-rail-width)] flex-col overflow-y-auto rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-deep)] shadow-[0_20px_60px_rgba(2,6,23,0.18)] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
         <div className="flex min-h-[var(--shell-header-height)] items-center border-b border-[var(--acade-border-subtle)] px-5">
           <Logo size="md" />
         </div>
@@ -265,7 +265,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main id="main-content" className="relative min-h-screen flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:ml-[var(--student-rail-width)] lg:pb-0">
+      <main id="main-content" className="relative min-h-screen flex-1 pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:ml-[calc(var(--student-rail-width)+2rem)] lg:pb-0">
         <header
           aria-label="Student page context"
           className="sticky top-0 hidden min-h-[var(--shell-header-height)] items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]/94 px-8 backdrop-blur-md lg:flex"

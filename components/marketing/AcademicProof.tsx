@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import { Calculator, LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
 
 const exampleCourses = [
@@ -6,10 +9,61 @@ const exampleCourses = [
   { code: 'MTH 321', title: 'Numerical Analysis', score: 71, grade: 'A', units: 3, gradeClass: 'text-[var(--acade-success)]' },
 ] as const;
 
+const settledStageOffsets = [
+  'lg:translate-y-0',
+  'lg:translate-y-16',
+  'lg:translate-y-32',
+  'lg:translate-y-48',
+] as const;
+
+function stagePosition(index: number, activeStage: number) {
+  return index <= activeStage
+    ? `${settledStageOffsets[index]} lg:opacity-100`
+    : 'lg:pointer-events-none lg:translate-y-[34rem] lg:opacity-0';
+}
+
 export function AcademicProof() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [activeStage, setActiveStage] = useState(0);
+
+  useEffect(() => {
+    let frame = 0;
+
+    const updateStage = () => {
+      const section = sectionRef.current;
+      if (!section || window.innerWidth < 1024) return;
+
+      const bounds = section.getBoundingClientRect();
+      const sectionStart = window.scrollY + bounds.top;
+      const travel = Math.max(1, window.innerHeight * 0.9);
+      const progress = Math.min(1, Math.max(0, (window.scrollY - sectionStart + 96) / travel));
+      const nextStage = Math.min(3, Math.floor(progress * 4));
+      setActiveStage((current) => current === nextStage ? current : nextStage);
+    };
+
+    const scheduleUpdate = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updateStage);
+    };
+
+    updateStage();
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, []);
+
   return (
-    <section id="features" aria-labelledby="academic-proof-title" className="scroll-mt-20 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]">
-      <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
+    <section
+      ref={sectionRef}
+      id="features"
+      aria-labelledby="academic-proof-title"
+      className={`scroll-mt-20 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)] transition-[min-height] duration-700 ${activeStage === 3 ? 'lg:min-h-[150vh]' : 'lg:min-h-[190vh]'}`}
+    >
+      <div className={`mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 transition-[min-height] duration-700 sm:px-6 sm:py-20 lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24 ${activeStage === 3 ? 'lg:min-h-[150vh]' : 'lg:min-h-[190vh]'}`}>
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-28">
             <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
@@ -28,8 +82,8 @@ export function AcademicProof() {
           </div>
         </div>
 
-        <ol aria-label="Illustrative calculation sequence" className="academic-ledger-field min-w-0 space-y-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 sm:p-5 lg:col-span-7 lg:pb-[36vh]">
-          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:sticky lg:top-24 lg:z-10">
+        <ol data-active-stage={activeStage + 1} aria-label="Illustrative calculation sequence" className={`academic-ledger-field min-w-0 space-y-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 transition-[height] duration-500 sm:p-5 lg:sticky lg:top-24 lg:col-span-7 lg:space-y-0 ${activeStage === 3 ? 'lg:h-[34rem]' : 'lg:h-[40rem]'}`}>
+          <li data-stage="1" className={`min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm transition-[transform,opacity] duration-500 sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-10 ${stagePosition(0, activeStage)}`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">01 · RESULT INPUT</p>
@@ -66,7 +120,7 @@ export function AcademicProof() {
             </div>
           </li>
 
-          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:sticky lg:top-36 lg:z-20">
+          <li data-stage="2" className={`min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm transition-[transform,opacity] duration-500 sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-20 ${stagePosition(1, activeStage)}`}>
             <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
               <div className="min-w-0">
                 <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-gold)]">02 · CREDIT WEIGHTING</p>
@@ -81,7 +135,7 @@ export function AcademicProof() {
             </div>
           </li>
 
-          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-48 lg:z-30">
+          <li data-stage="3" className={`min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] transition-[transform,opacity] duration-500 sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-30 ${stagePosition(2, activeStage)}`}>
             <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">03 · GPA + PI</p>
             <div className="mt-4 grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-border)] sm:grid-cols-2">
               <div className="bg-[var(--acade-surface)] p-6"><p className="text-sm font-semibold text-[var(--acade-text-muted)]">Semester GPA</p><p className="mt-2 font-[family-name:var(--font-geist-mono)] text-5xl font-semibold tracking-tight">4.14</p><p className="mt-3 text-xs text-[var(--acade-text-muted)]">Letter-grade points, credit weighted</p></div>
@@ -89,7 +143,7 @@ export function AcademicProof() {
             </div>
           </li>
 
-          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] sm:p-7 lg:sticky lg:top-60 lg:z-40">
+          <li data-stage="4" className={`min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] transition-[transform,opacity] duration-500 sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-40 ${stagePosition(3, activeStage)}`}>
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div><p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[#AFAAFF]">04 · DEGREE OUTLOOK</p><h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-2xl font-semibold">A trajectory, not just a total</h3></div>
               <div className="text-right"><p className="font-[family-name:var(--font-geist-mono)] text-3xl font-semibold">3.71</p><p className="text-xs text-[#B8BED0]">CGPA · after 117 credits</p></div>

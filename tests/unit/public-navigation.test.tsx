@@ -1,11 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'next-themes';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: null, uid: null, loading: false, error: null }),
+const { authState } = vi.hoisted(() => ({
+  authState: { user: null as { uid: string } | null, uid: null as string | null, loading: false, error: null },
 }));
+
+vi.mock('@/hooks/useAuth', () => ({ useAuth: () => authState }));
 
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
@@ -23,6 +25,10 @@ beforeAll(() => {
     return 1;
   });
   vi.stubGlobal('cancelAnimationFrame', () => undefined);
+});
+
+beforeEach(() => {
+  Object.assign(authState, { user: null, uid: null, loading: false, error: null });
 });
 
 function renderWithTheme(ui: React.ReactNode) {
@@ -46,27 +52,41 @@ describe('public responsive navigation', () => {
 
     const header = screen.getByRole('banner');
     const publicNavigation = screen.getByRole('navigation', { name: 'Public navigation' });
-    const desktopLinks = screen.getByRole('link', { name: 'Features' }).parentElement;
-    const menuButton = screen.getByRole('button', { name: 'Open navigation menu' });
+    const desktopLinks = within(publicNavigation).getByRole('link', { name: 'Features' }).parentElement;
+    const menuButton = within(publicNavigation).getByRole('button', { name: 'Open navigation menu' });
 
     expect(header).toHaveClass('sticky');
     expect(header).not.toHaveClass('fixed');
+    expect(header).toHaveClass('public-nav-shell');
+    expect(publicNavigation).toHaveClass('public-nav-capsule');
     expect(publicNavigation).toHaveClass('grid-cols-[1fr_auto]', 'lg:grid-cols-[1fr_auto_1fr]');
     expect(desktopLinks).toHaveClass('lg:flex');
     expect(desktopLinks).not.toHaveClass('md:flex');
     expect(menuButton).toHaveClass('lg:hidden');
+    expect(screen.queryByRole('navigation', { name: 'Public mobile dock' })).not.toBeInTheDocument();
   });
 
-  it('opens a labelled mobile menu with navigation, theme, and account actions', async () => {
+  it('keeps a useful primary action visible while authentication resolves', () => {
+    authState.loading = true;
+    renderWithTheme(<Navbar />);
+
+    const publicNavigation = screen.getByRole('navigation', { name: 'Public navigation' });
+    expect(within(publicNavigation).getByRole('link', { name: 'Get started' })).toHaveAttribute('href', '/register');
+  });
+
+  it('opens the mobile navigation from the compact top capsule', async () => {
     const user = userEvent.setup();
     renderWithTheme(<Navbar />);
 
     await user.click(screen.getByRole('button', { name: 'Open navigation menu' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Navigate AcadeGrade' });
-    const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
-    expect(mobileNavigation).toHaveClass('grid-cols-2');
-    expect(dialog).toHaveClass('h-auto', 'lg:hidden');
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Public mobile menu' });
+    expect(mobileNavigation).toContainElement(screen.getByRole('link', { name: 'Features' }));
+    expect(mobileNavigation).toContainElement(screen.getByRole('link', { name: 'How it works' }));
+    expect(mobileNavigation).toContainElement(screen.getByRole('link', { name: 'About AcadeGrade' }));
+    expect(mobileNavigation).toContainElement(screen.getByRole('link', { name: 'Calculator' }));
+    expect(dialog).toHaveClass('public-mobile-menu', 'mt-[5.25rem]', 'self-start', 'lg:hidden');
     expect(screen.getByRole('radiogroup', { name: 'Choose colour theme' })).toBeInTheDocument();
     expect(dialog).toContainElement(screen.getByRole('link', { name: 'Sign in' }));
     expect(dialog).toContainElement(screen.getByRole('link', { name: 'Get started' }));
