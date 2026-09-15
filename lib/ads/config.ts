@@ -244,3 +244,70 @@ export function safeParseAdsConfig(value: unknown): AdsConfig | null {
     return null;
   }
 }
+
+/**
+ * Keeps pre-control-plane banner data visible without preserving the old
+ * interruptive modal. Invalid legacy creatives are ignored and delivery
+ * remains fail-closed when no safe active banner is available.
+ */
+export function legacyBannersToAdsConfig(value: unknown): AdsConfig | null {
+  if (!Array.isArray(value)) return null;
+
+  const usedIds = new Set<string>();
+  const campaigns: AdCampaign[] = [];
+
+  for (const [index, candidate] of value.entries()) {
+    if (!isRecord(candidate) || candidate.isActive !== true) continue;
+
+    let imageUrl: string;
+    let linkUrl: string;
+    try {
+      imageUrl = requireHttpsUrl(candidate.imageUrl, 'Legacy banner imageUrl');
+      linkUrl = requireHttpsUrl(candidate.linkUrl ?? '', 'Legacy banner linkUrl', true);
+    } catch {
+      continue;
+    }
+
+    const sourceId = typeof candidate.id === 'string' ? candidate.id : `banner-${index + 1}`;
+    const baseId = sourceId
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || `banner-${index + 1}`;
+    let id = baseId;
+    let suffix = 2;
+    while (usedIds.has(id)) {
+      id = `${baseId}-${suffix}`;
+      suffix += 1;
+    }
+    usedIds.add(id);
+
+    campaigns.push({
+      id,
+      name: 'Legacy sponsored banner',
+      placementIds: ['dashboard.overview'],
+      deliveryMode: 'house',
+      active: true,
+      schedule: { startsAt: null, endsAt: null },
+      weight: 1,
+      frequencyCap: { maxImpressions: 1, windowHours: 6 },
+      creative: {
+        imageUrl,
+        altText: 'Sponsored offer',
+        headline: '',
+        body: '',
+        ctaLabel: linkUrl ? 'Learn more' : '',
+      },
+      linkUrl,
+    });
+  }
+
+  if (campaigns.length === 0) return null;
+
+  const config = createDefaultAdsConfig();
+  return {
+    ...config,
+    enabled: true,
+    campaigns,
+  };
+}

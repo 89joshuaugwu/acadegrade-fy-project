@@ -3,9 +3,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import CountUp from 'react-countup';
-import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen, X } from 'lucide-react';
+import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -15,7 +15,11 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { updateDocument, getDocument, queryCollection } from '@/lib/firebase/firestore';
 import { cn } from '@/lib/utils/cn';
-import type { CourseWithId } from '@/types/course';
+import {
+  buildDashboardSummary,
+  type DashboardCourseRecord,
+  type DashboardCourseSource,
+} from '@/lib/dashboard/summary';
 
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
@@ -29,7 +33,7 @@ import { AdPlacement } from '@/components/ads/AdPlacement';
 export default function DashboardPage() {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { cgpa, pi, degreeClass, semesterHistory, totalCredits, totalCourses, loading: cgpaLoading } = useCGPA();
+  const { cgpa, pi, degreeClass, semesterHistory, totalCredits, loading: cgpaLoading } = useCGPA();
   const shouldReduceMotion = useReducedMotion();
   const { insightsStale } = useAnalytics();
 
@@ -39,40 +43,9 @@ export default function DashboardPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [coursesDone, setCoursesDone] = useState(0);
   const [atRiskCount, setAtRiskCount] = useState(0);
-  const [recentCourses, setRecentCourses] = useState<CourseWithId[]>([]);
-  const [recentSemesterLabel, setRecentSemesterLabel] = useState<string>('');
+  const [unknownCount, setUnknownCount] = useState(0);
+  const [recentCourses, setRecentCourses] = useState<DashboardCourseRecord[]>([]);
   
-  // Advert state
-  const [activeAdvert, setActiveAdvert] = useState<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean } | null>(null);
-
-  // Fetch Advert
-  useEffect(() => {
-    const fetchAdvert = async () => {
-      try {
-        const config = await getDocument<any>('config/settings');
-        if (config?.advertBanners && Array.isArray(config.advertBanners)) {
-          const active = config.advertBanners.find((b: any) => b.isActive);
-          if (active) {
-            // Check local storage for 6-hour dismissal
-            const lastDismissed = localStorage.getItem(`advert_dismissed_${active.id}`);
-            const sixHours = 6 * 60 * 60 * 1000;
-            if (!lastDismissed || (Date.now() - Number(lastDismissed)) > sixHours) {
-              setActiveAdvert(active);
-            }
-          }
-        }
-      } catch (err) { console.error('Failed to load advert', err); }
-    };
-    fetchAdvert();
-  }, []);
-
-  const handleDismissAdvert = () => {
-    if (activeAdvert) {
-      localStorage.setItem(`advert_dismissed_${activeAdvert.id}`, Date.now().toString());
-      setActiveAdvert(null);
-    }
-  };
-
   // Sync state with user preference on mount
   useEffect(() => {
     if (profile?.gradeMode) {
@@ -117,36 +90,33 @@ export default function DashboardPage() {
 
   // Fetch real course data for Quick Stats
   useEffect(() => {
-    if (!user || semesterHistory.length === 0) return;
+    if (!user || semesterHistory.length === 0) {
+      setCoursesDone(0);
+      setAtRiskCount(0);
+      setUnknownCount(0);
+      setRecentCourses([]);
+      return;
+    }
 
     let isMounted = true;
     const fetchCoursesData = async () => {
-      let total = 0;
-      let risk = 0;
-
       try {
-        for (const sem of semesterHistory) {
-          const courses = await queryCollection<any>(`users/${user.uid}/semesters/${sem.semesterId}/courses`);
-          total += courses.length;
-          risk += courses.filter(c => (c.totalScore ?? 0) < 50).length;
-        }
-
-        // Real "Recent Results": pull the actual courses from the most recently
-        // added semester (semesterHistory is sorted ascending by level/semester,
-        // so the last entry is the latest one) instead of hardcoded sample data.
-        const latestSemester = semesterHistory[semesterHistory.length - 1];
-        let latestCourses: CourseWithId[] = [];
-        if (latestSemester) {
-          latestCourses = await queryCollection<CourseWithId>(
-            `users/${user.uid}/semesters/${latestSemester.semesterId}/courses`
-          );
-        }
+        const semesterCourses = await Promise.all(semesterHistory.map(async (semester, semesterIndex) => ({
+          semesterId: semester.semesterId,
+          semesterLabel: semester.label,
+          session: semester.session,
+          semesterIndex,
+          courses: await queryCollection<DashboardCourseSource>(
+            `users/${user.uid}/semesters/${semester.semesterId}/courses`
+          ),
+        })));
+        const summary = buildDashboardSummary(semesterCourses);
 
         if (isMounted) {
-          setCoursesDone(total);
-          setAtRiskCount(risk);
-          setRecentCourses(latestCourses.slice(0, 3));
-          setRecentSemesterLabel(latestSemester?.label || '');
+          setCoursesDone(summary.totalCourses);
+          setAtRiskCount(summary.atRiskCount);
+          setUnknownCount(summary.unknownCount);
+          setRecentCourses(summary.recent);
         }
       } catch (err) {
         console.error('Failed to fetch courses data for stats', err);
@@ -183,18 +153,31 @@ export default function DashboardPage() {
     return isPIMode ? lastSem.pi : lastSem.gpa;
   }, [semesterHistory, isPIMode]);
 
-  const timeOfDay = new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening';
+  const firstName = profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student';
+  const latestSemester = semesterHistory[semesterHistory.length - 1];
+  const primaryMetric = isPIMode ? pi : cgpa;
+  const metricLabel = isPIMode ? 'Performance Index' : 'Cumulative GPA';
+  const timeOfDay = 'day';
 
   if (cgpaLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      <div aria-busy="true" aria-label="Loading dashboard" className="space-y-6 pb-10">
+        <div className="space-y-3 py-2">
+          <div className="skeleton h-8 w-56" />
+          <div className="skeleton h-4 w-full max-w-md" />
+        </div>
+        <div className="grid gap-6 lg:grid-cols-12">
+          <div className="skeleton min-h-80 lg:col-span-7" />
+          <div className="skeleton min-h-80 lg:col-span-5" />
+        </div>
+        <div className="skeleton h-24" />
+        <div className="skeleton h-72" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 md:gap-8 max-w-7xl mx-auto pb-10">
+    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 pb-10 sm:gap-7">
       
       {/* HEADER ARC ROW */}
       <motion.div
@@ -232,7 +215,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="mt-8">
-                <DegreeClassBadge cgpa={isPIMode ? pi : cgpa} animated={true} />
+                <DegreeClassBadge cgpa={cgpa} animated={true} />
               </div>
             </div>
 
@@ -447,7 +430,7 @@ export default function DashboardPage() {
                               {course.code}
                             </div>
                             <div className="text-[10px] text-[var(--acade-text-faint)]">
-                              {recentSemesterLabel}
+                              {course.semesterLabel}
                             </div>
                           </div>
                         </div>
@@ -474,49 +457,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* SPONSORED ADVERT MODAL */}
-      <AnimatePresence>
-        {activeAdvert && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          >
-            <div className="relative w-full max-w-lg bg-[var(--acade-deep)] rounded-2xl overflow-hidden shadow-2xl border border-[var(--acade-border)]">
-              {/* Close Button */}
-              <button
-                onClick={handleDismissAdvert}
-                className="absolute top-3 right-3 z-10 p-2 bg-black/50 text-white rounded-full hover:bg-black/80 transition-colors backdrop-blur-md"
-                aria-label="Close advert"
-              >
-                <X size={18} />
-              </button>
-
-              {/* Advert Content */}
-              {activeAdvert.linkUrl ? (
-                <a href={activeAdvert.linkUrl} target="_blank" rel="noopener noreferrer" className="block w-full" onClick={handleDismissAdvert}>
-                  <img
-                    src={activeAdvert.imageUrl}
-                    alt="Sponsored Advert"
-                    className="w-full h-auto max-h-[70vh] object-cover"
-                  />
-                </a>
-              ) : (
-                <img
-                  src={activeAdvert.imageUrl}
-                  alt="Sponsored Advert"
-                  className="w-full h-auto max-h-[70vh] object-cover"
-                />
-              )}
-              
-              <div className="absolute bottom-3 left-3 px-2 py-1 bg-black/50 backdrop-blur-md rounded-md">
-                <span className="text-[10px] font-bold tracking-widest text-white/80 uppercase">Sponsored</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

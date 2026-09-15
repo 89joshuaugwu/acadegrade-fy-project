@@ -111,7 +111,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </a>
       <RouteAnnouncer title={routeMeta.title} />
       {/* Mobile & Tablet Header */}
-      <header className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
+      <header className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)]/96 px-4 backdrop-blur-md sm:px-6 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
         <Logo size="sm" />
         <div className="flex items-center gap-1">
           <NotificationDropdown />
@@ -129,27 +129,15 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop Sidebar */}
       <aside aria-label="Student navigation" className="fixed inset-y-0 left-0 hidden w-[var(--student-rail-width)] flex-col overflow-y-auto border-r border-[var(--acade-border)] bg-[var(--acade-deep)] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
-        <div className="p-6">
-          <Logo size="md" className="mb-8" />
+        <div className="flex min-h-[var(--shell-header-height)] items-center border-b border-[var(--acade-border-subtle)] px-5">
+          <Logo size="md" />
+        </div>
 
-          {/* Profile snippet */}
-          <div className="mb-8 flex flex-col items-center rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-card)]">
-            <div className="mb-3 rounded-full border-2 border-[var(--acade-primary)]/50 overflow-hidden size-16 shrink-0 relative flex items-center justify-center bg-[var(--acade-deep)]">
-              {profile?.avatarUrl ? (
-                <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} alt="Avatar" className="w-full h-full object-cover" />
-              )}
-            </div>
-            <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate w-full text-center">
-              {profile?.fullName || user?.displayName || 'Student'}
-            </span>
-            <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] truncate max-w-full">
-              {profile?.matric || 'No Matric'}
-            </span>
-          </div>
-
-          <nav id="tour-sidebar-nav" aria-label="Primary" className="flex flex-col gap-1.5">
+        <div className="px-3 py-5">
+          <p className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">
+            Your workspace
+          </p>
+          <nav id="tour-sidebar-nav" aria-label="Primary" className="flex flex-col gap-1">
             {studentNavigation.map((tab) => {
               const active = isRouteActive(pathname, tab.href);
               const Icon = STUDENT_ICONS[tab.icon];
@@ -158,8 +146,9 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                   key={tab.href}
                   href={tab.href}
                   id={`tour-desktop-nav-${tab.label.toLowerCase()}`}
+                  aria-current={active ? 'page' : undefined}
                   className={cn(
-                    "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
+                    "group relative flex min-h-12 items-center gap-3 rounded-[var(--radius-control)] px-3.5 text-sm font-semibold transition-colors",
                     active
                       ? "text-[var(--acade-primary)]"
                       : "border border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
@@ -168,7 +157,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                   {active && (
                     <motion.div
                       layoutId="sidebar-pill"
-                      className="absolute inset-0 rounded-xl border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                      className="absolute inset-0 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
                       transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                     />
                   )}
@@ -187,13 +176,14 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="mt-auto p-6 flex flex-col gap-1.5">
-          <div className="mb-2">
+        <div className="mt-auto border-t border-[var(--acade-border-subtle)] p-3">
+          <div className="flex flex-col gap-1">
             <Link
               href="/notifications"
               id="tour-desktop-nav-notifications"
+              aria-current={isRouteActive(pathname, '/notifications') ? 'page' : undefined}
               className={cn(
-                "relative flex items-center justify-between px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
+                "group relative flex min-h-12 items-center justify-between rounded-[var(--radius-control)] px-3.5 text-sm font-semibold transition-colors",
                 isRouteActive(pathname, '/notifications')
                   ? "text-[var(--acade-primary)]"
                   : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
@@ -216,44 +206,78 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                 </span>
               )}
             </Link>
+            <Link
+              href="/settings"
+              id="tour-desktop-nav-settings"
+              aria-current={isRouteActive(pathname, '/settings') ? 'page' : undefined}
+              className={cn(
+                "group relative flex min-h-12 items-center gap-3 rounded-[var(--radius-control)] px-3.5 text-sm font-semibold transition-colors",
+                isRouteActive(pathname, '/settings')
+                  ? "text-[var(--acade-primary)]"
+                  : "border border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
+              )}
+            >
+              {isRouteActive(pathname, '/settings') && (
+                <motion.div
+                  layoutId="sidebar-pill"
+                  className="absolute inset-0 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                  transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
+                />
+              )}
+              <Settings size={20} className={cn("relative z-10", isRouteActive(pathname, '/settings') ? "text-[var(--acade-primary-glow)]" : "")} />
+              <span className="relative z-10">Settings</span>
+            </Link>
           </div>
-          
-          <Link
-            href="/settings"
-            id="tour-desktop-nav-settings"
-            className={cn(
-              "relative flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] group",
-              isRouteActive(pathname, '/settings')
-                ? "text-[var(--acade-primary)]"
-                : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
-            )}
-          >
-            {isRouteActive(pathname, '/settings') && (
-              <motion.div
-                layoutId="sidebar-pill"
-                className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
-                transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+
+          <div className="mt-3 flex items-center gap-2 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-2">
+            <div className="relative size-10 shrink-0 overflow-hidden rounded-full border border-[var(--acade-border)] bg-[var(--acade-overlay)]">
+              <img
+                src={profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`}
+                alt=""
+                className="size-full object-cover"
               />
-            )}
-            <Settings size={20} className={cn("relative z-10", isRouteActive(pathname, '/settings') ? "text-[var(--acade-primary-glow)]" : "")} />
-            <span className="relative z-10">Settings</span>
-          </Link>
-          
-          <ThemeControl className="mb-2 w-full" />
-          <button
-            type="button"
-            id="tour-desktop-nav-logout"
-            onClick={handleSignOut}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] text-left w-full mt-2"
-          >
-            <LogOut size={20} />
-            Sign Out
-          </button>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-[var(--acade-text)]">
+                {profile?.fullName || user?.displayName || 'Student'}
+              </p>
+              <p className="truncate font-[family-name:var(--font-geist-mono)] text-[0.68rem] text-[var(--acade-text-muted)]">
+                {profile?.matric || user?.email || 'Academic profile'}
+              </p>
+            </div>
+            <button
+              type="button"
+              id="tour-desktop-nav-logout"
+              onClick={handleSignOut}
+              className="flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)]"
+              aria-label="Sign out"
+            >
+              <LogOut size={18} aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
       <main id="main-content" className="relative min-h-screen flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] lg:ml-[var(--student-rail-width)] lg:pb-0">
+        <header
+          aria-label="Student page context"
+          className="sticky top-0 hidden min-h-[var(--shell-header-height)] items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]/94 px-8 backdrop-blur-md lg:flex"
+          style={{ zIndex: 'var(--z-sticky)' }}
+        >
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">
+              Student workspace
+            </p>
+            <p className="truncate font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">
+              {routeMeta.title}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ThemeControl compact />
+            <NotificationDropdown />
+          </div>
+        </header>
         {announcement && (
           <div className="bg-[var(--acade-gold)]/10 border-b border-[var(--acade-gold)]/20 px-4 py-3 flex items-start sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3 text-[var(--acade-gold)]">

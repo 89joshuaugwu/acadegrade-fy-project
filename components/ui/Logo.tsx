@@ -22,6 +22,12 @@ export function Logo({ className, href = '/dashboard', onClick, size = 'md' }: L
     lg: 'w-12 h-12 text-lg'
   };
 
+  const imageSizes = {
+    sm: '24px',
+    md: '32px',
+    lg: '48px',
+  };
+
   const content = (
     <span className={cn('group flex items-center gap-2.5', className)}>
       <div className={cn(
@@ -32,6 +38,7 @@ export function Logo({ className, href = '/dashboard', onClick, size = 'md' }: L
           src="/logo.png" 
           alt="" 
           fill 
+          sizes={imageSizes[size]}
           className="object-contain" 
           priority 
         />

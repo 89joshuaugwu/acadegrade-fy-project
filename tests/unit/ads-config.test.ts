@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createDefaultAdsConfig,
+  legacyBannersToAdsConfig,
   parseAdsConfig,
   safeParseAdsConfig,
 } from '@/lib/ads/config';
@@ -116,5 +117,43 @@ describe('ads configuration validation', () => {
       target: 'settings',
       data: { adsConfig: config },
     });
+  });
+
+  it('adapts active legacy banners into quiet dashboard house campaigns', () => {
+    const config = legacyBannersToAdsConfig([
+      {
+        id: 'legacy-banner-1',
+        imageUrl: 'https://cdn.example.com/banner.png',
+        linkUrl: 'https://example.com/study',
+        isActive: true,
+      },
+      {
+        id: 'inactive',
+        imageUrl: 'https://cdn.example.com/inactive.png',
+        linkUrl: '',
+        isActive: false,
+      },
+    ]);
+
+    expect(config).toMatchObject({
+      enabled: true,
+      placements: expect.arrayContaining([
+        expect.objectContaining({ id: 'dashboard.overview', enabled: true }),
+      ]),
+      campaigns: [expect.objectContaining({
+        id: 'legacy-banner-1',
+        active: true,
+        deliveryMode: 'house',
+        placementIds: ['dashboard.overview'],
+      })],
+    });
+    expect(safeParseAdsConfig(config)).not.toBeNull();
+  });
+
+  it('fails closed for malformed or unsafe legacy banners', () => {
+    expect(legacyBannersToAdsConfig(null)).toBeNull();
+    expect(legacyBannersToAdsConfig([
+      { id: 'bad', imageUrl: 'javascript:alert(1)', linkUrl: '', isActive: true },
+    ])).toBeNull();
   });
 });

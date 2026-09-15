@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdPlacement } from '@/components/ads/AdPlacement';
 import type { AdsConfig } from '@/lib/ads/types';
+
+const mocks = vi.hoisted(() => ({ getDocument: vi.fn() }));
+
+vi.mock('@/lib/firebase/firestore', () => ({
+  getDocument: mocks.getDocument,
+}));
 
 function config(enabled = true): AdsConfig {
   return {
@@ -35,6 +41,11 @@ function config(enabled = true): AdsConfig {
 }
 
 describe('AdPlacement', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    mocks.getDocument.mockReset();
+  });
+
   it('silently renders nothing when delivery is disabled', () => {
     const { container } = render(
       <AdPlacement placement="dashboard.overview" config={config(false)} seed="student-1" />
@@ -52,5 +63,23 @@ describe('AdPlacement', () => {
       'https://acadegrade.example/insights'
     );
     expect(screen.getByText('House promotion')).toBeInTheDocument();
+  });
+
+  it('loads a legacy banner inline when the new configuration is absent', async () => {
+    mocks.getDocument.mockResolvedValueOnce({
+      advertBanners: [{
+        id: 'legacy-banner',
+        imageUrl: 'https://cdn.example.com/legacy.png',
+        linkUrl: 'https://example.com/legacy',
+        isActive: true,
+      }],
+    });
+
+    render(<AdPlacement placement="dashboard.overview" seed="student-1" now={1_788_768_000_000} />);
+
+    expect(await screen.findByRole('complementary', { name: 'Featured from AcadeGrade' }))
+      .toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /learn more/i }))
+      .toHaveAttribute('href', 'https://example.com/legacy');
   });
 });

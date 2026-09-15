@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Sparkles } from 'lucide-react';
-import { safeParseAdsConfig } from '@/lib/ads/config';
+import { legacyBannersToAdsConfig, safeParseAdsConfig } from '@/lib/ads/config';
 import {
   getEligibleCampaigns,
   pruneImpressionHistory,
@@ -81,7 +81,12 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
       let rawConfig = config;
       if (rawConfig === undefined) {
         const { getDocument } = await import('@/lib/firebase/firestore');
-        rawConfig = (await getDocument<{ adsConfig?: unknown }>('config/settings'))?.adsConfig;
+        const settings = await getDocument<{
+          adsConfig?: unknown;
+          advertBanners?: unknown;
+        }>('config/settings');
+        rawConfig = safeParseAdsConfig(settings?.adsConfig)
+          ?? legacyBannersToAdsConfig(settings?.advertBanners);
       }
       const parsed = safeParseAdsConfig(rawConfig);
       if (!parsed || cancelled) return;
