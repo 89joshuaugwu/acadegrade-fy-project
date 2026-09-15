@@ -34,6 +34,13 @@ function renderWithTheme(ui: React.ReactNode) {
 }
 
 describe('public responsive navigation', () => {
+  it('uses the branded AcadeGrade wordmark treatment', () => {
+    renderWithTheme(<Navbar />);
+
+    const homeLink = screen.getByRole('link', { name: 'AcadeGrade home' });
+    expect(homeLink.querySelector('[data-wordmark-accent="grade"]')).toHaveTextContent('Grade');
+  });
+
   it('keeps the compact navigation available through tablet widths', () => {
     renderWithTheme(<Navbar />);
 

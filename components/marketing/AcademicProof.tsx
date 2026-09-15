@@ -1,111 +1,109 @@
-import { Calculator, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Calculator, LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
 
 const exampleCourses = [
-  { code: 'CSC 415', title: 'Computer Graphics', score: 54, grade: 'C', units: 2, gradeClass: 'bg-[var(--acade-gold-dim)] text-[var(--acade-gold)]' },
-  { code: 'CSC 463', title: 'Software Engineering', score: 62, grade: 'B', units: 2, gradeClass: 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]' },
-  { code: 'MTH 321', title: 'Numerical Analysis', score: 71, grade: 'A', units: 3, gradeClass: 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]' },
+  { code: 'CSC 415', title: 'Computer Graphics', score: 54, grade: 'C', units: 2, gradeClass: 'text-[var(--acade-gold)]' },
+  { code: 'CSC 463', title: 'Software Engineering', score: 62, grade: 'B', units: 2, gradeClass: 'text-[var(--acade-primary)]' },
+  { code: 'MTH 321', title: 'Numerical Analysis', score: 71, grade: 'A', units: 3, gradeClass: 'text-[var(--acade-success)]' },
 ] as const;
 
 export function AcademicProof() {
   return (
-    <section id="features" aria-labelledby="academic-proof-title" className="scroll-mt-20 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.78fr_1.22fr] lg:gap-16 lg:px-8 lg:py-24">
-        <div className="lg:sticky lg:top-28 lg:self-start">
-          <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can inspect</p>
-          <h2
-            id="academic-proof-title"
-            className="mt-3 max-w-[15ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-[var(--acade-text)]"
-          >
-            From semester results to a clear degree outlook.
-          </h2>
-          <p className="mt-5 max-w-[48ch] text-base leading-7 text-[var(--acade-text-muted)]">
-            AcadeGrade keeps the calculation basis close to the result. You can see the scores, credit units, grades, and academic signals behind each summary.
-          </p>
-
-          <div className="mt-8 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5">
-            <div className="flex gap-3">
-              <ShieldCheck className="mt-0.5 size-5 shrink-0 text-[var(--acade-success)]" aria-hidden="true" />
-              <div>
-                <h3 className="font-semibold text-[var(--acade-text)]">A clear trust boundary</h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-                  AcadeGrade calculates from the records you enter. It does not replace an official university record.
-                </p>
-              </div>
+    <section id="features" aria-labelledby="academic-proof-title" className="scroll-mt-20 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]">
+      <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
+        <div className="lg:col-span-5">
+          <div className="lg:sticky lg:top-28">
+            <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
+            <h2 id="academic-proof-title" className="mt-3 max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,4vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.04em] text-[var(--acade-text)]">
+              A result becomes useful when its basis stays visible.
+            </h2>
+            <p className="mt-6 max-w-[48ch] leading-7 text-[var(--acade-text-muted)]">
+              AcadeGrade keeps course inputs, credit weighting, GPA, PI and degree outlook connected—so a headline metric never floats free of the record behind it.
+            </p>
+            <div className="mt-8 border-l-2 border-[var(--acade-gold)] pl-5">
+              <div className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-5 text-[var(--acade-success)]" aria-hidden="true" />Honest by design</div>
+              <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
+                AcadeGrade calculates from the records you enter. It does not replace an official university record.
+              </p>
             </div>
           </div>
         </div>
 
-        <figure
-          aria-labelledby="worked-record-title"
-          aria-describedby="worked-record-caption"
-          className="overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[var(--shadow-card)]"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--acade-border-subtle)] p-5 sm:p-7">
-            <div>
-              <p className="text-xs font-semibold text-[var(--acade-gold)]">Illustrative example</p>
-              <h3 id="worked-record-title" className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-                Worked academic record example
-              </h3>
-            </div>
-            <span className="inline-flex items-center gap-2 rounded-full bg-[var(--acade-success-dim)] px-3 py-1.5 text-xs font-semibold text-[var(--acade-success)]">
-              <CheckCircle2 className="size-4" aria-hidden="true" />
-              Complete inputs
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] border-collapse text-left">
-              <caption className="sr-only">Three illustrative courses used for the semester calculation</caption>
-              <thead>
-                <tr className="border-b border-[var(--acade-border-subtle)] text-xs text-[var(--acade-text-faint)]">
-                  <th scope="col" className="px-5 py-3 font-semibold sm:px-7">Course</th>
-                  <th scope="col" className="px-4 py-3 text-right font-semibold">Score</th>
-                  <th scope="col" className="px-4 py-3 text-center font-semibold">Grade</th>
-                  <th scope="col" className="px-5 py-3 text-right font-semibold sm:px-7">Credits</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exampleCourses.map((course) => (
-                  <tr key={course.code} className="border-b border-[var(--acade-border-subtle)] last:border-b-0">
-                    <td className="px-5 py-4 sm:px-7">
-                      <span className="block font-[family-name:var(--font-geist-mono)] text-sm font-semibold text-[var(--acade-text)]">{course.code}</span>
-                      <span className="mt-1 block text-sm text-[var(--acade-text-muted)]">{course.title}</span>
-                    </td>
-                    <td className="px-4 py-4 text-right font-[family-name:var(--font-geist-mono)] text-sm text-[var(--acade-text)]">{course.score}/100</td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`inline-flex min-w-8 justify-center rounded-lg px-2 py-1 font-[family-name:var(--font-geist-mono)] text-sm font-bold ${course.gradeClass}`}>
-                        {course.grade}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right font-[family-name:var(--font-geist-mono)] text-sm text-[var(--acade-text)] sm:px-7">{course.units}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid grid-cols-1 gap-px border-t border-[var(--acade-border)] bg-[var(--acade-border)] sm:grid-cols-[1.2fr_1fr_1fr]">
-            <div className="bg-[var(--acade-deep)] p-5 sm:p-6">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[var(--acade-text)]">
-                <Calculator className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />
-                Semester summary
+        <ol aria-label="Illustrative calculation sequence" className="academic-ledger-field min-w-0 space-y-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 sm:p-5 lg:col-span-7 lg:pb-[36vh]">
+          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:sticky lg:top-24 lg:z-10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">01 · RESULT INPUT</p>
+                <h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold">Record the semester evidence</h3>
+                <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[11px] text-[var(--acade-text-faint)]">2025/2026 · FIRST SEMESTER · ILLUSTRATIVE</p>
               </div>
-              <p className="mt-2 text-xs leading-5 text-[var(--acade-text-muted)]">Weighted by 7 recorded credit units on a five-point scale.</p>
+              <NotebookPen className="size-6 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
             </div>
-            <div className="bg-[var(--acade-surface)] p-5 sm:p-6">
-              <p className="text-xs font-semibold text-[var(--acade-text-faint)]">GPA</p>
-              <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-3xl font-semibold text-[var(--acade-text)]">4.14</p>
+            <ol aria-label="Illustrative courses on small screens" className="mt-6 divide-y divide-[var(--acade-border-subtle)] sm:hidden">
+              {exampleCourses.map((course) => (
+                <li key={course.code} className="grid min-w-0 grid-cols-[1fr_auto] gap-3 py-4 first:pt-0 last:pb-0">
+                  <div className="min-w-0"><p className="font-[family-name:var(--font-geist-mono)] text-sm font-semibold">{course.code}</p><p className="mt-1 truncate text-sm text-[var(--acade-text-muted)]">{course.title}</p></div>
+                  <div className="flex items-center gap-3 font-[family-name:var(--font-geist-mono)] text-sm"><span>{course.score}/100</span><span className={course.gradeClass}>{course.grade}</span><span>{course.units}u</span></div>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-6 hidden min-w-0 overflow-x-auto sm:block">
+              <table className="w-full min-w-[540px] text-left text-sm">
+                <caption className="sr-only">Illustrative semester result inputs</caption>
+                <thead className="text-xs text-[var(--acade-text-faint)]">
+                  <tr className="border-b border-[var(--acade-border-subtle)]"><th scope="col" className="pb-3 font-semibold">Course</th><th scope="col" className="pb-3 text-right font-semibold">Score</th><th scope="col" className="pb-3 text-right font-semibold">Grade</th><th scope="col" className="pb-3 text-right font-semibold">Credits</th></tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--acade-border-subtle)]">
+                  {exampleCourses.map((course) => (
+                    <tr key={course.code}>
+                      <td className="py-4"><span className="font-[family-name:var(--font-geist-mono)] font-semibold">{course.code}</span><span className="ml-2 text-[var(--acade-text-muted)]">{course.title}</span></td>
+                      <td className="py-4 text-right font-[family-name:var(--font-geist-mono)]">{course.score}</td>
+                      <td className={`py-4 text-right font-[family-name:var(--font-geist-mono)] ${course.gradeClass}`}>{course.grade}</td>
+                      <td className="py-4 text-right font-[family-name:var(--font-geist-mono)]">{course.units}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="bg-[var(--acade-surface)] p-5 sm:p-6">
-              <p className="text-xs font-semibold text-[var(--acade-text-faint)]">PI</p>
-              <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-3xl font-semibold text-[var(--acade-gold)]">3.18</p>
-            </div>
-          </div>
+          </li>
 
-          <figcaption id="worked-record-caption" className="border-t border-[var(--acade-border-subtle)] px-5 py-4 text-xs leading-5 text-[var(--acade-text-muted)] sm:px-7">
-            Scores and outcomes are deterministic sample data for explaining the product, not a student account or institutional result.
-          </figcaption>
-        </figure>
+          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:sticky lg:top-36 lg:z-20">
+            <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div className="min-w-0">
+                <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-gold)]">02 · CREDIT WEIGHTING</p>
+                <h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold">Weight the result by its academic load</h3>
+                <p className="mt-3 max-w-[45ch] text-sm leading-6 text-[var(--acade-text-muted)]">Every course keeps its contribution visible, so the total can always be traced back to the record.</p>
+              </div>
+              <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] px-6 py-5 text-center"><p className="text-xs font-semibold text-[var(--acade-text-faint)]">RECORDED CREDITS</p><p className="mt-1 font-[family-name:var(--font-geist-mono)] text-4xl font-semibold">7</p></div>
+            </div>
+            <div className="mt-5 grid min-w-0 gap-3 rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]/80 p-4 font-[family-name:var(--font-geist-mono)] text-xs leading-5 text-[var(--acade-text-muted)] sm:grid-cols-2">
+              <p className="min-w-0 whitespace-normal break-words">Quality points = grade point × credits</p>
+              <p className="min-w-0 whitespace-normal break-words">Semester GPA = total quality points ÷ total credits</p>
+            </div>
+          </li>
+
+          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-48 lg:z-30">
+            <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">03 · GPA + PI</p>
+            <div className="mt-4 grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-border)] sm:grid-cols-2">
+              <div className="bg-[var(--acade-surface)] p-6"><p className="text-sm font-semibold text-[var(--acade-text-muted)]">Semester GPA</p><p className="mt-2 font-[family-name:var(--font-geist-mono)] text-5xl font-semibold tracking-tight">4.14</p><p className="mt-3 text-xs text-[var(--acade-text-muted)]">Letter-grade points, credit weighted</p></div>
+              <div className="bg-[var(--acade-gold-dim)] p-6"><p className="text-sm font-semibold text-[var(--acade-gold)]">Performance Index</p><p className="mt-2 font-[family-name:var(--font-geist-mono)] text-5xl font-semibold tracking-tight text-[var(--acade-gold)]">3.18</p><p className="mt-3 text-xs text-[var(--acade-text-muted)]">Continuous raw-score signal when available</p></div>
+            </div>
+          </li>
+
+          <li className="marketing-rise min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] sm:p-7 lg:sticky lg:top-60 lg:z-40">
+            <div className="flex flex-wrap items-start justify-between gap-5">
+              <div><p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[#AFAAFF]">04 · DEGREE OUTLOOK</p><h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-2xl font-semibold">A trajectory, not just a total</h3></div>
+              <div className="text-right"><p className="font-[family-name:var(--font-geist-mono)] text-3xl font-semibold">3.71</p><p className="text-xs text-[#B8BED0]">CGPA · after 117 credits</p></div>
+            </div>
+            <LineChart className="sr-only" aria-hidden="true" />
+            <svg viewBox="0 0 600 180" role="img" aria-label="Illustrative CGPA trajectory rising over four semesters" className="mt-6 h-auto w-full">
+              <g stroke="#34364D" strokeWidth="1"><path d="M24 32H576M24 78H576M24 124H576M24 164H576" /></g>
+              <path d="M42 145 C120 140 152 132 210 116 S330 93 386 69 S480 48 558 30" fill="none" stroke="#8B84FF" strokeWidth="4" strokeLinecap="round" />
+              <path d="M42 157 C135 150 161 150 210 142 S321 132 386 115 S493 105 558 96" fill="none" stroke="#F4B544" strokeWidth="2.5" strokeDasharray="7 7" />
+              <g fill="#17172E" stroke="#8B84FF" strokeWidth="3"><circle cx="42" cy="145" r="5" /><circle cx="210" cy="116" r="5" /><circle cx="386" cy="69" r="5" /><circle cx="558" cy="30" r="7" /></g>
+            </svg>
+            <div className="mt-4 flex flex-wrap gap-5 text-xs text-[#B8BED0]"><span>Solid · CGPA</span><span>Dashed · PI</span><span className="ml-auto">Illustrative example</span></div>
+          </li>
+        </ol>
       </div>
     </section>
   );

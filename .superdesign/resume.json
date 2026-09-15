@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "e8c983cb-b960-48d4-888c-65e8ae65bfca",
+      "baselineDraftId": "ec89b36c-d5d5-4f5e-946b-015afd8cfbf1",
+      "activeDraftId": "4911e5c9-9ada-4bb7-8a18-3e6ad5909e21",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [
+        "public-logo.png",
+        "923e86ce-ef0f-454a-9616-b1895cc1ef06",
+        "5f8b78d5-bb21-44a1-8cd6-b08c713cb0d9",
+        "f6e44ffb-f26a-4406-93f3-40394aae68bd"
+      ],
+      "brandAssets": {
+        "logo": {
+          "assetKey": "public-logo.png",
+          "url": "https://vgbujcuwptvheqijyjbe.supabase.co/storage/v1/object/public/hmac-uploads/projects/e8c983cb-b960-48d4-888c-65e8ae65bfca/brand-assets/public-logo.png/logo.png",
+          "sourcePath": "public/logo.png"
+        }
+      },
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "app/(public)/page.tsx",
+        "components/layout/Navbar.tsx",
+        "components/layout/PublicShell.tsx",
+        "components/marketing/HomeHero.tsx",
+        "components/marketing/AcademicProof.tsx",
+        "components/marketing/SmartAutomation.tsx",
+        "components/marketing/ProductStory.tsx",
+        "components/marketing/HomeFAQ.tsx",
+        "components/ui/Logo.tsx"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "9019ce4911b1a2d5fa898ae7f339f76cee360b513df7b5fe7556cad95a5ce4ea",
+        "app/(public)/page.tsx": "5d290a45237f67b76f38232707a5d028973419549bfa61493ac83d13dfcf8725",
+        "components/layout/Navbar.tsx": "08a68fe51d9adae6f8a3793a5e793534bc5f08371dc1d0a5bd7d6801758f513c",
+        "components/layout/PublicShell.tsx": "e5657bf4c348c9d1096d44d6f243eff8bc356087b351dbed66bb4316ea08b70b",
+        "components/marketing/HomeHero.tsx": "a1462614c7f26b7d2fd2b07dd02329456023e1c4d9d6bc191af55b83e5e3362b",
+        "components/marketing/AcademicProof.tsx": "a4e5e3a3130f2f079d555be954c81a87db5d03c138e2593c928e9e63c5dd5e87",
+        "components/marketing/SmartAutomation.tsx": "b35a9b6dcb337125b8cb474d929803d9f58bc2e200efdc75ac4dd34ac4663777",
+        "components/marketing/ProductStory.tsx": "72d6b265806fcc58b14794071bffcbe04b923bcb31ea8c3265bd8431c72ff9ab",
+        "components/marketing/HomeFAQ.tsx": "f69ea4191143aaba236e07bab0104c3f0451f276e8d9de216b21bf74b66a7e21",
+        "components/ui/Logo.tsx": "53aa51cfaf13d581eff99e30d65718e52da0b7789585c2164a853ce5d13c059c"
+      },
+      "components": [
+        {
+          "name": "PublicNavbar",
+          "id": "17820e2b-e808-4ef9-a13d-41820870e425",
+          "sourcePath": "components/layout/Navbar.tsx",
+          "logoAssetKey": "public-logo.png",
+          "version": 6
+        },
+        {
+          "name": "PublicFooter",
+          "id": "462698c5-5d44-4e50-9dc8-3ec6d1d14422",
+          "sourcePath": "components/layout/PublicShell.tsx",
+          "logoAssetKey": "public-logo.png",
+          "version": 2
+        }
+      ],
+      "drafts": {
+        "ec89b36c-d5d5-4f5e-946b-015afd8cfbf1": {
+          "title": "Current AcadeGrade Homepage — Baseline",
+          "visualDirection": "faithful current homepage reproduction",
+          "currentVersion": 1
+        },
+        "4911e5c9-9ada-4bb7-8a18-3e6ad5909e21": {
+          "title": "AcadeGrade — Student Trajectory",
+          "visualDirection": "bright student-led trajectory with restrained academic ledger structure, traceable calculations, OCR proof and margin-note AI guidance",
+          "parentDraftId": "ec89b36c-d5d5-4f5e-946b-015afd8cfbf1",
+          "currentVersion": 2
+        },
+        "1b17b5cb-c418-45d1-b34d-dc47e48504d2": {
+          "title": "AcadeGrade — Academic Ledger",
+          "visualDirection": "editorial university-led result ledger with parchment and ink",
+          "parentDraftId": "ec89b36c-d5d5-4f5e-946b-015afd8cfbf1",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-15T11:32:00.000Z"
+    }
+  }
+}

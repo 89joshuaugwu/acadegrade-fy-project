@@ -51,7 +51,7 @@ export function Logo({ className, href = '/dashboard', onClick, size = 'md' }: L
             sizeClasses[size]
           )}
         >
-          AcadeGrade
+          <span>Acade</span><span data-wordmark-accent="grade" className="bg-gradient-to-r from-[var(--acade-primary)] via-[var(--acade-primary)] to-[var(--acade-gold)] bg-clip-text text-transparent">Grade</span>
         </span>
       </span>
     </span>

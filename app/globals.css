@@ -357,6 +357,28 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   }
 }
 
+@keyframes marketing-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marketing-visual {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
 /* ═══════════════════════════════════════════════════
    Utility Classes
    ═══════════════════════════════════════════════════ */
@@ -384,6 +406,74 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 .font-mono {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
+}
+
+.marketing-enter {
+  animation: marketing-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.marketing-stagger > * {
+  animation: marketing-enter 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.marketing-stagger > :nth-child(2) { animation-delay: 70ms; }
+.marketing-stagger > :nth-child(3) { animation-delay: 130ms; }
+.marketing-stagger > :nth-child(4) { animation-delay: 190ms; }
+.marketing-stagger > :nth-child(5) { animation-delay: 250ms; }
+.marketing-stagger > :nth-child(6) { animation-delay: 310ms; }
+
+.marketing-visual {
+  animation: marketing-visual 620ms 80ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.marketing-rise {
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease, box-shadow 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .marketing-rise:hover {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--acade-primary) 35%, var(--acade-border));
+    box-shadow: var(--shadow-popover);
+  }
+}
+
+.academic-ledger-field {
+  background-color: var(--acade-surface);
+  background-image:
+    linear-gradient(to bottom, transparent 31px, color-mix(in srgb, var(--acade-border) 42%, transparent) 32px),
+    linear-gradient(
+      90deg,
+      transparent 0,
+      transparent calc(25% - 1px),
+      color-mix(in srgb, var(--acade-border) 34%, transparent) 25%,
+      transparent calc(25% + 1px),
+      transparent calc(75% - 1px),
+      color-mix(in srgb, var(--acade-border) 34%, transparent) 75%,
+      transparent calc(75% + 1px)
+    );
+  background-size: 100% 32px, 100% 100%;
+}
+
+.academic-ledger-rules {
+  background-color: var(--acade-surface);
+  background-image: linear-gradient(to bottom, transparent 31px, color-mix(in srgb, var(--acade-border) 42%, transparent) 32px);
+  background-size: 100% 32px;
+}
+
+.academic-margin-note {
+  position: relative;
+}
+
+.academic-margin-note::before {
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: -1px;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--acade-primary), var(--acade-gold));
+  content: '';
 }
 
 /* ── Safe area padding for PWA bottom bar ── */
