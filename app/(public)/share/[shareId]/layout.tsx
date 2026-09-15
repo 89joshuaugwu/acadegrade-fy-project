@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { adminDb } from '@/lib/firebase/admin';
+import { absoluteUrl, NO_INDEX_METADATA } from '@/lib/seo/site';
 
 type Props = {
   params: Promise<{ shareId: string }>;
@@ -25,10 +26,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    robots: NO_INDEX_METADATA.robots,
     openGraph: {
       title,
       description,
-      url: `https://acadegrade.vercel.app/share/${shareId}`,
+      url: absoluteUrl(`/share/${shareId}`),
       images: [
         {
           url: '/logo.png', // Or a dynamic OG image if available

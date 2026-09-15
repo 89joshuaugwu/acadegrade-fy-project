@@ -8,6 +8,7 @@ vi.mock('@/hooks/useAuth', () => ({
 }));
 
 import { Navbar } from '@/components/layout/Navbar';
+import { PublicFooter } from '@/components/layout/PublicShell';
 import { HomeHero } from '@/components/marketing/HomeHero';
 
 beforeAll(() => {
@@ -36,9 +37,14 @@ describe('public responsive navigation', () => {
   it('keeps the compact navigation available through tablet widths', () => {
     renderWithTheme(<Navbar />);
 
+    const header = screen.getByRole('banner');
+    const publicNavigation = screen.getByRole('navigation', { name: 'Public navigation' });
     const desktopLinks = screen.getByRole('link', { name: 'Features' }).parentElement;
     const menuButton = screen.getByRole('button', { name: 'Open navigation menu' });
 
+    expect(header).toHaveClass('sticky');
+    expect(header).not.toHaveClass('fixed');
+    expect(publicNavigation).toHaveClass('grid-cols-[1fr_auto]', 'lg:grid-cols-[1fr_auto_1fr]');
     expect(desktopLinks).toHaveClass('lg:flex');
     expect(desktopLinks).not.toHaveClass('md:flex');
     expect(menuButton).toHaveClass('lg:hidden');
@@ -51,7 +57,9 @@ describe('public responsive navigation', () => {
     await user.click(screen.getByRole('button', { name: 'Open navigation menu' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Navigate AcadeGrade' });
-    expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeInTheDocument();
+    const mobileNavigation = screen.getByRole('navigation', { name: 'Mobile navigation' });
+    expect(mobileNavigation).toHaveClass('grid-cols-2');
+    expect(dialog).toHaveClass('h-auto', 'lg:hidden');
     expect(screen.getByRole('radiogroup', { name: 'Choose colour theme' })).toBeInTheDocument();
     expect(dialog).toContainElement(screen.getByRole('link', { name: 'Sign in' }));
     expect(dialog).toContainElement(screen.getByRole('link', { name: 'Get started' }));
@@ -65,7 +73,18 @@ describe('public call-to-action responsiveness', () => {
     const primaryAction = screen.getByRole('link', { name: /start your academic record/i });
     const actions = primaryAction.parentElement;
 
-    expect(actions).toHaveClass('md:flex-row');
+    expect(actions).toHaveClass('lg:flex-row');
     expect(actions).not.toHaveClass('sm:flex-row');
+    expect(actions).not.toHaveClass('md:flex-row');
+    expect(primaryAction).toHaveClass('w-full', 'whitespace-nowrap', 'lg:w-auto');
+  });
+});
+
+describe('public footer', () => {
+  it('renders production copy without encoding artifacts', () => {
+    render(<PublicFooter />);
+
+    expect(screen.getByText(/© \d{4} AcadeGrade\. All rights reserved\./)).toBeInTheDocument();
+    expect(screen.getByText('Personal academic planning, not an official university record.')).toBeInTheDocument();
   });
 });

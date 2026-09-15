@@ -1,16 +1,13 @@
 import type { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/seo/site';
 
-export const metadata: Metadata = {
-  title: 'CGPA & Performance Index Calculator | AcadeGrade',
+export const metadata: Metadata = createPageMetadata({
+  title: 'Free CGPA & Performance Index Calculator',
   description:
     'Instantly calculate your CGPA and Performance Index using the AcadeGrade Quick Calculator. Use grades or actual scores. No account required.',
-  openGraph: {
-    title: 'CGPA & Performance Index Calculator | AcadeGrade',
-    description:
-      'Instantly calculate your CGPA and Performance Index. Share your results with friends or save them to your profile.',
-    url: 'https://acadegrade.vercel.app/calculator',
-  },
-};
+  path: '/calculator',
+  keywords: ['CGPA calculator', 'GPA calculator Nigeria', 'Performance Index calculator'],
+});
 
 export default function CalculatorLayout({
   children,

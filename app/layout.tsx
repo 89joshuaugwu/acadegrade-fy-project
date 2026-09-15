@@ -6,6 +6,13 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/layout/AuthProvider';
 import { ServiceWorkerKill } from '@/components/shared/ServiceWorkerKill';
 import { PWABanner } from '@/components/ui/PWABanner';
+import {
+  getSiteJsonLd,
+  resolveSiteUrl,
+  serializeJsonLd,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+} from '@/lib/seo/site';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -23,13 +30,12 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://acadegrade.vercel.app'),
+  metadataBase: new URL(resolveSiteUrl()),
   title: {
-    default: 'AcadeGrade — Premium AI-Powered CGPA Tracker & Academic Advisor',
+    default: 'AcadeGrade — Understand your academic progress',
     template: '%s | AcadeGrade',
   },
-  description:
-    'The smartest academic companion for university students. Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',
+  description: SITE_DESCRIPTION,
   keywords: [
     'CGPA calculator',
     'GPA tracker',
@@ -41,9 +47,9 @@ export const metadata: Metadata = {
     'Nigeria university grading',
     'academic trajectory',
   ],
-  authors: [{ name: 'Joshua Chimaobi Ugwu', url: 'https://github.com/joshuazaza' }],
-  creator: 'Joshua Chimaobi Ugwu',
-  publisher: 'AcadeGrade',
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
   category: 'Education',
   manifest: '/manifest.json',
   verification: {
@@ -59,27 +65,24 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_NG',
-    url: 'https://acadegrade.vercel.app',
-    title: 'AcadeGrade — Premium AI-Powered CGPA Tracker',
-    description:
-      'Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',
-    siteName: 'AcadeGrade',
+    url: '/',
+    title: 'AcadeGrade — Understand your academic progress',
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
     images: [
       {
-        url: '/logo.png', // Fallback OG image
-        width: 800,
-        height: 600,
-        alt: 'AcadeGrade Logo',
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'AcadeGrade academic progress workspace',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AcadeGrade — Premium AI-Powered CGPA Tracker',
-    description:
-      'Track your CGPA, forecast future grades, and get AI-powered insights to optimize your degree class.',
-    creator: '@joshuazaza',
-    images: ['/logo.png'],
+    title: 'AcadeGrade — Understand your academic progress',
+    description: SITE_DESCRIPTION,
+    images: ['/opengraph-image'],
   },
   robots: {
     index: true,
@@ -117,6 +120,10 @@ export default function RootLayout({
       className={`${bricolage.variable} ${dmSans.variable} ${GeistMono.variable}`}
     >
       <body className="font-body antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(getSiteJsonLd()) }}
+        />
         <ServiceWorkerKill />
         <ThemeProvider
           attribute="class"

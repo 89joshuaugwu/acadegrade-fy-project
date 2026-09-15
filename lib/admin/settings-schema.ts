@@ -1,3 +1,5 @@
+import { parseAdsConfig } from '@/lib/ads/config';
+
 export const ADMIN_SETTING_FIELDS = [
   'aiSystemPrompt',
   'announcementBanner',
@@ -6,6 +8,7 @@ export const ADMIN_SETTING_FIELDS = [
   'disabledFeatures',
   'gradeScale',
   'advertBanners',
+  'adsConfig',
   'mobileAppLinks',
 ] as const;
 
@@ -149,6 +152,8 @@ function parseSettingValue(field: AdminSettingField, value: unknown) {
         };
       });
     }
+    case 'adsConfig':
+      return parseAdsConfig(value);
   }
 }
 

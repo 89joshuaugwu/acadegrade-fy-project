@@ -12,6 +12,7 @@ import {
   Info,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   Settings,
   Shield,
   Users,
@@ -38,6 +39,7 @@ const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
   courses: BookOpen,
   analytics: BarChart3,
   activity: Activity,
+  ads: Megaphone,
   settings: Settings,
   results: BookOpen,
   insights: BrainCircuit,
@@ -69,58 +71,60 @@ export function MobileDrawer({
       onClose={onClose}
       title={isAdmin ? 'Admin navigation' : 'More'}
       description={isAdmin ? 'Manage AcadeGrade operations.' : 'Account, preferences and helpful tools.'}
-      className="lg:hidden"
+      className="h-auto max-h-[calc(100dvh-0.75rem)] lg:hidden"
     >
-      {!isAdmin && user && (
-        <div className="mb-5 flex items-center gap-4 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4">
-          <div className="size-12 shrink-0 overflow-hidden rounded-full border-2 border-[var(--acade-primary)]/35 bg-[var(--acade-overlay)]">
-            <img
-              src={profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
-              alt=""
-              className="size-full object-cover"
-            />
+      <div className="pb-[max(0px,env(safe-area-inset-bottom))]">
+        {!isAdmin && user && (
+          <div className="mb-4 flex items-center gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
+            <div className="size-12 shrink-0 overflow-hidden rounded-full border-2 border-[var(--acade-primary)]/35 bg-[var(--acade-overlay)]">
+              <img
+                src={profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
+                alt=""
+                className="size-full object-cover"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate font-semibold text-[var(--acade-text)]">
+                {profile?.fullName || user.displayName || 'Student'}
+              </p>
+              <p className="truncate text-sm text-[var(--acade-text-muted)]">
+                {profile?.matric || user.email || 'Academic profile'}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-[var(--acade-text)]">
-              {profile?.fullName || user.displayName || 'Student'}
-            </p>
-            <p className="truncate text-sm text-[var(--acade-text-muted)]">
-              {profile?.matric || user.email || 'Academic profile'}
-            </p>
-          </div>
+        )}
+
+        <nav aria-label={isAdmin ? 'Admin mobile navigation' : 'Student secondary navigation'} className="grid gap-1">
+          {isAdmin ? (
+            adminNavigation.map((item) => {
+              const Icon = ADMIN_ICONS[item.icon];
+              return <DrawerLink key={item.href} href={item.href} icon={Icon} label={item.label} onClick={onClose} />;
+            })
+          ) : (
+            <>
+              <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
+              <DrawerLink href="/calculator" icon={Calculator} label="Quick calculator" onClick={onClose} />
+              <DrawerLink href="/notifications" id="tour-mobile-nav-notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
+              <DrawerLink href="/about" icon={Info} label="About AcadeGrade" onClick={onClose} />
+            </>
+          )}
+        </nav>
+
+        <div className="mt-4 border-t border-[var(--acade-border-subtle)] pt-4">
+          <ThemeControl className="w-full" />
+          {isAdmin && user?.email && (
+            <p className="mt-3 truncate text-center text-xs text-[var(--acade-text-muted)]">{user.email}</p>
+          )}
+          <button
+            type="button"
+            id="tour-mobile-nav-logout"
+            onClick={handleSignOut}
+            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
+          >
+            {isAdmin ? <Shield className="size-5" aria-hidden="true" /> : <LogOut className="size-5" aria-hidden="true" />}
+            Sign out
+          </button>
         </div>
-      )}
-
-      <nav aria-label={isAdmin ? 'Admin mobile navigation' : 'Student secondary navigation'} className="grid gap-1">
-        {isAdmin ? (
-          adminNavigation.map((item) => {
-            const Icon = ADMIN_ICONS[item.icon];
-            return <DrawerLink key={item.href} href={item.href} icon={Icon} label={item.label} onClick={onClose} />;
-          })
-        ) : (
-          <>
-            <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
-            <DrawerLink href="/calculator" icon={Calculator} label="Quick calculator" onClick={onClose} />
-            <DrawerLink href="/notifications" id="tour-mobile-nav-notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
-            <DrawerLink href="/about" icon={Info} label="About AcadeGrade" onClick={onClose} />
-          </>
-        )}
-      </nav>
-
-      <div className="mt-5 border-t border-[var(--acade-border-subtle)] pt-5">
-        <ThemeControl className="w-full" />
-        {isAdmin && user?.email && (
-          <p className="mt-4 truncate text-center text-xs text-[var(--acade-text-muted)]">{user.email}</p>
-        )}
-        <button
-          type="button"
-          id="tour-mobile-nav-logout"
-          onClick={handleSignOut}
-          className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
-        >
-          {isAdmin ? <Shield className="size-5" aria-hidden="true" /> : <LogOut className="size-5" aria-hidden="true" />}
-          Sign out
-        </button>
       </div>
     </Sheet>
   );

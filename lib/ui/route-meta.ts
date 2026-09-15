@@ -7,6 +7,7 @@ export type NavigationIcon =
   | 'courses'
   | 'analytics'
   | 'activity'
+  | 'ads'
   | 'settings';
 
 export interface NavigationItem {
@@ -33,6 +34,7 @@ export const adminNavigation: NavigationItem[] = [
   { href: '/admin/courses', label: 'Course catalogue', icon: 'courses' },
   { href: '/admin/analytics', label: 'Analytics', icon: 'analytics' },
   { href: '/admin/api-analytics', label: 'API monitor', icon: 'activity' },
+  { href: '/admin/ads', label: 'Advertising', icon: 'ads' },
   { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -71,6 +73,7 @@ export function getRouteMeta(pathname: string): RouteMeta {
     '/admin/courses': { title: 'Course catalogue' },
     '/admin/analytics': { title: 'Analytics' },
     '/admin/api-analytics': { title: 'API monitor' },
+    '/admin/ads': { title: 'Advertising' },
     '/admin/settings': { title: 'Admin settings' },
   };
   if (known[current]) return known[current];

@@ -136,8 +136,7 @@ function DegreeMeridianPreview() {
 export function HomeHero() {
   return (
     <section aria-labelledby="home-hero-title" className="relative overflow-hidden border-b border-[var(--acade-border-subtle)]">
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-px bg-[var(--acade-border-subtle)] lg:block" aria-hidden="true" />
-      <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:gap-14 lg:px-8 lg:py-28">
+      <div className="mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:gap-14 lg:px-8 lg:py-24">
         <div className="lg:col-span-6">
           <div className="mb-7 flex flex-wrap items-center gap-3 text-sm font-medium text-[var(--acade-text-muted)]">
             <span className="inline-flex items-center gap-2 rounded-full border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-1.5">
@@ -160,12 +159,12 @@ export function HomeHero() {
             Record semester results, understand CGPA and performance trends, and plan your next academic move from one clear workspace.
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <LinkButton href="/register" size="lg" className="group">
+          <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <LinkButton href="/register" size="lg" className="group w-full whitespace-nowrap lg:w-auto">
               Start your academic record
               <ArrowRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true" />
             </LinkButton>
-            <LinkButton href="/calculator" size="lg" variant="outline">
+            <LinkButton href="/calculator" size="lg" variant="outline" className="w-full whitespace-nowrap lg:w-auto">
               Try the CGPA calculator
             </LinkButton>
           </div>

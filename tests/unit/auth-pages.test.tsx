@@ -43,6 +43,7 @@ vi.mock('@/components/ui/MobileAppDownload', () => ({
 
 import LoginPage from '@/app/(public)/login/page';
 import ForgotPasswordPage from '@/app/(public)/forgot-password/page';
+import RegisterPage from '@/app/(public)/register/page';
 
 function renderPage(ui: React.ReactNode) {
   return render(
@@ -211,5 +212,25 @@ describe('ForgotPasswordPage presentation and behavior', () => {
     });
     expect(await screen.findByRole('status')).toHaveTextContent('Password reset');
     expect(mocks.toastSuccess).toHaveBeenCalledWith('Password reset successfully!');
+  });
+});
+
+describe('RegisterPage presentation', () => {
+  beforeEach(() => {
+    mocks.replace.mockReset();
+    mocks.push.mockReset();
+    mocks.getDocument.mockReset();
+    mocks.getDocument.mockResolvedValue(null);
+    sessionStorage.clear();
+  });
+
+  it('uses the shared auth shell and exposes the current registration phase', async () => {
+    renderPage(<RegisterPage />);
+
+    expect(await screen.findByRole('main', { name: 'Create your academic record' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Build a record you can trust' })).toBeInTheDocument();
+    const progress = screen.getByRole('navigation', { name: 'Registration progress' });
+    expect(within(progress).getByText('Step 1 of 4')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Create Your Account' })).toBeInTheDocument();
   });
 });

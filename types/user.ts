@@ -42,6 +42,7 @@ export interface User {
   };
   tourCompleted?: boolean;
   resultsTourCompleted?: boolean;
+  tourVersions?: Record<string, number>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

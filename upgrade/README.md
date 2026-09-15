@@ -19,7 +19,8 @@ Use the documents in this order:
 9. [Data and integration contracts](./10-data-and-integration-contracts.md) — existing APIs, correctness fixes, backend dependencies, and deferred work.
 10. [Source inventory](./11-source-inventory.md) — all 197 tracked files and easily missed features to preserve.
 11. [AI handoff prompt](./09-ai-handoff-prompt.md) — copy-ready instructions for an implementation agent.
-12. Implementation plans — [Foundations](./plans/01-foundation-shells-implementation-plan.md), [Public/auth](./plans/02-public-auth-implementation-plan.md), [Student](./plans/03-student-product-implementation-plan.md), [Admin](./plans/04-admin-console-implementation-plan.md), [Quality/rollout](./plans/05-quality-rollout-implementation-plan.md).
+12. [Production expansion](./12-production-expansion-design.md) — email, ads, onboarding, SEO, provider architecture, and the mobile compatibility boundary.
+13. Implementation plans — [Foundations](./plans/01-foundation-shells-implementation-plan.md), [Public/auth](./plans/02-public-auth-implementation-plan.md), [Student](./plans/03-student-product-implementation-plan.md), [Admin](./plans/04-admin-console-implementation-plan.md), [Quality/rollout](./plans/05-quality-rollout-implementation-plan.md), [Public/SEO/auth polish](./plans/06-public-seo-auth-polish-plan.md), [Email](./plans/07-email-rebrand-plan.md), [Advertising](./plans/08-advertising-control-plane-plan.md), and [Versioned onboarding](./plans/09-versioned-onboarding-plan.md).
 
 When two documents appear to conflict, use this precedence:
 
@@ -48,6 +49,7 @@ The signature visual is the **Degree Meridian**: a calibrated CGPA/PI trajectory
 - Do not make every section a floating card. Use page structure, rules, tonal sections, tables, and whitespace deliberately.
 - Motion must explain hierarchy or change. Continuous pulses, blanket blur transitions, universal count-up effects, and universal hover lifts are out.
 - Desktop, tablet, mobile, keyboard-only, 200% zoom, slow network, empty data, partial failure, and permission-denied states are first-class requirements.
+- Existing mobile-facing HTTP contracts are immutable during this web rollout. New server capabilities must be additive or versioned and must not require a mobile rebuild.
 
 ## Delivery Order
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Activity, Settings, LogOut, Shield } from 'lucide-react';
+import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Activity, Settings, LogOut, Shield, Megaphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
@@ -19,6 +19,7 @@ const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
   courses: BookOpen,
   analytics: BarChart3,
   activity: Activity,
+  ads: Megaphone,
   settings: Settings,
   results: BookOpen,
   insights: BarChart3,

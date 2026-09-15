@@ -98,13 +98,13 @@ export function AuthShell({
     <div
       className={cn(
         'min-h-dvh bg-[var(--acade-void)] text-[var(--acade-text)]',
-        'lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(32rem,1.08fr)]',
+        'lg:grid lg:grid-cols-[minmax(20rem,0.82fr)_minmax(32rem,1.18fr)]',
         className
       )}
     >
       <aside
         aria-labelledby={`${titleId}-proof`}
-        className="relative hidden min-h-dvh overflow-hidden border-r border-[var(--acade-border-subtle)] bg-[var(--acade-primary-dim)] p-8 lg:flex lg:flex-col lg:justify-between xl:p-12"
+        className="relative hidden min-h-dvh overflow-hidden border-r border-[var(--acade-border-subtle)] bg-[var(--acade-primary-dim)] p-8 lg:flex lg:flex-col lg:justify-between xl:p-10"
       >
         <div
           aria-hidden="true"
@@ -115,22 +115,22 @@ export function AuthShell({
           className="pointer-events-none absolute -left-12 top-1/3 size-72 rounded-full border border-[var(--acade-primary)] opacity-10"
         />
 
-        <div className="relative max-w-xl pt-16 xl:pt-24">
+        <div className="relative max-w-xl pt-10 xl:pt-14">
           <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
             Academic clarity, semester by semester
           </p>
           <h2
             id={`${titleId}-proof`}
-            className="mt-4 max-w-lg font-[family-name:var(--font-bricolage)] text-[length:clamp(2rem,4vw,3.75rem)] font-bold leading-[1.02] tracking-[-0.04em]"
+            className="mt-4 max-w-lg font-[family-name:var(--font-bricolage)] text-[length:clamp(2rem,3.2vw,3rem)] font-bold leading-[1.04] tracking-[-0.035em]"
           >
             {proofTitle}
           </h2>
-          <p className="mt-5 max-w-lg text-[length:var(--text-base)] leading-7 text-[var(--acade-text-muted)]">
+          <p className="mt-4 max-w-lg text-[length:var(--text-base)] leading-7 text-[var(--acade-text-muted)]">
             {proofDescription}
           </p>
         </div>
 
-        <div className="relative my-10 max-w-xl xl:my-14">
+        <div className="relative my-8 max-w-xl xl:my-10">
           <DegreeMeridian />
 
           <ul className="mt-6 grid gap-3">
@@ -157,19 +157,19 @@ export function AuthShell({
       </aside>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
-        <header className="flex min-h-20 flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
+        <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 xl:px-10">
           <Logo href="/" size="sm" />
           <ThemeControl compact />
         </header>
 
         <main
           aria-labelledby={titleId}
-          className="flex flex-1 items-start justify-center px-4 pb-8 pt-4 sm:items-center sm:px-6 sm:pb-12 sm:pt-6 lg:px-8 xl:px-12"
+          className="flex flex-1 items-start justify-center px-4 pb-8 pt-3 sm:px-6 sm:pb-10 sm:pt-5 lg:px-8 xl:px-10"
         >
-          <div className={cn('w-full max-w-[35rem]', contentClassName)}>
+          <div className={cn('w-full max-w-[33rem]', contentClassName)}>
             <Card
               padding="none"
-              className="overflow-hidden rounded-[var(--radius-dialog)] border-[var(--acade-border)] p-5 shadow-[var(--shadow-popover)] sm:p-8"
+              className="overflow-hidden rounded-[var(--radius-dialog)] border-[var(--acade-border)] p-5 shadow-[var(--shadow-popover)] sm:p-7"
             >
               {eyebrow && (
                 <p className="mb-3 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">
@@ -178,7 +178,7 @@ export function AuthShell({
               )}
               <h1
                 id={titleId}
-                className="font-[family-name:var(--font-bricolage)] text-[length:clamp(1.75rem,5vw,2.5rem)] font-bold leading-tight tracking-[-0.035em]"
+                className="font-[family-name:var(--font-bricolage)] text-[length:clamp(1.65rem,3.5vw,2.1rem)] font-bold leading-tight tracking-[-0.03em]"
               >
                 {title}
               </h1>
@@ -186,7 +186,7 @@ export function AuthShell({
                 {description}
               </p>
 
-              <div className="mt-7">{children}</div>
+              <div className="mt-6">{children}</div>
 
               {support && (
                 <nav
@@ -207,4 +207,3 @@ export function AuthShell({
     </div>
   );
 }
-

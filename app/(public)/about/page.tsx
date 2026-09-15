@@ -61,7 +61,6 @@ export default function AboutPage() {
       <PageTransition>
         <main className="overflow-hidden pt-[var(--shell-header-height)]">
           <section className="relative border-b border-[var(--acade-border-subtle)]">
-            <div aria-hidden="true" className="absolute inset-y-0 left-1/2 hidden w-px bg-[var(--acade-border-subtle)] lg:block" />
             <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
               <div className="lg:col-span-7">
                 <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
@@ -83,11 +82,11 @@ export default function AboutPage() {
                   </>
                 )}
 
-                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                  <LinkButton href="/register" size="lg">
+                <div className="mt-9 flex flex-col gap-3 lg:flex-row">
+                  <LinkButton href="/register" size="lg" className="w-full whitespace-nowrap lg:w-auto">
                     Build your academic record <ArrowRight size={18} aria-hidden="true" />
                   </LinkButton>
-                  <LinkButton href="/calculator" variant="outline" size="lg">
+                  <LinkButton href="/calculator" variant="outline" size="lg" className="w-full whitespace-nowrap lg:w-auto">
                     Try the calculator
                   </LinkButton>
                 </div>
@@ -102,7 +101,11 @@ export default function AboutPage() {
                 ) : null}
               </div>
 
-              <div className="lg:col-span-5">
+              <div className="relative lg:col-span-5">
+                <div aria-hidden="true" className="mb-5 hidden items-center gap-2 lg:flex">
+                  <span className="h-px w-14 bg-[var(--acade-primary)]" />
+                  <span className="h-px w-5 bg-[var(--acade-gold)]" />
+                </div>
                 <DegreeSignal />
               </div>
             </div>

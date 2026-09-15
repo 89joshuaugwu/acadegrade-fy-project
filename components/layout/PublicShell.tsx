@@ -76,8 +76,8 @@ export function PublicFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-[var(--acade-border-subtle)] pt-6 text-xs text-[var(--acade-text-faint)] sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} AcadeGrade. All rights reserved.</p>
-          <p>Personal academic planning—not an official university record.</p>
+          <p>&copy; {new Date().getFullYear()} AcadeGrade. All rights reserved.</p>
+          <p>Personal academic planning, not an official university record.</p>
         </div>
       </div>
     </footer>

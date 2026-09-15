@@ -1,5 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 import { SemesterSummary } from './semester';
+import type { AdsConfig } from '@/lib/ads/types';
 
 /** Firestore analytics/{uid} document */
 export interface Analytics {
@@ -38,6 +39,8 @@ export interface PlatformSettings {
     grade: string;
     gradePoint: number;
   }[];
+  /** Additive typed ads foundation. Legacy advertBanners remains supported separately. */
+  adsConfig?: AdsConfig;
 }
 
 /** Firestore config/admins document */

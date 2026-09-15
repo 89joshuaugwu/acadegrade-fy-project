@@ -3,12 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, ArrowRight, Check, Sparkles, AlertCircle, FileText, Database } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparkles, AlertCircle, Database } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
@@ -31,10 +30,9 @@ import {
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { Logo } from '@/components/ui';
-import { ReactiveAuthBackground } from '@/components/ui/ReactiveAuthBackground';
-import { HolographicCard } from '@/components/ui/HolographicCard';
 import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
+import { AuthProgress, AuthShell } from '@/components/auth';
+import { navigationSpring } from '@/lib/ui/motion';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -799,7 +797,7 @@ export default function RegisterWizard() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [signupsDisabled, setSignupsDisabled] = useState(false);
 
-  const totalSteps = 5;
+  const registrationSteps = ['Account', 'Academic details', 'Record setup', 'Confirm history'] as const;
 
   const { profile, loading: profileLoading } = useProfile();
   const draftRestored = useRef(false);
@@ -1019,109 +1017,80 @@ export default function RegisterWizard() {
 
   if (signupsDisabled) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--acade-void)] text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[var(--acade-primary)]/5 mix-blend-overlay pointer-events-none" />
-        <div className="max-w-md w-full z-10 text-center space-y-6">
-          <div className="flex justify-center mb-6">
-            <Logo />
+      <AuthShell
+        eyebrow="Account availability"
+        title="Registration is paused"
+        description="New account creation is temporarily unavailable. Existing students can still sign in and use their records."
+        proofTitle="Your academic record remains available"
+        proofDescription="Maintenance never changes an existing student's saved semesters, metrics, or transcript."
+      >
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-5 flex size-14 items-center justify-center rounded-2xl border border-[var(--acade-gold)]/25 bg-[var(--acade-gold)]/10 text-[var(--acade-gold)]">
+            <AlertCircle size={26} aria-hidden="true" />
           </div>
-          <div className="p-8 rounded-[2rem] bg-[var(--acade-surface)] border border-[var(--acade-border)] shadow-xl flex flex-col items-center">
-            <div className="size-16 rounded-full bg-[var(--acade-gold)]/10 flex items-center justify-center text-[var(--acade-gold)] mb-6">
-              <AlertCircle size={32} />
-            </div>
-            <h1 className="text-2xl font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-3">
-              Registration Closed
-            </h1>
-            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-8">
-              We are currently not accepting new sign-ups. Existing users can still log in to access their dashboards.
-            </p>
-            <Button fullWidth disabled className="mb-4">
-              Sign Up Disabled
-            </Button>
-            <Button variant="outline" fullWidth onClick={() => router.push('/login')}>
-              Go to Login
-            </Button>
-          </div>
+          <p className="mb-6 max-w-sm text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
+            Please sign in if you already have an account, or check back when registration reopens.
+          </p>
+          <Button variant="primary" fullWidth onClick={() => router.push('/login')}>
+            Sign in to AcadeGrade
+          </Button>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center px-5 py-12 bg-[var(--acade-void)]">
-      {/* Keystroke Reactive Background */}
-      <ReactiveAuthBackground />
-
-      {/* Confetti container (Pure CSS) */}
-      {isSuccess && !shouldReduceMotion && (
-        <div className="fixed inset-0 pointer-events-none overflow-hidden z-50 flex justify-around">
-          {[...Array(30)].map((_, i) => (
-            <div 
-              key={i}
-              className="w-2 h-4 bg-[var(--acade-primary-glow)] rounded-sm animate-[confetti-fall_3s_ease-out_forwards]"
-              style={{
-                backgroundColor: i % 3 === 0 ? 'var(--acade-gold)' : i % 2 === 0 ? 'var(--acade-success)' : 'var(--acade-primary-glow)',
-                animationDelay: `${Math.random() * 0.5}s`,
-                transform: `rotate(${Math.random() * 360}deg)`
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      <div className="relative w-full max-w-lg">
-        {/* Header Logo */}
-        <div className="flex justify-center mb-8">
-          <Logo href="/" size="lg" />
-        </div>
-
-        {/* Progress Bar */}
+    <AuthShell
+      eyebrow="Student onboarding"
+      title="Create your academic record"
+      description={isSuccess
+        ? 'Your profile is ready. We are taking you to the dashboard now.'
+        : 'Set up your identity and academic timeline once, then keep every semester in one dependable place.'}
+      proofTitle="Build a record you can trust"
+      proofDescription="AcadeGrade keeps your academic identity, programme timeline, and semester history connected without inventing missing results."
+      contentClassName="max-w-[35rem]"
+      support={!isSuccess ? (
+        <span>
+          Already have an account? <Link href="/login">Sign in</Link>
+        </span>
+      ) : undefined}
+    >
+      <div className="relative">
         {!isSuccess && (
-          <div className="mb-8">
-            <div className="flex justify-between text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-bold mb-2 px-1">
-              <span>STEP {currentStep} OF {totalSteps - 1}</span>
-              <span>{Math.round((currentStep / (totalSteps - 1)) * 100)}%</span>
-            </div>
-            <div className="h-2 w-full bg-[var(--acade-deep)] rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-[var(--acade-primary)]"
-                initial={{ width: 0 }}
-                animate={{ width: `${(currentStep / (totalSteps - 1)) * 100}%` }}
-                transition={{ type: 'spring', stiffness: 100, damping: 20 }}
-              />
-            </div>
-          </div>
+          <AuthProgress
+            steps={registrationSteps}
+            currentStep={currentStep}
+            label="Registration progress"
+            className="mb-7"
+          />
         )}
-
-        <HolographicCard
-          initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative"
-        >
           {isSubmitting && (
-            <div className="absolute inset-0 bg-[var(--acade-deep)]/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-center">
-               <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin mb-4" />
-               <p className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">
-                 Setting up your academic profile...
+            <div className="absolute inset-0 z-50 flex min-h-72 flex-col items-center justify-center rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)]/95 p-6 text-center shadow-[var(--shadow-popover)]" role="status" aria-live="polite">
+               <div className="mb-4 size-10 animate-spin rounded-full border-4 border-[var(--acade-primary)] border-t-transparent motion-reduce:animate-none" />
+               <p className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
+                 Setting up your academic profile…
+               </p>
+               <p className="mt-2 text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
+                 Keep this page open while we finalize your account once.
                </p>
             </div>
           )}
 
           <FormProvider {...methods}>
-            <form onSubmit={methods.handleSubmit(onSubmit)} noValidate>
-              <AnimatePresence mode="wait">
+            <form onSubmit={methods.handleSubmit(onSubmit)} noValidate aria-label="Registration form">
+              <AnimatePresence mode="wait" initial={false}>
                 {currentStep === 1 && (
-                  <motion.div key="step1" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div key="step1" initial={shouldReduceMotion ? { opacity: 1 } : { x: -18, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={shouldReduceMotion ? { opacity: 0 } : { x: 18, opacity: 0 }} transition={shouldReduceMotion ? { duration: 0 } : navigationSpring}>
                     <Step1Account onNext={() => setCurrentStep(2)} />
                   </motion.div>
                 )}
                 {currentStep === 2 && (
-                  <motion.div key="step2" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div key="step2" initial={shouldReduceMotion ? { opacity: 1 } : { x: -18, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={shouldReduceMotion ? { opacity: 0 } : { x: 18, opacity: 0 }} transition={shouldReduceMotion ? { duration: 0 } : navigationSpring}>
                     <Step2Programme onNext={() => setCurrentStep(3)} onBack={() => setCurrentStep(1)} />
                   </motion.div>
                 )}
                 {currentStep === 3 && (
-                  <motion.div key="step3" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
+                  <motion.div key="step3" initial={shouldReduceMotion ? { opacity: 1 } : { x: -18, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={shouldReduceMotion ? { opacity: 0 } : { x: 18, opacity: 0 }} transition={shouldReduceMotion ? { duration: 0 } : navigationSpring}>
                     <Step3RecordMode
                       onNext={() => setCurrentStep(4)}
                       onSubmit={submitRegistration}
@@ -1130,43 +1099,29 @@ export default function RegisterWizard() {
                   </motion.div>
                 )}
                 {currentStep === 4 && (
-                  <motion.div key="step4" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.2 }}>
-                    {/* The next button on step 4 submits the form */}
+                  <motion.div key="step4" initial={shouldReduceMotion ? { opacity: 1 } : { x: -18, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={shouldReduceMotion ? { opacity: 0 } : { x: 18, opacity: 0 }} transition={shouldReduceMotion ? { duration: 0 } : navigationSpring}>
                     <Step4PastSemesters onNext={submitRegistration} onBack={() => setCurrentStep(3)} />
                   </motion.div>
                 )}
                 {currentStep === 5 && (
-                  <motion.div key="step5" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center text-center py-10">
-                    <div className="size-20 bg-[var(--acade-success)]/20 text-[var(--acade-success)] rounded-full flex items-center justify-center mb-6">
-                      <Check size={40} />
+                  <motion.div key="step5" initial={shouldReduceMotion ? { opacity: 1 } : { scale: 0.96, y: 10, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} transition={shouldReduceMotion ? { duration: 0 } : navigationSpring} className="flex flex-col items-center py-10 text-center" role="status">
+                    <div className="mb-6 flex size-20 items-center justify-center rounded-3xl border border-[var(--acade-success)]/25 bg-[var(--acade-success)]/10 text-[var(--acade-success)]">
+                      <Check size={38} aria-hidden="true" />
                     </div>
-                    <h2 className="text-[length:var(--text-3xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
-                      You&apos;re All Set!
+                    <h2 className="mb-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)]">
+                      Your record is ready
                     </h2>
-                    <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] max-w-sm">
-                      Your AcadeGrade profile is ready. Redirecting you to your new dashboard...
+                    <p className="max-w-sm text-[length:var(--text-base)] leading-7 text-[var(--acade-text-muted)]">
+                      Your AcadeGrade profile has been finalized. Opening your dashboard…
                     </p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </form>
           </FormProvider>
-        </HolographicCard>
 
-        {/* Footer Link */}
-        {!isSuccess && (
-          <p className="text-center mt-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
-            Already have an account?{' '}
-            <Link
-              href="/login"
-              className="text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] font-semibold transition-colors"
-            >
-              Sign in →
-            </Link>
-          </p>
-        )}
-        {!isSuccess && <MobileAppDownload compact className="mt-4" />}
+        {!isSuccess && <MobileAppDownload compact className="mt-6" />}
       </div>
-    </main>
+    </AuthShell>
   );
 }

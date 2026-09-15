@@ -1,22 +1,11 @@
 import { MetadataRoute } from 'next';
+import { absoluteUrl, PUBLIC_SITEMAP_ROUTES } from '@/lib/seo/site';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://acadegrade.vercel.app';
-
-  // These are the public pages that should be indexed by search engines
-  const routes = [
-    '',
-    '/about',
-    '/calculator',
-    '/login',
-    '/register',
-    '/forgot-password',
-  ];
-
-  return routes.map((route) => ({
-    url: `${baseUrl}${route}`,
+  return PUBLIC_SITEMAP_ROUTES.map((route) => ({
+    url: absoluteUrl(route),
     lastModified: new Date(),
-    changeFrequency: route === '' ? 'weekly' : 'monthly',
-    priority: route === '' ? 1 : 0.8,
+    changeFrequency: route === '/' ? 'weekly' : 'monthly',
+    priority: route === '/' ? 1 : route.startsWith('/features') ? 0.9 : 0.7,
   }));
 }

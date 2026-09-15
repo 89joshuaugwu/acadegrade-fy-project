@@ -51,6 +51,30 @@ export function useProfile() {
     }
   };
 
+  const completeProductTour = async (
+    tourId: string,
+    version: number,
+    legacyField?: 'tourCompleted' | 'resultsTourCompleted'
+  ) => {
+    if (!uid || !profile) return;
+    const tourVersions = { ...(profile.tourVersions || {}), [tourId]: version };
+    const legacyUpdate = legacyField ? { [legacyField]: true } : {};
+    try {
+      await updateDocument(`users/${uid}`, {
+        tourVersions,
+        ...legacyUpdate,
+        updatedAt: new Date().toISOString(),
+      });
+      setProfile((previous) => previous ? {
+        ...previous,
+        tourVersions,
+        ...legacyUpdate,
+      } : null);
+    } catch {
+      toast.error('Could not save tour progress. You can continue using AcadeGrade.');
+    }
+  };
+
   const completeResultsTour = async () => {
     if (!uid || !profile || profile.resultsTourCompleted) return;
     try {
@@ -62,5 +86,5 @@ export function useProfile() {
   };
 
   const profileLoading = Boolean(uid) && (loading || loadedUid !== uid);
-  return { profile, loading: profileLoading, updateProfile, completeTour, completeResultsTour };
+  return { profile, loading: profileLoading, updateProfile, completeTour, completeResultsTour, completeProductTour };
 }

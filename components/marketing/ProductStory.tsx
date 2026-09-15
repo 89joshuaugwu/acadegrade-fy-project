@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, Compass, LineChart } from 'lucide-react';
+import { ArrowDown, ArrowRight, BookOpen, CheckCircle2, Compass, FileScan, LineChart } from 'lucide-react';
 import { LinkButton } from '@/components/ui';
 
 const workflow = [
@@ -28,6 +28,69 @@ const workflow = [
   },
 ] as const;
 
+const extractedCourses = [
+  { code: 'CSC 415', score: '76' },
+  { code: 'CSC 421', score: '68' },
+  { code: 'CSC 455', score: '72' },
+] as const;
+
+function ScanToRecordPreview() {
+  return (
+    <figure aria-labelledby="scan-record-title" className="mt-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 sm:p-5">
+      <figcaption id="scan-record-title" className="sr-only">Scan to academic record</figcaption>
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--acade-border-subtle)] pb-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <FileScan className="size-4 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+          <span className="truncate text-xs font-semibold text-[var(--acade-text-muted)]">Result slip · image or PDF</span>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[var(--acade-success)]">
+          <CheckCircle2 className="size-3.5" aria-hidden="true" />
+          Scan complete
+        </span>
+      </div>
+
+      <div className="mt-4 grid items-stretch gap-3 sm:grid-cols-[0.9fr_auto_1.25fr]">
+        <div className="rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-3" aria-hidden="true">
+          <div className="h-1.5 w-14 rounded-full bg-[var(--acade-primary)]/55" />
+          <div className="mt-3 space-y-2">
+            <div className="h-1.5 w-full rounded-full bg-[var(--acade-control-border)]" />
+            <div className="h-1.5 w-4/5 rounded-full bg-[var(--acade-control-border)]" />
+            <div className="grid grid-cols-[1fr_2rem] gap-2 pt-1">
+              <div className="space-y-2">
+                <div className="h-1.5 rounded-full bg-[var(--acade-border)]" />
+                <div className="h-1.5 rounded-full bg-[var(--acade-border)]" />
+                <div className="h-1.5 rounded-full bg-[var(--acade-border)]" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-1.5 rounded-full bg-[var(--acade-primary)]/35" />
+                <div className="h-1.5 rounded-full bg-[var(--acade-primary)]/35" />
+                <div className="h-1.5 rounded-full bg-[var(--acade-primary)]/35" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-center text-[var(--acade-text-faint)]" aria-hidden="true">
+          <ArrowRight className="hidden size-4 sm:block" />
+          <ArrowDown className="size-4 sm:hidden" />
+        </div>
+
+        <div className="rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)] p-3">
+          <p className="text-xs font-semibold text-[var(--acade-primary)]">3 courses ready to review</p>
+          <div className="mt-2 divide-y divide-[var(--acade-border-subtle)]">
+            {extractedCourses.map((course) => (
+              <div key={course.code} className="flex items-center justify-between gap-3 py-1.5 font-[family-name:var(--font-geist-mono)] text-xs">
+                <span className="font-semibold text-[var(--acade-text)]">{course.code}</span>
+                <span className="text-[var(--acade-text-muted)]">{course.score}/100</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </figure>
+  );
+}
+
 export function ProductStory() {
   return (
     <section id="how-it-works" aria-labelledby="product-story-title" className="scroll-mt-20 border-b border-[var(--acade-border-subtle)]">
@@ -55,7 +118,7 @@ export function ProductStory() {
                 key={step.marker}
                 className={
                   step.featured
-                    ? 'relative overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8 lg:col-span-7 lg:row-span-2 lg:min-h-[430px]'
+                    ? 'relative overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 shadow-[var(--shadow-card)] sm:p-8 lg:col-span-7 lg:row-span-2'
                     : 'rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-6 lg:col-span-5'
                 }
               >
@@ -63,7 +126,8 @@ export function ProductStory() {
                   <div className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
                     <Icon className="size-5" aria-hidden="true" />
                   </div>
-                  <div className={step.featured ? 'mt-10 sm:mt-16 lg:mt-auto lg:pt-20' : 'min-w-0'}>
+                  {step.featured && <ScanToRecordPreview />}
+                  <div className={step.featured ? 'mt-6' : 'min-w-0'}>
                     <p className="text-xs font-semibold text-[var(--acade-text-faint)]">{step.marker}</p>
                     <h3 className="mt-2 font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)] sm:text-2xl">
                       {step.title}

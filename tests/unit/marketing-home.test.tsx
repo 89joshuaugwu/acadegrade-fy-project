@@ -43,10 +43,13 @@ describe('AcadeGrade landing presentation', () => {
   it('presents the product workflow as a real ordered sequence', () => {
     render(<ProductStory />);
 
-    expect(screen.getByRole('heading', { level: 2, name: /one record, three useful answers/i })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 2, name: /one record, three useful answers/i });
+    expect(heading).toHaveClass('text-[clamp(2rem,3vw,2.75rem)]');
     const workflow = screen.getByRole('list', { name: /academic workflow/i });
     expect(workflow).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByRole('figure', { name: /scan to academic record/i })).toBeInTheDocument();
+    expect(screen.getByText(/3 courses ready to review/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: /record what happened/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: /see where you stand/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: /plan what comes next/i })).toBeInTheDocument();

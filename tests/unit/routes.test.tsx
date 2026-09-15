@@ -21,6 +21,11 @@ describe('route metadata', () => {
     expect(isRouteActive('/admin/users/student-1', '/admin/users')).toBe(true);
     expect(isRouteActive('/admin/users', '/admin/dashboard')).toBe(false);
   });
+
+  it('identifies the advertising control plane as its own admin destination', () => {
+    expect(isRouteActive('/admin/ads', '/admin/ads')).toBe(true);
+    expect(getRouteMeta('/admin/ads')).toEqual({ title: 'Advertising' });
+  });
 });
 
 describe('RouteAnnouncer', () => {

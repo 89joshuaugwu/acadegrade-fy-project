@@ -24,6 +24,7 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { DegreeClassBadge } from '@/components/cgpa/DegreeClassBadge';
 import { TrendChart } from '@/components/charts/TrendChart';
 import { HolographicCard } from '@/components/ui/HolographicCard';
+import { AdPlacement } from '@/components/ads/AdPlacement';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -286,6 +287,11 @@ export default function DashboardPage() {
           </motion.div>
         ))}
       </div>
+
+      <AdPlacement
+        placement="dashboard.overview"
+        seed={user?.uid}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
         

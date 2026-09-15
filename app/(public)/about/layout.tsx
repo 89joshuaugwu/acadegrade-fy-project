@@ -1,16 +1,12 @@
 import type { Metadata } from 'next';
+import { createPageMetadata } from '@/lib/seo/site';
 
-export const metadata: Metadata = {
-  title: 'About AcadeGrade | The Builder & Technology',
+export const metadata: Metadata = createPageMetadata({
+  title: 'About AcadeGrade',
   description:
-    'Learn about the academic context behind AcadeGrade, the technology stack (Next.js, Firebase, Tailwind CSS), and the builder behind the project.',
-  openGraph: {
-    title: 'About AcadeGrade | The Builder & Technology',
-    description:
-      'Learn about the academic context behind AcadeGrade, the technology stack, and the builder behind the project.',
-    url: 'https://acadegrade.vercel.app/about',
-  },
-};
+    'Learn how AcadeGrade helps students build a clear, private academic record and make better-informed decisions about their progress.',
+  path: '/about',
+});
 
 export default function AboutLayout({
   children,

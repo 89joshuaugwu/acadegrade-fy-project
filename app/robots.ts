@@ -1,12 +1,27 @@
 import { MetadataRoute } from 'next';
+import { absoluteUrl, resolveSiteUrl } from '@/lib/seo/site';
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/admin/', '/api/', '/dashboard', '/insights', '/transcript', '/settings'],
+      disallow: [
+        '/api/',
+        '/admin/',
+        '/dashboard',
+        '/insights',
+        '/notifications',
+        '/results',
+        '/settings',
+        '/transcript',
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/copy-code',
+      ],
     },
-    sitemap: 'https://acadegrade.vercel.app/sitemap.xml',
+    sitemap: absoluteUrl('/sitemap.xml'),
+    host: resolveSiteUrl(),
   };
 }
