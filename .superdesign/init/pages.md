@@ -1,0 +1,667 @@
+# Key Page Dependency Trees
+
+These trees recursively trace local static imports and re-exports from each selected page entry. Package imports are omitted. A repeated file is marked instead of expanding the same subtree again, keeping the artifact bounded while preserving the complete candidate file set. Route-layout source is captured in layouts.md; metadata-only route layouts are named here for context.
+
+## / (Home)
+
+Entry: `app/(public)/page.tsx`
+Layouts: `app/layout.tsx`
+Dependencies:
+- `components/layout/Navbar.tsx`
+  - `components/ui/index.ts`
+    - `components/forms/FormSection.tsx`
+      - `lib/utils/cn.ts`
+    - `components/ui/Badge.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Button.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Card.tsx`
+      - `hooks/useReducedMotion.ts`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/DataTable.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Disclosure.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/FormField.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/IconButton.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Input.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/LinkButton.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Logo.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Modal.tsx`
+      - `components/ui/Button.tsx` _(already listed in this tree)_
+      - `components/ui/IconButton.tsx` _(already listed in this tree)_
+      - `components/ui/Input.tsx` _(already listed in this tree)_
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Pagination.tsx`
+      - `components/ui/Button.tsx` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/SegmentedControl.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Select.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Sheet.tsx`
+      - `components/ui/Modal.tsx` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Skeleton.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Switch.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Tabs.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Textarea.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/ThemeControl.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Toggle.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `hooks/useAuth.ts`
+    - `lib/firebase/auth.ts`
+      - `lib/firebase/client.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/layout/PublicShell.tsx`
+  - `components/ui/index.ts` _(already listed in this tree)_
+  - `components/ui/Logo.tsx` _(already listed in this tree)_
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+- `components/marketing/index.ts`
+  - `components/marketing/AcademicProof.tsx`
+  - `components/marketing/HomeFAQ.tsx`
+    - `components/ui/index.ts` _(already listed in this tree)_
+  - `components/marketing/HomeHero.tsx`
+    - `components/ui/index.ts` _(already listed in this tree)_
+  - `components/marketing/ProductStory.tsx`
+    - `components/ui/index.ts` _(already listed in this tree)_
+  - `components/marketing/SmartAutomation.tsx`
+    - `components/ui/index.ts` _(already listed in this tree)_
+- `components/ui/MobileAppDownload.tsx`
+  - `lib/firebase/firestore.ts`
+    - `lib/firebase/client.ts` _(already listed in this tree)_
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+
+## /features (Features)
+
+Entry: `app/(public)/features/page.tsx`
+Layouts: `app/layout.tsx`
+Dependencies:
+- `components/marketing/PublicPage.tsx`
+  - `components/layout/Navbar.tsx`
+    - `components/ui/index.ts`
+      - `components/forms/FormSection.tsx`
+        - `lib/utils/cn.ts`
+      - `components/ui/Badge.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Button.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Card.tsx`
+        - `hooks/useReducedMotion.ts`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/DataTable.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Disclosure.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/FormField.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/IconButton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Input.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/LinkButton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Logo.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Modal.tsx`
+        - `components/ui/Button.tsx` _(already listed in this tree)_
+        - `components/ui/IconButton.tsx` _(already listed in this tree)_
+        - `components/ui/Input.tsx` _(already listed in this tree)_
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Pagination.tsx`
+        - `components/ui/Button.tsx` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/SegmentedControl.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Select.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Sheet.tsx`
+        - `components/ui/Modal.tsx` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Skeleton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Switch.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Tabs.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Textarea.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/ThemeControl.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Toggle.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `hooks/useAuth.ts`
+      - `lib/firebase/auth.ts`
+        - `lib/firebase/client.ts`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/layout/PublicShell.tsx`
+    - `components/ui/index.ts` _(already listed in this tree)_
+    - `components/ui/Logo.tsx` _(already listed in this tree)_
+    - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `components/ui/LinkButton.tsx` _(already listed in this tree)_
+- `lib/seo/site.ts`
+
+## /calculator (Calculator)
+
+Entry: `app/(public)/calculator/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(public)/calculator/layout.tsx`
+Dependencies:
+- `components/layout/Navbar.tsx`
+  - `components/ui/index.ts`
+    - `components/forms/FormSection.tsx`
+      - `lib/utils/cn.ts`
+    - `components/ui/Badge.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Button.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Card.tsx`
+      - `hooks/useReducedMotion.ts`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/DataTable.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Disclosure.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/FormField.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/IconButton.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Input.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/LinkButton.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Logo.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Modal.tsx`
+      - `components/ui/Button.tsx` _(already listed in this tree)_
+      - `components/ui/IconButton.tsx` _(already listed in this tree)_
+      - `components/ui/Input.tsx` _(already listed in this tree)_
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Pagination.tsx`
+      - `components/ui/Button.tsx` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/SegmentedControl.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Select.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Sheet.tsx`
+      - `components/ui/Modal.tsx` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Skeleton.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Switch.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Tabs.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Textarea.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/ThemeControl.tsx`
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `components/ui/Toggle.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `hooks/useAuth.ts`
+    - `lib/firebase/auth.ts`
+      - `lib/firebase/client.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/layout/PublicShell.tsx`
+  - `components/ui/index.ts` _(already listed in this tree)_
+  - `components/ui/Logo.tsx` _(already listed in this tree)_
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+- `components/shared/index.ts`
+  - `components/shared/EmptyState.tsx`
+    - `components/ui/Button.tsx` _(already listed in this tree)_
+    - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/shared/ErrorState.tsx`
+    - `components/ui/Button.tsx` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/shared/PageHeader.tsx`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/shared/PageTransition.tsx`
+  - `components/shared/RouteAnnouncer.tsx`
+  - `components/shared/SkeletonCard.tsx`
+    - `components/ui/Skeleton.tsx` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/index.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts` _(already listed in this tree)_
+- `lib/cgpa/calculator.ts`
+  - `lib/cgpa/gradeScale.ts`
+    - `lib/utils/constants.ts`
+      - `types/analytics.ts`
+        - `lib/ads/types.ts`
+        - `types/semester.ts`
+          - `types/course.ts`
+      - `types/course.ts` _(already listed in this tree)_
+    - `types/course.ts` _(already listed in this tree)_
+  - `types/course.ts` _(already listed in this tree)_
+- `types/course.ts` _(already listed in this tree)_
+
+## /login (Sign in)
+
+Entry: `app/(public)/login/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(public)/login/layout.tsx`
+Dependencies:
+- `components/auth/index.ts`
+  - `components/auth/AuthDivider.tsx`
+    - `lib/utils/cn.ts`
+  - `components/auth/AuthProgress.tsx`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/auth/AuthShell.tsx`
+    - `components/ui/index.ts`
+      - `components/forms/FormSection.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Badge.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Button.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Card.tsx`
+        - `hooks/useReducedMotion.ts`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/DataTable.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Disclosure.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/FormField.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/IconButton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Input.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/LinkButton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Logo.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Modal.tsx`
+        - `components/ui/Button.tsx` _(already listed in this tree)_
+        - `components/ui/IconButton.tsx` _(already listed in this tree)_
+        - `components/ui/Input.tsx` _(already listed in this tree)_
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Pagination.tsx`
+        - `components/ui/Button.tsx` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/SegmentedControl.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Select.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Sheet.tsx`
+        - `components/ui/Modal.tsx` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Skeleton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Switch.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Tabs.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Textarea.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/ThemeControl.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Toggle.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Button.tsx` _(already listed in this tree)_
+- `components/ui/Input.tsx` _(already listed in this tree)_
+- `components/ui/MobileAppDownload.tsx`
+  - `lib/firebase/firestore.ts`
+    - `lib/firebase/client.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts`
+  - `lib/firebase/auth.ts`
+    - `lib/firebase/client.ts` _(already listed in this tree)_
+- `hooks/useReducedMotion.ts` _(already listed in this tree)_
+- `lib/auth/profile.ts`
+  - `types/user.ts`
+- `lib/firebase/auth.ts` _(already listed in this tree)_
+- `lib/firebase/firestore.ts` _(already listed in this tree)_
+
+## /register (Registration)
+
+Entry: `app/(public)/register/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(public)/register/layout.tsx`
+Dependencies:
+- `components/auth/index.ts`
+  - `components/auth/AuthDivider.tsx`
+    - `lib/utils/cn.ts`
+  - `components/auth/AuthProgress.tsx`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/auth/AuthShell.tsx`
+    - `components/ui/index.ts`
+      - `components/forms/FormSection.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Badge.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Button.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Card.tsx`
+        - `hooks/useReducedMotion.ts`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/DataTable.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Disclosure.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/FormField.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/IconButton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Input.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/LinkButton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Logo.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Modal.tsx`
+        - `components/ui/Button.tsx` _(already listed in this tree)_
+        - `components/ui/IconButton.tsx` _(already listed in this tree)_
+        - `components/ui/Input.tsx` _(already listed in this tree)_
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Pagination.tsx`
+        - `components/ui/Button.tsx` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/SegmentedControl.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Select.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Sheet.tsx`
+        - `components/ui/Modal.tsx` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Skeleton.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Switch.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Tabs.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Textarea.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/ThemeControl.tsx`
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+      - `components/ui/Toggle.tsx`
+        - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+        - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Button.tsx` _(already listed in this tree)_
+- `components/ui/Input.tsx` _(already listed in this tree)_
+- `components/ui/MobileAppDownload.tsx`
+  - `lib/firebase/firestore.ts`
+    - `lib/firebase/client.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Select.tsx` _(already listed in this tree)_
+- `hooks/useAuth.ts`
+  - `lib/firebase/auth.ts`
+    - `lib/firebase/client.ts` _(already listed in this tree)_
+- `hooks/useProfile.ts`
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts` _(already listed in this tree)_
+  - `types/user.ts`
+- `hooks/useReducedMotion.ts` _(already listed in this tree)_
+- `lib/academic/timeline.ts`
+- `lib/auth/profile.ts`
+  - `types/user.ts` _(already listed in this tree)_
+- `lib/firebase/auth.ts` _(already listed in this tree)_
+- `lib/firebase/firestore.ts` _(already listed in this tree)_
+- `lib/ui/motion.ts`
+- `lib/utils/academic-data.ts`
+- `lib/utils/cn.ts` _(already listed in this tree)_
+- `lib/utils/constants.ts`
+  - `types/analytics.ts`
+    - `lib/ads/types.ts`
+    - `types/semester.ts`
+      - `types/course.ts`
+  - `types/course.ts` _(already listed in this tree)_
+- `types/user.ts` _(already listed in this tree)_
+
+## /dashboard (Student dashboard)
+
+Entry: `app/(student)/dashboard/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(student)/layout.tsx` -> `app/(student)/dashboard/layout.tsx`
+Dependencies:
+- `components/ads/AdPlacement.tsx`
+  - `lib/ads/config.ts`
+    - `lib/ads/types.ts`
+  - `lib/ads/delivery.ts`
+    - `lib/ads/types.ts` _(already listed in this tree)_
+  - `lib/ads/types.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts`
+    - `lib/firebase/client.ts`
+  - `lib/utils/cn.ts`
+- `components/charts/TrendChart.tsx`
+  - `hooks/useReducedMotion.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `types/semester.ts`
+    - `types/course.ts`
+- `components/dashboard/NextActionCard.tsx`
+  - `components/ui/Card.tsx`
+    - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `lib/dashboard/next-action.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/dashboard/RecentResults.tsx`
+  - `components/ui/Badge.tsx`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/ui/Card.tsx` _(already listed in this tree)_
+  - `lib/dashboard/summary.ts`
+    - `types/course.ts` _(already listed in this tree)_
+- `components/dashboard/StandingOverview.tsx`
+  - `components/cgpa/CGPAArc.tsx`
+    - `components/cgpa/DegreeClassBadge.tsx`
+      - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+      - `lib/cgpa/degreeClass.ts`
+        - `lib/utils/constants.ts`
+          - `types/analytics.ts`
+            - `lib/ads/types.ts` _(already listed in this tree)_
+            - `types/semester.ts` _(already listed in this tree)_
+          - `types/course.ts` _(already listed in this tree)_
+        - `types/analytics.ts` _(already listed in this tree)_
+      - `lib/utils/cn.ts` _(already listed in this tree)_
+    - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+    - `lib/cgpa/degreeClass.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/ui/Card.tsx` _(already listed in this tree)_
+  - `components/ui/Toggle.tsx`
+    - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Card.tsx` _(already listed in this tree)_
+- `hooks/useAnalytics.ts`
+  - `hooks/useAuth.ts`
+    - `lib/firebase/auth.ts`
+      - `lib/firebase/client.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts` _(already listed in this tree)_
+- `hooks/useCGPA.ts`
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `hooks/useSemesters.ts`
+    - `hooks/useAuth.ts` _(already listed in this tree)_
+    - `lib/firebase/firestore.ts` _(already listed in this tree)_
+    - `types/semester.ts` _(already listed in this tree)_
+  - `lib/utils/constants.ts` _(already listed in this tree)_
+  - `types/analytics.ts` _(already listed in this tree)_
+  - `types/course.ts` _(already listed in this tree)_
+  - `types/semester.ts` _(already listed in this tree)_
+- `hooks/useProfile.ts`
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts` _(already listed in this tree)_
+  - `types/user.ts`
+- `lib/dashboard/next-action.ts` _(already listed in this tree)_
+- `lib/dashboard/summary.ts` _(already listed in this tree)_
+- `lib/firebase/firestore.ts` _(already listed in this tree)_
+
+## /results (Results library)
+
+Entry: `app/(student)/results/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(student)/layout.tsx` -> `app/(student)/results/layout.tsx`
+Dependencies:
+- `components/cgpa/GradeTable.tsx`
+  - `components/ui/Badge.tsx`
+    - `lib/utils/cn.ts`
+  - `components/ui/Button.tsx`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `hooks/useReducedMotion.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `lib/utils/constants.ts`
+    - `types/analytics.ts`
+      - `lib/ads/types.ts`
+      - `types/semester.ts`
+        - `types/course.ts`
+    - `types/course.ts` _(already listed in this tree)_
+  - `types/course.ts` _(already listed in this tree)_
+- `components/onboarding/ResultsTour.tsx`
+  - `components/onboarding/ProductTour.tsx`
+    - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+    - `lib/ui/motion.ts`
+  - `hooks/useProfile.ts`
+    - `hooks/useAuth.ts`
+      - `lib/firebase/auth.ts`
+        - `lib/firebase/client.ts`
+    - `lib/firebase/firestore.ts`
+      - `lib/firebase/client.ts` _(already listed in this tree)_
+    - `types/user.ts`
+- `components/ui/Badge.tsx` _(already listed in this tree)_
+- `components/ui/Button.tsx` _(already listed in this tree)_
+- `components/ui/Modal.tsx`
+  - `components/ui/Button.tsx` _(already listed in this tree)_
+  - `components/ui/IconButton.tsx`
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `components/ui/Input.tsx`
+    - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts` _(already listed in this tree)_
+  - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts` _(already listed in this tree)_
+- `hooks/usePlatformSettings.ts`
+  - `lib/firebase/firestore.ts` _(already listed in this tree)_
+- `hooks/useReducedMotion.ts` _(already listed in this tree)_
+- `hooks/useSemesters.ts`
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts` _(already listed in this tree)_
+  - `types/semester.ts` _(already listed in this tree)_
+- `lib/firebase/firestore.ts` _(already listed in this tree)_
+- `types/course.ts` _(already listed in this tree)_
+- `types/semester.ts` _(already listed in this tree)_
+
+## /insights (Insights)
+
+Entry: `app/(student)/insights/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(student)/layout.tsx` -> `app/(student)/insights/layout.tsx`
+Dependencies:
+- `components/ai/InsightCard.tsx`
+  - `lib/utils/cn.ts`
+- `components/ai/WhatIfCalculator.tsx`
+  - `hooks/useAuth.ts`
+    - `lib/firebase/auth.ts`
+      - `lib/firebase/client.ts`
+  - `hooks/useReducedMotion.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/charts/ForecastChart.tsx`
+  - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Badge.tsx`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Button.tsx`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts` _(already listed in this tree)_
+- `hooks/usePlatformSettings.ts`
+  - `lib/firebase/firestore.ts`
+    - `lib/firebase/client.ts` _(already listed in this tree)_
+- `hooks/useProfile.ts`
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts` _(already listed in this tree)_
+  - `types/user.ts`
+- `lib/firebase/firestore.ts` _(already listed in this tree)_
+- `lib/utils/cn.ts` _(already listed in this tree)_
+- `lib/utils/constants.ts`
+  - `types/analytics.ts`
+    - `lib/ads/types.ts`
+    - `types/semester.ts`
+      - `types/course.ts`
+  - `types/course.ts` _(already listed in this tree)_
+- `types/ai.ts`
+- `types/course.ts` _(already listed in this tree)_
+- `types/semester.ts` _(already listed in this tree)_
+
+## /transcript (Transcript)
+
+Entry: `app/(student)/transcript/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(student)/layout.tsx` -> `app/(student)/transcript/layout.tsx`
+Dependencies:
+- `components/cgpa/CGPAArc.tsx`
+  - `components/cgpa/DegreeClassBadge.tsx`
+    - `hooks/useReducedMotion.ts`
+    - `lib/cgpa/degreeClass.ts`
+      - `lib/utils/constants.ts`
+        - `types/analytics.ts`
+          - `lib/ads/types.ts`
+          - `types/semester.ts`
+            - `types/course.ts`
+        - `types/course.ts` _(already listed in this tree)_
+      - `types/analytics.ts` _(already listed in this tree)_
+    - `lib/utils/cn.ts`
+  - `hooks/useReducedMotion.ts` _(already listed in this tree)_
+  - `lib/cgpa/degreeClass.ts` _(already listed in this tree)_
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Button.tsx`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts`
+  - `lib/firebase/auth.ts`
+    - `lib/firebase/client.ts`
+- `hooks/useProfile.ts`
+  - `hooks/useAuth.ts` _(already listed in this tree)_
+  - `lib/firebase/firestore.ts`
+    - `lib/firebase/client.ts` _(already listed in this tree)_
+  - `types/user.ts`
+- `lib/firebase/firestore.ts` _(already listed in this tree)_
+- `lib/utils/cn.ts` _(already listed in this tree)_
+- `types/course.ts` _(already listed in this tree)_
+- `types/semester.ts` _(already listed in this tree)_
+
+## /admin/dashboard (Admin overview)
+
+Entry: `app/(admin)/admin/dashboard/page.tsx`
+Layouts: `app/layout.tsx` -> `app/(admin)/layout.tsx` -> `app/(admin)/admin/layout.tsx`
+Dependencies:
+- `components/ui/Button.tsx`
+  - `lib/utils/cn.ts`
+- `components/ui/Card.tsx`
+  - `hooks/useReducedMotion.ts`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `components/ui/Skeleton.tsx`
+  - `lib/utils/cn.ts` _(already listed in this tree)_
+- `hooks/useAuth.ts`
+  - `lib/firebase/auth.ts`
+    - `lib/firebase/client.ts`
+- `hooks/useReducedMotion.ts` _(already listed in this tree)_
+- `lib/firebase/client.ts` _(already listed in this tree)_
+
+

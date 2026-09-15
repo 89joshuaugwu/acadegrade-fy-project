@@ -77,7 +77,9 @@ export function buildDashboardSummary(
     const bTime = timestampValue(b.updatedAt) || timestampValue(b.createdAt);
     if (aTime !== bTime) return bTime - aTime;
     if (a.semesterIndex !== b.semesterIndex) return b.semesterIndex - a.semesterIndex;
-    return a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+    const codeOrder = a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' });
+    if (codeOrder !== 0) return codeOrder;
+    return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   let atRiskCount = 0;

@@ -32,6 +32,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Superdesign generated component templates
+/.superdesign/tmp/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
@@ -69,4 +72,3 @@ PROMPT.md
 /reference
 
 .vercel
-

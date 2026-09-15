@@ -67,4 +67,21 @@ describe('dashboard academic summary', () => {
     expect(summary.unknownCount).toBe(1);
     expect(summary.recent.map((course) => course.id)).toEqual(['grade-only', 'safe', 'unknown']);
   });
+
+  it('uses the course id as a stable final tie-breaker', () => {
+    const summary = buildDashboardSummary([
+      {
+        semesterId: 'same-semester',
+        semesterLabel: '200L First Semester',
+        session: '2025/2026',
+        semesterIndex: 2,
+        courses: [
+          { id: 'course-b', code: 'CSC 201', title: 'Second copy', totalScore: 60 },
+          { id: 'course-a', code: 'CSC 201', title: 'First copy', totalScore: 60 },
+        ],
+      },
+    ]);
+
+    expect(summary.recent.map((course) => course.id)).toEqual(['course-a', 'course-b']);
+  });
 });

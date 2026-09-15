@@ -92,5 +92,7 @@ describe('student shell navigation', () => {
     expect(resultsLinks.every((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
     expect(screen.getByRole('banner', { name: 'Student page context' }))
       .toHaveTextContent('Semester result');
+    expect(screen.getByRole('banner', { name: 'Student mobile header' }))
+      .toHaveTextContent('Semester result');
   });
 });

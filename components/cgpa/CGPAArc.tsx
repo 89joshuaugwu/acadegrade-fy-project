@@ -435,7 +435,7 @@ function CGPAArc({
       {/* Degree class badge below arc */}
       {size !== 'sm' && (
         <DegreeClassBadge
-          cgpa={primaryMetric === 'cgpa' ? clampedCGPA : clampedPI}
+          cgpa={clampedCGPA}
           animated={animateOnMount}
         />
       )}

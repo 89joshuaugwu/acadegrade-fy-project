@@ -111,8 +111,14 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </a>
       <RouteAnnouncer title={routeMeta.title} />
       {/* Mobile & Tablet Header */}
-      <header className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)]/96 px-4 backdrop-blur-md sm:px-6 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
-        <Logo size="sm" />
+      <header aria-label="Student mobile header" className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)]/96 px-4 backdrop-blur-md sm:px-6 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Logo size="sm" />
+          <span className="hidden h-5 w-px shrink-0 bg-[var(--acade-border)] min-[390px]:block" aria-hidden="true" />
+          <span className="hidden truncate text-sm font-semibold text-[var(--acade-text-muted)] min-[390px]:block">
+            {routeMeta.title}
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <NotificationDropdown />
           <button

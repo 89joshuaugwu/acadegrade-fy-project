@@ -132,7 +132,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
                 </span>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]" />
-                  <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-medium">CGPA</span>
+                  <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-medium">Semester GPA</span>
                 </div>
               </div>
             )}
@@ -155,6 +155,12 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
       <div className="w-full h-64 md:h-80 relative select-none touch-none">
         <svg
           ref={svgRef}
+          role="img"
+          aria-label={metric === 'both'
+            ? 'Semester GPA and performance index trend'
+            : metric === 'cgpa'
+              ? 'Semester GPA trend'
+              : 'Performance index trend'}
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full overflow-visible"
           preserveAspectRatio="none"
@@ -370,6 +376,26 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
           />
         </svg>
       </div>
+      <table className="sr-only" aria-label="Semester GPA and PI values">
+        <thead>
+          <tr>
+            <th scope="col">Semester</th>
+            <th scope="col">Session</th>
+            <th scope="col">Semester GPA</th>
+            <th scope="col">Performance Index</th>
+          </tr>
+        </thead>
+        <tbody>
+          {semesters.map((semester) => (
+            <tr key={semester.semesterId}>
+              <th scope="row">{semester.label}</th>
+              <td>{semester.session}</td>
+              <td>{semester.gpa.toFixed(2)}</td>
+              <td>{semester.pi.toFixed(2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

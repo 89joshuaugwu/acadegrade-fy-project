@@ -1,462 +1,299 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { motion } from 'motion/react';
-import CountUp from 'react-countup';
-import { Share, FileText, BrainCircuit, Plus, RefreshCw, AlertTriangle, CheckCircle2, ChevronRight, BookOpen, ArrowRight, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, ArrowRight, BrainCircuit, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { useCGPA } from '@/hooks/useCGPA';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { updateDocument, getDocument, queryCollection } from '@/lib/firebase/firestore';
-import { cn } from '@/lib/utils/cn';
+import { useAuth } from '@/hooks/useAuth';
+import { useCGPA } from '@/hooks/useCGPA';
+import { useProfile } from '@/hooks/useProfile';
+import { getDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
 import {
   buildDashboardSummary,
   type DashboardCourseRecord,
   type DashboardCourseSource,
 } from '@/lib/dashboard/summary';
-
-import { Card } from '@/components/ui/Card';
-import { Toggle } from '@/components/ui/Toggle';
-import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
-import { CGPAArc } from '@/components/cgpa/CGPAArc';
-import { DegreeClassBadge } from '@/components/cgpa/DegreeClassBadge';
-import { TrendChart } from '@/components/charts/TrendChart';
-import { HolographicCard } from '@/components/ui/HolographicCard';
+import { getDashboardNextAction } from '@/lib/dashboard/next-action';
 import { AdPlacement } from '@/components/ads/AdPlacement';
+import { NextActionCard } from '@/components/dashboard/NextActionCard';
+import { RecentResults } from '@/components/dashboard/RecentResults';
+import { StandingOverview } from '@/components/dashboard/StandingOverview';
+import { TrendChart } from '@/components/charts/TrendChart';
+import { Card } from '@/components/ui/Card';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const { profile } = useProfile();
-  const { cgpa, pi, degreeClass, semesterHistory, totalCredits, loading: cgpaLoading } = useCGPA();
-  const shouldReduceMotion = useReducedMotion();
+  const { cgpa, pi, degreeClass, semesterHistory, totalCredits, loading: cgpaLoading, error: cgpaError } = useCGPA();
   const { insightsStale } = useAnalytics();
 
-  // Primary mode state: false = CGPA, true = PI
   const [isPIMode, setIsPIMode] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(false);
   const [coursesDone, setCoursesDone] = useState(0);
   const [atRiskCount, setAtRiskCount] = useState(0);
   const [unknownCount, setUnknownCount] = useState(0);
   const [recentCourses, setRecentCourses] = useState<DashboardCourseRecord[]>([]);
-  
-  // Sync state with user preference on mount
+  const [courseDataError, setCourseDataError] = useState(false);
+  const [courseRefreshKey, setCourseRefreshKey] = useState(0);
+
   useEffect(() => {
-    if (profile?.gradeMode) {
-      setIsPIMode(profile.gradeMode === 'pi');
-    }
+    if (profile?.gradeMode) setIsPIMode(profile.gradeMode === 'pi');
   }, [profile?.gradeMode]);
 
-  // Handle grade mode toggle
   const handleModeChange = async (checked: boolean) => {
+    const previous = isPIMode;
     setIsPIMode(checked);
-    if (user?.uid) {
-      try {
-        await updateDocument(`users/${user.uid}`, { gradeMode: checked ? 'pi' : 'cgpa' });
-      } catch (e) {
-        console.error('Failed to save preference', e);
-      }
+    if (!user?.uid) return;
+
+    try {
+      await updateDocument(`users/${user.uid}`, { gradeMode: checked ? 'pi' : 'cgpa' });
+    } catch (error) {
+      setIsPIMode(previous);
+      console.error('Failed to save academic metric preference', error);
+      toast.error('Your metric preference could not be saved. Please try again.');
     }
   };
 
-  // Fetch AI summary from Firestore cache
-  const fetchAiSummary = async () => {
-    if (!user) return;
+  const fetchAiSummary = useCallback(async () => {
+    if (!user?.uid) return;
     setAiLoading(true);
+    setAiError(false);
     try {
-      const analyticsData = await getDocument<any>(`analytics/${user.uid}`);
-      if (analyticsData?.lastInsight?.data?.degreeOutlook) {
-        setAiSummary(analyticsData.lastInsight.data.degreeOutlook);
-      } else {
-        setAiSummary("Visit the Insights Hub to generate your first personalized AI analysis.");
-      }
-    } catch (e) {
-      console.error('Failed to load insight', e);
-      setAiSummary("Failed to load insights. Please try again later.");
+      const analyticsData = await getDocument<{ lastInsight?: { data?: { degreeOutlook?: string } } }>(`analytics/${user.uid}`);
+      setAiSummary(
+        analyticsData?.lastInsight?.data?.degreeOutlook
+        || 'Visit the Insights Hub to generate your first personalized academic analysis.'
+      );
+    } catch (error) {
+      console.error('Failed to load AI insight', error);
+      setAiError(true);
+      setAiSummary(null);
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [user?.uid]);
 
   useEffect(() => {
     fetchAiSummary();
-  }, []);
+  }, [fetchAiSummary]);
 
-  // Fetch real course data for Quick Stats
   useEffect(() => {
-    if (!user || semesterHistory.length === 0) {
+    if (!user?.uid || semesterHistory.length === 0) {
       setCoursesDone(0);
       setAtRiskCount(0);
       setUnknownCount(0);
       setRecentCourses([]);
+      setCourseDataError(false);
       return;
     }
 
     let isMounted = true;
     const fetchCoursesData = async () => {
+      setCourseDataError(false);
       try {
-        const semesterCourses = await Promise.all(semesterHistory.map(async (semester, semesterIndex) => ({
-          semesterId: semester.semesterId,
-          semesterLabel: semester.label,
-          session: semester.session,
-          semesterIndex,
-          courses: await queryCollection<DashboardCourseSource>(
-            `users/${user.uid}/semesters/${semester.semesterId}/courses`
-          ),
-        })));
+        const semesterCourses = await Promise.all(
+          semesterHistory.map(async (semester, semesterIndex) => ({
+            semesterId: semester.semesterId,
+            semesterLabel: semester.label,
+            session: semester.session,
+            semesterIndex,
+            courses: await queryCollection<DashboardCourseSource>(
+              `users/${user.uid}/semesters/${semester.semesterId}/courses`
+            ),
+          }))
+        );
         const summary = buildDashboardSummary(semesterCourses);
-
-        if (isMounted) {
-          setCoursesDone(summary.totalCourses);
-          setAtRiskCount(summary.atRiskCount);
-          setUnknownCount(summary.unknownCount);
-          setRecentCourses(summary.recent);
-        }
-      } catch (err) {
-        console.error('Failed to fetch courses data for stats', err);
+        if (!isMounted) return;
+        setCoursesDone(summary.totalCourses);
+        setAtRiskCount(summary.atRiskCount);
+        setUnknownCount(summary.unknownCount);
+        setRecentCourses(summary.recent);
+      } catch (error) {
+        console.error('Failed to load dashboard course summary', error);
+        if (isMounted) setCourseDataError(true);
       }
     };
 
     fetchCoursesData();
-    return () => { isMounted = false; };
-  }, [user, semesterHistory]);
+    return () => {
+      isMounted = false;
+    };
+  }, [courseRefreshKey, semesterHistory, user?.uid]);
 
-  // Web Share API
-  const handleShare = async () => {
-    const text = `I'm tracking my academic performance on AcadeGrade! My current ${isPIMode ? 'PI' : 'CGPA'} is ${isPIMode ? pi.toFixed(2) : cgpa.toFixed(2)}.`;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'My AcadeGrade Progress',
-          text,
-          url: window.location.href,
-        });
-      } catch (err) {
-        console.error('Error sharing', err);
-      }
-    } else {
-      navigator.clipboard.writeText(text);
-      toast.success('Progress copied to clipboard!');
-    }
-  };
-
-  // Stats calculation
-  const currentSemGPA = useMemo(() => {
-    if (semesterHistory.length === 0) return 0;
-    const lastSem = semesterHistory[semesterHistory.length - 1];
-    return isPIMode ? lastSem.pi : lastSem.gpa;
-  }, [semesterHistory, isPIMode]);
-
-  const firstName = profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student';
   const latestSemester = semesterHistory[semesterHistory.length - 1];
-  const primaryMetric = isPIMode ? pi : cgpa;
-  const metricLabel = isPIMode ? 'Performance Index' : 'Cumulative GPA';
-  const timeOfDay = 'day';
+  const hasAcademicData = totalCredits > 0 && semesterHistory.length > 0;
+  const currentSemesterMetric = latestSemester
+    ? (isPIMode ? latestSemester.pi : latestSemester.gpa)
+    : 0;
+  const firstName = profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student';
+  const nextAction = useMemo(() => getDashboardNextAction({
+    hasAcademicData,
+    atRiskCount,
+    unknownCount,
+    insightsStale,
+  }), [atRiskCount, hasAcademicData, insightsStale, unknownCount]);
 
-  if (cgpaLoading) {
+  if (cgpaLoading) return <DashboardSkeleton />;
+
+  if (cgpaError) {
     return (
-      <div aria-busy="true" aria-label="Loading dashboard" className="space-y-6 pb-10">
-        <div className="space-y-3 py-2">
-          <div className="skeleton h-8 w-56" />
-          <div className="skeleton h-4 w-full max-w-md" />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-12">
-          <div className="skeleton min-h-80 lg:col-span-7" />
-          <div className="skeleton min-h-80 lg:col-span-5" />
-        </div>
-        <div className="skeleton h-24" />
-        <div className="skeleton h-72" />
-      </div>
+      <Card className="mx-auto max-w-2xl text-center" role="alert">
+        <AlertTriangle className="mx-auto size-8 text-[var(--acade-warning)]" aria-hidden="true" />
+        <h1 className="mt-4 font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-semibold text-[var(--acade-text)]">
+          Your academic overview could not load
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
+          Check your connection and reload this page. Your saved records have not been changed.
+        </p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-5 min-h-12 rounded-[var(--radius-control)] bg-[var(--acade-primary)] px-5 text-sm font-semibold text-[var(--acade-on-primary)] hover:bg-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+        >
+          Reload overview
+        </button>
+      </Card>
     );
   }
 
   return (
-    <div className="mx-auto flex max-w-[1200px] flex-col gap-6 pb-10 sm:gap-7">
-      
-      {/* HEADER ARC ROW */}
-      <motion.div
-        initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <Card variant="glass" padding="lg" className="relative overflow-hidden group">
-          {/* Subtle background glow based on degree class */}
-          <div 
-            className="absolute inset-0 opacity-10 pointer-events-none transition-colors duration-1000"
-            style={{ 
-              background: `radial-gradient(circle at 50% -20%, ${degreeClass.colorToken} 0%, transparent 70%)` 
-            }} 
-          />
-          
-          <div className="flex flex-col md:flex-row items-center gap-8 relative z-10">
-            <div id="tour-welcome" className="flex-1 text-center md:text-left flex flex-col items-center md:items-start order-2 md:order-1">
-              <h1 className="text-[length:var(--text-3xl)] md:text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-2">
-                Good {timeOfDay}, {profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student'} <span className="inline-block animate-[wave_2.5s_ease-in-out_infinite] origin-bottom-right">👋</span>
-              </h1>
-              <p className="text-[length:var(--text-base)] text-[var(--acade-text-muted)] mb-6 max-w-md font-[family-name:var(--font-dm-sans)]">
-                {semesterHistory.length === 0 
-                  ? "Welcome to AcadeGrade! Add your first semester results to generate your insights."
-                  : "Here is a quick overview of your academic standing."}
-              </p>
-              
-              <div id="tour-metrics-toggle" className="flex items-center gap-4">
-                <Toggle 
-                  checked={isPIMode} 
-                  onChange={handleModeChange} 
-                  leftLabel="CGPA" 
-                  rightLabel="PI" 
-                />
-              </div>
+    <div className="flex flex-col gap-6 pb-10 sm:gap-7">
+      <header id="tour-welcome" className="max-w-2xl py-1">
+        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">Academic overview</p>
+        <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
+          Hello, {firstName}.
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base">
+          {hasAcademicData
+            ? 'See your current standing, the records that changed most recently, and the clearest next step.'
+            : 'Start with one semester. AcadeGrade will build the picture as your record grows.'}
+        </p>
+      </header>
 
-              <div className="mt-8">
-                <DegreeClassBadge cgpa={cgpa} animated={true} />
-              </div>
-            </div>
+      <section aria-label="Academic standing and next action" className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
+        <StandingOverview
+          hasAcademicData={hasAcademicData}
+          isPIMode={isPIMode}
+          onModeChange={handleModeChange}
+          cgpa={cgpa}
+          pi={pi}
+          degreeClassLabel={degreeClass.label}
+          latestSemesterLabel={latestSemester?.label || null}
+          currentSemesterMetric={currentSemesterMetric}
+          totalCredits={totalCredits}
+          coursesDone={coursesDone}
+          atRiskCount={atRiskCount}
+          unknownCount={unknownCount}
+        />
+        <NextActionCard action={nextAction} />
+      </section>
 
-            <div id="tour-cgpa-arc" className="shrink-0 order-1 md:order-2">
-              <CGPAArc 
-                cgpa={cgpa} 
-                pi={pi} 
-                size="lg" 
-                animateOnMount={true} 
-                showParticles={true} 
-                primaryMetric={isPIMode ? 'pi' : 'cgpa'}
-              />
-              <div className="mt-2 text-center text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
-                {isPIMode ? 'Primary: PI' : 'Primary: CGPA'}
-              </div>
-            </div>
+      {courseDataError ? (
+        <Card role="alert" className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">Recent course updates are unavailable</h2>
+            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Your standing is still visible, but this section needs another connection attempt.</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setCourseRefreshKey((key) => key + 1)}
+            className="inline-flex min-h-12 items-center gap-2 rounded-[var(--radius-control)] border border-[var(--acade-border)] px-4 text-sm font-semibold text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+          >
+            <RefreshCw className="size-4" aria-hidden="true" /> Retry
+          </button>
         </Card>
-      </motion.div>
+      ) : (
+        <RecentResults courses={recentCourses} />
+      )}
 
-      {/* QUICK STATS ROW */}
-      <div id="tour-quick-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Credits', value: totalCredits, suffix: ' CU' },
-          { label: 'Current Sem', value: currentSemGPA, decimals: 2 },
-          { label: 'Courses Done', value: coursesDone },
-          { label: 'At Risk', value: atRiskCount, highlight: atRiskCount > 0 },
-        ].map((stat, idx) => (
-          <motion.div
-            key={stat.label}
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: idx * 0.1 }}
-          >
-            <HolographicCard className="h-full p-4 md:p-5" innerClassName="flex flex-col justify-between h-full">
-              <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
-                {stat.label}
+      <section aria-label="Academic trend and AI insight" className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
+        <Card>
+          <div className="mb-5">
+            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">Trajectory</p>
+            <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)]">Semester GPA and PI</h2>
+            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Compare your official semester GPA with score-sensitive performance.</p>
+          </div>
+          {hasAcademicData ? (
+            <TrendChart semesters={semesterHistory} metric="both" showForecast={false} />
+          ) : (
+            <div className="flex min-h-64 items-center justify-center rounded-[var(--radius-surface)] border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] px-5 text-center text-sm text-[var(--acade-text-muted)]">
+              Your trend will appear after the first semester is recorded.
+            </div>
+          )}
+        </Card>
+
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--acade-gold)]/80 to-transparent" aria-hidden="true" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
+                <Image src="/acadegradeailogo.png" alt="" width={26} height={26} className="object-contain" />
               </span>
-              <div className={cn(
-                "text-[length:var(--text-2xl)] md:text-[length:var(--text-3xl)] font-bold mt-2 font-[family-name:var(--font-geist-mono)]",
-                stat.highlight ? "text-[var(--acade-danger)] drop-shadow-[0_0_8px_rgba(239,68,68,0.3)]" : "text-[var(--acade-text)]"
-              )}>
-                <CountUp 
-                  end={stat.value} 
-                  decimals={stat.decimals || 0} 
-                  duration={shouldReduceMotion ? 0 : 2} 
-                  separator=","
-                />
-                {stat.suffix && <span className="text-[length:var(--text-lg)] text-[var(--acade-text-faint)] ml-1">{stat.suffix}</span>}
-              </div>
-            </HolographicCard>
-          </motion.div>
-        ))}
-      </div>
-
-      <AdPlacement
-        placement="dashboard.overview"
-        seed={user?.uid}
-      />
-
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
-        
-        {/* TREND CHART (Left Column on Desktop) */}
-        <div className="md:col-span-8 flex flex-col gap-6">
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card variant="glass" padding="lg">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-                    Performance Trend
-                  </h2>
-                  <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">
-                    Comparing Official CGPA vs True Mastery (PI)
-                  </p>
-                </div>
-              </div>
-              <TrendChart semesters={semesterHistory} metric="both" showForecast={false} />
-            </Card>
-          </motion.div>
-
-          {/* AI SUMMARY CARD */}
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div className="relative rounded-2xl overflow-hidden p-[1px] shadow-[0_0_30px_rgba(99,102,241,0.05)]">
-              {/* Animated background breathing border */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[var(--acade-primary)]/40 via-[var(--acade-deep)] to-[var(--acade-primary)]/40 animate-[pulse_4s_ease-in-out_infinite]" />
-              
-              {/* Inner card content */}
-              <div className="relative bg-[var(--acade-deep)]/90 backdrop-blur-xl h-full w-full rounded-[15px] p-6 md:p-8 overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--acade-primary)]/10 rounded-full blur-3xl" />
-                
-                <div className="flex items-center justify-between mb-4 relative z-10">
-                  <div className="flex items-center gap-2 text-[var(--acade-primary-glow)] font-bold font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)]">
-                    <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="rounded-md object-contain" />
-                    AcadeMind Insight
-                    {insightsStale && (
-                      <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/20 text-[var(--acade-warning)] text-[10px] uppercase tracking-wider font-bold">
-                        <AlertTriangle size={10} /> Stale
-                      </span>
-                    )}
-                  </div>
-                  <button 
-                    onClick={fetchAiSummary}
-                    disabled={aiLoading}
-                    className="p-2 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors rounded-full hover:bg-[var(--acade-overlay)] disabled:opacity-50"
-                    aria-label="Refresh Insight"
-                  >
-                    <RefreshCw size={16} className={cn(aiLoading && "animate-spin")} />
-                  </button>
-                </div>
-
-                <div className="relative z-10 min-h-[60px]">
-                  {aiLoading ? (
-                    <div className="flex flex-col gap-2">
-                      <div className="h-4 bg-[var(--acade-border)] rounded w-full animate-pulse" />
-                      <div className="h-4 bg-[var(--acade-border)] rounded w-5/6 animate-pulse" />
-                      <div className="h-4 bg-[var(--acade-border)] rounded w-4/6 animate-pulse" />
-                    </div>
-                  ) : (
-                    <p className="text-[length:var(--text-sm)] md:text-[length:var(--text-base)] text-[var(--acade-text)] leading-relaxed font-[family-name:var(--font-dm-sans)]">
-                      {aiSummary || "Add more results to generate personalized insights."}
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-6 flex items-center justify-between relative z-10">
-                  <span className="text-[10px] text-[var(--acade-text-faint)] font-[family-name:var(--font-geist-mono)]">
-                    POWERED BY ACADEMIND
-                  </span>
-                  <Link 
-                    href="/insights"
-                    className="flex items-center gap-1 text-[length:var(--text-sm)] font-bold text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors"
-                  >
-                    Degree Outlook <ChevronRight size={16} />
-                  </Link>
-                </div>
+              <div className="min-w-0">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-gold)]">AcadeMind</p>
+                <h2 className="truncate font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">AI insight</h2>
               </div>
             </div>
-          </motion.div>
-        </div>
+            {insightsStale && <span className="rounded-full bg-[var(--acade-warning)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--acade-warning)]">Update ready</span>}
+          </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="md:col-span-4 flex flex-col gap-6">
-          
-          {/* QUICK ACTIONS */}
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <Card variant="default" padding="md">
-              <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">
-                Quick Actions
-              </h3>
-              <div className="flex flex-col gap-2">
-                <Link href="/results" className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-primary)] hover:bg-[var(--acade-primary)]/5 transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
-                  <Plus size={18} className="text-[var(--acade-primary)]" />
-                  Add Results
-                </Link>
-                <Link href="/insights" className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-gold)] hover:bg-[var(--acade-gold)]/5 transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
-                  <BrainCircuit size={18} className="text-[var(--acade-gold)]" />
-                  View Insights
-                </Link>
-                <Link href="/transcript" className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">
-                  <FileText size={18} className="text-[var(--acade-text-muted)]" />
-                  Export PDF
-                </Link>
-                <button 
-                  onClick={handleShare}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] hover:border-[var(--acade-success)] hover:bg-[var(--acade-success)]/5 transition-all text-[length:var(--text-sm)] font-medium text-[var(--acade-text)] w-full text-left"
-                >
-                  <Share size={18} className="text-[var(--acade-success)]" />
-                  Share Progress
+          <div className="mt-6 min-h-28" aria-live="polite">
+            {aiLoading ? (
+              <div aria-label="Loading AI insight" className="space-y-2">
+                <div className="skeleton h-4 w-full" />
+                <div className="skeleton h-4 w-5/6" />
+                <div className="skeleton h-4 w-3/5" />
+              </div>
+            ) : aiError ? (
+              <div role="alert">
+                <p className="text-sm leading-6 text-[var(--acade-text-muted)]">The saved insight could not be loaded.</p>
+                <button type="button" onClick={fetchAiSummary} className="mt-3 inline-flex min-h-12 items-center gap-2 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)]">
+                  <RefreshCw className="size-4" aria-hidden="true" /> Retry insight
                 </button>
               </div>
-            </Card>
-          </motion.div>
+            ) : (
+              <p className="text-sm leading-6 text-[var(--acade-text)]">{aiSummary}</p>
+            )}
+          </div>
 
-          {/* RECENT ACTIVITY STUB */}
-          <motion.div
-            initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
-          >
-            <Card variant="default" padding="md">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-                  Recent Results
-                </h3>
-              </div>
-              <div className="flex flex-col gap-3">
-                {recentCourses.length > 0 ? (
-                  <div className="flex flex-col gap-3">
-                    {recentCourses.map((course) => (
-                      <div
-                        key={course.id}
-                        className="p-3 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="bg-[var(--acade-primary)]/20 p-2 rounded-lg">
-                            <BookOpen size={16} className="text-[var(--acade-primary)]" />
-                          </div>
-                          <div>
-                            <div className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-dm-sans)]">
-                              {course.code}
-                            </div>
-                            <div className="text-[10px] text-[var(--acade-text-faint)]">
-                              {course.semesterLabel}
-                            </div>
-                          </div>
-                        </div>
-                        {course.grade ? (
-                          <Badge variant={getGradeBadgeVariant(course.grade)}>{course.grade}</Badge>
-                        ) : (
-                          <Badge variant="status">Pending</Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-                    No recent activity yet.
-                  </div>
-                )}
-                <Link href="/results" className="text-center text-[length:var(--text-sm)] font-semibold text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] transition-colors mt-2">
-                  View all results →
-                </Link>
-              </div>
-            </Card>
-          </motion.div>
+          <div className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--acade-border-subtle)] pt-4">
+            <span className="inline-flex items-center gap-1.5 text-xs text-[var(--acade-text-faint)]">
+              <BrainCircuit className="size-3.5" aria-hidden="true" /> Personalized to your record
+            </span>
+            <Link href="/insights" className="inline-flex min-h-12 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]">
+              Open insights <ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </Card>
+      </section>
 
-        </div>
+      <AdPlacement placement="dashboard.overview" seed={user?.uid} />
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading dashboard" className="space-y-6 pb-10">
+      <div className="space-y-3 py-2">
+        <div className="skeleton h-4 w-32" />
+        <div className="skeleton h-10 w-64 max-w-full" />
+        <div className="skeleton h-4 w-full max-w-xl" />
       </div>
-
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
+        <div className="skeleton min-h-[28rem]" />
+        <div className="skeleton min-h-72" />
+      </div>
+      <div className="skeleton h-72" />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="skeleton h-96" />
+        <div className="skeleton h-72" />
+      </div>
     </div>
   );
 }
