@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, BookOpen, Clock3 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { getDocument, queryCollection, setDocument, updateDocument } from '@/lib/firebase/firestore';
 import { DEGREE_CLASSES } from '@/lib/utils/constants';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { InsightCard } from '@/components/ai/InsightCard';
@@ -50,6 +51,7 @@ export default function InsightsPage() {
   const { profile } = useProfile();
   const { isFeatureDisabled } = usePlatformSettings();
   const disableInsights = isFeatureDisabled('ai_insights');
+  const shouldReduceMotion = useReducedMotion();
   
   const [activeTab, setActiveTab] = useState<TabType>('forecast');
   const [loading, setLoading] = useState(true);
@@ -68,6 +70,12 @@ export default function InsightsPage() {
   const [projectionMode, setProjectionMode] = useState<'pi' | 'cgpa'>('pi');
   const [cooldownText, setCooldownText] = useState<string | null>(null);
   const [isCooldownActive, setIsCooldownActive] = useState(false);
+  const tabRefs = useRef<Record<TabType, HTMLButtonElement | null>>({
+    forecast: null,
+    whatif: null,
+    risk: null,
+    analysis: null,
+  });
 
   // Sync state with user preference on mount/update
   useEffect(() => {
@@ -315,14 +323,32 @@ export default function InsightsPage() {
     loadData(true);
   };
 
+  const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, currentTab: TabType) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+
+    event.preventDefault();
+    const currentIndex = TABS.findIndex((tab) => tab.id === currentTab);
+    const nextIndex = event.key === 'Home'
+      ? 0
+      : event.key === 'End'
+        ? TABS.length - 1
+        : (currentIndex + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length;
+    const nextTab = TABS[nextIndex].id;
+
+    setActiveTab(nextTab);
+    tabRefs.current[nextTab]?.focus();
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 relative overflow-hidden rounded-3xl border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]">
         {/* Futuristic Scanning Overlay */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div 
-            animate={{ y: ["-100%", "500%"] }}
-            transition={{ duration: 3, ease: "linear", repeat: Infinity }}
+          <motion.div
+            data-testid="insights-scanner"
+            data-animated={!shouldReduceMotion}
+            animate={shouldReduceMotion ? undefined : { y: ["-100%", "500%"] }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 3, ease: "linear", repeat: Infinity }}
             className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent via-[var(--acade-primary)]/5 to-[var(--acade-primary)]/20 border-b-2 border-[var(--acade-primary)]/80 shadow-[0_10px_30px_rgba(99,102,241,0.3)]" 
           />
           {/* Subtle grid pattern background */}
@@ -330,9 +356,21 @@ export default function InsightsPage() {
         </div>
         
         <div className="relative z-10">
-          <div className="absolute inset-0 rounded-full blur-2xl bg-[var(--acade-primary)]/30 animate-pulse" />
+          <div
+            data-testid="insights-loading-glow"
+            className={cn(
+              "absolute inset-0 rounded-full blur-2xl bg-[var(--acade-primary)]/30",
+              !shouldReduceMotion && "animate-pulse"
+            )}
+          />
           <div className="size-24 relative flex items-center justify-center rounded-full bg-[var(--acade-deep)] border border-[var(--acade-primary)]/40 shadow-[0_0_40px_rgba(99,102,241,0.2)]">
-            <Image src="/acadegradeailogo.png" alt="AcadeMind" width={60} height={60} className="object-contain animate-pulse" />
+            <Image
+              src="/acadegradeailogo.png"
+              alt="AcadeMind"
+              width={60}
+              height={60}
+              className={cn("object-contain", !shouldReduceMotion && "animate-pulse")}
+            />
           </div>
         </div>
         
@@ -340,7 +378,10 @@ export default function InsightsPage() {
           <h3 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-primary-glow)] font-[family-name:var(--font-geist-mono)] tracking-widest uppercase">
             AcadeMind Synthesizing
           </h3>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium mt-2 animate-pulse font-[family-name:var(--font-geist-mono)]">
+          <p className={cn(
+            "text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium mt-2 font-[family-name:var(--font-geist-mono)]",
+            !shouldReduceMotion && "animate-pulse"
+          )}>
             Analyzing academic records...
           </p>
         </div>
@@ -353,7 +394,9 @@ export default function InsightsPage() {
       case 'forecast':
         return (
           <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
             className="space-y-6"
           >
             <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6">
@@ -433,7 +476,11 @@ export default function InsightsPage() {
 
       case 'whatif':
         return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+          <motion.div
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
+          >
             <WhatIfCalculator currentCGPA={currentCGPA} totalCredits={totalCredits} />
           </motion.div>
         );
@@ -441,7 +488,9 @@ export default function InsightsPage() {
       case 'risk':
         return (
           <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
             className="space-y-6"
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -463,7 +512,7 @@ export default function InsightsPage() {
                       strokeDashoffset={351 - (351 * (analytics?.forecast?.riskScore || 1)) / 5}
                       strokeLinecap="round"
                       fill="none"
-                      className="transition-all duration-1000 ease-out"
+                      className={cn(!shouldReduceMotion && "transition-all duration-1000 ease-out")}
                     />
                   </svg>
                   <span className="text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
@@ -538,7 +587,9 @@ export default function InsightsPage() {
       case 'analysis':
         return (
           <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
             className="space-y-6"
           >
             {isCooldownActive && (
@@ -570,12 +621,12 @@ export default function InsightsPage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-10">
-      <AnimatePresence>
+      <AnimatePresence initial={!shouldReduceMotion}>
         {rateLimitError && (
           <motion.div 
-            initial={{ opacity: 0, height: 0 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, height: 0 }}
             className="mb-6 bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)] text-[var(--acade-warning)] rounded-xl p-4 flex items-center gap-3"
           >
             <AlertTriangle size={20} />
@@ -589,12 +640,12 @@ export default function InsightsPage() {
         )}
         {!rateLimitError && analytics?.insightsStale && (
           <motion.div 
-            initial={{ opacity: 0, height: 0 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0, height: 0 }}
             className="mb-6 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)] text-[var(--acade-primary)] rounded-xl p-4 flex items-center gap-3"
           >
-            <RefreshCw size={20} className="animate-pulse" />
+            <RefreshCw size={20} className={cn(!shouldReduceMotion && "animate-pulse")} />
             <div>
               <p className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">Your results changed.</p>
               <p className="text-[length:var(--text-xs)]">Refresh your insights to get an updated AI analysis.</p>
@@ -623,7 +674,7 @@ export default function InsightsPage() {
             className="bg-[var(--acade-surface)] disabled:opacity-50"
             title={disableInsights ? "AI Insights are temporarily disabled for maintenance" : ""}
           >
-            <RefreshCw size={16} className={cn("mr-2", refreshing && "animate-spin")} />
+            <RefreshCw size={16} className={cn("mr-2", refreshing && !shouldReduceMotion && "animate-spin")} />
             {refreshing 
               ? 'Analyzing...' 
               : rateLimitCooldown > 0 
@@ -636,7 +687,9 @@ export default function InsightsPage() {
           </Button>
           {analytics?.insightsStale && !disableInsights && (
             <span className="absolute -top-1 -right-1 flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              {!shouldReduceMotion && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+              )}
               <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-[var(--acade-surface)]"></span>
             </span>
           )}
@@ -644,15 +697,26 @@ export default function InsightsPage() {
       </div>
 
       {/* Animated Tabs */}
-      <div className="flex overflow-x-auto hide-scrollbar border-b border-[var(--acade-border)] mb-8" role="tablist" aria-label="Insights Navigation">
+      <div
+        className="flex overflow-x-auto hide-scrollbar border-b border-[var(--acade-border)] mb-8"
+        role="tablist"
+        aria-label="Insights Navigation"
+        aria-orientation="horizontal"
+      >
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              ref={(element) => { tabRefs.current[tab.id] = element; }}
+              type="button"
               role="tab"
+              id={`insights-tab-${tab.id}`}
               aria-selected={isActive}
+              aria-controls={`insights-panel-${tab.id}`}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
+              onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
               className={cn(
                 "relative px-6 py-4 text-[length:var(--text-sm)] font-bold transition-colors whitespace-nowrap",
                 isActive ? "text-[var(--acade-text)]" : "text-[var(--acade-text-faint)] hover:text-[var(--acade-text-muted)]"
@@ -660,11 +724,15 @@ export default function InsightsPage() {
             >
               {tab.label}
               {isActive && (
-                <motion.div
-                  layoutId="activeTabUnderline"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--acade-primary)] shadow-[0_-2px_8px_rgba(99,102,241,0.5)]"
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                />
+                shouldReduceMotion ? (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--acade-primary)]" />
+                ) : (
+                  <motion.div
+                    layoutId="activeTabUnderline"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--acade-primary)] shadow-[0_-2px_8px_rgba(99,102,241,0.5)]"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )
               )}
             </button>
           );
@@ -677,9 +745,18 @@ export default function InsightsPage() {
       </div>
 
       {/* Tab Content */}
-      <AnimatePresence mode="wait">
-        {renderTabContent()}
-      </AnimatePresence>
+      <div
+        key={activeTab}
+        role="tabpanel"
+        id={`insights-panel-${activeTab}`}
+        aria-labelledby={`insights-tab-${activeTab}`}
+        tabIndex={0}
+        className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--acade-primary)]"
+      >
+        <AnimatePresence mode="wait" initial={!shouldReduceMotion}>
+          {renderTabContent()}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

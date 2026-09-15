@@ -34,16 +34,15 @@ export default function TranscriptPage() {
   const loadData = useCallback(async () => {
     if (!user) return;
 
-    setLoadStatus('loading');
     try {
       const sems = await queryCollection<SemesterWithId>(`users/${user.uid}/semesters`);
-      const semsWithCourses: SemesterWithCourses[] = [];
-      
-      for (const sem of sems) {
-        if (!sem.isComplete) continue;
-        const courses = await queryCollection<CourseWithId>(`users/${user.uid}/semesters/${sem.id}/courses`);
-        semsWithCourses.push({ ...sem, courses });
-      }
+      const completedSemesters = sems.filter((semester) => semester.isComplete);
+      const semsWithCourses = await Promise.all(
+        completedSemesters.map(async (semester): Promise<SemesterWithCourses> => {
+          const courses = await queryCollection<CourseWithId>(`users/${user.uid}/semesters/${semester.id}/courses`);
+          return { ...semester, courses };
+        }),
+      );
       
       semsWithCourses.sort((a, b) => {
         if (a.level !== b.level) return a.level - b.level;
@@ -216,7 +215,10 @@ export default function TranscriptPage() {
           title="Your academic record is temporarily unavailable"
           description="The transcript preview and export tools are disabled until your completed semesters load successfully. Your saved results have not been changed."
           retryLabel="Retry loading transcript"
-          onRetry={() => void loadData()}
+          onRetry={() => {
+            setLoadStatus('loading');
+            void loadData();
+          }}
         />
       </div>
     );

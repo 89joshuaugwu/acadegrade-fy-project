@@ -96,7 +96,7 @@ export function AcademicProof() {
 
       const bounds = section.getBoundingClientRect();
       const availableTravel = section.offsetHeight - deck.offsetHeight - 128;
-      const scrollSceneLength = Math.max(1, Math.min(window.innerHeight * 0.6, availableTravel));
+      const scrollSceneLength = Math.max(1, Math.min(window.innerHeight * 0.5, availableTravel));
       targetProgress = clamp((96 - bounds.top) / scrollSceneLength);
 
       if (!isAnimating) {
@@ -120,9 +120,9 @@ export function AcademicProof() {
       ref={sectionRef}
       id="features"
       aria-labelledby="academic-proof-title"
-      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[160vh]"
+      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[150vh]"
     >
-      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[160vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
+      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[150vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
         <div className="academic-proof-copy lg:sticky lg:top-28 lg:col-span-5">
           <div>
             <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>

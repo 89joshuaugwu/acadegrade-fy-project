@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import {
   Activity,
   BarChart3,
-  Bell,
   BookOpen,
   BrainCircuit,
   LayoutDashboard,
@@ -49,7 +48,6 @@ export function MobileDrawer({
   onClose,
   isAdmin = false,
   profile,
-  unreadCount = 0,
 }: MobileDrawerProps) {
   const { user } = useAuth();
 
@@ -67,8 +65,8 @@ export function MobileDrawer({
     <Sheet
       open={isOpen}
       onClose={onClose}
-      title={isAdmin ? 'Admin navigation' : 'Student navigation'}
-      description={isAdmin ? 'Manage AcadeGrade operations.' : 'Account, preferences and helpful tools.'}
+      title={isAdmin ? 'Admin navigation' : 'Account and preferences'}
+      description={isAdmin ? 'Manage AcadeGrade operations.' : 'Manage your profile, display preferences and session.'}
       className="h-auto max-h-[calc(100dvh-0.75rem)] lg:hidden"
     >
       <div className="pb-[max(0px,env(safe-area-inset-bottom))]">
@@ -100,9 +98,8 @@ export function MobileDrawer({
             })}
           </nav>
         ) : (
-          <nav aria-label="Student account navigation" className="grid gap-1">
+          <nav aria-label="Account settings" className="grid gap-1">
             <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
-            <DrawerLink href="/notifications" id="tour-mobile-nav-notifications" icon={Bell} label="Notifications" badge={unreadCount} onClick={onClose} />
           </nav>
         )}
 

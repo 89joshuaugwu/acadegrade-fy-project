@@ -28,7 +28,7 @@ describe('student mobile drawer', () => {
       </ThemeProvider>
     );
 
-    expect(screen.getByRole('dialog', { name: 'Student navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Account and preferences' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Student primary navigation' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Results' })).not.toBeInTheDocument();
@@ -37,8 +37,8 @@ describe('student mobile drawer', () => {
     expect(screen.queryByRole('link', { name: 'Quick calculator' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'About AcadeGrade' })).not.toBeInTheDocument();
 
-    const account = screen.getByRole('navigation', { name: 'Student account navigation' });
+    const account = screen.getByRole('navigation', { name: 'Account settings' });
     expect(account).toContainElement(screen.getByRole('link', { name: 'Settings' }));
-    expect(account).toContainElement(screen.getByRole('link', { name: /Notifications/ }));
+    expect(account).not.toContainElement(screen.queryByRole('link', { name: /Notifications/ }));
   });
 });

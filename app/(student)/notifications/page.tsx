@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
 import { setRTDB } from '@/lib/firebase/rtdb';
 import { Button } from '@/components/ui/Button';
@@ -26,6 +27,7 @@ const ICONS = {
 
 export default function NotificationsPage() {
   const { user } = useAuth();
+  const shouldReduceMotion = useReducedMotion();
   const [notifications, setNotifications] = useState<NotificationWithId[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -95,8 +97,8 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="size-10 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      <div className="flex h-64 items-center justify-center" role="status" aria-label="Loading notifications">
+        <div className="size-10 animate-spin rounded-full border-4 border-[var(--acade-primary)] border-t-transparent motion-reduce:animate-none" aria-hidden="true" />
       </div>
     );
   }
@@ -140,70 +142,96 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="divide-y divide-[var(--acade-border-subtle)]">
-            <AnimatePresence>
+            <AnimatePresence initial={!shouldReduceMotion}>
               {notifications.map((notif, index) => (
-                <motion.div
+                <motion.article
                   key={notif.id}
-                  initial={{ opacity: 0, rotateX: -60, y: -20, transformOrigin: "top" }}
+                  aria-label={notif.title}
+                  data-reduced-motion={shouldReduceMotion ? 'true' : 'false'}
+                  initial={shouldReduceMotion ? false : { opacity: 0, rotateX: -60, y: -20, transformOrigin: 'top' }}
                   animate={{ opacity: 1, rotateX: 0, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, height: 0 }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: index * 0.08, 
-                    type: 'spring', 
-                    damping: 20 
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.95, height: 0 }}
+                  transition={shouldReduceMotion ? { duration: 0 } : {
+                    duration: 0.5,
+                    delay: index * 0.08,
+                    type: 'spring',
+                    damping: 20,
                   }}
-                  onClick={() => !notif.read && handleMarkAsRead(notif.id)}
                   className={cn(
-                    "p-4 sm:p-6 transition-colors flex gap-4 cursor-pointer",
-                    notif.read ? "bg-transparent hover:bg-[var(--acade-deep)]/50" : "bg-[var(--acade-primary-dim)] hover:bg-[var(--acade-primary-dim)]/80"
+                    'transition-colors motion-reduce:transition-none',
+                    notif.read ? 'bg-transparent' : 'bg-[var(--acade-primary-dim)]'
                   )}
                 >
-                  <div className="shrink-0 mt-1">
-                    <div className="w-10 h-10 rounded-full bg-[var(--acade-surface)] border border-[var(--acade-border)] flex items-center justify-center">
-                      {ICONS[notif.type as keyof typeof ICONS] || ICONS.info}
+                  {notif.read ? (
+                    <div className="flex gap-4 p-4 sm:p-6">
+                      <NotificationContent notification={notif} />
                     </div>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <h4 className={cn(
-                        "text-[length:var(--text-base)] font-bold",
-                        notif.read ? "text-[var(--acade-text)]" : "text-[var(--acade-primary-glow)]"
-                      )}>
-                        {notif.title}
-                      </h4>
-                      {notif.createdAt?.toMillis && (
-                        <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--acade-text-faint)] whitespace-nowrap">
-                          {formatDistanceToNow(notif.createdAt.toMillis(), { addSuffix: true })}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1 leading-relaxed">
-                      {notif.message}
-                    </p>
-                    
-                    {notif.actionUrl && (
-                      <Button variant="outline" size="sm" className="mt-3" onClick={(e) => {
-                        e.stopPropagation();
-                        window.location.href = notif.actionUrl!;
-                      }}>
-                        View Details
-                      </Button>
-                    )}
-                  </div>
-                  
-                  {!notif.read && (
-                    <div className="shrink-0 flex items-center">
-                      <div className="w-2.5 h-2.5 rounded-full bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]" />
-                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Mark “${notif.title}” as read`}
+                      onClick={() => handleMarkAsRead(notif.id)}
+                      className="flex w-full gap-4 p-4 text-left transition-colors hover:bg-[var(--acade-primary-dim)]/80 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acade-primary)] motion-reduce:transition-none sm:p-6"
+                    >
+                      <NotificationContent notification={notif} />
+                    </button>
                   )}
-                </motion.div>
+
+                  {notif.actionUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mb-4 ml-16 sm:mb-6"
+                      onClick={() => {
+                        window.location.href = notif.actionUrl!;
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  )}
+                </motion.article>
               ))}
             </AnimatePresence>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+function NotificationContent({ notification }: { notification: NotificationWithId }) {
+  return (
+    <>
+      <div className="mt-1 shrink-0">
+        <div className="flex size-10 items-center justify-center rounded-full border border-[var(--acade-border)] bg-[var(--acade-surface)]">
+          {ICONS[notification.type as keyof typeof ICONS] || ICONS.info}
+        </div>
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-4">
+          <h2 className={cn(
+            'text-[length:var(--text-base)] font-bold',
+            notification.read ? 'text-[var(--acade-text)]' : 'text-[var(--acade-primary-glow)]'
+          )}>
+            {notification.title}
+          </h2>
+          {notification.createdAt?.toMillis && (
+            <span className="shrink-0 whitespace-nowrap text-[length:var(--text-xs)] text-[var(--acade-text-faint)]">
+              {formatDistanceToNow(notification.createdAt.toMillis(), { addSuffix: true })}
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-[length:var(--text-sm)] leading-relaxed text-[var(--acade-text-muted)]">
+          {notification.message}
+        </p>
+      </div>
+
+      {!notification.read && (
+        <span className="flex shrink-0 items-center" aria-hidden="true">
+          <span className="size-2.5 rounded-full bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]" />
+        </span>
+      )}
+    </>
   );
 }
