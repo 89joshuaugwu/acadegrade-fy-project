@@ -56,7 +56,7 @@ export default function AboutPage() {
   }, [loadAbout]);
 
   return (
-    <div className="min-h-screen bg-[var(--acade-void)] text-[var(--acade-text)]">
+    <div className="public-atmosphere min-h-screen text-[var(--acade-text)]">
       <Navbar />
       <PageTransition>
         <main className="overflow-hidden">

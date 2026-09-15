@@ -20,7 +20,7 @@ function TrajectoryField() {
 
 export function HomeHero() {
   return (
-    <section aria-labelledby="home-hero-title" className="relative overflow-hidden border-b border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
+    <section aria-labelledby="home-hero-title" className="public-atmosphere-section relative overflow-hidden border-b border-[var(--acade-border-subtle)]">
       <div className="relative overflow-hidden">
         <TrajectoryField />
 

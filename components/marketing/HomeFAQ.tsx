@@ -22,7 +22,7 @@ const questions = [
 
 export function HomeFAQ() {
   return (
-    <section aria-labelledby="home-faq-title" className="bg-[var(--acade-deep)]">
+    <section aria-labelledby="home-faq-title" className="public-atmosphere-section">
       <div className="mx-auto grid max-w-[1200px] grid-cols-1 gap-10 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
         <div className="lg:col-span-5">
           <div className="flex size-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">

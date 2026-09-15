@@ -455,6 +455,28 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   background-size: 100% 32px, 100% 100%;
 }
 
+/* The four proof cards stay ordinary document content on small screens.
+   On desktop their transform is driven by the section scroll scene. */
+.academic-proof-card {
+  --deck-card-y: 0px;
+  --deck-card-opacity: 1;
+  --deck-card-scale: 1;
+}
+
+@media (min-width: 1024px) {
+  .academic-proof-card {
+    opacity: var(--deck-card-opacity);
+    pointer-events: none;
+    transform: translate3d(0, var(--deck-card-y), 0) scale(var(--deck-card-scale));
+    transform-origin: center top;
+    will-change: transform, opacity;
+  }
+
+  .academic-proof-card:first-child {
+    pointer-events: auto;
+  }
+}
+
 .academic-ledger-rules {
   background-color: var(--acade-surface);
   background-image: linear-gradient(to bottom, transparent 31px, color-mix(in srgb, var(--acade-border) 42%, transparent) 32px);
@@ -513,6 +535,76 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
 .public-nav-shell--scrolled .public-nav-capsule {
   box-shadow: var(--shadow-popover);
+}
+
+/* Public marketing atmosphere: a restrained version of the supplied violet / gold
+   wave artwork. It is token-based so it adapts to the selected light or dark theme. */
+.public-atmosphere {
+  position: relative;
+  isolation: isolate;
+  contain: paint;
+  background-color: var(--acade-void);
+  background-image:
+    radial-gradient(58rem 37rem at -12% -8%, color-mix(in srgb, var(--acade-primary) 19%, transparent) 0%, transparent 69%),
+    radial-gradient(48rem 38rem at 111% 10%, color-mix(in srgb, var(--acade-primary) 15%, transparent) 0%, transparent 71%),
+    radial-gradient(50rem 32rem at 106% 94%, color-mix(in srgb, var(--acade-gold) 12%, transparent) 0%, transparent 70%),
+    radial-gradient(52rem 35rem at -8% 96%, color-mix(in srgb, var(--acade-primary) 16%, transparent) 0%, transparent 71%),
+    linear-gradient(145deg, color-mix(in srgb, var(--acade-void) 84%, var(--acade-primary)) 0%, var(--acade-void) 42%, color-mix(in srgb, var(--acade-void) 88%, var(--acade-gold)) 100%);
+}
+
+.public-atmosphere::before,
+.public-atmosphere::after {
+  position: absolute;
+  z-index: 0;
+  width: min(60rem, 72vw);
+  height: min(42rem, 54vw);
+  border: 1px solid color-mix(in srgb, var(--acade-gold) 62%, transparent);
+  border-radius: 48% 52% 46% 54%;
+  content: '';
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.public-atmosphere::before {
+  top: -21rem;
+  left: -23rem;
+  transform: rotate(-18deg);
+}
+
+.public-atmosphere::after {
+  right: -25rem;
+  bottom: -18rem;
+  transform: rotate(17deg);
+}
+
+.public-atmosphere > * {
+  position: relative;
+  z-index: 1;
+}
+
+.public-atmosphere-section {
+  background-color: color-mix(in srgb, var(--acade-void) 79%, transparent);
+}
+
+.dark .public-atmosphere-section {
+  background-color: color-mix(in srgb, var(--acade-void) 71%, transparent);
+}
+
+@media (max-width: 767px) {
+  .public-atmosphere::before,
+  .public-atmosphere::after {
+    opacity: 0.34;
+  }
+
+  .public-atmosphere::before {
+    top: -16rem;
+    left: -30rem;
+  }
+
+  .public-atmosphere::after {
+    right: -34rem;
+    bottom: -15rem;
+  }
 }
 
 .public-mobile-menu-link:focus-visible {

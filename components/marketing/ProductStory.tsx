@@ -23,7 +23,7 @@ const workflow = [
 
 export function ProductStory() {
   return (
-    <section id="how-it-works" aria-labelledby="product-story-title" className="scroll-mt-20 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
+    <section id="how-it-works" aria-labelledby="product-story-title" className="public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)]">
       <div className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
         <div className="grid gap-5 border-b border-[var(--acade-border)] pb-9 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">

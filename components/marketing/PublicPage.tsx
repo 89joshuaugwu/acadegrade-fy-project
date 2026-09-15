@@ -6,7 +6,7 @@ import { LinkButton } from '@/components/ui/LinkButton';
 
 export function PublicPage({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-[var(--acade-void)] text-[var(--acade-text)]">
+    <div className="public-atmosphere min-h-screen text-[var(--acade-text)]">
       <Navbar />
       <div id="hero-sentinel" className="pointer-events-none absolute top-0 h-px w-full" aria-hidden="true" />
       <main>{children}</main>
