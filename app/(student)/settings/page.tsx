@@ -290,7 +290,7 @@ export default function SettingsPage() {
                 document.getElementById(`section-${tab.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
               className={cn(
-                "text-left font-bold text-[length:var(--text-sm)] p-3 rounded-xl transition-all duration-200 border-l-4",
+                "min-h-12 text-left font-bold text-[length:var(--text-sm)] px-3 py-2 rounded-xl transition-all duration-200 border-l-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]",
                 tab.danger ? "hover:bg-[var(--acade-danger)]/10 text-[var(--acade-danger)] border-transparent hover:border-[var(--acade-danger)]" 
                            : "hover:bg-[var(--acade-surface)] text-[var(--acade-text-muted)] border-transparent hover:border-[var(--acade-border-subtle)] focus:border-[var(--acade-primary)] focus:text-[var(--acade-text)]"
               )}
@@ -304,25 +304,28 @@ export default function SettingsPage() {
         <div className="md:col-span-2 space-y-8">
           
           {/* PROFILE SECTION */}
-          <section id="section-profile" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-profile" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Public Profile</h2>
             
-            <div className="flex items-center gap-6 mb-8">
-              <div className="relative group cursor-pointer w-24 h-24" onClick={() => fileInputRef.current?.click()}>
+            <div className="flex items-center gap-4 sm:gap-6 mb-8">
+              <button
+                type="button"
+                aria-label="Upload profile picture"
+                onClick={() => fileInputRef.current?.click()}
+                className="relative group h-24 w-24 shrink-0 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--acade-primary)]"
+              >
                 <img 
                   src={avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + user?.uid} 
-                  alt="Avatar" 
+                  alt="" 
                   className="w-full h-full rounded-full object-cover border-4 border-[var(--acade-deep)] shadow-lg transition-transform duration-300 group-hover:scale-105"
                 />
-                <button 
-                  className="absolute inset-0 bg-[var(--acade-primary)]/80 backdrop-blur-sm rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-95 group-hover:scale-105"
-                >
+                <span className="absolute inset-0 bg-[var(--acade-primary)]/80 backdrop-blur-sm rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-all duration-300 scale-95 group-hover:scale-105 group-focus-visible:scale-100">
                   <Camera size={24} className="text-white mb-1" />
                   <span className="text-[10px] text-white font-bold tracking-wider uppercase">Upload</span>
-                </button>
-                <input type="file" hidden ref={fileInputRef} onChange={handleAvatarUpload} accept="image/*" />
-              </div>
-              <div>
+                </span>
+              </button>
+              <input type="file" hidden ref={fileInputRef} onChange={handleAvatarUpload} accept="image/*" />
+              <div className="min-w-0">
                 <h3 className="font-bold text-[var(--acade-text)]">Profile Picture</h3>
                 <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">JPG, GIF or PNG. 1MB max.</p>
               </div>
@@ -352,91 +355,91 @@ export default function SettingsPage() {
           </section>
 
           {/* ACADEMIC SETUP SECTION */}
-          <section id="section-academic" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-academic" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Academic Setup</h2>
             
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Record Mode</h4>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 sm:pr-4">
+                  <h4 id="record-mode-label" className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Record Mode</h4>
                   <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">From Scratch builds up, Complete builds backwards.</p>
                 </div>
-                <div className="flex items-center gap-2 bg-[var(--acade-deep)] p-1 rounded-xl border border-[var(--acade-border)]">
-                  <button onClick={() => handleToggleRecordMode('fromScratch')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${recordMode === 'fromScratch' ? 'bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm' : 'text-[var(--acade-text-muted)]'}`}>Scratch</button>
-                  <button onClick={() => handleToggleRecordMode('complete')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${recordMode === 'complete' ? 'bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm' : 'text-[var(--acade-text-muted)]'}`}>Complete</button>
+                <div role="group" aria-labelledby="record-mode-label" className="grid w-full grid-cols-2 gap-1 bg-[var(--acade-deep)] p-1 rounded-xl border border-[var(--acade-border)] sm:flex sm:w-auto">
+                  <button type="button" aria-pressed={recordMode === 'fromScratch'} onClick={() => handleToggleRecordMode('fromScratch')} className={`h-12 min-w-24 px-3 rounded-lg text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${recordMode === 'fromScratch' ? 'bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm' : 'text-[var(--acade-text-muted)]'}`}>Scratch</button>
+                  <button type="button" aria-pressed={recordMode === 'complete'} onClick={() => handleToggleRecordMode('complete')} className={`h-12 min-w-24 px-3 rounded-lg text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${recordMode === 'complete' ? 'bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-sm' : 'text-[var(--acade-text-muted)]'}`}>Complete</button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Default Metric</h4>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 sm:pr-4">
+                  <h4 id="default-metric-label" className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Default Metric</h4>
                   <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">What to show prominently on the dashboard.</p>
                 </div>
-                <div className="flex items-center gap-2 bg-[var(--acade-deep)] p-1 rounded-xl border border-[var(--acade-border)]">
-                  <button onClick={() => handleToggleGradeMode('cgpa')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${gradeMode === 'cgpa' ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)]' : 'text-[var(--acade-text-muted)]'}`}>CGPA</button>
-                  <button onClick={() => handleToggleGradeMode('pi')} className={`px-3 py-1.5 rounded-lg text-xs font-bold ${gradeMode === 'pi' ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)]' : 'text-[var(--acade-text-muted)]'}`}>PI</button>
+                <div role="group" aria-labelledby="default-metric-label" className="grid w-full grid-cols-2 gap-1 bg-[var(--acade-deep)] p-1 rounded-xl border border-[var(--acade-border)] sm:flex sm:w-auto">
+                  <button type="button" aria-pressed={gradeMode === 'cgpa'} onClick={() => handleToggleGradeMode('cgpa')} className={`h-12 min-w-24 px-3 rounded-lg text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${gradeMode === 'cgpa' ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)]' : 'text-[var(--acade-text-muted)]'}`}>CGPA</button>
+                  <button type="button" aria-pressed={gradeMode === 'pi'} onClick={() => handleToggleGradeMode('pi')} className={`h-12 min-w-24 px-3 rounded-lg text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${gradeMode === 'pi' ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)]' : 'text-[var(--acade-text-muted)]'}`}>PI</button>
                 </div>
               </div>
             </div>
           </section>
 
           {/* NOTIFICATIONS SECTION */}
-          <section id="section-notifications" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-notifications" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Bell size={20} /> Notifications
             </h2>
             
-            <div className="p-4 bg-[var(--acade-primary-dim)] border border-[var(--acade-primary)]/20 rounded-xl mb-6 flex items-center justify-between">
-              <div>
+            <div className="p-4 bg-[var(--acade-primary-dim)] border border-[var(--acade-primary)]/20 rounded-xl mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 sm:pr-4">
                 <h4 className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Push Notifications</h4>
                 <p className="text-[length:var(--text-xs)] text-[var(--acade-primary-glow)] mt-1">Get alerts on your device.</p>
               </div>
-              <Button variant="outline" size="sm" onClick={requestFCM}>Enable</Button>
+              <Button variant="outline" size="sm" onClick={requestFCM} className="w-full sm:w-auto">Enable</Button>
             </div>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)]">
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Semester saved successfully</span>
-                <Switch checked={notifPrefs.semesterSaved} onCheckedChange={(val) => handleTogglePreference('semesterSaved', val)} />
+              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2 border-b border-[var(--acade-border-subtle)]">
+                <span id="notification-semester-saved" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Semester saved successfully</span>
+                <Switch aria-labelledby="notification-semester-saved" checked={notifPrefs.semesterSaved} onCheckedChange={(val) => handleTogglePreference('semesterSaved', val)} />
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)]">
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Degree class projections change</span>
-                <Switch checked={notifPrefs.degreeClass} onCheckedChange={(val) => handleTogglePreference('degreeClass', val)} />
+              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2 border-b border-[var(--acade-border-subtle)]">
+                <span id="notification-degree-class" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Degree class projections change</span>
+                <Switch aria-labelledby="notification-degree-class" checked={notifPrefs.degreeClass} onCheckedChange={(val) => handleTogglePreference('degreeClass', val)} />
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-[var(--acade-border-subtle)]">
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">AI insights are ready</span>
-                <Switch checked={notifPrefs.aiInsights} onCheckedChange={(val) => handleTogglePreference('aiInsights', val)} />
+              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2 border-b border-[var(--acade-border-subtle)]">
+                <span id="notification-ai-insights" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">AI insights are ready</span>
+                <Switch aria-labelledby="notification-ai-insights" checked={notifPrefs.aiInsights} onCheckedChange={(val) => handleTogglePreference('aiInsights', val)} />
               </div>
-              <div className="flex items-center justify-between py-2">
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Admin broadcasts</span>
-                <Switch checked={notifPrefs.adminBroadcasts} onCheckedChange={(val) => handleTogglePreference('adminBroadcasts', val)} />
+              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2">
+                <span id="notification-admin-broadcasts" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Admin broadcasts</span>
+                <Switch aria-labelledby="notification-admin-broadcasts" checked={notifPrefs.adminBroadcasts} onCheckedChange={(val) => handleTogglePreference('adminBroadcasts', val)} />
               </div>
             </div>
           </section>
 
           {/* SECURITY & DANGER SECTION */}
-          <section id="section-security" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-security" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Shield size={20} /> Security & Data
             </h2>
             
             <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)]">
-                <div>
+              <div className="flex flex-col gap-3 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 sm:pr-4">
                   <h4 className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Password</h4>
                   <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">Update your password securely.</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setPasswordModal(true)}>
+                <Button variant="outline" size="sm" onClick={() => setPasswordModal(true)} className="w-full sm:w-auto">
                   <KeyRound size={16} className="mr-2" /> Change
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-[var(--acade-danger-dim)] rounded-xl border border-[var(--acade-danger)]/20">
-                <div>
+              <div className="flex flex-col gap-3 p-4 bg-[var(--acade-danger-dim)] rounded-xl border border-[var(--acade-danger)]/20 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0 sm:pr-4">
                   <h4 className="font-bold text-[var(--acade-danger)] text-[length:var(--text-sm)]">Danger Zone</h4>
                   <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">Permanently delete your account and all records.</p>
                 </div>
-                <Button variant="danger" size="sm" onClick={() => setDeleteModal(true)}>
+                <Button variant="danger" size="sm" onClick={() => setDeleteModal(true)} className="w-full sm:w-auto">
                   <Trash2 size={16} className="mr-2" /> Delete
                 </Button>
               </div>
