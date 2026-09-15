@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2, Lightbulb } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,11 +31,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationWithId[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) loadNotifications();
-  }, [user]);
-
-  const loadNotifications = async () => {
+  const loadNotifications = useCallback(async () => {
     if (!user) return;
     try {
       const items = await queryCollection<NotificationWithId>(`notifications/${user.uid}/items`);
@@ -53,7 +49,11 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) loadNotifications();
+  }, [loadNotifications, user]);
 
   const handleMarkAsRead = async (id: string) => {
     if (!user) return;

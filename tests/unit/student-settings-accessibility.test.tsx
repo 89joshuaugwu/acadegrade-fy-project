@@ -3,21 +3,21 @@ import { describe, expect, it, vi } from 'vitest';
 
 import SettingsPage from '@/app/(student)/settings/page';
 
+const profile = {
+  fullName: 'Ada Student',
+  matric: 'AG/001',
+  currentLevel: 300,
+  department: 'Computer Science',
+  programme: 'BSc Computer Science',
+  notificationPreferences: {},
+};
+
 vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { uid: 'student-1' } }),
 }));
 
 vi.mock('@/hooks/useProfile', () => ({
-  useProfile: () => ({
-    profile: {
-      fullName: 'Ada Student',
-      matric: 'AG/001',
-      currentLevel: 300,
-      department: 'Computer Science',
-      programme: 'BSc Computer Science',
-      notificationPreferences: {},
-    },
-  }),
+  useProfile: () => ({ profile }),
 }));
 
 vi.mock('@/hooks/usePlatformSettings', () => ({
