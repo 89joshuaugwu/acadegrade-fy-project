@@ -56,6 +56,7 @@ export function AcademicProof() {
     let targetProgress = 0;
     let renderedProgress = 0;
     let isAnimating = false;
+    let previousFrameTime = 0;
 
     const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -68,13 +69,18 @@ export function AcademicProof() {
         card.style.setProperty('--deck-card-scale', style['--deck-card-scale']);
       });
 
-      const nextStage = [3, 2, 1].find((index) => getCardProgress(index, progress) >= 0.92) ?? 0;
+      // Grow the viewport as soon as the next card begins entering so its body is
+      // never clipped inside the preceding stage's shorter frame.
+      const nextStage = [3, 2, 1].find((index) => getCardProgress(index, progress) >= 0.08) ?? 0;
       setActiveStage((current) => current === nextStage ? current : nextStage);
     };
 
-    const render = () => {
+    const render = (frameTime: number) => {
       const delta = targetProgress - renderedProgress;
-      renderedProgress = prefersReducedMotion ? targetProgress : renderedProgress + delta * 0.17;
+      const elapsed = previousFrameTime ? Math.min(frameTime - previousFrameTime, 64) : 16.67;
+      previousFrameTime = frameTime;
+      const smoothing = 1 - Math.exp(-elapsed / 90);
+      renderedProgress = prefersReducedMotion ? targetProgress : renderedProgress + delta * smoothing;
       if (Math.abs(targetProgress - renderedProgress) < 0.001) renderedProgress = targetProgress;
       applyProgress(renderedProgress);
 
@@ -82,13 +88,14 @@ export function AcademicProof() {
         frame = requestAnimationFrame(render);
       } else {
         isAnimating = false;
+        previousFrameTime = 0;
       }
     };
 
     const updateProgress = () => {
       const section = sectionRef.current;
       const deck = deckRef.current;
-      if (!section || !deck || window.innerWidth < 1024) return;
+      if (!section || !deck || !window.matchMedia('(min-width: 1024px) and (min-height: 720px)').matches) return;
 
       const bounds = section.getBoundingClientRect();
       const availableTravel = section.offsetHeight - deck.offsetHeight - 128;
@@ -116,11 +123,11 @@ export function AcademicProof() {
       ref={sectionRef}
       id="features"
       aria-labelledby="academic-proof-title"
-      className="public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[170vh]"
+      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[170vh]"
     >
-      <div className="mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[170vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
+      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[170vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
         <div className="lg:col-span-5">
-          <div className="lg:sticky lg:top-28">
+          <div className="academic-proof-copy lg:sticky lg:top-28">
             <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
             <h2 id="academic-proof-title" className="mt-3 max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,4vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.04em] text-[var(--acade-text)]">
               A result becomes useful when its basis stays visible.
