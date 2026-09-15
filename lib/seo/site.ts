@@ -18,7 +18,7 @@ function normalizeOrigin(candidate: string): string {
   return url.origin;
 }
 
-export function resolveSiteUrl(environment: SiteEnvironment = process.env): string {
+export function resolveSiteUrl(environment: SiteEnvironment = process.env as SiteEnvironment): string {
   const candidate =
     environment.NEXT_PUBLIC_SITE_URL?.trim() ||
     environment.SITE_URL?.trim() ||

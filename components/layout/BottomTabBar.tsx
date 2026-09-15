@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
-import { LayoutDashboard, BookOpen, BrainCircuit, FileText } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BrainCircuit, FileText, Megaphone } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -18,6 +18,7 @@ const TAB_ICONS: Record<NavigationIcon, React.ElementType> = {
   courses: BookOpen,
   analytics: BrainCircuit,
   activity: BrainCircuit,
+  ads: Megaphone,
   settings: LayoutDashboard,
 };
 

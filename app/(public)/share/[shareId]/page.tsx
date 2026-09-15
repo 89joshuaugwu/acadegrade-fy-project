@@ -388,7 +388,7 @@ export default function ShareTranscriptPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen pt-24 pb-20 px-4">
+        <div className="min-h-screen px-4 pb-20 pt-10 sm:pt-14">
           <div className="max-w-4xl mx-auto space-y-6">
             <Skeleton className="h-12 w-64" />
             <Skeleton className="h-6 w-96" />
@@ -404,7 +404,7 @@ export default function ShareTranscriptPage() {
     return (
       <>
         <Navbar />
-        <div className="min-h-screen pt-24 pb-20 px-4 flex items-center justify-center">
+        <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-10 sm:pt-14">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -441,7 +441,7 @@ export default function ShareTranscriptPage() {
     <>
       <Navbar />
 
-      <div className="min-h-screen pt-24 pb-20 px-4">
+      <div className="min-h-screen px-4 pb-20 pt-10 sm:pt-14">
         <div className="max-w-4xl mx-auto">
           {/* Actions bar */}
           <motion.div

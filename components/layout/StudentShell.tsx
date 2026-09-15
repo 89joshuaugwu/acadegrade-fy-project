@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut, X, AlertTriangle } from 'lucide-react';
+import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut, X, AlertTriangle, Megaphone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { signOut } from '@/lib/firebase/auth';
@@ -32,6 +32,7 @@ const STUDENT_ICONS: Record<NavigationIcon, React.ElementType> = {
   courses: BookOpen,
   analytics: BrainCircuit,
   activity: BrainCircuit,
+  ads: Megaphone,
   settings: Settings,
 };
 

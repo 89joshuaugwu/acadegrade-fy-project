@@ -59,7 +59,7 @@ export default function AboutPage() {
     <div className="min-h-screen bg-[var(--acade-void)] text-[var(--acade-text)]">
       <Navbar />
       <PageTransition>
-        <main className="overflow-hidden pt-[var(--shell-header-height)]">
+        <main className="overflow-hidden">
           <section className="relative border-b border-[var(--acade-border-subtle)]">
             <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
               <div className="lg:col-span-7">
@@ -73,7 +73,7 @@ export default function AboutPage() {
                   </>
                 ) : (
                   <>
-                    <h1 className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.6rem,6vw,5rem)] font-bold leading-[1.02] tracking-[-0.05em]">
+                    <h1 className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.04] tracking-[-0.045em]">
                       {data.headline}
                     </h1>
                     <p className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
@@ -115,7 +115,7 @@ export default function AboutPage() {
             <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">How we build</p>
-                <h2 id="principles-title" className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,4vw,3.3rem)] font-bold leading-[1.08] tracking-[-0.04em]">
+                <h2 id="principles-title" className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]">
                   Clarity before complexity.
                 </h2>
                 <p className="mt-5 max-w-lg leading-7 text-[var(--acade-text-muted)]">

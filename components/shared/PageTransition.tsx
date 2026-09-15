@@ -1,9 +1,3 @@
-'use client';
-
-import { motion } from 'motion/react';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { routeEntry } from '@/lib/ui/motion';
-
 interface PageTransitionProps {
   children: React.ReactNode;
   className?: string;
@@ -17,18 +11,9 @@ interface PageTransitionProps {
  * Respects prefers-reduced-motion.
  */
 function PageTransition({ children, className }: PageTransitionProps) {
-  const shouldReduceMotion = useReducedMotion();
-
-  return (
-    <motion.div
-      initial={shouldReduceMotion ? false : routeEntry.initial}
-      animate={routeEntry.animate}
-      transition={shouldReduceMotion ? { duration: 0 } : routeEntry.transition}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
+  // Keep route content visible during SSR and hydration. An initial Motion
+  // opacity could remain at zero when its mount animation failed to start.
+  return <div className={className}>{children}</div>;
 }
 
 export { PageTransition };

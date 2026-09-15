@@ -72,21 +72,21 @@ describe('ads configuration validation', () => {
   });
 
   it('keeps rewarded and third-party delivery disabled', () => {
-    const futureMode = validConfig();
+    const futureMode: any = validConfig();
     futureMode.deliveryModes.rewarded = true;
     expect(() => parseAdsConfig(futureMode)).toThrow('Rewarded delivery is not available yet');
 
-    const futureCampaign = validConfig();
+    const futureCampaign: any = validConfig();
     futureCampaign.campaigns[0].deliveryMode = 'rewarded';
     expect(() => parseAdsConfig(futureCampaign)).toThrow('Only house campaigns can be enabled');
   });
 
   it('rejects invalid placement references, schedules, weights, and caps', () => {
-    const missingPlacement = validConfig();
+    const missingPlacement: any = validConfig();
     missingPlacement.campaigns[0].placementIds = ['ocr.result'];
     expect(() => parseAdsConfig(missingPlacement)).toThrow('references a disabled or missing placement');
 
-    const reversedSchedule = validConfig();
+    const reversedSchedule: any = validConfig();
     reversedSchedule.campaigns[0].schedule = {
       startsAt: '2026-09-02T00:00:00.000Z',
       endsAt: '2026-09-01T00:00:00.000Z',

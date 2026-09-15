@@ -10,7 +10,7 @@ export default function LandingPage() {
       <Navbar />
       <div id="hero-sentinel" className="pointer-events-none absolute top-0 h-px w-full" aria-hidden="true" />
 
-      <main className="pt-[var(--shell-header-height)]">
+      <main>
         <HomeHero />
         <AcademicProof />
         <SmartAutomation />

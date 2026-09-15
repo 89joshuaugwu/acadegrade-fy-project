@@ -449,7 +449,7 @@ export default function QuickCalculatorPage() {
       <Navbar />
       <main
         aria-labelledby="calculator-title"
-        className="min-h-screen bg-[var(--acade-void)] px-4 pb-20 pt-24 sm:px-6 sm:pt-28 lg:px-8"
+        className="min-h-screen bg-[var(--acade-void)] px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8"
       >
         <div className="mx-auto max-w-[1200px]">
           <header className="grid grid-cols-1 gap-7 border-b border-[var(--acade-border)] pb-10 md:grid-cols-12 md:items-end">

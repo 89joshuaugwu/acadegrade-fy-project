@@ -9,7 +9,7 @@ export function PublicPage({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[var(--acade-void)] text-[var(--acade-text)]">
       <Navbar />
       <div id="hero-sentinel" className="pointer-events-none absolute top-0 h-px w-full" aria-hidden="true" />
-      <main className="pt-[var(--shell-header-height)]">{children}</main>
+      <main>{children}</main>
       <PublicFooter />
     </div>
   );

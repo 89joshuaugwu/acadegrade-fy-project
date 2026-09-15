@@ -42,7 +42,7 @@ export function Navbar({ className }: NavbarProps) {
     <>
       <header
         className={cn(
-          'fixed inset-x-0 top-0 flex h-[var(--shell-header-height)] items-center border-b px-4 transition-[background-color,border-color,box-shadow] duration-200 sm:px-6 lg:px-8',
+          'sticky top-0 flex h-[var(--shell-header-height)] items-center border-b px-4 transition-[background-color,border-color,box-shadow] duration-200 sm:px-6 lg:px-8',
           scrolled
             ? 'border-[var(--acade-border)] bg-[var(--acade-deep)]/96 shadow-[var(--shadow-card)] backdrop-blur-md'
             : 'border-transparent bg-transparent',
@@ -50,10 +50,10 @@ export function Navbar({ className }: NavbarProps) {
         )}
         style={{ zIndex: 'var(--z-sticky)' }}
       >
-        <nav aria-label="Public navigation" className="mx-auto flex w-full max-w-[1440px] items-center justify-between">
+        <nav aria-label="Public navigation" className="mx-auto grid w-full max-w-[1280px] grid-cols-[1fr_auto] items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
           <Logo href="/" size="md" />
 
-          <div className="hidden items-center gap-1 lg:flex">
+          <div className="hidden items-center justify-center gap-1 lg:flex">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -65,7 +65,7 @@ export function Navbar({ className }: NavbarProps) {
             ))}
           </div>
 
-          <div className="hidden items-center gap-2 lg:flex">
+          <div className="hidden items-center justify-end gap-2 lg:flex">
             <ThemeControl compact />
             {loading ? <span className="h-12 w-24" aria-hidden="true" /> : user ? (
               <LinkButton variant="primary" size="sm" href="/dashboard">Dashboard</LinkButton>
@@ -78,7 +78,7 @@ export function Navbar({ className }: NavbarProps) {
           </div>
 
           <IconButton
-            className="lg:hidden"
+            className="justify-self-end lg:hidden"
             aria-label="Open navigation menu"
             aria-expanded={mobileOpen}
             aria-controls="public-mobile-navigation"
