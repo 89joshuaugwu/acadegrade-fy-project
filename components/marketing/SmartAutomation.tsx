@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { ArrowRight, BrainCircuit, ScanLine } from 'lucide-react';
+import { ArrowRight, ScanLine } from 'lucide-react';
 import ocrScreen from '../../mobile-app-images/ocr page.jpeg';
 import { LinkButton } from '@/components/ui';
 
@@ -48,7 +48,9 @@ export function SmartAutomation() {
       <section aria-labelledby="ai-title" className="public-atmosphere-section border-b border-[var(--acade-border-subtle)]">
         <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:px-8">
           <div className="lg:col-span-5">
-            <span className="flex size-12 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]"><BrainCircuit className="size-6" aria-hidden="true" /></span>
+            <span className="flex size-12 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
+              <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="size-6 object-contain" />
+            </span>
             <p className="mt-6 text-sm font-semibold text-[var(--acade-primary)]">AcadeMind insights</p>
             <h2 id="ai-title" className="mt-2 max-w-[14ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3.5vw,2.75rem)] font-semibold leading-tight tracking-[-0.035em]">
               Ask better questions about what comes next.

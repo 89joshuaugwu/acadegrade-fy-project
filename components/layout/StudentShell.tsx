@@ -105,13 +105,13 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--acade-void)] flex flex-col lg:flex-row">
+    <div className="flex min-h-screen w-full min-w-0 max-w-full flex-col overflow-x-clip bg-[var(--acade-void)] lg:flex-row">
       <a href="#main-content" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-[var(--acade-primary)] px-4 py-3 text-[var(--acade-on-primary)] focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to content
       </a>
       <RouteAnnouncer title={routeMeta.title} />
       {/* Mobile & Tablet Header */}
-      <header aria-label="Student mobile header" className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)]/96 px-4 backdrop-blur-md sm:px-6 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
+      <header aria-label="Student mobile header" className="sticky top-0 flex h-[var(--shell-header-height)] w-full min-w-0 max-w-full items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)]/96 px-4 backdrop-blur-md sm:px-6 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
         <div className="flex min-w-0 items-center gap-2.5">
           <Logo size="sm" />
           <span className="hidden h-5 w-px shrink-0 bg-[var(--acade-border)] min-[390px]:block" aria-hidden="true" />
@@ -265,7 +265,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main id="main-content" className="relative min-h-screen flex-1 pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:ml-[calc(var(--student-rail-width)+2rem)] lg:pb-0">
+      <main id="main-content" className="relative min-h-screen w-full min-w-0 max-w-full flex-1 overflow-x-clip pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:ml-[calc(var(--student-rail-width)+2rem)] lg:w-auto lg:max-w-none lg:pb-0">
         <header
           aria-label="Student page context"
           className="sticky top-0 hidden min-h-[var(--shell-header-height)] items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]/94 px-8 backdrop-blur-md lg:flex"
@@ -297,7 +297,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         )}
-        <div className="mx-auto h-full w-full max-w-[1200px] p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto h-full w-full min-w-0 max-w-[1200px] overflow-x-clip p-4 sm:p-6 lg:p-8">
           {children}
         </div>
       </main>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Loader2, Target } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -247,7 +248,7 @@ export function WhatIfCalculator({
             
             {loading ? (
               <div className="flex items-center gap-2 text-[var(--acade-text-muted)] text-[length:var(--text-sm)]">
-                <Loader2 size={16} className="animate-spin" />
+                <Image src="/acadegradeailogo.png" alt="" width={18} height={18} className="size-[18px] shrink-0 animate-pulse object-contain" />
                 <span>AcadeMind is analyzing feasibility...</span>
               </div>
             ) : countdown !== null && countdown > 0 ? (

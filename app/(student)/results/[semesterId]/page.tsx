@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2, AlertCircle, RefreshCw, Camera } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -382,29 +382,53 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
       <Modal open={isImportSlipOpen} onClose={() => setIsImportSlipOpen(false)} title="Import Result Slip">
         <div className="flex flex-col gap-4 mt-2">
           <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-            Upload your official academic result slip (Image or PDF) and our AI will automatically extract your courses and scores.
+            Scan your result slip with your phone camera, or choose an existing image or PDF. AcadeGrade will extract the courses and scores for you to review.
           </p>
-          <div className="relative border-2 border-dashed border-[var(--acade-border-subtle)] rounded-xl p-8 hover:border-[var(--acade-primary)] hover:bg-[var(--acade-overlay)] transition-colors flex flex-col items-center justify-center cursor-pointer">
-            <input 
-              type="file" 
-              accept="image/*,application/pdf" 
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" 
-              onChange={handleFileUpload}
-              disabled={uploadingSlip}
-            />
-            {uploadingSlip ? (
-              <div className="flex flex-col items-center gap-3 text-[var(--acade-primary)]">
-                <div className="size-8 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[length:var(--text-sm)] font-bold">Extracting Results...</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-3 text-[var(--acade-text-muted)]">
-                <Upload size={32} />
-                <span className="text-[length:var(--text-sm)] font-medium">Click or drag file here</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">JPG, PNG, PDF</span>
-              </div>
-            )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="relative flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-[var(--acade-primary)]/35 bg-[var(--acade-primary-dim)] p-5 text-center transition-colors hover:border-[var(--acade-primary)] hover:bg-[var(--acade-overlay)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                aria-label="Scan with camera"
+                className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                onChange={handleFileUpload}
+                disabled={uploadingSlip}
+              />
+              <span className="flex size-11 items-center justify-center rounded-full bg-[var(--acade-primary)] text-white shadow-sm">
+                <Camera size={22} aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-[var(--acade-text)]">Scan with camera</span>
+                <span className="mt-1 block text-xs leading-5 text-[var(--acade-text-muted)]">Open your rear camera and take a clear photo</span>
+              </span>
+            </label>
+
+            <label className="relative flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 text-center transition-colors hover:border-[var(--acade-primary)] hover:bg-[var(--acade-overlay)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                aria-label="Choose image or PDF"
+                className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                onChange={handleFileUpload}
+                disabled={uploadingSlip}
+              />
+              <span className="flex size-11 items-center justify-center rounded-full border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-text-muted)]">
+                <Upload size={21} aria-hidden="true" />
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-[var(--acade-text)]">Choose image or PDF</span>
+                <span className="mt-1 block text-xs leading-5 text-[var(--acade-text-muted)]">Select an existing JPG, PNG, or PDF file</span>
+              </span>
+            </label>
           </div>
+
+          {uploadingSlip && (
+            <div role="status" className="flex items-center justify-center gap-3 rounded-xl bg-[var(--acade-overlay)] px-4 py-3 text-[var(--acade-primary)]">
+              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+              <span className="text-[length:var(--text-sm)] font-bold">Extracting results...</span>
+            </div>
+          )}
         </div>
       </Modal>
 

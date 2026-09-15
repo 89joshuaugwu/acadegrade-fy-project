@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   router: null as null | { push: ReturnType<typeof vi.fn>; replace: ReturnType<typeof vi.fn> },
   getDocument: vi.fn(),
   queryCollection: vi.fn(),
+  getIdToken: vi.fn(),
   toastError: vi.fn(),
 }));
 
@@ -17,7 +18,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { uid: 'student-1', getIdToken: vi.fn() } }),
+  useAuth: () => ({ user: { uid: 'student-1', getIdToken: mocks.getIdToken } }),
 }));
 
 vi.mock('@/hooks/useProfile', () => ({
@@ -70,10 +71,12 @@ async function renderPage() {
 
 describe('semester detail load failure', () => {
   beforeEach(() => {
+    vi.unstubAllGlobals();
     mocks.push.mockReset();
     mocks.replace.mockReset();
     mocks.getDocument.mockReset();
     mocks.queryCollection.mockReset();
+    mocks.getIdToken.mockReset();
     mocks.toastError.mockReset();
     mocks.router = { push: mocks.push, replace: mocks.replace };
   });
@@ -111,5 +114,72 @@ describe('semester detail load failure', () => {
     expect(mocks.queryCollection).toHaveBeenCalledWith(
       'users/student-1/semesters/semester-1/courses'
     );
+  });
+
+  it('offers separate accessible camera and image/PDF OCR inputs', async () => {
+    const user = userEvent.setup();
+    mocks.getDocument.mockResolvedValue({
+      id: 'semester-1',
+      label: 'First Semester',
+      level: 300,
+      semester: 1,
+      session: '2025/2026',
+    });
+    mocks.queryCollection.mockResolvedValue([]);
+
+    await renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Import Result Slip' }));
+
+    const cameraInput = screen.getByLabelText('Scan with camera');
+    expect(cameraInput).toHaveAttribute('type', 'file');
+    expect(cameraInput).toHaveAttribute('accept', 'image/*');
+    expect(cameraInput).toHaveAttribute('capture', 'environment');
+
+    const fileInput = screen.getByLabelText('Choose image or PDF');
+    expect(fileInput).toHaveAttribute('type', 'file');
+    expect(fileInput).toHaveAttribute('accept', 'image/*,application/pdf');
+    expect(fileInput).not.toHaveAttribute('capture');
+  });
+
+  it('sends camera photos and chosen files through the existing extraction endpoint', async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ courses: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    mocks.getIdToken.mockResolvedValue('student-token');
+    mocks.getDocument.mockResolvedValue({
+      id: 'semester-1',
+      label: 'First Semester',
+      level: 300,
+      semester: 1,
+      session: '2025/2026',
+    });
+    mocks.queryCollection.mockResolvedValue([]);
+
+    await renderPage();
+    await user.click(await screen.findByRole('button', { name: 'Import Result Slip' }));
+
+    await user.upload(
+      screen.getByLabelText('Scan with camera'),
+      new File(['camera-result'], 'camera-result.jpg', { type: 'image/jpeg' })
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+    await user.upload(
+      screen.getByLabelText('Choose image or PDF'),
+      new File(['saved-result'], 'saved-result.pdf', { type: 'application/pdf' })
+    );
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/results/extract',
+      '/api/results/extract',
+    ]);
+    expect(fetchMock.mock.calls.map(([, request]) => JSON.parse(request.body).mimeType)).toEqual([
+      'image/jpeg',
+      'application/pdf',
+    ]);
   });
 });

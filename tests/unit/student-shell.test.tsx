@@ -77,7 +77,15 @@ describe('student shell navigation', () => {
 
     expect(screen.getByRole('complementary', { name: 'Student navigation' }))
       .toHaveClass('w-[var(--student-rail-width)]', 'inset-y-4', 'left-4', 'rounded-[var(--radius-dialog)]');
-    expect(screen.getByRole('main')).toHaveClass('lg:ml-[calc(var(--student-rail-width)+2rem)]');
+    expect(screen.getByRole('main')).toHaveClass(
+      'w-full',
+      'min-w-0',
+      'max-w-full',
+      'overflow-x-clip',
+      'lg:ml-[calc(var(--student-rail-width)+2rem)]'
+    );
+    expect(screen.getByRole('banner', { name: 'Student mobile header' }))
+      .toHaveClass('w-full', 'min-w-0', 'max-w-full');
     expect(screen.getByRole('banner', { name: 'Student page context' }))
       .toHaveTextContent('Dashboard');
     expect(screen.getByText('Student content')).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
-import { BrainCircuit, ChartSpline, Compass, Scale, ShieldCheck, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { ChartSpline, Compass, Scale, ShieldCheck, Sparkles } from 'lucide-react';
 import { CheckList, EditorialHero, ProductCta, PublicPage, SectionIntro } from '@/components/marketing/PublicPage';
 import { createPageMetadata } from '@/lib/seo/site';
 
@@ -74,7 +75,9 @@ function InsightPreview() {
     <figure className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 shadow-[var(--shadow-card)] sm:p-7">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]"><BrainCircuit size={20} aria-hidden="true" /></span>
+          <span className="flex size-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
+            <Image src="/acadegradeailogo.png" alt="AcadeMind" width={20} height={20} className="size-5 object-contain" />
+          </span>
           <div><p className="text-sm font-bold">Academic signal</p><p className="text-xs text-[var(--acade-text-faint)]">Illustrative insight</p></div>
         </div>
         <Sparkles className="size-5 text-[var(--acade-gold)]" aria-hidden="true" />

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, BrainCircuit, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -76,7 +76,7 @@ export default function DashboardPage() {
     } finally {
       setAiLoading(false);
     }
-  }, [user?.uid]);
+  }, [user]);
 
   useEffect(() => {
     fetchAiSummary();
@@ -162,7 +162,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pb-10 sm:gap-7">
+    <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
       <header id="tour-welcome" className="max-w-2xl py-1">
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">Academic overview</p>
         <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
@@ -175,7 +175,7 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <section aria-label="Academic standing and next action" className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
+      <section aria-label="Academic standing and next action" className="grid min-w-0 items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
         <StandingOverview
           hasAcademicData={hasAcademicData}
           isPIMode={isPIMode}
@@ -211,7 +211,7 @@ export default function DashboardPage() {
         <RecentResults courses={recentCourses} />
       )}
 
-      <section aria-label="Academic trend and AI insight" className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
+      <section aria-label="Academic trend and AI insight" className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
         <Card>
           <div className="mb-5">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">Trajectory</p>
@@ -263,7 +263,7 @@ export default function DashboardPage() {
 
           <div className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--acade-border-subtle)] pt-4">
             <span className="inline-flex items-center gap-1.5 text-xs text-[var(--acade-text-faint)]">
-              <BrainCircuit className="size-3.5" aria-hidden="true" /> Personalized to your record
+              <Image src="/acadegradeailogo.png" alt="" width={14} height={14} className="size-3.5 object-contain opacity-75" /> Personalized to your record
             </span>
             <Link href="/insights" className="inline-flex min-h-12 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]">
               Open insights <ArrowRight className="size-4" aria-hidden="true" />

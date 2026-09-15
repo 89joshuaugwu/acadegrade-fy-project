@@ -33,7 +33,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     const shouldReduceMotion = useReducedMotion();
 
     const baseStyles = cn(
-      'rounded-2xl border border-[var(--acade-border)]',
+      'min-w-0 max-w-full rounded-2xl border border-[var(--acade-border)]',
       paddingStyles[padding],
       variant === 'glass'
         ? 'bg-[var(--acade-deep)]/60 backdrop-blur-md border-[var(--acade-border-subtle)]'
