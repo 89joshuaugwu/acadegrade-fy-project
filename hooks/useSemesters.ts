@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { subscribeToCollection } from '@/lib/firebase/firestore';
 import { orderBy } from 'firebase/firestore';
@@ -10,6 +10,7 @@ interface SemesterState {
   semesters: SemesterWithId[];
   loading: boolean;
   error: Error | null;
+  retry: () => void;
 }
 
 /**
@@ -18,17 +19,20 @@ interface SemesterState {
  */
 export function useSemesters(): SemesterState {
   const { uid } = useAuth();
-  const [state, setState] = useState<SemesterState>({
+  const [state, setState] = useState<Omit<SemesterState, 'retry'>>({
     semesters: [],
     loading: true,
     error: null,
   });
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!uid) {
       setState({ semesters: [], loading: false, error: null });
       return;
     }
+
+    setState((previous) => ({ ...previous, loading: true, error: null }));
 
     const unsubscribe = subscribeToCollection<SemesterWithId>(
       `users/${uid}/semesters`,
@@ -39,11 +43,22 @@ export function useSemesters(): SemesterState {
         });
         setState({ semesters: sorted, loading: false, error: null });
       },
+      (subscriptionError) => {
+        setState((previous) => ({
+          ...previous,
+          loading: false,
+          error: subscriptionError,
+        }));
+      },
       orderBy('level', 'asc')
     );
 
     return unsubscribe;
-  }, [uid]);
+  }, [retryKey, uid]);
 
-  return state;
+  const retry = useCallback(() => {
+    setRetryKey((key) => key + 1);
+  }, []);
+
+  return { ...state, retry };
 }

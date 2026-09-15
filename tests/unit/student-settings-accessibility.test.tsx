@@ -1,7 +1,14 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SettingsPage from '@/app/(student)/settings/page';
+
+const mocks = vi.hoisted(() => ({
+  requestNotificationPermission: vi.fn(),
+  toastError: vi.fn(),
+  toastSuccess: vi.fn(),
+}));
 
 const profile = {
   fullName: 'Ada Student',
@@ -32,6 +39,10 @@ vi.mock('@/lib/firebase/firestore', () => ({
   updateDocument: vi.fn(),
 }));
 
+vi.mock('@/lib/firebase/fcm', () => ({
+  requestNotificationPermission: mocks.requestNotificationPermission,
+}));
+
 vi.mock('firebase/auth', () => ({
   updatePassword: vi.fn(),
   EmailAuthProvider: { credential: vi.fn() },
@@ -42,13 +53,19 @@ vi.mock('firebase/auth', () => ({
 
 vi.mock('react-hot-toast', () => ({
   default: {
-    error: vi.fn(),
-    success: vi.fn(),
+    error: mocks.toastError,
+    success: mocks.toastSuccess,
     loading: vi.fn(),
   },
 }));
 
 describe('Student settings accessibility', () => {
+  beforeEach(() => {
+    mocks.requestNotificationPermission.mockReset();
+    mocks.toastError.mockReset();
+    mocks.toastSuccess.mockReset();
+  });
+
   it('uses one semantic avatar upload button without nested interactive controls', () => {
     render(<SettingsPage />);
 
@@ -85,5 +102,40 @@ describe('Student settings accessibility', () => {
     const semesterSwitch = screen.getByRole('switch', { name: /semester saved successfully/i });
     expect(semesterSwitch).toHaveClass('h-12');
     expect(semesterSwitch.closest('[data-setting-row]')).toHaveClass('min-h-16');
+  });
+
+  it('associates the Current Level label with its select control', () => {
+    render(<SettingsPage />);
+
+    expect(screen.getByRole('combobox', { name: 'Current Level' })).toBeInTheDocument();
+    expect(screen.getAllByText('Current Level')).toHaveLength(1);
+  });
+
+  it('reports push notifications enabled only after this device is registered', async () => {
+    const user = userEvent.setup();
+    mocks.requestNotificationPermission.mockResolvedValue('registered-token');
+
+    render(<SettingsPage />);
+    await user.click(screen.getByRole('button', { name: 'Enable' }));
+
+    await waitFor(() => {
+      expect(mocks.requestNotificationPermission).toHaveBeenCalledWith('student-1');
+      expect(mocks.toastSuccess).toHaveBeenCalledWith('Push notifications enabled on this device');
+    });
+  });
+
+  it('does not report success when notification token registration fails', async () => {
+    const user = userEvent.setup();
+    mocks.requestNotificationPermission.mockResolvedValue(null);
+
+    render(<SettingsPage />);
+    await user.click(screen.getByRole('button', { name: 'Enable' }));
+
+    await waitFor(() => {
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        'Could not enable push notifications. Check permission and try again.'
+      );
+    });
+    expect(mocks.toastSuccess).not.toHaveBeenCalled();
   });
 });

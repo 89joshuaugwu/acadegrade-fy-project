@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { cn } from '@/lib/utils/cn';
 import { updateDocument } from '@/lib/firebase/firestore';
+import { requestNotificationPermission } from '@/lib/firebase/fcm';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -70,6 +71,7 @@ export default function SettingsPage() {
   }, [profile]);
 
   const [savingProfile, setSavingProfile] = useState(false);
+  const [enablingNotifications, setEnablingNotifications] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals
@@ -173,15 +175,19 @@ export default function SettingsPage() {
 
   // 4. Notifications
   const requestFCM = async () => {
-    if (!('Notification' in window)) {
-      toast.error('Browser does not support notifications');
-      return;
-    }
-    const perm = await Notification.requestPermission();
-    if (perm === 'granted') {
-      toast.success('Notification permission granted!');
-    } else {
-      toast.error('Permission denied');
+    if (!user || enablingNotifications) return;
+    setEnablingNotifications(true);
+    try {
+      const token = await requestNotificationPermission(user.uid);
+      if (token) {
+        toast.success('Push notifications enabled on this device');
+      } else {
+        toast.error('Could not enable push notifications. Check permission and try again.');
+      }
+    } catch {
+      toast.error('Could not enable push notifications. Check permission and try again.');
+    } finally {
+      setEnablingNotifications(false);
     }
   };
 
@@ -336,9 +342,9 @@ export default function SettingsPage() {
               <Input label="Matric Number" value={profile?.matric || ''} disabled hint="Contact admin to change matric" />
               <Input label="Department" value={department} onChange={e => setDepartment(e.target.value)} disabled={disableEditProfile} />
               <Input label="Programme" value={programme} onChange={e => setProgramme(e.target.value)} disabled={disableEditProfile} />
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">Current Level</label>
+              <div className="sm:col-span-2">
                 <Select 
+                  label="Current Level"
                   options={STUDENT_LEVELS.map(l => ({ value: l.toString(), label: `${l}L` }))}
                   value={level.toString()}
                   onChange={(val) => setLevel(parseInt(val))}
@@ -394,7 +400,9 @@ export default function SettingsPage() {
                 <h4 className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Push Notifications</h4>
                 <p className="text-[length:var(--text-xs)] text-[var(--acade-primary-glow)] mt-1">Get alerts on your device.</p>
               </div>
-              <Button variant="outline" size="sm" onClick={requestFCM} className="w-full sm:w-auto">Enable</Button>
+              <Button variant="outline" size="sm" onClick={requestFCM} loading={enablingNotifications} disabled={!user || enablingNotifications} className="w-full sm:w-auto">
+                {enablingNotifications ? 'Enabling...' : 'Enable'}
+              </Button>
             </div>
 
             <div className="space-y-4">

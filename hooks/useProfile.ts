@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { subscribeToDocument, updateDocument } from '@/lib/firebase/firestore';
 import type { UserWithId } from '@/types/user';
@@ -10,27 +10,43 @@ export function useProfile() {
   const { uid } = useAuth();
   const [profile, setProfile] = useState<UserWithId | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const [loadedUid, setLoadedUid] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!uid) {
       setProfile(null);
       setLoading(false);
+      setError(null);
       setLoadedUid(null);
       return;
     }
     setProfile(null);
     setLoading(true);
+    setError(null);
     const unsubscribe = subscribeToDocument<UserWithId>(
       `users/${uid}`,
       (data) => {
         setProfile(data);
         setLoading(false);
+        setError(null);
+        setLoadedUid(uid);
+      },
+      (subscriptionError) => {
+        setError(subscriptionError);
+        setLoading(false);
         setLoadedUid(uid);
       }
     );
     return unsubscribe;
-  }, [uid]);
+  }, [retryKey, uid]);
+
+  const retry = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setRetryKey((key) => key + 1);
+  }, []);
 
   const updateProfile = async (data: Partial<UserWithId>) => {
     if (!uid) return;
@@ -86,5 +102,5 @@ export function useProfile() {
   };
 
   const profileLoading = Boolean(uid) && (loading || loadedUid !== uid);
-  return { profile, loading: profileLoading, updateProfile, completeTour, completeResultsTour, completeProductTour };
+  return { profile, loading: profileLoading, error, retry, updateProfile, completeTour, completeResultsTour, completeProductTour };
 }

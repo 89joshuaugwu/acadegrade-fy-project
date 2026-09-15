@@ -6,6 +6,7 @@ import TranscriptPage from '@/app/(student)/transcript/page';
 
 const mocks = vi.hoisted(() => ({
   queryCollection: vi.fn(),
+  deleteDocument: vi.fn(),
   user: { uid: 'student-1', photoURL: null, getIdToken: vi.fn() },
 }));
 
@@ -30,7 +31,7 @@ vi.mock('@/hooks/useProfile', () => ({
 
 vi.mock('@/lib/firebase/firestore', () => ({
   queryCollection: mocks.queryCollection,
-  deleteDocument: vi.fn(),
+  deleteDocument: mocks.deleteDocument,
   where: vi.fn(),
 }));
 
@@ -49,6 +50,7 @@ vi.mock('react-hot-toast', () => ({
 describe('Transcript safety states', () => {
   beforeEach(() => {
     mocks.queryCollection.mockReset();
+    mocks.deleteDocument.mockReset().mockResolvedValue(undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
@@ -113,5 +115,76 @@ describe('Transcript safety states', () => {
     expect(screen.getByRole('button', { name: /print html/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /share link/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /download pdf/i })).toBeInTheDocument();
+  });
+
+  it('labels shared-link actions and uses an accessible, dismissible delete dialog', async () => {
+    const user = userEvent.setup();
+    mocks.queryCollection
+      .mockResolvedValueOnce([{
+        id: 'semester-1',
+        label: 'Year 3 â€” First Semester',
+        session: '2025/2026',
+        level: 300,
+        semester: 1,
+        gpa: 4.2,
+        pi: 4.1,
+        creditLoaded: 18,
+        isComplete: true,
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'share-1',
+        expiresAt: new Date(Date.now() + 86_400_000),
+      }]);
+
+    render(<TranscriptPage />);
+
+    const copyButton = await screen.findByRole('button', { name: /copy shared transcript link/i });
+    const deleteButton = screen.getByRole('button', { name: /delete shared transcript link/i });
+    expect(copyButton).toBeInTheDocument();
+
+    await user.click(deleteButton);
+    const dialog = await screen.findByRole('dialog', { name: /delete shared link/i });
+    expect(dialog).toHaveAccessibleDescription(/permanently unshared/i);
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(deleteButton).toHaveFocus());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /delete shared link/i })).not.toBeInTheDocument());
+  });
+
+  it('opens the generated share link in the accessible modal and restores trigger focus', async () => {
+    const user = userEvent.setup();
+    mocks.user.getIdToken.mockResolvedValue('token');
+    mocks.queryCollection
+      .mockResolvedValueOnce([{
+        id: 'semester-1',
+        label: 'Year 3 â€” First Semester',
+        session: '2025/2026',
+        level: 300,
+        semester: 1,
+        gpa: 4.2,
+        pi: 4.1,
+        creditLoaded: 18,
+        isComplete: true,
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({ shareUrl: 'https://grade.example/share/abc' }),
+    }));
+
+    render(<TranscriptPage />);
+
+    const shareButton = await screen.findByRole('button', { name: /share link/i });
+    await user.click(shareButton);
+
+    const dialog = await screen.findByRole('dialog', { name: /transcript shared/i });
+    expect(dialog).toHaveAccessibleDescription(/expires in 30 days/i);
+    expect(screen.getByRole('textbox', { name: /shared transcript link/i })).toHaveValue('https://grade.example/share/abc');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(shareButton).toHaveFocus());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /transcript shared/i })).not.toBeInTheDocument());
   });
 });

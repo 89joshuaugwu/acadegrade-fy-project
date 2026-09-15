@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import InsightsPage from '@/app/(student)/insights/page';
 
@@ -44,6 +44,11 @@ describe('Insights tabs accessibility and motion preferences', () => {
     mocks.reducedMotion = false;
     mocks.queryCollection.mockReset().mockResolvedValue([]);
     mocks.getDocument.mockReset().mockResolvedValue(null);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('connects tabs to panels and supports automatic arrow, Home, and End navigation', async () => {
@@ -102,5 +107,39 @@ describe('Insights tabs accessibility and motion preferences', () => {
 
     await waitFor(() => expect(screen.getByTestId('insights-scanner')).toHaveAttribute('data-animated', 'true'));
     expect(screen.getByTestId('insights-loading-glow')).toHaveClass('animate-pulse');
+  });
+
+  it('shows a recoverable error without presenting fallback analysis as valid data', async () => {
+    const user = userEvent.setup();
+    mocks.queryCollection
+      .mockRejectedValueOnce(new Error('Firestore unavailable'))
+      .mockResolvedValueOnce([]);
+
+    render(<InsightsPage />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/couldn.t load your insights/i);
+    expect(screen.getByRole('button', { name: /retry loading insights/i })).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(screen.queryByText(/stable performance/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/keep up the consistent work/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1 = safe, 5 = critical/i)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /retry loading insights/i }));
+
+    expect(await screen.findByRole('tab', { name: 'Forecast' })).toBeInTheDocument();
+    expect(screen.getByText(/not enough data to forecast/i)).toBeInTheDocument();
+  });
+
+  it('does not manufacture a safe risk assessment when no forecast exists', async () => {
+    const user = userEvent.setup();
+    render(<InsightsPage />);
+
+    await user.click(await screen.findByRole('tab', { name: 'Risk Analysis' }));
+
+    expect(screen.getByRole('heading', { name: /risk analysis unavailable/i })).toBeInTheDocument();
+    expect(screen.queryByText(/stable performance/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/keep up the consistent work/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1 = safe, 5 = critical/i)).not.toBeInTheDocument();
   });
 });

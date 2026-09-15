@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   updateDocument: vi.fn(),
   deleteDocument: vi.fn(),
   setRTDB: vi.fn(),
+  toastError: vi.fn(),
   shouldReduceMotion: false,
 }));
 
@@ -26,6 +27,10 @@ vi.mock('@/lib/firebase/firestore', () => ({
 
 vi.mock('@/lib/firebase/rtdb', () => ({ setRTDB: mocks.setRTDB }));
 
+vi.mock('react-hot-toast', () => ({
+  default: { error: mocks.toastError },
+}));
+
 import NotificationsPage from '@/app/(student)/notifications/page';
 
 const timestamp = {
@@ -38,6 +43,7 @@ describe('notification accessibility', () => {
     mocks.updateDocument.mockReset().mockResolvedValue(undefined);
     mocks.deleteDocument.mockReset().mockResolvedValue(undefined);
     mocks.setRTDB.mockReset().mockResolvedValue(undefined);
+    mocks.toastError.mockReset();
     mocks.shouldReduceMotion = false;
   });
 
@@ -90,5 +96,68 @@ describe('notification accessibility', () => {
 
     const row = await screen.findByRole('article', { name: 'Record saved' });
     expect(row).toHaveAttribute('data-reduced-motion', 'true');
+  });
+
+  it('shows a retryable load failure instead of the empty inbox state', async () => {
+    const user = userEvent.setup();
+    mocks.queryCollection.mockRejectedValue(new Error('offline'));
+
+    render(<NotificationsPage />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Notifications are unavailable');
+    expect(screen.queryByText('All caught up!')).not.toBeInTheDocument();
+
+    const callsBeforeRetry = mocks.queryCollection.mock.calls.length;
+    mocks.queryCollection.mockResolvedValue([]);
+    await user.click(screen.getByRole('button', { name: /try again/i }));
+
+    expect(await screen.findByText('All caught up!')).toBeInTheDocument();
+    expect(mocks.queryCollection.mock.calls.length).toBeGreaterThan(callsBeforeRetry);
+  });
+
+  it('keeps an unread notification visible and reports a mark-read failure', async () => {
+    const user = userEvent.setup();
+    mocks.queryCollection.mockResolvedValue([
+      {
+        id: 'notification-1',
+        type: 'info',
+        title: 'Semester updated',
+        message: 'Your semester calculation is ready.',
+        read: false,
+        createdAt: timestamp,
+      },
+    ]);
+    mocks.updateDocument.mockRejectedValueOnce(new Error('offline'));
+
+    render(<NotificationsPage />);
+    await user.click(await screen.findByRole('button', { name: /Mark .*Semester updated.* as read/ }));
+
+    await waitFor(() => {
+      expect(mocks.toastError).toHaveBeenCalledWith('Could not mark the notification as read. Try again.');
+    });
+    expect(screen.getByRole('button', { name: /Mark .*Semester updated.* as read/ })).toBeInTheDocument();
+  });
+
+  it('keeps notifications visible and reports a clear-all failure', async () => {
+    const user = userEvent.setup();
+    mocks.queryCollection.mockResolvedValue([
+      {
+        id: 'notification-1',
+        type: 'info',
+        title: 'Semester updated',
+        message: 'Your semester calculation is ready.',
+        read: true,
+        createdAt: timestamp,
+      },
+    ]);
+    mocks.deleteDocument.mockRejectedValueOnce(new Error('offline'));
+
+    render(<NotificationsPage />);
+    await user.click(await screen.findByRole('button', { name: /clear all/i }));
+
+    await waitFor(() => {
+      expect(mocks.toastError).toHaveBeenCalledWith('Could not clear notifications. Try again.');
+    });
+    expect(screen.getByRole('article', { name: 'Semester updated' })).toBeInTheDocument();
   });
 });

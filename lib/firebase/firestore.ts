@@ -16,6 +16,8 @@ import {
 } from 'firebase/firestore';
 import { db } from './client';
 
+export type SubscriptionErrorCallback = (error: Error) => void;
+
 /**
  * Firestore helper utilities for client-side operations.
  * These wrap the modular Firestore SDK for common patterns.
@@ -76,32 +78,47 @@ export async function queryCollection<T>(
 /** Subscribe to a document with real-time updates */
 export function subscribeToDocument<T>(
   path: string,
-  callback: (data: T | null) => void
+  callback: (data: T | null) => void,
+  onError?: SubscriptionErrorCallback
 ): () => void {
   const docRef = doc(db, path);
-  return onSnapshot(docRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback(null);
-      return;
-    }
-    callback({ id: snapshot.id, ...snapshot.data() } as T);
-  });
+  return onSnapshot(
+    docRef,
+    (snapshot) => {
+      if (!snapshot.exists()) {
+        callback(null);
+        return;
+      }
+      callback({ id: snapshot.id, ...snapshot.data() } as T);
+    },
+    onError
+  );
 }
 
 /** Subscribe to a collection with real-time updates */
 export function subscribeToCollection<T>(
   collectionPath: string,
   callback: (data: T[]) => void,
-  ...constraints: QueryConstraint[]
+  ...constraintsOrError: Array<QueryConstraint | SubscriptionErrorCallback>
 ): () => void {
+  const onError = constraintsOrError.find(
+    (value): value is SubscriptionErrorCallback => typeof value === 'function'
+  );
+  const constraints = constraintsOrError.filter(
+    (value): value is QueryConstraint => typeof value !== 'function'
+  );
   const ref = collection(db, collectionPath);
   const q = query(ref, ...constraints);
-  return onSnapshot(q, (snapshot) => {
-    const results = snapshot.docs.map(
-      (docSnap) => ({ id: docSnap.id, ...docSnap.data() }) as T
-    );
-    callback(results);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const results = snapshot.docs.map(
+        (docSnap) => ({ id: docSnap.id, ...docSnap.data() }) as T
+      );
+      callback(results);
+    },
+    onError
+  );
 }
 
 /** Re-export commonly used Firestore functions */

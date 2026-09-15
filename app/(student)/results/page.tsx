@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, ChevronDown, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Edit2, AlertCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -149,7 +149,7 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
 }
 
 export default function ResultsListPage() {
-  const { semesters, loading } = useSemesters();
+  const { semesters, loading, error, retry } = useSemesters();
   const { isFeatureDisabled } = usePlatformSettings();
   const shouldReduceMotion = useReducedMotion();
   const disableAddSemester = isFeatureDisabled('add_semester');
@@ -159,6 +159,36 @@ export default function ResultsListPage() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <section
+        role="alert"
+        aria-labelledby="results-load-error-title"
+        className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-6 text-center sm:p-8"
+      >
+        <span className="flex size-12 items-center justify-center rounded-full bg-[var(--acade-warning)]/10 text-[var(--acade-warning)]">
+          <AlertCircle className="size-6" aria-hidden="true" />
+        </span>
+        <h1
+          id="results-load-error-title"
+          className="mt-4 font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-semibold text-[var(--acade-text)]"
+        >
+          Your results could not load
+        </h1>
+        <p className="mt-2 max-w-md text-sm leading-6 text-[var(--acade-text-muted)]">
+          Check your connection and try again. Your saved semesters have not been changed.
+        </p>
+        <button
+          type="button"
+          onClick={retry}
+          className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--acade-primary)] px-5 text-sm font-semibold text-[var(--acade-on-primary)] hover:bg-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+        >
+          <RefreshCw className="size-4" aria-hidden="true" /> Try again
+        </button>
+      </section>
     );
   }
 

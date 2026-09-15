@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2, Lightbulb } from 'lucide-react';
+import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2, Lightbulb, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 import { motion, AnimatePresence } from 'motion/react';
 import { formatDistanceToNow } from 'date-fns';
@@ -30,6 +31,8 @@ export default function NotificationsPage() {
   const shouldReduceMotion = useReducedMotion();
   const [notifications, setNotifications] = useState<NotificationWithId[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -46,6 +49,7 @@ export default function NotificationsPage() {
       setNotifications(items);
     } catch (err) {
       console.error(err);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -55,43 +59,63 @@ export default function NotificationsPage() {
     if (user) loadNotifications();
   }, [loadNotifications, user]);
 
+  const retryNotifications = () => {
+    setLoading(true);
+    setLoadError(false);
+    void loadNotifications();
+  };
+
   const handleMarkAsRead = async (id: string) => {
-    if (!user) return;
+    if (!user || pendingAction) return;
+    setPendingAction(id);
     try {
       await updateDocument(`notifications/${user.uid}/items/${id}`, { read: true });
       const updated = notifications.map(n => n.id === id ? { ...n, read: true } : n);
-      setNotifications(updated);
-      
       const newUnreadCount = updated.filter(n => !n.read).length;
       await setRTDB(`notif_counts/${user.uid}/unread`, newUnreadCount);
+      setNotifications(updated);
     } catch (err) {
       console.error(err);
+      toast.error('Could not mark the notification as read. Try again.');
+    } finally {
+      setPendingAction(null);
     }
   };
 
   const handleMarkAllRead = async () => {
-    if (!user) return;
+    if (!user || pendingAction) return;
     const unread = notifications.filter(n => !n.read);
     if (unread.length === 0) return;
-    
-    await Promise.all(
-      unread.map(n => updateDocument(`notifications/${user.uid}/items/${n.id}`, { read: true }))
-    );
-    
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    await setRTDB(`notif_counts/${user.uid}/unread`, 0);
+
+    setPendingAction('mark-all');
+    try {
+      await Promise.all(
+        unread.map(n => updateDocument(`notifications/${user.uid}/items/${n.id}`, { read: true }))
+      );
+      await setRTDB(`notif_counts/${user.uid}/unread`, 0);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+      toast.error('Could not mark all notifications as read. Try again.');
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleClearAll = async () => {
-    if (!user || notifications.length === 0) return;
+    if (!user || notifications.length === 0 || pendingAction) return;
+    setPendingAction('clear-all');
     try {
       await Promise.all(
         notifications.map(n => deleteDocument(`notifications/${user.uid}/items/${n.id}`))
       );
-      setNotifications([]);
       await setRTDB(`notif_counts/${user.uid}/unread`, 0);
+      setNotifications([]);
     } catch (err) {
       console.error('Failed to clear notifications:', err);
+      toast.error('Could not clear notifications. Try again.');
+    } finally {
+      setPendingAction(null);
     }
   };
 
@@ -119,12 +143,12 @@ export default function NotificationsPage() {
         
         <div className="flex flex-wrap items-center gap-2">
           {unreadCount > 0 && (
-            <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+            <Button variant="outline" size="sm" onClick={handleMarkAllRead} loading={pendingAction === 'mark-all'} disabled={pendingAction !== null}>
               <CheckCheck size={16} className="mr-2" /> Mark all read
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button variant="danger" size="sm" onClick={handleClearAll} className="bg-[var(--acade-danger-dim)] text-[var(--acade-danger)] hover:bg-[var(--acade-danger)] hover:text-white border-transparent">
+            <Button variant="danger" size="sm" onClick={handleClearAll} loading={pendingAction === 'clear-all'} disabled={pendingAction !== null} className="bg-[var(--acade-danger-dim)] text-[var(--acade-danger)] hover:bg-[var(--acade-danger)] hover:text-white border-transparent">
               <Trash2 size={16} className="mr-2" /> Clear all
             </Button>
           )}
@@ -132,7 +156,18 @@ export default function NotificationsPage() {
       </div>
 
       <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden shadow-sm">
-        {notifications.length === 0 ? (
+        {loadError ? (
+          <div role="alert" className="p-8 text-center text-[var(--acade-text-muted)] sm:p-12">
+            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-[var(--acade-danger-dim)]">
+              <AlertTriangle size={24} className="text-[var(--acade-danger)]" aria-hidden="true" />
+            </div>
+            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">Notifications are unavailable</h2>
+            <p className="mx-auto mt-1 max-w-md text-[length:var(--text-sm)]">We could not load your updates. Check your connection and try again.</p>
+            <Button variant="outline" size="sm" onClick={retryNotifications} className="mt-5">
+              <RefreshCw size={16} className="mr-2" aria-hidden="true" /> Try again
+            </Button>
+          </div>
+        ) : notifications.length === 0 ? (
           <div className="p-12 text-center text-[var(--acade-text-muted)]">
             <div className="mx-auto w-16 h-16 bg-[var(--acade-deep)] rounded-full flex items-center justify-center mb-4">
               <Bell size={24} className="text-[var(--acade-text-faint)]" />
@@ -171,6 +206,7 @@ export default function NotificationsPage() {
                       type="button"
                       aria-label={`Mark “${notif.title}” as read`}
                       onClick={() => handleMarkAsRead(notif.id)}
+                      disabled={pendingAction !== null}
                       className="flex w-full gap-4 p-4 text-left transition-colors hover:bg-[var(--acade-primary-dim)]/80 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acade-primary)] motion-reduce:transition-none sm:p-6"
                     >
                       <NotificationContent notification={notif} />

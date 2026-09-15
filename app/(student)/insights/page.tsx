@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/Badge';
 import { InsightCard } from '@/components/ai/InsightCard';
 import { WhatIfCalculator } from '@/components/ai/WhatIfCalculator';
 import { ForecastChart } from '@/components/charts/ForecastChart';
+import { ErrorState } from '@/components/shared';
 
 import type { SemesterWithId } from '@/types/semester';
 import type { Course } from '@/types/course';
@@ -55,6 +56,7 @@ export default function InsightsPage() {
   
   const [activeTab, setActiveTab] = useState<TabType>('forecast');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [rateLimitError, setRateLimitError] = useState(false);
   const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
@@ -144,6 +146,7 @@ export default function InsightsPage() {
     if (!user) return;
     try {
       if (!forceRefresh) setLoading(true);
+      setLoadError(false);
       setRateLimitError(false);
 
       // 1. Fetch semesters
@@ -311,6 +314,7 @@ export default function InsightsPage() {
       setAnalytics(analyticsData || null);
     } catch (err) {
       console.error('loadData error:', err);
+      setLoadError(true);
       toast.error('Failed to load insights.');
     } finally {
       setLoading(false);
@@ -385,6 +389,27 @@ export default function InsightsPage() {
             Analyzing academic records...
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto max-w-3xl pb-10">
+        <div className="mb-6">
+          <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-danger)]">
+            Insights unavailable
+          </p>
+          <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+            Your analysis is paused
+          </h1>
+        </div>
+        <ErrorState
+          title="We couldn&apos;t load your insights"
+          description="Forecasts, risk scoring, and written analysis are hidden until your academic data loads successfully. No result has been changed."
+          retryLabel="Retry loading insights"
+          onRetry={() => void loadData()}
+        />
       </div>
     );
   }
@@ -486,6 +511,25 @@ export default function InsightsPage() {
         );
 
       case 'risk':
+        if (!analytics?.forecast) {
+          return (
+            <motion.div
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
+              className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-6 py-10 text-center"
+            >
+              <AlertTriangle className="mx-auto size-7 text-[var(--acade-warning)]" aria-hidden="true" />
+              <h2 className="mt-4 font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">
+                Risk analysis unavailable
+              </h2>
+              <p className="mx-auto mt-2 max-w-lg text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
+                AcadeMind does not have a verified forecast to assess yet. Add completed semester data or refresh later; no risk level has been assigned.
+              </p>
+            </motion.div>
+          );
+        }
+
         return (
           <motion.div
             initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}

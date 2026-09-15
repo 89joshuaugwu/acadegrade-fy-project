@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Share2, Printer, Link2, Copy, Check, X, ImageIcon, AlertTriangle, FileText } from 'lucide-react';
+import { Download, Share2, Printer, Link2, Copy, Check, Trash2, ImageIcon, AlertTriangle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { queryCollection, deleteDocument, where } from '@/lib/firebase/firestore';
 import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { EmptyState, ErrorState } from '@/components/shared';
 import { cn } from '@/lib/utils/cn';
@@ -342,11 +343,22 @@ export default function TranscriptPage() {
                     </a>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="outline" size="sm" onClick={() => handleCopyLinkText(url)}>
-                      <Copy size={14} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      aria-label="Copy shared transcript link"
+                      onClick={() => handleCopyLinkText(url)}
+                    >
+                      <Copy size={14} aria-hidden="true" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteShare(link.id)} className="text-[var(--acade-danger)]">
-                      <X size={14} />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label="Delete shared transcript link"
+                      onClick={() => handleDeleteShare(link.id)}
+                      className="text-[var(--acade-danger)]"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
                     </Button>
                   </div>
                 </div>
@@ -356,94 +368,58 @@ export default function TranscriptPage() {
         </div>
       )}
 
-      {/* Share Link Modal */}
-      {shareModalOpen && shareUrl && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden" style={{ zIndex: 9999 }}>
-          <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
-            <button
-              onClick={() => setShareModalOpen(false)}
-              className="absolute top-4 right-4 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors"
-            >
-              <X size={20} />
-            </button>
-            
-            <div className="text-center space-y-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--acade-primary)]/10 flex items-center justify-center mx-auto">
-                <Share2 size={24} className="text-[var(--acade-primary)]" />
-              </div>
-              <h3 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)]">
-                Transcript Shared!
-              </h3>
-              <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-                Anyone with this link can view your transcript. The link expires in 30 days.
-              </p>
-
-              {/* QR Code */}
-              <div className="bg-white rounded-xl p-4 inline-block mx-auto">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=4f46e5`}
-                  alt="QR Code"
-                  width={180}
-                  height={180}
-                  className="mx-auto"
-                />
-              </div>
-
-              {/* Link + Copy */}
-              <div className="flex items-center gap-2 bg-[var(--acade-deep)] rounded-xl p-2 border border-[var(--acade-border-subtle)]">
-                <input
-                  readOnly
-                  value={shareUrl}
-                  className="flex-1 bg-transparent text-[length:var(--text-sm)] text-[var(--acade-text)] px-2 outline-none truncate"
-                />
-                <Button variant="primary" size="sm" onClick={handleCopyLink} className="shrink-0 gap-1.5">
-                  {copied ? <Check size={14} /> : <Copy size={14} />}
-                  {copied ? 'Copied' : 'Copy'}
-                </Button>
-              </div>
+      <Modal
+        open={shareModalOpen && Boolean(shareUrl)}
+        onClose={() => setShareModalOpen(false)}
+        title="Transcript shared"
+        description="Anyone with this link can view your transcript. The link expires in 30 days."
+        className="print:hidden"
+      >
+        {shareUrl && (
+          <div className="space-y-5 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-[var(--acade-primary)]/10">
+              <Share2 size={24} className="text-[var(--acade-primary)]" aria-hidden="true" />
+            </div>
+            <div className="mx-auto inline-block rounded-xl bg-white p-4">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=4f46e5`}
+                alt="QR code for the shared transcript link"
+                width={180}
+                height={180}
+                className="mx-auto"
+              />
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-2">
+              <input
+                aria-label="Shared transcript link"
+                readOnly
+                value={shareUrl}
+                className="min-w-0 flex-1 truncate bg-transparent px-2 text-[length:var(--text-sm)] text-[var(--acade-text)] outline-none"
+              />
+              <Button variant="primary" size="sm" onClick={handleCopyLink} className="shrink-0 gap-1.5">
+                {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmId && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 print:hidden" style={{ zIndex: 9999 }}>
-          <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
-            <button
-              onClick={() => setDeleteConfirmId(null)}
-              className="absolute top-4 right-4 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors"
-            >
-              <X size={20} />
-            </button>
-            
-            <div className="text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[var(--acade-danger)]/10 flex items-center justify-center mx-auto">
-                <AlertTriangle size={24} className="text-[var(--acade-danger)]" />
-              </div>
-              <div>
-                <h3 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
-                  Delete Shared Link?
-                </h3>
-                <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-2">
-                  This transcript will be permanently unshared. Anyone with the link will no longer have access.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmId(null)}>
-                  Cancel
-                </Button>
-                <Button 
-                  className="flex-1 bg-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/90 text-white border-transparent"
-                  onClick={confirmDeleteShare}
-                >
-                  Delete Link
-                </Button>
-              </div>
-            </div>
-          </div>
+      <Modal
+        open={Boolean(deleteConfirmId)}
+        onClose={() => setDeleteConfirmId(null)}
+        title="Delete shared link?"
+        description="This transcript will be permanently unshared. Anyone with the link will no longer have access."
+        confirm={{ label: 'Delete link', onConfirm: () => void confirmDeleteShare() }}
+        className="print:hidden"
+      >
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--acade-danger)]/25 bg-[var(--acade-danger-dim)] p-4">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[var(--acade-danger)]" aria-hidden="true" />
+          <p className="text-left text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
+            Delete this link only if you no longer want recipients to access this transcript.
+          </p>
         </div>
-      )}
+      </Modal>
 
       {/* Transcript Paper Preview */}
       <div className="transcript-paper bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden">

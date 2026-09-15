@@ -79,10 +79,8 @@ export default function NewSemesterPage() {
         <Card variant="default" padding="lg">
           <div className="flex flex-col gap-6">
             <div>
-              <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-2 block">
-                Level
-              </label>
               <Select
+                label="Level"
                 options={programmeLevels.map(l => ({ value: String(l), label: `${l} Level` }))}
                 value={String(level)}
                 onChange={(val) => setLevel(Number(val))}
@@ -90,10 +88,8 @@ export default function NewSemesterPage() {
             </div>
 
             <div>
-              <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-2 block">
-                Semester
-              </label>
               <Select
+                label="Semester"
                 options={[
                   { value: '1', label: 'First Semester' },
                   { value: '2', label: 'Second Semester' },
