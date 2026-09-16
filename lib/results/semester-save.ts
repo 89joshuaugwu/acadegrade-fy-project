@@ -1,7 +1,6 @@
 import { computeCourseMetrics, computeSemesterGPA } from '@/lib/cgpa/calculator';
 import type { CourseInput, CourseMetrics, Grade } from '@/types/course';
 
-const GRADES: readonly Grade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
 const MAX_COURSES_PER_SEMESTER = 100;
 
 export interface PreparedCourse {
@@ -88,7 +87,7 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
     const hasCA = caScore !== null;
     const hasExam = examScore !== null;
     if (hasCA !== hasExam) {
-      throw new SemesterSaveValidationError(`${code}: enter both CA and exam scores, or use a letter grade.`);
+      throw new SemesterSaveValidationError(`${code}: enter both CA and exam scores so the grade can be calculated.`);
     }
     if (hasCA && (caScore < 0 || caScore > 30)) {
       throw new SemesterSaveValidationError(`${code}: CA score must be between 0 and 30.`);
@@ -97,9 +96,8 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
       throw new SemesterSaveValidationError(`${code}: exam score must be between 0 and 70.`);
     }
 
-    const grade = GRADES.includes(input.grade as Grade) ? input.grade as Grade : undefined;
-    if (!hasCA && !hasExam && !grade) {
-      throw new SemesterSaveValidationError(`${code}: enter CA and exam scores, or select a letter grade.`);
+    if (!hasCA && !hasExam) {
+      throw new SemesterSaveValidationError(`${code}: enter CA and exam scores so the grade can be calculated.`);
     }
 
     const metrics = computeCourseMetrics({
@@ -108,7 +106,6 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
       units,
       caScore,
       examScore,
-      ...(grade ? { grade } : {}),
     });
     contributingMetrics.push(metrics);
 

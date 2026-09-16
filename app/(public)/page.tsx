@@ -32,7 +32,7 @@ export default function LandingPage() {
               <div className="mobile-showcase-scrim absolute inset-0 z-10" aria-hidden="true" />
 
               <div className="mobile-showcase-copy relative z-20 px-5 pb-24 pt-8 sm:px-8 md:w-[45%] md:py-10" data-landing-motion="section">
-                <p className="text-sm font-semibold text-[var(--acade-primary)]">AcadeGrade for mobile</p>
+                <p data-landing-motion="type" className="marketing-type-line text-sm font-semibold text-[var(--acade-primary)]">AcadeGrade for mobile</p>
                 <h2 id="mobile-product-title" className="mt-2 max-w-[17ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-semibold leading-[1.06] tracking-[-0.04em]">
                   Your academic record, ready when you are.
                 </h2>

@@ -42,7 +42,7 @@ describe('AcadeGrade landing presentation', () => {
       '/calculator'
     );
     expect(screen.getByText(/private by default/i)).toBeInTheDocument();
-    expect(screen.getByText(/record · understand · plan/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/record results\. understand progress\. plan what comes next\./i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /student holding a phone showing the acadegrade academic dashboard/i })).toBeInTheDocument();
     expect(screen.getByText(/session and level aware/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('marketing-stagger');

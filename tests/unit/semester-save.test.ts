@@ -27,19 +27,10 @@ describe('prepareSemesterSave', () => {
     expect(Object.values(result.courses[0])).not.toContain(undefined);
   });
 
-  it('supports a letter-grade-only record without turning it into a zero score', () => {
-    const result = prepareSemesterSave([
+  it('rejects letter-grade-only records because grades are derived from CA and exam scores', () => {
+    expect(() => prepareSemesterSave([
       { code: 'CSC 463', title: 'Software Engineering', units: 3, caScore: null, examScore: null, grade: 'B' },
-    ]);
-
-    expect(result.courses[0]).toMatchObject({
-      totalScore: null,
-      grade: 'B',
-      gradePoint: 4,
-      piPoint: 4,
-      estimated: true,
-    });
-    expect(result.summary).toMatchObject({ gpa: 4, pi: 4, creditLoaded: 3, isComplete: true });
+    ])).toThrow('enter CA and exam scores so the grade can be calculated');
   });
 
   it('rejects partial scores instead of silently replacing the missing value with zero', () => {

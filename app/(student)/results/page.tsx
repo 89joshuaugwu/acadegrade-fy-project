@@ -55,33 +55,36 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
       {/* Header (Clickable) */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 md:p-5 flex items-center justify-between hover:bg-[var(--acade-overlay)] transition-colors text-left"
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4 text-left transition-colors hover:bg-[var(--acade-overlay)] md:p-5"
       >
-        <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-          <Badge variant="status" className="font-[family-name:var(--font-geist-mono)]">
-            {semester.level}L S{semester.semester}
-          </Badge>
-          <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-            {semester.label}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:inline-block">
-              GPA:
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2.5 md:gap-4">
+            <Badge variant="status" className="shrink-0 font-[family-name:var(--font-geist-mono)]">
+              {semester.level}L S{semester.semester}
+            </Badge>
+            <span className="min-w-0 truncate text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+              {semester.label}
             </span>
+          </div>
+          <div className="mt-2 flex items-center gap-4 pl-0.5 md:mt-0 md:inline-flex md:pl-4">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--acade-text-muted)] md:text-[length:var(--text-sm)] md:normal-case md:tracking-normal">
+                GPA
+              </span>
             <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)]">
               {semester.gpa.toFixed(2)}
             </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:inline-block">
-              CU:
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--acade-text-muted)] md:text-[length:var(--text-sm)] md:normal-case md:tracking-normal">
+                Credits
             </span>
             <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
               {semester.creditLoaded}
             </span>
-          </div>
+            </div>
           {!semester.isComplete && (
-            <div className="ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)]/30 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+            <div className="flex items-center gap-1.5 rounded-full border border-[var(--acade-warning)]/30 bg-[var(--acade-warning)]/10 px-2 py-1 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-warning)] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--acade-warning)]"></span>
@@ -89,6 +92,7 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
               <span className="text-[10px] font-bold text-[var(--acade-warning)] uppercase tracking-wider">Ongoing</span>
             </div>
           )}
+          </div>
         </div>
         <motion.div
           animate={{ rotate: isExpanded ? 180 : 0 }}

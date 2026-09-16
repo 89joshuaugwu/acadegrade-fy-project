@@ -13,6 +13,11 @@ const { chromium } = require('@playwright/test');
     await page.goto(process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000');
     await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(() => document.querySelector('.academic-proof-deck').style.getPropertyValue('--proof-stack-height'));
+    const expressiveMotion = await page.evaluate(() => ({
+      phrase: getComputedStyle(document.querySelector('.marketing-phrase-loop > span')).animationName,
+      color: getComputedStyle(document.querySelector('[data-text-effect="color-flow"]')).animationName,
+    }));
+    assert.deepEqual(expressiveMotion, { phrase: 'landing-phrase-cycle', color: 'landing-color-flow' });
     for (const width of [1440, 1024]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -32,15 +37,15 @@ const { chromium } = require('@playwright/test');
       await page.emulateMedia({ colorScheme: theme === 'light' ? 'dark' : 'light' });
       await page.getByRole('radio', { name: theme === 'light' ? 'Light' : 'Dark', exact: true }).first().click();
       await page.waitForFunction(theme => document.documentElement.classList.contains(theme), theme);
-      assert.equal(await page.locator(`.mobile-showcase-${theme}`).isVisible(), true);
-      assert.equal(await page.locator(`.mobile-showcase-${theme === 'light' ? 'dark' : 'light'}`).isVisible(), false);
+      assert.equal(await page.locator(`.mobile-showcase-${theme}:visible`).count(), 1);
+      assert.equal(await page.locator(`.mobile-showcase-${theme === 'light' ? 'dark' : 'light'}:visible`).count(), 0);
       const panel = await page.locator('.mobile-showcase-copy').evaluate(el => {
         const style = getComputedStyle(el);
         return { background: style.backgroundColor, shadow: style.boxShadow, border: style.borderTopWidth };
       });
       assert.deepEqual(panel, { background: 'rgba(0, 0, 0, 0)', shadow: 'none', border: '0px' });
       await page.locator('.mobile-showcase').scrollIntoViewIfNeeded();
-      await page.locator(`.mobile-showcase-${theme}`).evaluate(image => image.decode());
+      await page.locator(`.mobile-showcase-${theme}:visible`).evaluate(image => image.decode());
       await page.locator('.mobile-showcase').screenshot({ path: `.superdesign/tmp/showcase-${theme}.png` });
     }
     for (const width of [375, 768]) {
@@ -50,7 +55,19 @@ const { chromium } = require('@playwright/test');
       for (let i = 1; i < cards.length; i++) assert.ok(cards[i].top >= cards[i - 1].bottom + 20, 'Mobile cards must not overlap');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No mobile horizontal overflow');
       await page.locator('.mobile-showcase').scrollIntoViewIfNeeded();
-      await page.locator('.mobile-showcase-dark').evaluate(image => image.decode());
+      if (width === 375) {
+        await page.evaluate(() => {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.classList.add('light');
+        });
+        await page.locator('.mobile-showcase-light.mobile-showcase-art-mobile:visible').evaluate(image => image.decode());
+        await page.locator('.mobile-showcase').screenshot({ path: '.superdesign/tmp/showcase-mobile-light.png' });
+        await page.evaluate(() => {
+          document.documentElement.classList.remove('light');
+          document.documentElement.classList.add('dark');
+        });
+      }
+      await page.locator('.mobile-showcase-dark:visible').evaluate(image => image.decode());
       if (width === 375) await page.locator('.mobile-showcase').screenshot({ path: '.superdesign/tmp/showcase-mobile.png' });
     }
     await page.locator('.mobile-showcase').screenshot({ path: '.superdesign/tmp/showcase-tablet.png' });
@@ -62,6 +79,11 @@ const { chromium } = require('@playwright/test');
     }));
     assert.ok(reduced.length > 10, 'Landing motion targets must be integrated');
     reduced.forEach(style => assert.deepEqual(style, { animation: 'none', delay: '0s', opacity: '1', transform: 'none' }));
+    const reducedExpressiveMotion = await page.evaluate(() => ({
+      phrase: getComputedStyle(document.querySelector('.marketing-phrase-loop > span')).animationName,
+      color: getComputedStyle(document.querySelector('[data-text-effect="color-flow"]')).animationName,
+    }));
+    assert.deepEqual(reducedExpressiveMotion, { phrase: 'none', color: 'none' });
     const staticCards = await page.locator('.academic-proof-card').evaluateAll(cards => cards.map(card => ({ top: card.getBoundingClientRect().top, bottom: card.getBoundingClientRect().bottom })));
     for (let i = 1; i < staticCards.length; i++) assert.ok(staticCards[i].top >= staticCards[i - 1].bottom + 20, 'Reduced-motion deck remains readable');
     const noJS = await browser.newContext({ javaScriptEnabled: false });

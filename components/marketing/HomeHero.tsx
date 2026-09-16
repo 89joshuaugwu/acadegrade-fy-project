@@ -31,12 +31,16 @@ export function HomeHero() {
               Your degree, made easier to read
             </div>
 
-            <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
-              Record · Understand · Plan
+            <p aria-label="Record results. Understand progress. Plan what comes next." className="flex items-center font-[family-name:var(--font-geist-mono)] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
+              <span aria-hidden="true" className="marketing-phrase-loop">
+                <span>Record results.</span>
+                <span>Understand progress.</span>
+                <span>Plan what comes next.</span>
+              </span>
             </p>
 
             <h1 data-landing-motion="hero" id="home-hero-title" className="mt-6 max-w-[11ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.75rem,5.6vw,4.25rem)] font-bold leading-[1.01] tracking-[-0.052em] text-[var(--acade-text)]">
-              See the path behind every result.
+              See the <span data-text-effect="color-flow">path</span> behind every result.
             </h1>
             <p data-landing-motion="hero-copy" className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
               Record each semester, understand your CGPA and performance signals, then plan your next academic move with evidence you can inspect.

@@ -94,7 +94,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     setTimeout(() => setShakeId(null), 500);
   };
 
-  const computeRow = useCallback((ca: number | null, exam: number | null, letterGrade?: Grade, isAR?: boolean) => {
+  const computeRow = useCallback((ca: number | null, exam: number | null, isAR?: boolean) => {
     if (isAR) {
       return { totalScore: null, grade: 'AR', gradePoint: 0, piPoint: 0 };
     }
@@ -102,10 +102,6 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       const totalScore = ca + exam;
       const scale = GRADE_SCALE.find(g => totalScore >= g.minScore && totalScore <= g.maxScore) || GRADE_SCALE[GRADE_SCALE.length - 1];
       return { totalScore, grade: scale.grade, gradePoint: scale.gradePoint, piPoint: (totalScore / 100) * 5 };
-    }
-    if (letterGrade) {
-      const gradePoint = { A: 5, B: 4, C: 3, D: 2, E: 1, F: 0 }[letterGrade];
-      return { totalScore: null, grade: letterGrade, gradePoint, piPoint: gradePoint };
     }
     return { totalScore: null, grade: null, gradePoint: 0, piPoint: 0 };
   }, []);
@@ -118,7 +114,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     const gradeCount: Record<Grade, number> = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0 };
 
     courses.forEach(c => {
-      const { grade, gradePoint, piPoint } = computeRow(c.caScore, c.examScore, c.grade, c.isAR);
+      const { grade, gradePoint, piPoint } = computeRow(c.caScore, c.examScore, c.isAR);
       if (grade && grade !== 'AR') {
         totalUnits += c.units;
         totalGP += gradePoint * c.units;
@@ -150,15 +146,25 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
         aria-label="Mobile course editor"
         aria-describedby="mobile-course-editor-help"
         tabIndex={0}
-        className="w-full overflow-x-auto rounded-xl border border-[var(--acade-border)] custom-scrollbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] md:hidden"
+        className="w-full overflow-x-auto overscroll-x-contain rounded-xl border border-[var(--acade-border)] custom-scrollbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] md:hidden"
       >
-        <p id="mobile-course-editor-help" className="sticky left-0 z-30 w-44 border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)]">
+        <p id="mobile-course-editor-help" className="sticky left-0 z-30 w-[9.25rem] border-b border-r border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)] shadow-[8px_0_16px_-14px_rgba(0,0,0,0.9)]">
           Swipe sideways to edit every result field.
         </p>
-        <table aria-label={editable ? 'Editable course results' : 'Course results'} className="min-w-[680px] border-collapse text-left">
+        <table aria-label={editable ? 'Editable course results' : 'Course results'} className="w-[690px] table-fixed border-collapse text-left">
+          <colgroup>
+            <col className="w-[9.25rem]" />
+            <col className="w-[4.5rem]" />
+            <col className="w-[4.75rem]" />
+            <col className="w-[4.75rem]" />
+            <col className="w-[4.25rem]" />
+            <col className="w-[4.5rem]" />
+            <col className="w-[3.75rem]" />
+            <col className="w-[4.25rem]" />
+          </colgroup>
           <thead>
             <tr className="border-b border-[var(--acade-border)] bg-[var(--acade-deep)] text-[10px] font-bold uppercase tracking-wide text-[var(--acade-text-muted)]">
-              <th scope="col" className="sticky left-0 z-30 w-44 bg-[var(--acade-deep)] px-3 py-2 shadow-[6px_0_12px_-10px_rgba(0,0,0,0.8)]">Course</th>
+              <th scope="col" className="sticky left-0 z-30 border-r border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-2 shadow-[8px_0_16px_-14px_rgba(0,0,0,0.9)]">Course</th>
               <th scope="col" className="w-[70px] px-2 py-2 text-center">Units</th>
               <th scope="col" className="w-[74px] px-2 py-2 text-center">CA /30</th>
               <th scope="col" className="w-[74px] px-2 py-2 text-center">Exam /70</th>
@@ -171,7 +177,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <tbody>
             <AnimatePresence initial={false}>
               {courses.map((course, idx) => {
-                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.grade, course.isAR);
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
                 const courseName = course.code || `course ${idx + 1}`;
 
                 return (
@@ -182,16 +188,16 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
                     className="border-b border-[var(--acade-border-subtle)] last:border-b-0"
                   >
-                    <td aria-label={`Course ${idx + 1}: ${courseName}`} className="sticky left-0 z-20 w-44 bg-[var(--acade-surface)] p-2 align-top shadow-[6px_0_12px_-10px_rgba(0,0,0,0.8)]">
+                    <td aria-label={`Course ${idx + 1}: ${courseName}`} className="sticky left-0 z-20 overflow-hidden border-r border-[var(--acade-border)] bg-[var(--acade-surface)] p-2 align-top shadow-[8px_0_16px_-14px_rgba(0,0,0,0.9)]">
                       {editable ? (
-                        <div className="grid grid-cols-[1fr_44px] gap-1.5">
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_40px] gap-1.5">
                           <input
                             aria-label={`Course ${idx + 1} code`}
                             type="text"
                             value={course.code}
                             onChange={event => updateCourse(course.localId, 'code', event.target.value.toUpperCase())}
                             placeholder="CSC 401"
-                            className="min-h-11 min-w-0 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-base font-bold uppercase text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
+                            className="min-h-11 min-w-0 max-w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-base font-bold uppercase text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
                           />
                           <button type="button" onClick={() => handleRemoveRow(course.localId)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--acade-danger)]/25 text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]" aria-label={`Remove ${courseName}`}>
                             <Trash2 size={17} aria-hidden="true" />
@@ -202,7 +208,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                             value={course.title}
                             onChange={event => updateCourse(course.localId, 'title', event.target.value)}
                             placeholder="Course title"
-                            className="col-span-2 min-h-11 min-w-0 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
+                            className="col-span-2 min-h-11 min-w-0 max-w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
                           />
                         </div>
                       ) : (
@@ -259,7 +265,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <tbody>
             <AnimatePresence initial={false}>
               {courses.map((course, idx) => {
-                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.grade, course.isAR);
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
                 const isShaking = shakeId === course.localId;
 
                 return (

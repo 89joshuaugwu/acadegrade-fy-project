@@ -26,7 +26,7 @@ describe('GradeTable mobile editor', () => {
     const courseCell = within(grid).getByRole('cell', { name: 'Course 1: CSC 401' });
 
     expect(mobileEditor).toHaveClass('overflow-x-auto', 'md:hidden');
-    expect(grid).toHaveClass('min-w-[680px]');
+    expect(grid).toHaveClass('w-[690px]', 'table-fixed');
     expect(courseHeader).toHaveClass('sticky', 'left-0');
     expect(courseCell).toHaveClass('sticky', 'left-0');
     expect(within(mobileEditor).getByText('Swipe sideways to edit every result field.')).toBeInTheDocument();
