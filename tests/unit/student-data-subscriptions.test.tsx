@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   uid: 'student-1' as string | null,
   subscribeToDocument: vi.fn(),
   subscribeToCollection: vi.fn(),
+  updateDocument: vi.fn(),
   orderBy: vi.fn(() => ({ type: 'orderBy' })),
 }));
 
@@ -15,7 +16,7 @@ vi.mock('@/hooks/useAuth', () => ({
 vi.mock('@/lib/firebase/firestore', () => ({
   subscribeToDocument: mocks.subscribeToDocument,
   subscribeToCollection: mocks.subscribeToCollection,
-  updateDocument: vi.fn(),
+  updateDocument: mocks.updateDocument,
 }));
 
 vi.mock('firebase/firestore', () => ({
@@ -34,6 +35,7 @@ describe('student data subscriptions', () => {
     mocks.uid = 'student-1';
     mocks.subscribeToDocument.mockReset();
     mocks.subscribeToCollection.mockReset();
+    mocks.updateDocument.mockReset();
     mocks.orderBy.mockClear();
     mocks.subscribeToDocument.mockReturnValue(vi.fn());
     mocks.subscribeToCollection.mockReturnValue(vi.fn());
@@ -69,5 +71,23 @@ describe('student data subscriptions', () => {
     await waitFor(() => expect(mocks.subscribeToCollection).toHaveBeenCalledTimes(2));
     expect(result.current.loading).toBe(true);
     expect(result.current.error).toBeNull();
+  });
+
+  it('recalculates graduation when course duration is updated', async () => {
+    const { result } = renderHook(() => useProfile());
+    const onProfile = mocks.subscribeToDocument.mock.calls[0][1] as (profile: unknown) => void;
+    act(() => onProfile({
+      uid: 'student-1',
+      entrySession: '2022/2023',
+      currentSession: '2022/2023',
+      courseDuration: 4,
+    }));
+
+    await act(() => result.current.updateProfile({ courseDuration: 5 }));
+
+    expect(mocks.updateDocument).toHaveBeenCalledWith('users/student-1', expect.objectContaining({
+      courseDuration: 5,
+      graduationSession: '2026/2027',
+    }));
   });
 });

@@ -7,6 +7,7 @@ import { PublicFooter } from '@/components/layout/PublicShell';
 import { PageTransition } from '@/components/shared/PageTransition';
 import { Button, LinkButton, Skeleton } from '@/components/ui';
 import { DEFAULT_ABOUT_CONTENT, type AboutContent } from '@/lib/about/content';
+import { LandingMotion } from '@/components/marketing/LandingMotion';
 
 const principles = [
   {
@@ -58,11 +59,12 @@ export default function AboutPage() {
   return (
     <div className="public-atmosphere min-h-screen text-[var(--acade-text)]">
       <Navbar />
+      <LandingMotion>
       <PageTransition>
         <main className="overflow-hidden">
           <section className="relative border-b border-[var(--acade-border-subtle)]">
             <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
-              <div className="lg:col-span-7">
+              <div data-landing-motion="section" className="lg:col-span-7">
                 <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
                   About AcadeGrade
                 </p>
@@ -101,7 +103,7 @@ export default function AboutPage() {
                 ) : null}
               </div>
 
-              <div className="relative lg:col-span-5">
+              <div data-landing-motion="card" className="relative lg:col-span-5">
                 <div aria-hidden="true" className="mb-5 hidden items-center gap-2 lg:flex">
                   <span className="h-px w-14 bg-[var(--acade-primary)]" />
                   <span className="h-px w-5 bg-[var(--acade-gold)]" />
@@ -113,7 +115,7 @@ export default function AboutPage() {
 
           <section aria-labelledby="principles-title" className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
             <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-              <div>
+              <div data-landing-motion="section">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">How we build</p>
                 <h2 id="principles-title" className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]">
                   Clarity before complexity.
@@ -125,7 +127,7 @@ export default function AboutPage() {
 
               <div className="divide-y divide-[var(--acade-border-subtle)] border-y border-[var(--acade-border-subtle)]">
                 {principles.map(({ icon: Icon, title, description }, index) => (
-                  <article key={title} className="grid gap-4 py-7 sm:grid-cols-[3rem_1fr] sm:gap-5">
+                  <article data-landing-motion="card" key={title} className="grid gap-4 py-7 sm:grid-cols-[3rem_1fr] sm:gap-5">
                     <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-primary)]">
                       <Icon size={20} aria-hidden="true" />
                     </div>
@@ -144,12 +146,12 @@ export default function AboutPage() {
 
           <section className="border-y border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
             <div className="mx-auto grid max-w-[1200px] gap-6 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20">
-              <article className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
+              <article data-landing-motion="card" className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
                 <Target className="text-[var(--acade-primary)]" size={25} aria-hidden="true" />
                 <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">Our mission</p>
                 <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-2xl font-bold leading-tight sm:text-3xl">{data.mission}</h2>
               </article>
-              <article className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
+              <article data-landing-motion="card" className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
                 <ShieldCheck className="text-[var(--acade-success)]" size={25} aria-hidden="true" />
                 <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">Our commitment</p>
                 <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-2xl font-bold leading-tight sm:text-3xl">{data.trustStatement}</h2>
@@ -175,6 +177,7 @@ export default function AboutPage() {
           </section>
         </main>
       </PageTransition>
+      </LandingMotion>
       <PublicFooter />
     </div>
   );

@@ -17,21 +17,28 @@ const course = {
 } as const;
 
 describe('GradeTable mobile editor', () => {
-  it('provides a stacked mobile course editor with a programmatic label for every control', () => {
+  it('provides a compact horizontally scrollable grid with sticky course identity and actions', () => {
     render(<GradeTable editable initialCourses={[course]} />);
 
     const mobileEditor = screen.getByRole('region', { name: 'Mobile course editor' });
+    const grid = within(mobileEditor).getByRole('table', { name: 'Editable course results' });
+    const courseHeader = within(grid).getByRole('columnheader', { name: 'Course' });
+    const courseCell = within(grid).getByRole('cell', { name: 'Course 1: CSC 401' });
 
-    expect(mobileEditor).toHaveClass('md:hidden');
-    expect(within(mobileEditor).getByRole('group', { name: 'Course 1: CSC 401' })).toBeInTheDocument();
-    expect(within(mobileEditor).getByRole('textbox', { name: 'Course 1 code' })).toHaveClass('min-h-11');
-    expect(within(mobileEditor).getByRole('textbox', { name: 'Course 1 title' })).toHaveClass('min-h-11');
-    expect(within(mobileEditor).getByRole('spinbutton', { name: 'Course 1 units' })).toHaveClass('min-h-11');
-    expect(within(mobileEditor).getByRole('spinbutton', { name: 'Course 1 CA score out of 30' })).toHaveClass('min-h-11');
-    expect(within(mobileEditor).getByRole('spinbutton', { name: 'Course 1 exam score out of 70' })).toHaveClass('min-h-11');
-    expect(within(mobileEditor).getByRole('combobox', { name: 'Course 1 letter grade' })).toHaveClass('min-h-11');
+    expect(mobileEditor).toHaveClass('overflow-x-auto', 'md:hidden');
+    expect(grid).toHaveClass('min-w-[680px]');
+    expect(courseHeader).toHaveClass('sticky', 'left-0');
+    expect(courseCell).toHaveClass('sticky', 'left-0');
+    expect(within(mobileEditor).getByText('Swipe sideways to edit every result field.')).toBeInTheDocument();
+    expect(within(courseCell).getByRole('textbox', { name: 'Course 1 code' })).toHaveClass('text-base');
+    expect(within(courseCell).getByRole('textbox', { name: 'Course 1 title' })).toHaveClass('text-base');
+    expect(within(grid).getByRole('spinbutton', { name: 'Course 1 units' })).toHaveClass('min-h-11');
+    expect(within(grid).getByRole('spinbutton', { name: 'Course 1 CA score out of 30' })).toHaveClass('min-h-11');
+    expect(within(grid).getByRole('spinbutton', { name: 'Course 1 exam score out of 70' })).toHaveClass('min-h-11');
+    expect(within(grid).queryByRole('combobox', { name: 'Course 1 letter grade' })).not.toBeInTheDocument();
+    expect(within(grid).getByRole('cell', { name: 'A' })).toBeInTheDocument();
 
-    const removeButton = within(mobileEditor).getByRole('button', { name: 'Remove CSC 401' });
+    const removeButton = within(courseCell).getByRole('button', { name: 'Remove CSC 401' });
     expect(removeButton).toHaveClass('min-h-11', 'min-w-11');
     expect(removeButton).not.toHaveClass('opacity-0');
   });
@@ -46,11 +53,12 @@ describe('GradeTable mobile editor', () => {
     await user.clear(codeInput);
     await user.type(codeInput, 'mth 402');
     await user.clear(within(mobileEditor).getByRole('spinbutton', { name: 'Course 1 CA score out of 30' }));
-    await user.type(within(mobileEditor).getByRole('spinbutton', { name: 'Course 1 CA score out of 30' }), '20');
+    await user.type(within(mobileEditor).getByRole('spinbutton', { name: 'Course 1 CA score out of 30' }), '10');
+    expect(within(mobileEditor).getByRole('cell', { name: 'B' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Save Semester' }));
 
     expect(onSave).toHaveBeenCalledWith([
-      expect.objectContaining({ code: 'MTH 402', title: 'Software Engineering', units: 3, caScore: 20, examScore: 55 }),
+      expect.objectContaining({ code: 'MTH 402', title: 'Software Engineering', units: 3, caScore: 10, examScore: 55 }),
     ]);
 
     await user.click(within(mobileEditor).getByRole('button', { name: 'Remove MTH 402' }));
@@ -68,6 +76,7 @@ describe('GradeTable mobile editor', () => {
     expect(within(desktopEditor).getByRole('spinbutton', { name: 'Course 1 units' })).toBeInTheDocument();
     expect(within(desktopEditor).getByRole('spinbutton', { name: 'Course 1 CA score out of 30' })).toBeInTheDocument();
     expect(within(desktopEditor).getByRole('spinbutton', { name: 'Course 1 exam score out of 70' })).toBeInTheDocument();
-    expect(within(desktopEditor).getByRole('combobox', { name: 'Course 1 letter grade' })).toBeInTheDocument();
+    expect(within(desktopEditor).queryByRole('combobox', { name: 'Course 1 letter grade' })).not.toBeInTheDocument();
+    expect(within(desktopEditor).getByRole('cell', { name: 'A' })).toBeInTheDocument();
   });
 });

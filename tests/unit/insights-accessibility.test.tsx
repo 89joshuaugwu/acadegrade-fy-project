@@ -8,6 +8,17 @@ const mocks = vi.hoisted(() => ({
   getDocument: vi.fn(),
   queryCollection: vi.fn(),
   reducedMotion: false,
+  insightsDisabled: true,
+  whatIfRemaining: null as number | null,
+  forecastProjectionCount: null as number | null,
+  profile: {
+    fullName: 'Ada Student',
+    gradeMode: 'cgpa',
+    entrySession: '2022/2023',
+    currentSession: '2022/2023',
+    courseDuration: 4,
+    currentLevel: 400,
+  },
   user: { uid: 'student-1', getIdToken: vi.fn() },
 }));
 
@@ -16,11 +27,11 @@ vi.mock('@/hooks/useAuth', () => ({
 }));
 
 vi.mock('@/hooks/useProfile', () => ({
-  useProfile: () => ({ profile: { fullName: 'Ada Student', gradeMode: 'cgpa', courseDuration: 4 } }),
+  useProfile: () => ({ profile: mocks.profile }),
 }));
 
 vi.mock('@/hooks/usePlatformSettings', () => ({
-  usePlatformSettings: () => ({ isFeatureDisabled: () => true }),
+  usePlatformSettings: () => ({ isFeatureDisabled: () => mocks.insightsDisabled }),
 }));
 
 vi.mock('@/hooks/useReducedMotion', () => ({
@@ -34,21 +45,84 @@ vi.mock('@/lib/firebase/firestore', () => ({
   updateDocument: vi.fn(),
 }));
 
-vi.mock('@/components/charts/ForecastChart', () => ({ ForecastChart: () => <div /> }));
-vi.mock('@/components/ai/WhatIfCalculator', () => ({ WhatIfCalculator: () => <div>What-if calculator</div> }));
+vi.mock('@/components/charts/ForecastChart', () => ({
+  ForecastChart: ({ projected }: { projected: number[] }) => {
+    mocks.forecastProjectionCount = projected.length;
+    return <div>Forecast projections: {projected.length}</div>;
+  },
+}));
+vi.mock('@/components/ai/WhatIfCalculator', () => ({
+  WhatIfCalculator: ({ initialRemainingSemesters }: { initialRemainingSemesters?: number }) => {
+    mocks.whatIfRemaining = initialRemainingSemesters ?? null;
+    return <div>What-if remaining: {initialRemainingSemesters}</div>;
+  },
+}));
 vi.mock('@/components/ai/InsightCard', () => ({ InsightCard: () => <div /> }));
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 
 describe('Insights tabs accessibility and motion preferences', () => {
   beforeEach(() => {
     mocks.reducedMotion = false;
+    mocks.insightsDisabled = true;
+    mocks.whatIfRemaining = null;
+    mocks.forecastProjectionCount = null;
     mocks.queryCollection.mockReset().mockResolvedValue([]);
     mocks.getDocument.mockReset().mockResolvedValue(null);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it('uses the academic plan for forecast, What-If, and written-analysis context', async () => {
+    const user = userEvent.setup();
+    const semesters = [
+      semester(100, 1), semester(100, 2),
+      semester(200, 1), semester(200, 2),
+      semester(300, 1), semester(300, 2),
+      semester(400, 1),
+    ];
+    mocks.insightsDisabled = false;
+    mocks.queryCollection.mockImplementation((path: string) =>
+      Promise.resolve(path.endsWith('/semesters') ? semesters : [])
+    );
+    mocks.getDocument.mockResolvedValue({
+      forecast: {
+        projected: [4.1, 4.2],
+        projectedPi: [4.1, 4.2],
+        projectedCgpa: [4.0, 4.1],
+        riskScore: 1,
+        trendLabel: 'Improving',
+        trendDirection: 'improving',
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({ strengths: [], concerns: [], recommendations: [], degreeOutlook: '' }),
+      text: async () => '',
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<InsightsPage />);
+
+    expect(await screen.findByText('Forecast projections: 1')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'What-If' }));
+    expect(screen.getByText('What-if remaining: 1')).toBeInTheDocument();
+
+    await waitFor(() => {
+      const insightCall = fetchMock.mock.calls.find(([url]) => url === '/api/ai/insights');
+      expect(insightCall).toBeDefined();
+      const body = JSON.parse((insightCall?.[1] as RequestInit).body as string);
+      expect(body.academicContext).toEqual({
+        remainingSemesters: 1,
+        graduationSession: '2025/2026',
+        isGraduated: false,
+      });
+    });
   });
 
   it('connects tabs to panels and supports automatic arrow, Home, and End navigation', async () => {
@@ -143,3 +217,17 @@ describe('Insights tabs accessibility and motion preferences', () => {
     expect(screen.queryByText(/1 = safe, 5 = critical/i)).not.toBeInTheDocument();
   });
 });
+
+function semester(level: number, number: 1 | 2) {
+  return {
+    id: `semester-${level}-${number}`,
+    label: `${level}L Semester ${number}`,
+    session: `${2022 + level / 100 - 1}/${2023 + level / 100 - 1}`,
+    level,
+    semester: number,
+    gpa: 4,
+    pi: 4,
+    creditLoaded: 18,
+    isComplete: true,
+  };
+}

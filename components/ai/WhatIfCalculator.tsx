@@ -12,14 +12,14 @@ import toast from 'react-hot-toast';
 interface WhatIfCalculatorProps {
   currentCGPA: number;
   totalCredits: number;
-  initialRemainingSemesters?: number;
+  initialRemainingSemesters: number;
   initialCreditLoad?: number;
 }
 
 export function WhatIfCalculator({
   currentCGPA,
   totalCredits,
-  initialRemainingSemesters = 2,
+  initialRemainingSemesters,
   initialCreditLoad = 18,
 }: WhatIfCalculatorProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -37,6 +37,10 @@ export function WhatIfCalculator({
   
   const [countdown, setCountdown] = useState<number | null>(null);
   const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    setRemainingSemesters(initialRemainingSemesters);
+  }, [initialRemainingSemesters]);
   
   // Client-side math computation
   useEffect(() => {
@@ -186,9 +190,9 @@ export function WhatIfCalculator({
             <input 
               type="number" 
               min={1} 
-              max={10} 
+              max={20}
               value={remainingSemesters}
-              onChange={(e) => setRemainingSemesters(parseInt(e.target.value) || 1)}
+              onChange={(e) => setRemainingSemesters(Math.min(20, parseInt(e.target.value) || 1))}
               disabled={cooldown > 0 || loading}
               className={cn("w-full bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-3 text-[length:var(--text-base)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] transition-colors", (cooldown > 0 || loading) && "opacity-50 cursor-not-allowed")}
             />

@@ -14,8 +14,15 @@ import { auth } from '@/lib/firebase/client';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useSemesters } from '@/hooks/useSemesters';
 import { cn } from '@/lib/utils/cn';
 import { updateDocument } from '@/lib/firebase/firestore';
+import {
+  COURSE_DURATION_OPTIONS,
+  graduationSession,
+  minimumDurationForSemesters,
+  parseAcademicSession,
+} from '@/lib/academic/timeline';
 import { requestNotificationPermission } from '@/lib/firebase/fcm';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
@@ -23,11 +30,13 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Switch } from '@/components/ui/Switch';
 import { Select } from '@/components/ui/Select';
+import type { StudentLevel } from '@/types/user';
 const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile, updateProfile } = useProfile();
+  const { semesters } = useSemesters();
   const { isFeatureDisabled } = usePlatformSettings();
   const disableEditProfile = isFeatureDisabled('edit_profile');
   
@@ -35,7 +44,10 @@ export default function SettingsPage() {
   const [fullName, setFullName] = useState('');
   const [department, setDepartment] = useState('');
   const [programme, setProgramme] = useState('');
-  const [level, setLevel] = useState(100);
+  const [level, setLevel] = useState<StudentLevel>(100);
+  const [entrySession, setEntrySession] = useState('');
+  const [courseDuration, setCourseDuration] = useState(4);
+  const [timelineError, setTimelineError] = useState<string | undefined>();
   const [avatarUrl, setAvatarUrl] = useState('');
   const [recordMode, setRecordMode] = useState<'fromScratch' | 'complete'>('fromScratch');
   const [gradeMode, setGradeMode] = useState<'cgpa' | 'pi'>('cgpa');
@@ -55,6 +67,8 @@ export default function SettingsPage() {
       setDepartment(profile.department || (profile as any).dept || '');
       setProgramme(profile.programme || '');
       setLevel(profile.currentLevel || (profile as any).level || 100);
+      setEntrySession(profile.entrySession || profile.currentSession || '');
+      setCourseDuration(profile.courseDuration || 4);
       setAvatarUrl(profile.avatarUrl || '');
       setRecordMode(profile.recordMode || 'fromScratch');
       setGradeMode(profile.gradeMode || 'cgpa');
@@ -126,9 +140,22 @@ export default function SettingsPage() {
   // 2. Save Profile
   const handleSaveProfile = async () => {
     if (!user) return;
+    if (parseAcademicSession(entrySession) == null) {
+      setTimelineError('Use consecutive years in YYYY/YYYY format, for example 2022/2023.');
+      return;
+    }
+    const minimumDuration = Math.max(
+      minimumDurationForSemesters(semesters),
+      Math.ceil(level / 100)
+    );
+    if (courseDuration < minimumDuration) {
+      setTimelineError(`Your existing level/results require at least ${minimumDuration} years.`);
+      return;
+    }
     setSavingProfile(true);
+    setTimelineError(undefined);
     try {
-      await updateDocument(`users/${user.uid}`, {
+      await updateProfile({
         fullName,
         name: fullName, // Legacy compatibility
         department,
@@ -136,7 +163,11 @@ export default function SettingsPage() {
         programme,
         currentLevel: level,
         level: level, // Legacy compatibility
-      });
+        entrySession,
+        currentSession: entrySession,
+        courseDuration,
+        graduationSession: graduationSession(entrySession, courseDuration),
+      } as Parameters<typeof updateProfile>[0]);
       toast.success('Profile updated');
     } catch (err) {
       toast.error('Failed to update profile');
@@ -310,7 +341,7 @@ export default function SettingsPage() {
         <div className="md:col-span-2 space-y-8">
           
           {/* PROFILE SECTION */}
-          <section id="section-profile" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-profile" className="relative focus-within:z-[var(--z-dropdown)] bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Public Profile</h2>
             
             <div className="flex items-center gap-4 sm:gap-6 mb-8">
@@ -347,7 +378,7 @@ export default function SettingsPage() {
                   label="Current Level"
                   options={STUDENT_LEVELS.map(l => ({ value: l.toString(), label: `${l}L` }))}
                   value={level.toString()}
-                  onChange={(val) => setLevel(parseInt(val))}
+                  onChange={(val) => setLevel(parseInt(val) as StudentLevel)}
                   disabled={disableEditProfile}
                 />
               </div>
@@ -365,6 +396,42 @@ export default function SettingsPage() {
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Academic Setup</h2>
             
             <div className="space-y-6">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Input
+                  label="Entry Session"
+                  placeholder="e.g. 2022/2023"
+                  value={entrySession}
+                  onChange={(event) => {
+                    setEntrySession(event.target.value);
+                    setTimelineError(undefined);
+                  }}
+                  error={timelineError}
+                  disabled={disableEditProfile}
+                />
+                <Select
+                  label="Programme Duration"
+                  options={COURSE_DURATION_OPTIONS.map((duration) => ({
+                    value: String(duration),
+                    label: `${duration} years`,
+                  }))}
+                  value={String(courseDuration)}
+                  onChange={(value) => {
+                    setCourseDuration(Number(value));
+                    setTimelineError(undefined);
+                  }}
+                  disabled={disableEditProfile}
+                />
+              </div>
+              {parseAcademicSession(entrySession) !== null && (
+                <p className="text-xs text-[var(--acade-text-muted)]">
+                  Expected graduation: {graduationSession(entrySession, courseDuration)}
+                </p>
+              )}
+              <div className="flex justify-end">
+                <Button onClick={handleSaveProfile} disabled={savingProfile || disableEditProfile}>
+                  <Save size={16} className="mr-2" /> {savingProfile ? 'Saving...' : 'Save Academic Timeline'}
+                </Button>
+              </div>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 sm:pr-4">
                   <h4 id="record-mode-label" className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Record Mode</h4>

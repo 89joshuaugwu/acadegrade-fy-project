@@ -3,6 +3,7 @@
 import { useCallback, useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { subscribeToDocument, updateDocument } from '@/lib/firebase/firestore';
+import { withAcademicTimelineDerivations } from '@/lib/academic/timeline';
 import type { UserWithId } from '@/types/user';
 import toast from 'react-hot-toast';
 
@@ -51,7 +52,8 @@ export function useProfile() {
   const updateProfile = async (data: Partial<UserWithId>) => {
     if (!uid) return;
     try {
-      await updateDocument(`users/${uid}`, { ...data, updatedAt: new Date().toISOString() });
+      const update = withAcademicTimelineDerivations(profile, data);
+      await updateDocument(`users/${uid}`, { ...update, updatedAt: new Date().toISOString() });
     } catch (err: any) {
       toast.error('Failed to update profile');
     }

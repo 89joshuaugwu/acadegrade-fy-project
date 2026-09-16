@@ -1,54 +1,52 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, CalendarRange, Check, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { setDocument } from '@/lib/firebase/firestore';
-import { STUDENT_LEVELS } from '@/lib/utils/constants';
+import { useSemesters } from '@/hooks/useSemesters';
+import { queryCollection, setDocument } from '@/lib/firebase/firestore';
+import { getAcademicPlan, slotKey } from '@/lib/academic/timeline';
+import type { SemesterWithId } from '@/types/semester';
 
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Card } from '@/components/ui/Card';
 import { ResultsTour } from '@/components/onboarding/ResultsTour';
 
 export default function NewSemesterPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { profile } = useProfile();
-  const [loading, setLoading] = useState(false);
-
-  const [level, setLevel] = useState<number>(100);
-  const [semesterNum, setSemesterNum] = useState<1 | 2>(1);
-  const [session, setSession] = useState(new Date().getFullYear() + '/' + (new Date().getFullYear() + 1));
-  const programmeLevels = STUDENT_LEVELS.filter(
-    (studentLevel) => studentLevel <= (profile?.courseDuration || 10) * 100
-  );
-
-  useEffect(() => {
-    if (profile?.currentLevel) {
-      setLevel(profile.currentLevel);
-    }
-  }, [profile?.currentLevel]);
+  const { profile, loading: profileLoading } = useProfile();
+  const { semesters, loading: semestersLoading } = useSemesters();
+  const [creating, setCreating] = useState(false);
+  const plan = useMemo(() => getAcademicPlan(profile, semesters), [profile, semesters]);
+  const nextSlot = plan.remainingSlots[0] ?? null;
 
   const handleCreate = async () => {
-    if (!user) return;
-    setLoading(true);
+    if (!user || !nextSlot || creating) return;
+    setCreating(true);
     
     try {
-      const id = `sem_${Date.now()}`;
-      const label = `${level}L ${semesterNum === 1 ? 'First' : 'Second'} Semester`;
+      const collectionPath = `users/${user.uid}/semesters`;
+      const latest = await queryCollection<SemesterWithId>(collectionPath);
+      const duplicate = latest.some(
+        (semester) => slotKey(Number(semester.level), Number(semester.semester)) === nextSlot.key
+      );
+      if (duplicate) {
+        toast('Semester already exists. Your timeline will refresh to the next available slot.');
+        return;
+      }
 
-      await setDocument(`users/${user.uid}/semesters/${id}`, {
-        label,
-        session,
-        level,
-        semester: semesterNum,
+      const id = `slot_${nextSlot.level}_${nextSlot.semester}`;
+      await setDocument(`${collectionPath}/${id}`, {
+        label: nextSlot.label,
+        session: nextSlot.session,
+        level: nextSlot.level,
+        semester: nextSlot.semester,
         gpa: 0,
         pi: 0,
         creditLoaded: 0,
@@ -59,9 +57,12 @@ export default function NewSemesterPage() {
       router.replace(`/results/${id}`);
     } catch (err) {
       toast.error('Failed to create semester');
-      setLoading(false);
+    } finally {
+      setCreating(false);
     }
   };
+
+  const loading = profileLoading || semestersLoading;
 
   return (
     <div className="max-w-2xl mx-auto pb-10">
@@ -77,39 +78,42 @@ export default function NewSemesterPage() {
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card variant="default" padding="lg">
-          <div className="flex flex-col gap-6">
-            <div>
-              <Select
-                label="Level"
-                options={programmeLevels.map(l => ({ value: String(l), label: `${l} Level` }))}
-                value={String(level)}
-                onChange={(val) => setLevel(Number(val))}
-              />
+          {loading ? (
+            <p className="text-sm text-[var(--acade-text-muted)]">Checking your academic timeline…</p>
+          ) : !plan.slots.length ? (
+            <div className="text-center">
+              <CalendarRange className="mx-auto size-8 text-[var(--acade-warning)]" aria-hidden="true" />
+              <h2 className="mt-4 text-lg font-bold text-[var(--acade-text)]">Academic timeline needed</h2>
+              <p className="mt-2 text-sm text-[var(--acade-text-muted)]">Add a valid entry session and programme duration in Settings before creating semesters.</p>
             </div>
+          ) : nextSlot ? (
+            <div className="flex flex-col gap-6">
+              <div className="flex items-start gap-4 rounded-xl border border-[var(--acade-primary)] bg-[var(--acade-primary)]/5 p-4">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--acade-primary)]/10 text-[var(--acade-primary)]">
+                  <Check className="size-5" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-[var(--acade-text-muted)]">Next available semester</p>
+                  <h2 className="mt-1 text-lg font-bold text-[var(--acade-text)]">{nextSlot.level}L {nextSlot.semester === 1 ? 'First' : 'Second'} Semester</h2>
+                  <p className="mt-1 text-sm text-[var(--acade-text-muted)]">{nextSlot.session} · {plan.duration}-year programme ending {plan.graduationSession}</p>
+                </div>
+              </div>
 
-            <div>
-              <Select
-                label="Semester"
-                options={[
-                  { value: '1', label: 'First Semester' },
-                  { value: '2', label: 'Second Semester' },
-                ]}
-                value={String(semesterNum)}
-                onChange={(val) => setSemesterNum(Number(val) as 1 | 2)}
-              />
+              <p className="text-sm leading-6 text-[var(--acade-text-muted)]">
+                AcadeGrade suggests the earliest valid semester missing from your record and prevents an existing level and semester from being added twice.
+              </p>
+
+              <Button id="tour-create-semester" variant="primary" size="lg" onClick={handleCreate} disabled={creating}>
+                {creating ? 'Creating…' : `Create ${nextSlot.level}L ${nextSlot.semester === 1 ? 'First' : 'Second'} Semester`}
+              </Button>
             </div>
-
-            <Input 
-              label="Academic Session" 
-              placeholder="e.g. 2025/2026" 
-              value={session}
-              onChange={(e) => setSession(e.target.value)}
-            />
-
-            <Button id="tour-create-semester" variant="primary" size="lg" onClick={handleCreate} disabled={loading} className="mt-4">
-              {loading ? 'Creating...' : 'Create Semester'}
-            </Button>
-          </div>
+          ) : (
+            <div className="text-center">
+              <GraduationCap className="mx-auto size-9 text-[var(--acade-success)]" aria-hidden="true" />
+              <h2 className="mt-4 text-lg font-bold text-[var(--acade-text)]">Your full timeline is ready</h2>
+              <p className="mt-2 text-sm text-[var(--acade-text-muted)]">All {plan.slots.length} semester slots through {plan.graduationSession} already exist.</p>
+            </div>
+          )}
         </Card>
       </motion.div>
     </div>

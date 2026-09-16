@@ -6,6 +6,7 @@ import SettingsPage from '@/app/(student)/settings/page';
 
 const mocks = vi.hoisted(() => ({
   requestNotificationPermission: vi.fn(),
+  updateProfile: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
 }));
@@ -16,6 +17,9 @@ const profile = {
   currentLevel: 300,
   department: 'Computer Science',
   programme: 'BSc Computer Science',
+  entrySession: '2022/2023',
+  currentSession: '2022/2023',
+  courseDuration: 4,
   notificationPreferences: {},
 };
 
@@ -24,7 +28,11 @@ vi.mock('@/hooks/useAuth', () => ({
 }));
 
 vi.mock('@/hooks/useProfile', () => ({
-  useProfile: () => ({ profile }),
+  useProfile: () => ({ profile, updateProfile: mocks.updateProfile }),
+}));
+
+vi.mock('@/hooks/useSemesters', () => ({
+  useSemesters: () => ({ semesters: [], loading: false, error: null }),
 }));
 
 vi.mock('@/hooks/usePlatformSettings', () => ({
@@ -62,6 +70,7 @@ vi.mock('react-hot-toast', () => ({
 describe('Student settings accessibility', () => {
   beforeEach(() => {
     mocks.requestNotificationPermission.mockReset();
+    mocks.updateProfile.mockReset().mockResolvedValue(undefined);
     mocks.toastError.mockReset();
     mocks.toastSuccess.mockReset();
   });
@@ -109,6 +118,25 @@ describe('Student settings accessibility', () => {
 
     expect(screen.getByRole('combobox', { name: 'Current Level' })).toBeInTheDocument();
     expect(screen.getAllByText('Current Level')).toHaveLength(1);
+  });
+
+  it('persists entry session, duration, and recalculated graduation through the profile update path', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    const entrySession = screen.getByRole('textbox', { name: 'Entry Session' });
+    await user.clear(entrySession);
+    await user.type(entrySession, '2021/2022');
+    await user.click(screen.getByRole('combobox', { name: 'Programme Duration' }));
+    await user.click(screen.getByRole('option', { name: '5 years' }));
+    await user.click(screen.getByRole('button', { name: 'Save Academic Timeline' }));
+
+    expect(mocks.updateProfile).toHaveBeenCalledWith(expect.objectContaining({
+      entrySession: '2021/2022',
+      currentSession: '2021/2022',
+      courseDuration: 5,
+      graduationSession: '2025/2026',
+    }));
   });
 
   it('reports push notifications enabled only after this device is registered', async () => {

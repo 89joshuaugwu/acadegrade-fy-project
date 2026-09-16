@@ -23,6 +23,7 @@ import { RecentResults } from '@/components/dashboard/RecentResults';
 import { StandingOverview } from '@/components/dashboard/StandingOverview';
 import { TrendChart } from '@/components/charts/TrendChart';
 import { Card } from '@/components/ui/Card';
+import { LandingMotion } from '@/components/marketing/LandingMotion';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -162,8 +163,9 @@ export default function DashboardPage() {
   }
 
   return (
+    <LandingMotion>
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
-      <header id="tour-welcome" className="max-w-2xl py-1">
+      <header data-landing-motion="section" id="tour-welcome" className="max-w-2xl py-1">
         <p className="text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">Academic overview</p>
         <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
           Hello, {firstName}.
@@ -175,7 +177,7 @@ export default function DashboardPage() {
         </p>
       </header>
 
-      <section aria-label="Academic standing and next action" className="grid min-w-0 items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
+      <section data-landing-motion="card" aria-label="Academic standing and next action" className="grid min-w-0 items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
         <StandingOverview
           hasAcademicData={hasAcademicData}
           isPIMode={isPIMode}
@@ -211,7 +213,7 @@ export default function DashboardPage() {
         <RecentResults courses={recentCourses} />
       )}
 
-      <section aria-label="Academic trend and AI insight" className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
+      <section data-landing-motion="card" aria-label="Academic trend and AI insight" className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
         <Card>
           <div className="mb-5">
             <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">Trajectory</p>
@@ -274,6 +276,7 @@ export default function DashboardPage() {
 
       <AdPlacement placement="dashboard.overview" seed={user?.uid} />
     </div>
+    </LandingMotion>
   );
 }
 

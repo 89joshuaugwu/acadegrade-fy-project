@@ -14,6 +14,8 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     const targets = Array.from(container.querySelectorAll<HTMLElement>('[data-landing-motion]'));
     let observer: IntersectionObserver | undefined;
 
+    container.dataset.landingMotionReady = 'true';
+
     const configure = () => {
       observer?.disconnect();
       if (preference.matches) {
@@ -39,6 +41,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
     return () => {
       observer?.disconnect();
       preference.removeEventListener('change', configure);
+      delete container.dataset.landingMotionReady;
     };
   }, []);
 

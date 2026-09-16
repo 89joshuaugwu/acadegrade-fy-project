@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     if (currentCGPA < 0 || currentCGPA > 5 || targetCGPA < 0 || targetCGPA > 5) {
       return NextResponse.json({ error: 'CGPA values must be between 0 and 5.' }, { status: 400 });
     }
-    if (totalCredits < 0 || totalCredits > 1000 || remainingSemesters < 1 || remainingSemesters > 10 || creditLoad < 1 || creditLoad > 30) {
+    if (totalCredits < 0 || totalCredits > 1000 || remainingSemesters < 1 || remainingSemesters > 20 || creditLoad < 1 || creditLoad > 30) {
       return NextResponse.json({ error: 'Credits, remaining semesters, or credit load are outside the supported range.' }, { status: 400 });
     }
 

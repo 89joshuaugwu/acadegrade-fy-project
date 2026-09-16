@@ -61,12 +61,6 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     setCourses(courses.filter(c => c.localId !== id));
   };
 
-  const handleGradeChange = (id: string, value: Grade | '') => {
-    setCourses(courses.map((course) => course.localId === id
-      ? { ...course, caScore: null, examScore: null, grade: value || undefined }
-      : course));
-  };
-
   const updateCourse = (id: string, field: keyof LocalCourse, value: any) => {
     setCourses(courses.map(c => {
       if (c.localId === id) {
@@ -154,152 +148,91 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       <section
         role="region"
         aria-label="Mobile course editor"
-        className="space-y-3 md:hidden"
+        aria-describedby="mobile-course-editor-help"
+        tabIndex={0}
+        className="w-full overflow-x-auto rounded-xl border border-[var(--acade-border)] custom-scrollbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] md:hidden"
       >
-        <AnimatePresence initial={false}>
-          {courses.map((course, idx) => {
-            const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.grade, course.isAR);
-            const courseName = course.code || `course ${idx + 1}`;
-            const fieldId = (field: string) => `mobile-${course.localId}-${field}`;
+        <p id="mobile-course-editor-help" className="sticky left-0 z-30 w-44 border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)]">
+          Swipe sideways to edit every result field.
+        </p>
+        <table aria-label={editable ? 'Editable course results' : 'Course results'} className="min-w-[680px] border-collapse text-left">
+          <thead>
+            <tr className="border-b border-[var(--acade-border)] bg-[var(--acade-deep)] text-[10px] font-bold uppercase tracking-wide text-[var(--acade-text-muted)]">
+              <th scope="col" className="sticky left-0 z-30 w-44 bg-[var(--acade-deep)] px-3 py-2 shadow-[6px_0_12px_-10px_rgba(0,0,0,0.8)]">Course</th>
+              <th scope="col" className="w-[70px] px-2 py-2 text-center">Units</th>
+              <th scope="col" className="w-[74px] px-2 py-2 text-center">CA /30</th>
+              <th scope="col" className="w-[74px] px-2 py-2 text-center">Exam /70</th>
+              <th scope="col" className="w-16 px-2 py-2 text-center">Total</th>
+              <th scope="col" className="w-[70px] px-2 py-2 text-center">Grade</th>
+              <th scope="col" className="w-14 px-2 py-2 text-center">GP</th>
+              <th scope="col" className="w-16 px-2 py-2 text-center">PI</th>
+            </tr>
+          </thead>
+          <tbody>
+            <AnimatePresence initial={false}>
+              {courses.map((course, idx) => {
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.grade, course.isAR);
+                const courseName = course.code || `course ${idx + 1}`;
 
-            return (
-              <motion.article
-                key={course.localId}
-                role="group"
-                aria-label={`Course ${idx + 1}: ${courseName}`}
-                initial={shouldReduceMotion ? {} : { opacity: 0, y: -8 }}
-                animate={shakeId === course.localId
-                  ? { x: [-5, 5, -5, 5, 0], transition: { duration: 0.4 } }
-                  : { opacity: 1, y: 0, x: 0 }}
-                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
-                className="overflow-hidden rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)]"
-              >
-                <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[var(--acade-border-subtle)] px-4 py-2.5">
-                  <div className="min-w-0">
-                    <p className="text-[length:var(--text-xs)] font-bold uppercase tracking-wider text-[var(--acade-text-faint)]">
-                      Course {idx + 1}
-                    </p>
-                    {!editable && (
-                      <p className="truncate font-bold text-[var(--acade-text)]">{course.code || 'Untitled course'}</p>
-                    )}
-                  </div>
-                  {editable && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRow(course.localId)}
-                      className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--acade-danger)]/25 text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
-                      aria-label={`Remove ${courseName}`}
-                    >
-                      <Trash2 size={18} aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-
-                {editable ? (
-                  <div className="grid grid-cols-2 gap-3 p-4">
-                    <div className="col-span-2 sm:col-span-1">
-                      <label htmlFor={fieldId('code')} className="mb-1.5 block text-xs font-semibold text-[var(--acade-text-muted)]">Code</label>
-                      <input
-                        id={fieldId('code')}
-                        aria-label={`Course ${idx + 1} code`}
-                        type="text"
-                        value={course.code}
-                        onChange={event => updateCourse(course.localId, 'code', event.target.value.toUpperCase())}
-                        placeholder="CSC 401"
-                        className="min-h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-sm font-bold uppercase text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
-                      />
-                    </div>
-                    <div className="col-span-2 sm:col-span-1">
-                      <label htmlFor={fieldId('title')} className="mb-1.5 block text-xs font-semibold text-[var(--acade-text-muted)]">Course title</label>
-                      <input
-                        id={fieldId('title')}
-                        aria-label={`Course ${idx + 1} title`}
-                        type="text"
-                        value={course.title}
-                        onChange={event => updateCourse(course.localId, 'title', event.target.value)}
-                        placeholder="Software Engineering"
-                        className="min-h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-sm text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor={fieldId('units')} className="mb-1.5 block text-xs font-semibold text-[var(--acade-text-muted)]">Units</label>
-                      <input
-                        id={fieldId('units')}
-                        aria-label={`Course ${idx + 1} units`}
-                        type="number"
-                        value={course.units || ''}
-                        onChange={event => updateCourse(course.localId, 'units', parseInt(event.target.value) || 0)}
-                        min="1"
-                        max="6"
-                        inputMode="numeric"
-                        className="min-h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-center font-[family-name:var(--font-geist-mono)] text-sm text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor={fieldId('grade')} className="mb-1.5 block text-xs font-semibold text-[var(--acade-text-muted)]">Letter grade</label>
-                      <select
-                        id={fieldId('grade')}
-                        aria-label={`Course ${idx + 1} letter grade`}
-                        value={grade ?? ''}
-                        onChange={event => handleGradeChange(course.localId, event.target.value as Grade | '')}
-                        disabled={course.isAR}
-                        className="min-h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-center text-sm font-bold text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:opacity-50"
-                      >
-                        <option value="">—</option>
-                        {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map(option => <option key={option} value={option}>{option}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label htmlFor={fieldId('ca')} className="mb-1.5 block text-xs font-semibold text-[var(--acade-text-muted)]">CA score <span className="font-normal text-[var(--acade-text-faint)]">/ 30</span></label>
-                      <input
-                        id={fieldId('ca')}
-                        aria-label={`Course ${idx + 1} CA score out of 30`}
-                        type="number"
-                        value={course.caScore === null ? '' : course.caScore}
-                        onChange={event => updateCourse(course.localId, 'caScore', event.target.value ? parseInt(event.target.value) : null)}
-                        min="0"
-                        max={MAX_CA_SCORE}
-                        inputMode="numeric"
-                        disabled={course.isAR}
-                        className="min-h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-center font-[family-name:var(--font-geist-mono)] text-sm text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:opacity-50"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor={fieldId('exam')} className="mb-1.5 block text-xs font-semibold text-[var(--acade-text-muted)]">Exam score <span className="font-normal text-[var(--acade-text-faint)]">/ 70</span></label>
-                      <input
-                        id={fieldId('exam')}
-                        aria-label={`Course ${idx + 1} exam score out of 70`}
-                        type="number"
-                        value={course.examScore === null ? '' : course.examScore}
-                        onChange={event => updateCourse(course.localId, 'examScore', event.target.value ? parseInt(event.target.value) : null)}
-                        min="0"
-                        max={MAX_EXAM_SCORE}
-                        inputMode="numeric"
-                        disabled={course.isAR}
-                        className="min-h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-center font-[family-name:var(--font-geist-mono)] text-sm text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:opacity-50"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-4">
-                    <p className="text-sm text-[var(--acade-text-muted)]">{course.title}</p>
-                    <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-                      <div className="rounded-lg bg-[var(--acade-deep)] p-3"><dt className="text-xs text-[var(--acade-text-faint)]">Units</dt><dd className="mt-1 font-bold text-[var(--acade-text)]">{course.units}</dd></div>
-                      <div className="rounded-lg bg-[var(--acade-deep)] p-3"><dt className="text-xs text-[var(--acade-text-faint)]">Total</dt><dd className="mt-1 font-bold text-[var(--acade-text)]">{totalScore ?? '—'}</dd></div>
-                      <div className="rounded-lg bg-[var(--acade-deep)] p-3"><dt className="text-xs text-[var(--acade-text-faint)]">Grade</dt><dd className="mt-1 font-bold text-[var(--acade-text)]">{grade ?? '—'}</dd></div>
-                    </dl>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-3 border-t border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]/45 text-center">
-                  <div className="px-2 py-3"><p className="text-[10px] font-bold uppercase text-[var(--acade-text-faint)]">Total</p><p className="mt-1 font-[family-name:var(--font-geist-mono)] font-bold text-[var(--acade-text)]">{totalScore ?? '—'}</p></div>
-                  <div className="border-x border-[var(--acade-border-subtle)] px-2 py-3"><p className="text-[10px] font-bold uppercase text-[var(--acade-text-faint)]">GP</p><p className="mt-1 font-[family-name:var(--font-geist-mono)] font-bold text-[var(--acade-text-muted)]">{!grade || grade === 'AR' ? '—' : gradePoint.toFixed(1)}</p></div>
-                  <div className="px-2 py-3"><p className="text-[10px] font-bold uppercase text-[var(--acade-text-faint)]">PI</p><p className="mt-1 font-[family-name:var(--font-geist-mono)] font-bold text-[var(--acade-gold)]">{!grade || grade === 'AR' ? '—' : piPoint.toFixed(2)}</p></div>
-                </div>
-              </motion.article>
-            );
-          })}
-        </AnimatePresence>
+                return (
+                  <motion.tr
+                    key={course.localId}
+                    initial={shouldReduceMotion ? {} : { opacity: 0, y: -6 }}
+                    animate={shakeId === course.localId ? { x: [-5, 5, -5, 5, 0], transition: { duration: 0.4 } } : { opacity: 1, y: 0, x: 0 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+                    className="border-b border-[var(--acade-border-subtle)] last:border-b-0"
+                  >
+                    <td aria-label={`Course ${idx + 1}: ${courseName}`} className="sticky left-0 z-20 w-44 bg-[var(--acade-surface)] p-2 align-top shadow-[6px_0_12px_-10px_rgba(0,0,0,0.8)]">
+                      {editable ? (
+                        <div className="grid grid-cols-[1fr_44px] gap-1.5">
+                          <input
+                            aria-label={`Course ${idx + 1} code`}
+                            type="text"
+                            value={course.code}
+                            onChange={event => updateCourse(course.localId, 'code', event.target.value.toUpperCase())}
+                            placeholder="CSC 401"
+                            className="min-h-11 min-w-0 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-base font-bold uppercase text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
+                          />
+                          <button type="button" onClick={() => handleRemoveRow(course.localId)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--acade-danger)]/25 text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]" aria-label={`Remove ${courseName}`}>
+                            <Trash2 size={17} aria-hidden="true" />
+                          </button>
+                          <input
+                            aria-label={`Course ${idx + 1} title`}
+                            type="text"
+                            value={course.title}
+                            onChange={event => updateCourse(course.localId, 'title', event.target.value)}
+                            placeholder="Course title"
+                            className="col-span-2 min-h-11 min-w-0 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
+                          />
+                        </div>
+                      ) : (
+                        <div className="min-w-0 py-1">
+                          <p className="truncate text-sm font-bold text-[var(--acade-text)]">{course.code || 'Untitled course'}</p>
+                          <p className="mt-1 line-clamp-2 text-xs leading-4 text-[var(--acade-text-muted)]">{course.title}</p>
+                        </div>
+                      )}
+                    </td>
+                    <td className="p-2 text-center align-middle">
+                      {editable ? <input aria-label={`Course ${idx + 1} units`} type="number" value={course.units || ''} onChange={event => updateCourse(course.localId, 'units', parseInt(event.target.value) || 0)} min="1" max="6" inputMode="numeric" className="min-h-11 w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-1 text-center font-[family-name:var(--font-geist-mono)] text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none" /> : <span className="text-sm text-[var(--acade-text)]">{course.units}</span>}
+                    </td>
+                    <td className="p-2 text-center align-middle">
+                      {editable ? <input aria-label={`Course ${idx + 1} CA score out of 30`} type="number" value={course.caScore === null ? '' : course.caScore} onChange={event => updateCourse(course.localId, 'caScore', event.target.value ? parseInt(event.target.value) : null)} min="0" max={MAX_CA_SCORE} inputMode="numeric" disabled={course.isAR} className="min-h-11 w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-1 text-center font-[family-name:var(--font-geist-mono)] text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:opacity-50" /> : <span className="text-sm text-[var(--acade-text-muted)]">{course.caScore ?? '—'}</span>}
+                    </td>
+                    <td className="p-2 text-center align-middle">
+                      {editable ? <input aria-label={`Course ${idx + 1} exam score out of 70`} type="number" value={course.examScore === null ? '' : course.examScore} onChange={event => updateCourse(course.localId, 'examScore', event.target.value ? parseInt(event.target.value) : null)} min="0" max={MAX_EXAM_SCORE} inputMode="numeric" disabled={course.isAR} className="min-h-11 w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-1 text-center font-[family-name:var(--font-geist-mono)] text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:opacity-50" /> : <span className="text-sm text-[var(--acade-text-muted)]">{course.examScore ?? '—'}</span>}
+                    </td>
+                    <td className="px-2 py-3 text-center align-middle font-[family-name:var(--font-geist-mono)] text-sm font-bold text-[var(--acade-text)]">{totalScore ?? '—'}</td>
+                    <td className="p-2 text-center align-middle">
+                      {course.isAR ? <Badge variant="ongoing">AR</Badge> : <span className="text-sm font-bold text-[var(--acade-text)]">{grade ?? '—'}</span>}
+                    </td>
+                    <td className="px-2 py-3 text-center align-middle font-[family-name:var(--font-geist-mono)] text-sm font-bold text-[var(--acade-text-muted)]">{!grade || grade === 'AR' ? '—' : gradePoint.toFixed(1)}</td>
+                    <td className="px-2 py-3 text-center align-middle font-[family-name:var(--font-geist-mono)] text-sm font-bold text-[var(--acade-gold)]">{!grade || grade === 'AR' ? '—' : piPoint.toFixed(2)}</td>
+                  </motion.tr>
+                );
+              })}
+            </AnimatePresence>
+          </tbody>
+        </table>
       </section>
 
       <div
@@ -433,16 +366,6 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     <td className="p-3 text-center">
                       {course.isAR ? (
                         <Badge variant="ongoing">AR</Badge>
-                      ) : editable ? (
-                        <select
-                          aria-label={`Course ${idx + 1} letter grade`}
-                          value={grade ?? ''}
-                          onChange={(event) => handleGradeChange(course.localId, event.target.value as Grade | '')}
-                          className="min-h-11 w-full rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] px-2 text-center text-sm font-bold text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none"
-                        >
-                          <option value="">—</option>
-                          {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((option) => <option key={option} value={option}>{option}</option>)}
-                        </select>
                       ) : grade ? (
                         <Badge variant={`grade-${grade.toLowerCase()}` as any}>
                           {grade}

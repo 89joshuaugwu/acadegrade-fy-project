@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -139,6 +139,25 @@ describe('semester detail load failure', () => {
     expect(fileInput).toHaveAttribute('type', 'file');
     expect(fileInput).toHaveAttribute('accept', 'image/*,application/pdf');
     expect(fileInput).not.toHaveAttribute('capture');
+  });
+
+  it('keeps every semester action visible in a wrapped mobile toolbar', async () => {
+    mocks.getDocument.mockResolvedValue({
+      id: 'semester-1',
+      label: 'First Semester',
+      level: 300,
+      semester: 1,
+      session: '2025/2026',
+    });
+    mocks.queryCollection.mockResolvedValue([]);
+
+    await renderPage();
+
+    const toolbar = await screen.findByRole('toolbar', { name: 'Semester actions' });
+    expect(toolbar).toHaveClass('grid', 'grid-cols-2', 'md:flex');
+    expect(within(toolbar).getByRole('button', { name: 'Import Code' })).toBeVisible();
+    expect(within(toolbar).getByRole('button', { name: 'Share' })).toBeVisible();
+    expect(within(toolbar).getByRole('button', { name: 'Import Result Slip' })).toHaveClass('col-span-2');
   });
 
   it('sends camera photos and chosen files through the existing extraction endpoint', async () => {

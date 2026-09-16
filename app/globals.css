@@ -490,12 +490,13 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 }
 
 /* Follow the actual app theme, including a manual override of the OS theme. */
+.mobile-showcase-art-mobile,
 .mobile-showcase-dark,
 .dark .mobile-showcase-light {
   display: none;
 }
 
-.dark .mobile-showcase-dark {
+.dark .mobile-showcase-art-desktop.mobile-showcase-dark {
   display: block;
 }
 
@@ -504,12 +505,39 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 }
 
 @media (max-width: 767px) {
-  .mobile-showcase-art {
-    object-position: center bottom 4rem;
+  .mobile-showcase-art.mobile-showcase-art-desktop,
+  .dark .mobile-showcase-art.mobile-showcase-art-desktop.mobile-showcase-dark {
+    display: none;
+  }
+
+  .mobile-showcase-art.mobile-showcase-art-mobile {
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .mobile-showcase-art.mobile-showcase-art-mobile.mobile-showcase-light {
+    display: block;
+  }
+
+  .dark .mobile-showcase-art.mobile-showcase-art-mobile.mobile-showcase-light {
+    display: none;
+  }
+
+  .dark .mobile-showcase-art.mobile-showcase-art-mobile.mobile-showcase-dark {
+    display: block;
   }
 
   .mobile-showcase-scrim {
-    background: linear-gradient(to bottom, var(--acade-surface) 45%, transparent 75%);
+    background:
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--acade-surface) 88%, transparent) 0%,
+        color-mix(in srgb, var(--acade-surface) 66%, transparent) 40%,
+        color-mix(in srgb, var(--acade-surface) 18%, transparent) 66%,
+        transparent 78%
+      ),
+      linear-gradient(to top, color-mix(in srgb, var(--acade-deep) 76%, transparent) 0%, transparent 18%);
+    backdrop-filter: blur(1px);
   }
 }
 

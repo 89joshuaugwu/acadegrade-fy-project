@@ -351,14 +351,18 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-          <Button id="tour-import-code" variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
+        <div
+          role="toolbar"
+          aria-label="Semester actions"
+          className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center"
+        >
+          <Button id="tour-import-code" variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Download size={16} className="mr-2" /> Import Code
           </Button>
-          <Button id="tour-share-code" variant="outline" size="sm" onClick={handleGenerateShareCode} className="whitespace-nowrap" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
+          <Button id="tour-share-code" variant="outline" size="sm" onClick={handleGenerateShareCode} className="w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Share2 size={16} className="mr-2" /> Share
           </Button>
-          <Button id="tour-import-slip" variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="whitespace-nowrap" disabled={isFeatureDisabled('extract_slip')} title={isFeatureDisabled('extract_slip') ? "Temporarily disabled for maintenance" : ""}>
+          <Button id="tour-import-slip" variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="col-span-2 w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('extract_slip')} title={isFeatureDisabled('extract_slip') ? "Temporarily disabled for maintenance" : ""}>
             <FileText size={16} className="mr-2" /> Import Result Slip
           </Button>
         </div>

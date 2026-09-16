@@ -7,6 +7,7 @@ import { RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Minus, BookOpen, Cl
 import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
+import { getAcademicPlan } from '@/lib/academic/timeline';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { getDocument, queryCollection, setDocument, updateDocument } from '@/lib/firebase/firestore';
@@ -68,7 +69,9 @@ export default function InsightsPage() {
   const [piHistory, setPiHistory] = useState<number[]>([]);
   const [cgpaHistory, setCgpaHistory] = useState<number[]>([]);
   const [semesterLabels, setSemesterLabels] = useState<string[]>([]);
-  const [currentLevel, setCurrentLevel] = useState<number>(100);
+  const [remainingAcademicSemesters, setRemainingAcademicSemesters] = useState(0);
+  const [graduationSession, setGraduationSession] = useState('');
+  const [isGraduated, setIsGraduated] = useState(false);
   const [projectionMode, setProjectionMode] = useState<'pi' | 'cgpa'>('pi');
   const [cooldownText, setCooldownText] = useState<string | null>(null);
   const [isCooldownActive, setIsCooldownActive] = useState(false);
@@ -99,10 +102,10 @@ export default function InsightsPage() {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && profile) {
       loadData();
     }
-  }, [user]);
+  }, [user, profile]);
 
   useEffect(() => {
     if (rateLimitCooldown <= 0) return;
@@ -155,15 +158,21 @@ export default function InsightsPage() {
         if (a.level !== b.level) return a.level - b.level;
         return a.semester - b.semester;
       });
+      const academicPlan = getAcademicPlan(profile, semesters);
+      const academicContext = {
+        remainingSemesters: academicPlan.remainingAcademicSemesters,
+        graduationSession: academicPlan.graduationSession,
+        isGraduated: academicPlan.isGraduated,
+      };
+      setRemainingAcademicSemesters(academicPlan.remainingAcademicSemesters);
+      setGraduationSession(academicPlan.graduationSession);
+      setIsGraduated(academicPlan.isGraduated);
 
       const piHist = semesters
         .filter(s => s.isComplete && s.pi !== undefined && s.pi !== null)
         .map(s => s.pi!);
       setPiHistory(piHist);
       
-      const maxLevel = semesters.length > 0 ? Math.max(...semesters.map(s => s.level || 100)) : 100;
-      setCurrentLevel(maxLevel);
-
       // Compute CGPA & History
       let tPoints = 0;
       let tUnits = 0;
@@ -250,7 +259,12 @@ export default function InsightsPage() {
                'Content-Type': 'application/json',
                'Authorization': `Bearer ${authToken}`,
             },
-            body: JSON.stringify({ piHistory: piHist, cgpaHistory: cgpaHist, forceRegenerate: forceRefresh }),
+            body: JSON.stringify({
+              piHistory: piHist,
+              cgpaHistory: cgpaHist,
+              forceRegenerate: forceRefresh,
+              academicContext,
+            }),
           });
 
           if (res.ok) {
@@ -280,7 +294,7 @@ export default function InsightsPage() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${authToken}`,
           },
-          body: JSON.stringify({ forceRegenerate: forceRefresh, semesterData: semesters }),
+          body: JSON.stringify({ forceRegenerate: forceRefresh, semesterData: semesters, academicContext }),
         });
 
         if (res.ok) {
@@ -460,17 +474,15 @@ export default function InsightsPage() {
                       ? (piHistory.length > 0 ? piHistory.slice(-3) : [0]) 
                       : (cgpaHistory.length > 0 ? cgpaHistory.slice(-3) : [0])}
                     projected={projectionMode === 'pi' 
-                      ? analytics.forecast.projectedPi || analytics.forecast.projected 
-                      : analytics.forecast.projectedCgpa || analytics.forecast.projected}
+                      ? (analytics.forecast.projectedPi || analytics.forecast.projected).slice(0, Math.min(2, remainingAcademicSemesters))
+                      : (analytics.forecast.projectedCgpa || analytics.forecast.projected).slice(0, Math.min(2, remainingAcademicSemesters))}
                     labels={semesterLabels.length > 0 
                       ? [
                           ...semesterLabels.slice(-3),
-                          'Next Sem',
-                          currentLevel >= (profile?.courseDuration || 4) * 100
-                            ? 'Graduation'
-                            : 'Next Year',
+                          ...(remainingAcademicSemesters > 0 ? [remainingAcademicSemesters === 1 ? 'Graduation' : 'Next Sem'] : []),
+                          ...(remainingAcademicSemesters > 1 ? [remainingAcademicSemesters === 2 ? 'Graduation' : 'Next Year'] : []),
                         ]
-                      : ['Past', 'Current', 'Next Sem', 'Next Year']
+                      : ['Past', 'Current']
                     }
                     metricName={projectionMode === 'pi' ? 'PI' : 'CGPA'}
                   />
@@ -506,7 +518,18 @@ export default function InsightsPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
           >
-            <WhatIfCalculator currentCGPA={currentCGPA} totalCredits={totalCredits} />
+            {isGraduated ? (
+              <div className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-8 text-center">
+                <h2 className="text-lg font-bold text-[var(--acade-text)]">Programme timeline complete</h2>
+                <p className="mt-2 text-sm text-[var(--acade-text-muted)]">What-If projections stop at {graduationSession || 'graduation'} because no academic semesters remain.</p>
+              </div>
+            ) : (
+              <WhatIfCalculator
+                currentCGPA={currentCGPA}
+                totalCredits={totalCredits}
+                initialRemainingSemesters={remainingAcademicSemesters}
+              />
+            )}
           </motion.div>
         );
 
