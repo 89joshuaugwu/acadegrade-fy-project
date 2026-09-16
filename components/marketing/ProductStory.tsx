@@ -28,7 +28,9 @@ export function ProductStory() {
         <div className="grid gap-5 border-b border-[var(--acade-border)] pb-9 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
             <p className="text-sm font-semibold text-[var(--acade-primary)]">A practical academic rhythm</p>
-            <h2 id="product-story-title" className="mt-3 font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3.5vw,2.75rem)] font-semibold tracking-[-0.035em]">Record. Understand. Plan.</h2>
+            <h2 data-landing-motion="words" id="product-story-title" className="mt-3 font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3.5vw,2.75rem)] font-semibold tracking-[-0.035em]">
+              <span>Record.</span>{' '}<span>Understand.</span>{' '}<span>Plan.</span>
+            </h2>
           </div>
           <p className="max-w-[48ch] leading-7 text-[var(--acade-text-muted)] lg:col-span-5">One connected record supports the three decisions students return to throughout a degree.</p>
         </div>

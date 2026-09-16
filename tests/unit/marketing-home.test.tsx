@@ -65,10 +65,7 @@ describe('AcadeGrade landing presentation', () => {
     expect(sequence).toHaveClass('academic-proof-deck', 'min-w-0', 'space-y-6', 'lg:space-y-0');
     expect(stages).toHaveLength(4);
     expect(stages.map((stage) => stage.getAttribute('data-stage'))).toEqual(['1', '2', '3', '4']);
-    expect(stages[0]).toHaveClass('academic-proof-card', 'lg:sticky', 'lg:top-24');
-    expect(stages[1]).toHaveClass('academic-proof-card', 'lg:sticky', 'lg:top-40');
-    expect(stages[2]).toHaveClass('academic-proof-card', 'lg:sticky', 'lg:top-56');
-    expect(stages[3]).toHaveClass('academic-proof-card', 'lg:sticky', 'lg:top-72');
+    expect(stages.every(stage => stage.querySelector('.academic-proof-card'))).toBe(true);
     expect(screen.getByRole('table', { name: /illustrative semester result inputs/i }).parentElement).toHaveClass('hidden', 'sm:block');
     expect(screen.getByRole('list', { name: /illustrative courses on small screens/i })).toHaveClass('sm:hidden');
     expect(screen.getByText(/records you enter/i)).toBeInTheDocument();

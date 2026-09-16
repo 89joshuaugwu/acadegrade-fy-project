@@ -1,4 +1,5 @@
 import { LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
+import { ProofDeck } from './ProofDeck';
 
 const exampleCourses = [
   { code: 'CSC 415', title: 'Computer Graphics', score: 54, grade: 'C', units: 2, gradeClass: 'text-[var(--acade-gold)]' },
@@ -32,12 +33,12 @@ export function AcademicProof() {
           </div>
         </div>
 
-        <ol aria-label="Illustrative calculation sequence" className="academic-ledger-field academic-proof-deck min-w-0 space-y-6 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 sm:p-5 lg:col-span-7 lg:space-y-0">
-          <li data-stage="1" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-24 lg:z-10">
+        <ProofDeck>
+          <div className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">01 · RESULT INPUT</p>
-                <h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold">Record the semester evidence</h3>
+                <p data-landing-motion="heading" className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">01 · RESULT INPUT</p>
+                <h3 data-landing-motion="heading" className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold">Record the semester evidence</h3>
                 <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[11px] text-[var(--acade-text-faint)]">2025/2026 · FIRST SEMESTER · ILLUSTRATIVE</p>
               </div>
               <NotebookPen className="size-6 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
@@ -68,13 +69,13 @@ export function AcademicProof() {
                 </tbody>
               </table>
             </div>
-          </li>
+          </div>
 
-          <li data-stage="2" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-40 lg:z-20">
+          <div className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
             <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
               <div className="min-w-0">
-                <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-gold)]">02 · CREDIT WEIGHTING</p>
-                <h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold">Weight the result by its academic load</h3>
+                <p data-landing-motion="heading" className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-gold)]">02 · CREDIT WEIGHTING</p>
+                <h3 data-landing-motion="heading" className="mt-1 font-[family-name:var(--font-bricolage)] text-xl font-semibold">Weight the result by its academic load</h3>
                 <p className="mt-3 max-w-[45ch] text-sm leading-6 text-[var(--acade-text-muted)]">Every course keeps its contribution visible, so the total can always be traced back to the record.</p>
               </div>
               <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] px-6 py-5 text-center"><p className="text-xs font-semibold text-[var(--acade-text-faint)]">RECORDED CREDITS</p><p className="mt-1 font-[family-name:var(--font-geist-mono)] text-4xl font-semibold">7</p></div>
@@ -83,19 +84,19 @@ export function AcademicProof() {
               <p className="min-w-0 whitespace-normal break-words">Quality points = grade point × credits</p>
               <p className="min-w-0 whitespace-normal break-words">Semester GPA = total quality points ÷ total credits</p>
             </div>
-          </li>
+          </div>
 
-          <li data-stage="3" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-56 lg:z-30">
-            <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">03 · GPA + PI</p>
+          <div className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
+            <p data-landing-motion="heading" className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">03 · GPA + PI</p>
             <div className="mt-4 grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-border)] sm:grid-cols-2">
               <div className="bg-[var(--acade-surface)] p-6"><p className="text-sm font-semibold text-[var(--acade-text-muted)]">Semester GPA</p><p className="mt-2 font-[family-name:var(--font-geist-mono)] text-5xl font-semibold tracking-tight">4.14</p><p className="mt-3 text-xs text-[var(--acade-text-muted)]">Letter-grade points, credit weighted</p></div>
               <div className="bg-[var(--acade-gold-dim)] p-6"><p className="text-sm font-semibold text-[var(--acade-gold)]">Performance Index</p><p className="mt-2 font-[family-name:var(--font-geist-mono)] text-5xl font-semibold tracking-tight text-[var(--acade-gold)]">3.18</p><p className="mt-3 text-xs text-[var(--acade-text-muted)]">Continuous raw-score signal when available</p></div>
             </div>
-          </li>
+          </div>
 
-          <li data-stage="4" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] sm:p-7 lg:sticky lg:top-72 lg:z-40">
+          <div className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-5">
-              <div><p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[#AFAAFF]">04 · DEGREE OUTLOOK</p><h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-2xl font-semibold">A trajectory, not just a total</h3></div>
+              <div data-landing-motion="heading"><p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[#AFAAFF]">04 · DEGREE OUTLOOK</p><h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-2xl font-semibold">A trajectory, not just a total</h3></div>
               <div className="text-right"><p className="font-[family-name:var(--font-geist-mono)] text-3xl font-semibold">3.71</p><p className="text-xs text-[#B8BED0]">CGPA · after 117 credits</p></div>
             </div>
             <LineChart className="sr-only" aria-hidden="true" />
@@ -106,8 +107,8 @@ export function AcademicProof() {
               <g fill="#17172E" stroke="#8B84FF" strokeWidth="3"><circle cx="42" cy="145" r="5" /><circle cx="210" cy="116" r="5" /><circle cx="386" cy="69" r="5" /><circle cx="558" cy="30" r="7" /></g>
             </svg>
             <div className="mt-4 flex flex-wrap gap-5 text-xs text-[#B8BED0]"><span>Solid · CGPA</span><span>Dashed · PI</span><span className="ml-auto">Illustrative example</span></div>
-          </li>
-        </ol>
+          </div>
+        </ProofDeck>
       </div>
     </section>
   );

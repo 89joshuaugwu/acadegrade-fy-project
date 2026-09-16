@@ -462,11 +462,54 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   background-size: 100% 32px, 100% 100%;
 }
 
-/* Desktop cards use native sticky positioning, so every card remains in normal
-   document flow and the scene releases without an artificial scroll tail. */
+/* Each invisible slot ends at the same stack baseline. Different card heights
+   therefore cannot collapse the heading peeks when the deck leaves view. */
 @media (min-width: 1024px) {
-  .academic-proof-card + .academic-proof-card {
+  .academic-proof-slot + .academic-proof-slot {
     margin-top: 2rem;
+  }
+}
+
+@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .academic-proof-slot {
+    position: sticky;
+    top: calc(96px + var(--proof-offset));
+    min-height: calc(var(--proof-stack-height, 0px) - var(--proof-offset));
+    pointer-events: none;
+  }
+
+  .academic-proof-slot > .academic-proof-card {
+    pointer-events: auto;
+  }
+
+}
+
+.mobile-showcase-art {
+  object-fit: contain;
+  object-position: center bottom;
+}
+
+/* Follow the actual app theme, including a manual override of the OS theme. */
+.mobile-showcase-dark,
+.dark .mobile-showcase-light {
+  display: none;
+}
+
+.dark .mobile-showcase-dark {
+  display: block;
+}
+
+.mobile-showcase-scrim {
+  background: linear-gradient(90deg, var(--acade-surface) 0%, color-mix(in srgb, var(--acade-surface) 82%, transparent) 28%, transparent 55%);
+}
+
+@media (max-width: 767px) {
+  .mobile-showcase-art {
+    object-position: center bottom 4rem;
+  }
+
+  .mobile-showcase-scrim {
+    background: linear-gradient(to bottom, var(--acade-surface) 45%, transparent 75%);
   }
 }
 

@@ -1,0 +1,45 @@
+/* Visible SSR/no-JS baseline. Only observed entrances opt into animation. */
+[data-landing-hero].marketing-stagger > * {
+  animation: none;
+}
+
+[data-landing-motion='words'] > span {
+  display: inline-block;
+}
+
+@keyframes landing-text-enter {
+  from { opacity: 0.35; transform: translateY(var(--landing-distance, 4px)); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-landing-motion-root] [data-landing-entered='true']:not([data-landing-motion='words']),
+  [data-landing-motion-root] [data-landing-motion='words'][data-landing-entered='true'] > span {
+    animation: landing-text-enter var(--landing-duration, 300ms) cubic-bezier(0.22, 1, 0.36, 1) var(--landing-delay, 0ms) both;
+  }
+
+  [data-landing-motion='hero'] { --landing-duration: 360ms; --landing-distance: 6px; }
+  [data-landing-motion='hero-copy'] { --landing-duration: 300ms; --landing-delay: 60ms; --landing-distance: 6px; }
+  [data-landing-motion='words'] > span:nth-child(2) { --landing-delay: 80ms; }
+  [data-landing-motion='words'] > span:nth-child(3) { --landing-delay: 160ms; }
+  [data-landing-motion='capture'] { --landing-duration: 250ms; --landing-distance: 0px; }
+  [data-landing-motion='note'] { --landing-delay: 80ms; --landing-distance: 0px; }
+  [data-landing-motion='heading'] { --landing-duration: 240ms; --landing-distance: 0px; }
+
+  @media (min-width: 640px) {
+    [data-landing-motion='capture'][data-landing-order='1'] { --landing-delay: 70ms; }
+    [data-landing-motion='capture'][data-landing-order='2'] { --landing-delay: 140ms; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-landing-motion-root] [data-landing-motion],
+  [data-landing-motion-root] [data-landing-motion] > span {
+    animation: none !important;
+    animation-delay: 0ms !important;
+    transition: none !important;
+    transition-delay: 0ms !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

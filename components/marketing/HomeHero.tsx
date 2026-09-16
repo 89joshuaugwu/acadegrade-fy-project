@@ -25,7 +25,7 @@ export function HomeHero() {
         <TrajectoryField />
 
         <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-6 px-4 pb-0 pt-6 sm:gap-8 sm:px-6 sm:pt-10 lg:min-h-[640px] lg:grid-cols-12 lg:gap-10 lg:px-8 lg:pt-4">
-          <div className="marketing-stagger z-10 pb-6 pt-2 sm:pb-10 lg:col-span-6 lg:pb-20 lg:pt-0">
+          <div data-landing-hero="" className="marketing-stagger z-10 pb-6 pt-2 sm:pb-10 lg:col-span-6 lg:pb-20 lg:pt-0">
             <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-[var(--acade-border)] bg-[var(--acade-surface)] px-3 py-2 text-sm font-semibold text-[var(--acade-text-muted)] shadow-[var(--shadow-card)]">
               <Route className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />
               Your degree, made easier to read
@@ -35,10 +35,10 @@ export function HomeHero() {
               Record · Understand · Plan
             </p>
 
-            <h1 id="home-hero-title" className="mt-6 max-w-[11ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.75rem,5.6vw,4.25rem)] font-bold leading-[1.01] tracking-[-0.052em] text-[var(--acade-text)]">
+            <h1 data-landing-motion="hero" id="home-hero-title" className="mt-6 max-w-[11ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.75rem,5.6vw,4.25rem)] font-bold leading-[1.01] tracking-[-0.052em] text-[var(--acade-text)]">
               See the path behind every result.
             </h1>
-            <p className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
+            <p data-landing-motion="hero-copy" className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
               Record each semester, understand your CGPA and performance signals, then plan your next academic move with evidence you can inspect.
             </p>
 
@@ -58,7 +58,7 @@ export function HomeHero() {
             </div>
           </div>
 
-          <div className="marketing-visual relative self-end lg:col-span-6">
+          <div className="relative self-end lg:col-span-6">
             <div className="absolute bottom-12 left-1/2 h-[72%] w-[88%] -translate-x-1/2 rounded-[50%] bg-[var(--acade-primary-dim)] opacity-80" aria-hidden="true" />
             <Image src={heroStudent} alt="Student holding a phone showing the AcadeGrade academic dashboard" width={1199} height={1312} priority sizes="(max-width: 1023px) 100vw, 50vw" className="relative mx-auto max-h-[460px] w-full object-contain object-bottom sm:max-h-[560px] lg:max-h-[650px]" />
             <div className="absolute bottom-7 right-0 hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-popover)] sm:block lg:right-2">

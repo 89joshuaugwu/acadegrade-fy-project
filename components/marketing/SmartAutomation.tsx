@@ -28,8 +28,8 @@ export function SmartAutomation() {
           </div>
 
           <ol aria-label="OCR result capture workflow" className="mx-auto mt-6 grid max-w-3xl gap-3 text-left sm:grid-cols-3">
-            {captureSteps.map((step) => (
-              <li key={step.marker} className="rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] bg-[var(--acade-void)] p-4">
+            {captureSteps.map((step, index) => (
+              <li data-landing-motion="capture" data-landing-order={index} key={step.marker} className="rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] bg-[var(--acade-void)] p-4">
                 <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">{step.marker}</p>
                 <p className="mt-1 text-sm text-[var(--acade-text-muted)]">{step.detail}</p>
               </li>
@@ -72,7 +72,7 @@ export function SmartAutomation() {
               </div>
               <blockquote className="academic-margin-note rounded-[var(--radius-surface)] bg-[var(--acade-primary-dim)] p-5 pl-6">
                 <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">MARGIN NOTE · EXAMPLE</p>
-                <p className="mt-4 font-[family-name:var(--font-bricolage)] text-xl font-semibold leading-8 tracking-[-0.02em]">“Your recent performance is improving. Compare the credit weight of your remaining courses before setting the next CGPA target.”</p>
+                <p data-landing-motion="note" className="mt-4 font-[family-name:var(--font-bricolage)] text-xl font-semibold leading-8 tracking-[-0.02em]">“Your recent performance is improving. Compare the credit weight of your remaining courses before setting the next CGPA target.”</p>
                 <footer className="mt-5 text-xs leading-5 text-[var(--acade-text-muted)]">AI-generated guidance · verify against your programme requirements.</footer>
               </blockquote>
             </div>
