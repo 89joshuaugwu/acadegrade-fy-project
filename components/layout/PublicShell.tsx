@@ -50,8 +50,8 @@ export function PublicFooter() {
   return (
     <footer className="border-t border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
       <div className="mx-auto max-w-[1200px]">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_0.75fr_0.75fr]">
-          <div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 lg:grid-cols-[1.5fr_0.75fr_0.75fr] lg:gap-10">
+          <div className="col-span-2 lg:col-span-1">
             <Logo href="/" size="sm" />
             <p className="mt-4 max-w-sm text-sm leading-6 text-[var(--acade-text-muted)]">
               A clearer way to record results, understand academic progress, and plan what comes next.
@@ -75,9 +75,9 @@ export function PublicFooter() {
           ))}
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-[var(--acade-border-subtle)] pt-6 text-xs text-[var(--acade-text-faint)] sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 grid grid-cols-2 items-start gap-4 border-t border-[var(--acade-border-subtle)] pt-6 text-xs leading-5 text-[var(--acade-text-faint)]">
           <p>&copy; {new Date().getFullYear()} AcadeGrade. All rights reserved.</p>
-          <p>Personal academic planning, not an official university record.</p>
+          <p className="text-right">Personal academic planning, not an official university record.</p>
         </div>
       </div>
     </footer>

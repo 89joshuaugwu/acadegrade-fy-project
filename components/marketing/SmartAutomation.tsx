@@ -13,7 +13,7 @@ export function SmartAutomation() {
   return (
     <>
       <section aria-labelledby="ocr-title" className="public-atmosphere-section border-b border-[var(--acade-border-subtle)]">
-        <div className="mx-auto max-w-[1200px] px-4 py-16 text-center sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+        <div className="mx-auto max-w-[1200px] px-4 py-12 text-center sm:px-6 sm:py-16 lg:px-8 lg:py-24">
           <p className="text-sm font-semibold text-[var(--acade-primary)]">OCR-assisted result capture</p>
           <h2 id="ocr-title" className="mx-auto mt-3 max-w-[17ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,4vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.04em]">
             Turn a result slip into fields you can review.
@@ -46,7 +46,7 @@ export function SmartAutomation() {
       </section>
 
       <section aria-labelledby="ai-title" className="public-atmosphere-section border-b border-[var(--acade-border-subtle)]">
-        <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:px-8">
+        <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-12 lg:items-center lg:px-8 lg:py-20">
           <div className="lg:col-span-5">
             <span className="flex size-12 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
               <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="size-6 object-contain" />

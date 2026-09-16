@@ -100,8 +100,8 @@ describe('Student settings accessibility', () => {
     expect(recordModeGroup).toHaveClass('grid', 'grid-cols-2', 'sm:flex');
 
     const semesterSwitch = screen.getByRole('switch', { name: /semester saved successfully/i });
-    expect(semesterSwitch).toHaveClass('h-12');
-    expect(semesterSwitch.closest('[data-setting-row]')).toHaveClass('min-h-16');
+    expect(semesterSwitch).toHaveClass('size-12');
+    expect(semesterSwitch.closest('[data-setting-row]')).toHaveClass('min-h-14');
   });
 
   it('associates the Current Level label with its select control', () => {

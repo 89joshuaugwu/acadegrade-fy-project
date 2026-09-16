@@ -1,6 +1,3 @@
-'use client';
-
-import { type CSSProperties, useEffect, useRef } from 'react';
 import { LineChart, NotebookPen, ShieldCheck } from 'lucide-react';
 
 const exampleCourses = [
@@ -9,120 +6,14 @@ const exampleCourses = [
   { code: 'MTH 321', title: 'Numerical Analysis', score: 71, grade: 'A', units: 3, gradeClass: 'text-[var(--acade-success)]' },
 ] as const;
 
-const STAGE_RESTING_OFFSETS = [0, 64, 128, 192] as const;
-const STAGE_ENTER_POINTS = [0, 0.12, 0.35, 0.58] as const;
-const STAGE_ENTER_DURATION = 0.22;
-const ENTRY_OFFSET = 520;
-
-type DeckCardStyle = CSSProperties & {
-  '--deck-card-y': string;
-  '--deck-card-opacity': string;
-  '--deck-card-scale': string;
-};
-
-function clamp(value: number) {
-  return Math.min(1, Math.max(0, value));
-}
-
-function easeOutQuint(value: number) {
-  return 1 - Math.pow(1 - clamp(value), 5);
-}
-
-function getCardProgress(index: number, progress: number) {
-  if (index === 0) return 1;
-  return easeOutQuint((progress - STAGE_ENTER_POINTS[index]) / STAGE_ENTER_DURATION);
-}
-
-function getDeckCardStyle(index: number, progress: number): DeckCardStyle {
-  const reveal = getCardProgress(index, progress);
-  const y = ENTRY_OFFSET + (STAGE_RESTING_OFFSETS[index] - ENTRY_OFFSET) * reveal;
-
-  return {
-    '--deck-card-y': `${y.toFixed(2)}px`,
-    '--deck-card-opacity': index === 0 || reveal > 0 ? '1.000' : '0.000',
-    '--deck-card-scale': '1.000',
-  };
-}
-
 export function AcademicProof() {
-  const sectionRef = useRef<HTMLElement>(null);
-  const deckRef = useRef<HTMLOListElement>(null);
-  const cardRefs = useRef<Array<HTMLLIElement | null>>([]);
-  useEffect(() => {
-    let frame = 0;
-    let targetProgress = 0;
-    let renderedProgress = 0;
-    let isAnimating = false;
-    let previousFrameTime = 0;
-
-    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-
-    const applyProgress = (progress: number) => {
-      cardRefs.current.forEach((card, index) => {
-        if (!card) return;
-        const style = getDeckCardStyle(index, progress);
-        card.style.setProperty('--deck-card-y', style['--deck-card-y']);
-        card.style.setProperty('--deck-card-opacity', style['--deck-card-opacity']);
-        card.style.setProperty('--deck-card-scale', style['--deck-card-scale']);
-      });
-
-      // Grow the viewport as soon as the next card begins entering so its body is
-      // never clipped inside the preceding stage's shorter frame.
-      const nextStage = [3, 2, 1].find((index) => getCardProgress(index, progress) > 0) ?? 0;
-      if (deckRef.current) deckRef.current.dataset.activeStage = String(nextStage + 1);
-    };
-
-    const render = (frameTime: number) => {
-      const delta = targetProgress - renderedProgress;
-      const elapsed = previousFrameTime ? Math.min(frameTime - previousFrameTime, 64) : 16.67;
-      previousFrameTime = frameTime;
-      const smoothing = 1 - Math.exp(-elapsed / 90);
-      renderedProgress = prefersReducedMotion ? targetProgress : renderedProgress + delta * smoothing;
-      if (Math.abs(targetProgress - renderedProgress) < 0.001) renderedProgress = targetProgress;
-      applyProgress(renderedProgress);
-
-      if (Math.abs(targetProgress - renderedProgress) >= 0.001) {
-        frame = requestAnimationFrame(render);
-      } else {
-        isAnimating = false;
-        previousFrameTime = 0;
-      }
-    };
-
-    const updateProgress = () => {
-      const section = sectionRef.current;
-      const deck = deckRef.current;
-      if (!section || !deck || !window.matchMedia('(min-width: 1024px) and (min-height: 720px)').matches) return;
-
-      const bounds = section.getBoundingClientRect();
-      const availableTravel = section.offsetHeight - deck.offsetHeight - 128;
-      const scrollSceneLength = Math.max(1, Math.min(window.innerHeight * 0.5, availableTravel));
-      targetProgress = clamp((96 - bounds.top) / scrollSceneLength);
-
-      if (!isAnimating) {
-        isAnimating = true;
-        frame = requestAnimationFrame(render);
-      }
-    };
-
-    updateProgress();
-    window.addEventListener('scroll', updateProgress, { passive: true });
-    window.addEventListener('resize', updateProgress);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', updateProgress);
-      window.removeEventListener('resize', updateProgress);
-    };
-  }, []);
-
   return (
     <section
-      ref={sectionRef}
       id="features"
       aria-labelledby="academic-proof-title"
-      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)] lg:min-h-[150vh]"
+      className="academic-proof-scene public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)]"
     >
-      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:min-h-[150vh] lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
+      <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
         <div className="academic-proof-copy lg:sticky lg:top-28 lg:col-span-5">
           <div>
             <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
@@ -141,8 +32,8 @@ export function AcademicProof() {
           </div>
         </div>
 
-        <ol ref={deckRef} data-active-stage="1" aria-label="Illustrative calculation sequence" className="academic-ledger-field academic-proof-deck min-w-0 space-y-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 transition-[height] duration-300 sm:p-5 lg:sticky lg:top-24 lg:col-span-7 lg:space-y-0 lg:overflow-hidden">
-          <li ref={(node) => { cardRefs.current[0] = node; }} data-stage="1" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-10" style={getDeckCardStyle(0, 0)}>
+        <ol aria-label="Illustrative calculation sequence" className="academic-ledger-field academic-proof-deck min-w-0 space-y-6 rounded-[var(--radius-dialog)] border border-[var(--acade-border-subtle)] p-3 sm:p-5 lg:col-span-7 lg:space-y-0">
+          <li data-stage="1" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-24 lg:z-10">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">01 · RESULT INPUT</p>
@@ -179,7 +70,7 @@ export function AcademicProof() {
             </div>
           </li>
 
-          <li ref={(node) => { cardRefs.current[1] = node; }} data-stage="2" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)]/95 p-5 shadow-[var(--shadow-card)] backdrop-blur-sm sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-20" style={getDeckCardStyle(1, 0)}>
+          <li data-stage="2" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-40 lg:z-20">
             <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
               <div className="min-w-0">
                 <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-gold)]">02 · CREDIT WEIGHTING</p>
@@ -194,7 +85,7 @@ export function AcademicProof() {
             </div>
           </li>
 
-          <li ref={(node) => { cardRefs.current[2] = node; }} data-stage="3" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-30" style={getDeckCardStyle(2, 0)}>
+          <li data-stage="3" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7 lg:sticky lg:top-56 lg:z-30">
             <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[var(--acade-primary)]">03 · GPA + PI</p>
             <div className="mt-4 grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-border)] sm:grid-cols-2">
               <div className="bg-[var(--acade-surface)] p-6"><p className="text-sm font-semibold text-[var(--acade-text-muted)]">Semester GPA</p><p className="mt-2 font-[family-name:var(--font-geist-mono)] text-5xl font-semibold tracking-tight">4.14</p><p className="mt-3 text-xs text-[var(--acade-text-muted)]">Letter-grade points, credit weighted</p></div>
@@ -202,7 +93,7 @@ export function AcademicProof() {
             </div>
           </li>
 
-          <li ref={(node) => { cardRefs.current[3] = node; }} data-stage="4" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] sm:p-7 lg:absolute lg:inset-x-5 lg:top-5 lg:z-40" style={getDeckCardStyle(3, 0)}>
+          <li data-stage="4" className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-primary)] bg-[#17172E] p-5 text-white shadow-[0_24px_60px_rgba(20,24,39,.18)] sm:p-7 lg:sticky lg:top-72 lg:z-40">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div><p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold text-[#AFAAFF]">04 · DEGREE OUTLOOK</p><h3 className="mt-1 font-[family-name:var(--font-bricolage)] text-2xl font-semibold">A trajectory, not just a total</h3></div>
               <div className="text-right"><p className="font-[family-name:var(--font-geist-mono)] text-3xl font-semibold">3.71</p><p className="text-xs text-[#B8BED0]">CGPA · after 117 credits</p></div>

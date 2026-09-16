@@ -24,7 +24,7 @@ const workflow = [
 export function ProductStory() {
   return (
     <section id="how-it-works" aria-labelledby="product-story-title" className="public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)]">
-      <div className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+      <div className="mx-auto max-w-[1200px] px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="grid gap-5 border-b border-[var(--acade-border)] pb-9 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
             <p className="text-sm font-semibold text-[var(--acade-primary)]">A practical academic rhythm</p>
@@ -33,11 +33,11 @@ export function ProductStory() {
           <p className="max-w-[48ch] leading-7 text-[var(--acade-text-muted)] lg:col-span-5">One connected record supports the three decisions students return to throughout a degree.</p>
         </div>
 
-        <ol aria-label="Academic workflow" className="mt-10 grid gap-0 md:grid-cols-3">
+        <ol aria-label="Academic workflow" className="mt-7 grid gap-0 sm:mt-10 md:grid-cols-3">
           {workflow.map((step, index) => {
             const Icon = step.icon;
             return (
-              <li key={step.marker} className={`py-7 md:px-7 ${index < workflow.length - 1 ? 'border-b border-[var(--acade-border-subtle)] md:border-b-0 md:border-r' : ''} ${index === 0 ? 'md:pl-0' : ''} ${index === workflow.length - 1 ? 'md:pr-0' : ''}`}>
+              <li key={step.marker} className={`py-6 md:px-7 md:py-7 ${index < workflow.length - 1 ? 'border-b border-[var(--acade-border-subtle)] md:border-b-0 md:border-r' : ''} ${index === 0 ? 'md:pl-0' : ''} ${index === workflow.length - 1 ? 'md:pr-0' : ''}`}>
                 <span className="font-[family-name:var(--font-geist-mono)] text-sm font-semibold text-[var(--acade-primary)]">{step.marker}</span>
                 <Icon className="mt-6 size-7 text-[var(--acade-primary)]" aria-hidden="true" />
                 <h3 className="mt-5 font-[family-name:var(--font-bricolage)] text-xl font-semibold">{step.title}</h3>

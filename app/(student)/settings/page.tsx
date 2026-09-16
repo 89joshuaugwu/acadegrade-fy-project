@@ -406,19 +406,19 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2 border-b border-[var(--acade-border-subtle)]">
+              <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] py-1">
                 <span id="notification-semester-saved" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Semester saved successfully</span>
                 <Switch aria-labelledby="notification-semester-saved" checked={notifPrefs.semesterSaved} onCheckedChange={(val) => handleTogglePreference('semesterSaved', val)} />
               </div>
-              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2 border-b border-[var(--acade-border-subtle)]">
+              <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] py-1">
                 <span id="notification-degree-class" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Degree class projections change</span>
                 <Switch aria-labelledby="notification-degree-class" checked={notifPrefs.degreeClass} onCheckedChange={(val) => handleTogglePreference('degreeClass', val)} />
               </div>
-              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2 border-b border-[var(--acade-border-subtle)]">
+              <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] py-1">
                 <span id="notification-ai-insights" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">AI insights are ready</span>
                 <Switch aria-labelledby="notification-ai-insights" checked={notifPrefs.aiInsights} onCheckedChange={(val) => handleTogglePreference('aiInsights', val)} />
               </div>
-              <div data-setting-row className="flex min-h-16 items-center justify-between gap-4 py-2">
+              <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 py-1">
                 <span id="notification-admin-broadcasts" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Admin broadcasts</span>
                 <Switch aria-labelledby="notification-admin-broadcasts" checked={notifPrefs.adminBroadcasts} onCheckedChange={(val) => handleTogglePreference('adminBroadcasts', val)} />
               </div>

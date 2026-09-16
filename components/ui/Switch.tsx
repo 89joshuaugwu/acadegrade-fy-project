@@ -38,27 +38,20 @@ export function Switch({
       disabled={unavailable}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'relative inline-flex h-12 w-14 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)] focus-visible:ring-offset-2',
-        checked ? 'bg-[var(--acade-primary)]' : 'bg-[var(--acade-control-border)]',
+        'relative inline-flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-control)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)] focus-visible:ring-offset-2',
         unavailable && 'cursor-not-allowed opacity-50',
         className
       )}
     >
       {!ariaLabel && !ariaLabelledBy && <span className="sr-only">Toggle setting</span>}
-      <motion.span
-        initial={false}
-        animate={{
-          x: checked ? 24 : 0,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 500,
-          damping: 30
-        }}
-        className={cn(
-          'pointer-events-none ml-1 block h-6 w-6 rounded-full bg-[var(--acade-deep)] shadow-sm ring-0'
-        )}
-      />
+      <span className={cn('relative h-6 w-11 rounded-full transition-colors duration-150', checked ? 'bg-[var(--acade-primary)]' : 'bg-[var(--acade-control-border)]')} aria-hidden="true">
+        <motion.span
+          initial={false}
+          animate={{ x: checked ? 20 : 0 }}
+          transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+          className="pointer-events-none absolute left-0.5 top-0.5 block size-5 rounded-full bg-[var(--acade-deep)] shadow-sm ring-0"
+        />
+      </span>
     </button>
   );
 }

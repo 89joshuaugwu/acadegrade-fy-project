@@ -24,8 +24,8 @@ export function HomeHero() {
       <div className="relative overflow-hidden">
         <TrajectoryField />
 
-        <div className="relative mx-auto grid min-h-[640px] max-w-[1200px] grid-cols-1 items-center gap-8 px-4 pb-0 pt-8 sm:px-6 sm:pt-10 lg:grid-cols-12 lg:gap-10 lg:px-8 lg:pt-4">
-          <div className="marketing-stagger z-10 pb-12 pt-3 lg:col-span-6 lg:pb-20 lg:pt-0">
+        <div className="relative mx-auto grid max-w-[1200px] grid-cols-1 items-center gap-6 px-4 pb-0 pt-6 sm:gap-8 sm:px-6 sm:pt-10 lg:min-h-[640px] lg:grid-cols-12 lg:gap-10 lg:px-8 lg:pt-4">
+          <div className="marketing-stagger z-10 pb-6 pt-2 sm:pb-10 lg:col-span-6 lg:pb-20 lg:pt-0">
             <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-[var(--acade-border)] bg-[var(--acade-surface)] px-3 py-2 text-sm font-semibold text-[var(--acade-text-muted)] shadow-[var(--shadow-card)]">
               <Route className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />
               Your degree, made easier to read
@@ -60,7 +60,7 @@ export function HomeHero() {
 
           <div className="marketing-visual relative self-end lg:col-span-6">
             <div className="absolute bottom-12 left-1/2 h-[72%] w-[88%] -translate-x-1/2 rounded-[50%] bg-[var(--acade-primary-dim)] opacity-80" aria-hidden="true" />
-            <Image src={heroStudent} alt="Student holding a phone showing the AcadeGrade academic dashboard" width={1199} height={1312} priority sizes="(max-width: 1023px) 100vw, 50vw" className="relative mx-auto max-h-[650px] w-full object-contain object-bottom" />
+            <Image src={heroStudent} alt="Student holding a phone showing the AcadeGrade academic dashboard" width={1199} height={1312} priority sizes="(max-width: 1023px) 100vw, 50vw" className="relative mx-auto max-h-[460px] w-full object-contain object-bottom sm:max-h-[560px] lg:max-h-[650px]" />
             <div className="absolute bottom-7 right-0 hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-popover)] sm:block lg:right-2">
               <p className="text-xs font-semibold text-[var(--acade-text-faint)]">CURRENT TRAJECTORY</p>
               <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-2xl font-semibold">3.71 <span className="text-sm text-[var(--acade-success)]">+0.08</span></p>

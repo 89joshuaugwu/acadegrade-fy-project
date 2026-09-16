@@ -462,69 +462,11 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   background-size: 100% 32px, 100% 100%;
 }
 
-/* The four proof cards stay ordinary document content on small screens.
-   On desktop their transform is driven by the section scroll scene. */
-.academic-proof-card {
-  --deck-card-y: 0px;
-  --deck-card-opacity: 1;
-  --deck-card-scale: 1;
-}
-
-@media (min-width: 1024px) and (min-height: 720px) {
-  .academic-proof-deck {
-    height: 25rem;
-  }
-
-  .academic-proof-deck[data-active-stage='2'] {
-    height: 26rem;
-  }
-
-  .academic-proof-deck[data-active-stage='3'] {
-    height: 29rem;
-  }
-
-  .academic-proof-deck[data-active-stage='4'] {
-    height: 34rem;
-  }
-
-  .academic-proof-card {
-    opacity: var(--deck-card-opacity);
-    pointer-events: none;
-    transform: translate3d(0, var(--deck-card-y), 0) scale(var(--deck-card-scale));
-    transform-origin: center top;
-    will-change: transform;
-  }
-
-  .academic-proof-card:first-child {
-    pointer-events: auto;
-  }
-}
-
-@media (min-width: 1024px) and (max-height: 719px) {
-  .academic-proof-scene,
-  .academic-proof-grid {
-    min-height: auto !important;
-  }
-
-  .academic-proof-copy,
-  .academic-proof-deck {
-    position: static !important;
-  }
-
-  .academic-proof-deck {
-    height: auto !important;
-    overflow: visible !important;
-  }
-
-  .academic-proof-card {
-    position: static !important;
+/* Desktop cards use native sticky positioning, so every card remains in normal
+   document flow and the scene releases without an artificial scroll tail. */
+@media (min-width: 1024px) {
+  .academic-proof-card + .academic-proof-card {
     margin-top: 2rem;
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .academic-proof-card:first-child {
-    margin-top: 0;
   }
 }
 
@@ -701,6 +643,10 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
   .public-nav-capsule {
     animation: none;
+  }
+
+  .academic-proof-card {
+    position: static !important;
   }
 }
 
