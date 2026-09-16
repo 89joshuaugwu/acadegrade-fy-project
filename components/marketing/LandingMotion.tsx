@@ -55,6 +55,93 @@ type ReplayTypingTextProps = {
   replayDelayMs?: number;
 };
 
+type HeroTypedPhrasesProps = {
+  phrases: readonly [string, ...string[]];
+  typeIntervalMs?: number;
+  holdDelayMs?: number;
+  switchDelayMs?: number;
+};
+
+/** A stable, SSR-first type loop for the home hero. */
+export function HeroTypedPhrases({
+  phrases,
+  typeIntervalMs = 54,
+  holdDelayMs = 1_900,
+  switchDelayMs = 320,
+}: HeroTypedPhrasesProps) {
+  const [active, setActive] = useState(false);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [visibleLength, setVisibleLength] = useState(phrases[0].length);
+
+  useLayoutEffect(() => {
+    const preference = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (preference?.matches) {
+      setActive(false);
+      setPhraseIndex(0);
+      setVisibleLength(phrases[0].length);
+      return;
+    }
+
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    let currentPhrase = 0;
+
+    const typePhrase = () => {
+      if (cancelled) return;
+      const phrase = phrases[currentPhrase];
+      let cursor = 0;
+      setPhraseIndex(currentPhrase);
+      setVisibleLength(0);
+
+      const typeNextCharacter = () => {
+        if (cancelled) return;
+        cursor += 1;
+        setVisibleLength(cursor);
+        if (cursor < phrase.length) {
+          timeout = setTimeout(typeNextCharacter, typeIntervalMs);
+          return;
+        }
+
+        timeout = setTimeout(() => {
+          if (cancelled) return;
+          setVisibleLength(0);
+          currentPhrase = (currentPhrase + 1) % phrases.length;
+          timeout = setTimeout(typePhrase, switchDelayMs);
+        }, holdDelayMs);
+      };
+
+      timeout = setTimeout(typeNextCharacter, typeIntervalMs);
+    };
+
+    setActive(true);
+    typePhrase();
+    return () => {
+      cancelled = true;
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [holdDelayMs, phrases, switchDelayMs, typeIntervalMs]);
+
+  return (
+    <span
+      aria-label={phrases[0]}
+      className="marketing-hero-type-loop"
+      data-hero-type-loop=""
+      data-typing-active={active || undefined}
+    >
+      <span aria-hidden="true" className="marketing-hero-type-sizer">{phrases[phrases.length - 1]}</span>
+      <span
+        aria-hidden="true"
+        className="marketing-hero-type-output"
+        data-phrase-index={phraseIndex}
+        data-typing-output=""
+      >
+        {phrases[phraseIndex].slice(0, visibleLength)}
+        {active ? <span className="marketing-type-caret" /> : null}
+      </span>
+    </span>
+  );
+}
+
 /** Keeps the full insight available to assistive technology and no-JS clients. */
 export function ReplayTypingText({
   text,

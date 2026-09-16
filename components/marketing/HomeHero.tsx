@@ -4,6 +4,13 @@ import heroStudent from '../../mobile-app-images/Smiling Student Showcasing Acad
 import heroStudentDashboard from '../../mobile-app-images/heroimage2.png';
 import heroStudentScanner from '../../mobile-app-images/heroimage3.png';
 import { LinkButton } from '@/components/ui';
+import { HeroTypedPhrases } from './LandingMotion';
+
+const heroPhrases = [
+  'Understand your CGPA.',
+  'Spot courses at risk.',
+  'Plan the next semester.',
+] as const;
 
 function TrajectoryField() {
   return (
@@ -38,21 +45,13 @@ export function HomeHero() {
             </p>
 
             <h1
-              data-landing-motion="hero"
               id="home-hero-title"
-              aria-label="See the path behind every result. Understand your CGPA. Spot courses at risk. Plan the next semester."
               className="mt-6 max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.75rem,5.6vw,4.25rem)] font-bold leading-[1.01] tracking-[-0.052em] text-[var(--acade-text)]"
             >
-              <span aria-hidden="true">
-                <span className="block">See the <span data-text-effect="color-flow">path</span> behind every result.</span>
-                <span data-hero-type-loop="" className="marketing-phrase-loop marketing-hero-type-loop" role="presentation">
-                  <span>Understand your CGPA.</span>
-                  <span>Spot courses at risk.</span>
-                  <span>Plan the next semester.</span>
-                </span>
-              </span>
+              <span className="block">See the <span data-text-effect="color-flow">path</span> behind every result.</span>
+              <HeroTypedPhrases phrases={heroPhrases} />
             </h1>
-            <p data-landing-motion="hero-copy" className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
+            <p className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
               Record each semester, understand your CGPA and performance signals, then plan your next academic move with evidence you can inspect.
             </p>
 
@@ -73,13 +72,14 @@ export function HomeHero() {
           </div>
 
           <figure
-            aria-label="Students using AcadeGrade to review results and scan academic records"
-            className="hero-art-frame relative mx-auto aspect-[6/7] w-full max-w-[35rem] self-end lg:col-span-6"
+            role="img"
+            aria-label="Students using AcadeGrade on mobile to review a dashboard and scan academic records"
+            className="hero-art-frame relative mx-auto aspect-[6/7] w-full max-w-[35rem] self-end lg:col-span-6 lg:-translate-y-8"
           >
             <div className="absolute bottom-12 left-1/2 h-[72%] w-[88%] -translate-x-1/2 rounded-[50%] bg-[var(--acade-primary-dim)] opacity-80" aria-hidden="true" />
             <Image
               src={heroStudent}
-              alt="Student holding a phone showing the AcadeGrade academic dashboard"
+              alt=""
               fill
               priority
               sizes="(max-width: 1023px) min(100vw, 35rem), 35rem"
@@ -99,7 +99,7 @@ export function HomeHero() {
               sizes="(max-width: 1023px) min(100vw, 35rem), 35rem"
               className="hero-art-image hero-art-image-tertiary object-contain object-bottom"
             />
-            <div className="absolute bottom-7 right-0 hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-popover)] sm:block lg:right-2">
+            <div className="absolute bottom-7 right-0 z-10 hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-popover)] sm:block lg:right-2">
               <p className="text-xs font-semibold text-[var(--acade-text-faint)]">CURRENT TRAJECTORY</p>
               <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-2xl font-semibold">3.71 <span className="text-sm text-[var(--acade-success)]">+0.08</span></p>
               <p className="mt-1 text-xs text-[var(--acade-text-muted)]">after 117 recorded credits</p>

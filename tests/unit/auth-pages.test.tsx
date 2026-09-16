@@ -70,7 +70,10 @@ describe('LoginPage presentation and behavior', () => {
 
     const main = screen.getByRole('main', { name: 'Welcome back' });
     expect(main.closest('.auth-expressive')).toBeInTheDocument();
+    expect(main.closest('.auth-public-text-motion')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Know where you stand before the next result' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Know where you stand before the next result' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Choose colour theme' })).toBeInTheDocument();
     expect(within(main).getByRole('form', { name: 'Sign in with email' })).toBeInTheDocument();
     expect(within(main).getByRole('button', { name: 'Continue with Google' })).toBeInTheDocument();
@@ -230,7 +233,9 @@ describe('RegisterPage presentation', () => {
 
     expect(await screen.findByRole('main', { name: 'Create your academic record' })).toBeInTheDocument();
     expect(screen.getByRole('main', { name: 'Create your academic record' }).closest('.auth-expressive')).toBeInTheDocument();
+    expect(screen.getByRole('main', { name: 'Create your academic record' }).closest('.auth-public-text-motion')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Build a record you can trust' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Build a record you can trust' })).toBeInTheDocument();
     const progress = screen.getByRole('navigation', { name: 'Registration progress' });
     expect(within(progress).getByText('Step 1 of 4')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Create Your Account' })).toBeInTheDocument();

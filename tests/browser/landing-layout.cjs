@@ -12,7 +12,7 @@ const { chromium } = require('@playwright/test');
     page.on('pageerror', error => console.error('Browser error:', error.message));
     await page.goto(process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000');
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForFunction(() => document.querySelector('.academic-proof-deck').style.getPropertyValue('--proof-stack-height'));
+    await page.waitForSelector('.academic-proof-deck');
     const atmosphere = await page.locator('.public-atmosphere').evaluate(el => {
       const style = getComputedStyle(el, '::before');
       return { position: style.position, repeat: style.backgroundRepeat };
@@ -20,10 +20,11 @@ const { chromium } = require('@playwright/test');
     assert.equal(atmosphere.position, 'fixed', 'Landing artwork should remain anchored while content scrolls');
     assert.equal(atmosphere.repeat, 'no-repeat, no-repeat', 'Landing artwork must not tile vertically');
     const expressiveMotion = await page.evaluate(() => ({
-      phrase: getComputedStyle(document.querySelector('.marketing-phrase-loop > span')).animationName,
+      typing: document.querySelector('[data-hero-type-loop]')?.getAttribute('data-typing-active'),
+      caret: getComputedStyle(document.querySelector('.marketing-type-caret')).animationName,
       color: getComputedStyle(document.querySelector('[data-text-effect="color-flow"]')).animationName,
     }));
-    assert.deepEqual(expressiveMotion, { phrase: 'landing-phrase-cycle', color: 'landing-color-flow' });
+    assert.deepEqual(expressiveMotion, { typing: 'true', caret: 'landing-caret-blink', color: 'landing-color-flow' });
     for (const width of [1440, 1024]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
@@ -33,15 +34,19 @@ const { chromium } = require('@playwright/test');
       }));
       approachGaps.forEach(gap => assert.ok(gap <= 40, `${width}px: proof cards must approach without dead space; gap=${gap}`));
       const settledScroll = await page.locator('.academic-proof-slot:last-child').evaluate(el => el.getBoundingClientRect().top + scrollY - (96 + 3 * 64));
-      for (const progress of [0, 100, 200]) {
+      for (const progress of [0, 60, 120]) {
         await page.evaluate(y => scrollTo(0, y), settledScroll + progress);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const tops = await page.locator('.academic-proof-card').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().top));
         for (let i = 1; i < tops.length; i++) {
           assert.ok(Math.abs(tops[i] - tops[i - 1] - 64) < 2, `${width}px / ${progress}px after settle: lost heading peek, tops=${tops}`);
         }
-        if (width === 1440 && progress === 100) await page.screenshot({ path: '.superdesign/tmp/deck-release.png' });
+        if (width === 1440 && progress === 60) await page.screenshot({ path: '.superdesign/tmp/deck-release.png' });
       }
+      const releaseRunway = await page.locator('.academic-proof-deck').evaluate(deck =>
+        Number.parseFloat(getComputedStyle(deck, '::after').height)
+      );
+      assert.ok(releaseRunway <= 160, `${width}px: proof deck release runway is too tall; runway=${releaseRunway}`);
     }
     // The app's manual theme must win over the opposite OS preference.
     for (const theme of ['light', 'dark']) {
@@ -84,6 +89,8 @@ const { chromium } = require('@playwright/test');
     await page.locator('.mobile-showcase').screenshot({ path: '.superdesign/tmp/showcase-tablet.png' });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.reload();
+    await page.evaluate(() => document.fonts.ready);
     const reduced = await page.locator('[data-landing-motion]').evaluateAll(elements => elements.map(el => {
       const style = getComputedStyle(el);
       return { animation: style.animationName, delay: style.animationDelay, opacity: style.opacity, transform: style.transform };
@@ -91,7 +98,8 @@ const { chromium } = require('@playwright/test');
     assert.ok(reduced.length > 10, 'Landing motion targets must be integrated');
     reduced.forEach(style => assert.deepEqual(style, { animation: 'none', delay: '0s', opacity: '1', transform: 'none' }));
     const reducedExpressiveMotion = await page.evaluate(() => ({
-      phrase: getComputedStyle(document.querySelector('.marketing-phrase-loop > span')).animationName,
+      typedPhrase: document.querySelector('[data-hero-type-loop] [data-typing-output]')?.textContent,
+      caretCount: document.querySelectorAll('.marketing-type-caret').length,
       color: getComputedStyle(document.querySelector('[data-text-effect="color-flow"]')).animationName,
       heroImages: Array.from(document.querySelectorAll('.hero-art-image')).map(image => ({
         animation: getComputedStyle(image).animationName,
@@ -99,7 +107,8 @@ const { chromium } = require('@playwright/test');
       })),
     }));
     assert.deepEqual(reducedExpressiveMotion, {
-      phrase: 'none',
+      typedPhrase: 'Understand your CGPA.',
+      caretCount: 0,
       color: 'none',
       heroImages: [
         { animation: 'none', opacity: '1' },

@@ -41,7 +41,7 @@ describe('AcadeGrade landing presentation', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: /see the path behind every result.*understand your cgpa.*spot courses at risk.*plan the next semester/i,
+        name: /see the path behind every result.*understand your cgpa/i,
       })
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveAttribute(
@@ -56,18 +56,28 @@ describe('AcadeGrade landing presentation', () => {
     expect(screen.getByText(/record\. understand\. plan\./i)).toBeInTheDocument();
     expect(container.querySelector('[data-hero-type-loop]')).toHaveClass('marketing-hero-type-loop');
     expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveClass('marketing-edge-cta');
-    const heroArt = screen.getByRole('figure', { name: /students using acadegrade to review results and scan academic records/i });
+    const heroArt = screen.getByRole('img', { name: /students using acadegrade on mobile to review a dashboard and scan academic records/i });
+    expect(heroArt).toHaveClass('lg:-translate-y-8', 'aspect-[6/7]');
     const heroImages = Array.from(heroArt.querySelectorAll('img'));
     expect(heroImages).toHaveLength(3);
-    expect(heroImages.map((image) => decodeURIComponent(image.getAttribute('src') || ''))).toEqual(
+    const heroSources = heroImages.map((image) => {
+      const source = image.getAttribute('src') || '';
+      const optimizedSource = new URL(source, 'http://localhost').searchParams.get('url') || source;
+      return decodeURIComponent(optimizedSource);
+    });
+    expect(heroSources).toEqual(
       expect.arrayContaining([
         expect.stringContaining('Smiling Student Showcasing Academic Dashboard.png'),
         expect.stringContaining('heroimage2.png'),
         expect.stringContaining('heroimage3.png'),
       ])
     );
-    expect(heroImages[0]).toHaveAttribute('alt', 'Student holding a phone showing the AcadeGrade academic dashboard');
+    expect(heroImages.every((image) => image.getAttribute('alt') === '')).toBe(true);
     expect(heroImages[0]).toHaveClass('hero-art-image-primary');
+    expect(heroImages[1]).toHaveClass('hero-art-image-secondary');
+    expect(heroImages[2]).toHaveClass('hero-art-image-tertiary');
+    expect(screen.getByText('100L–500L · 2025/2026 sessions')).toBeInTheDocument();
+    expect(screen.getByText('Confirm your institution’s applicable rules')).toBeInTheDocument();
     expect(screen.getByText(/session and level aware/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('marketing-stagger');
     expect(container.querySelector('canvas')).not.toBeInTheDocument();

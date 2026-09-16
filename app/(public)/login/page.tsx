@@ -18,6 +18,7 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
+import { AUTH_TEXT_MOTION_CLASS } from '@/components/marketing/PublicTextMotion';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -139,7 +140,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell
-      className="auth-expressive"
+      className={AUTH_TEXT_MOTION_CLASS}
       eyebrow="Student access"
       title="Welcome back"
       description="Sign in to continue tracking your academic progress."

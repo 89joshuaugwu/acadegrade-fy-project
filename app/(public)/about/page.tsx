@@ -5,9 +5,10 @@ import { ArrowRight, BookOpenCheck, BrainCircuit, Mail, RefreshCw, ShieldCheck, 
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
 import { PageTransition } from '@/components/shared/PageTransition';
-import { Button, LinkButton, Skeleton } from '@/components/ui';
+import { Button, LinkButton } from '@/components/ui';
 import { DEFAULT_ABOUT_CONTENT, type AboutContent } from '@/lib/about/content';
 import { LandingMotion } from '@/components/marketing/LandingMotion';
+import { DirectionalText, TypedText } from '@/components/marketing/PublicTextMotion';
 
 const principles = [
   {
@@ -29,31 +30,31 @@ const principles = [
 
 export default function AboutPage() {
   const [data, setData] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const loadAbout = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setError(false);
-
     try {
       const response = await fetch('/api/about', { signal });
       if (!response.ok) throw new Error('Unable to load About content.');
       const payload = await response.json();
-      if (!signal?.aborted && payload?.about) setData(payload.about);
+      if (!signal?.aborted) {
+        if (payload?.about) setData(payload.about);
+        setError(false);
+      }
     } catch (loadError) {
       if (signal?.aborted) return;
       console.error('Failed to load About content:', loadError);
       setError(true);
-    } finally {
-      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     const controller = new AbortController();
-    void loadAbout(controller.signal);
-    return () => controller.abort();
+    const request = window.setTimeout(() => void loadAbout(controller.signal), 0);
+    return () => {
+      window.clearTimeout(request);
+      controller.abort();
+    };
   }, [loadAbout]);
 
   return (
@@ -68,21 +69,15 @@ export default function AboutPage() {
                 <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
                   About AcadeGrade
                 </p>
-                {loading ? (
-                  <>
-                    <Skeleton className="h-16 w-full max-w-2xl rounded-2xl" />
-                    <Skeleton className="mt-6 h-24 w-full max-w-xl rounded-2xl" />
-                  </>
-                ) : (
-                  <>
-                    <h1 data-landing-motion="heading" className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.04] tracking-[-0.045em]">
-                      {data.headline}
-                    </h1>
-                    <p data-landing-motion="hero-copy" className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
-                      {data.platformDescription}
-                    </p>
-                  </>
-                )}
+                <DirectionalText
+                  as="h1"
+                  text={data.headline}
+                  accentWords={2}
+                  className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.04] tracking-[-0.045em]"
+                />
+                <p className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
+                  {data.platformDescription}
+                </p>
 
                 <div className="mt-9 flex flex-col gap-3 lg:flex-row">
                   <LinkButton href="/register" size="lg" className="marketing-edge-cta w-full whitespace-nowrap lg:w-auto">
@@ -115,11 +110,14 @@ export default function AboutPage() {
 
           <section aria-labelledby="principles-title" className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
             <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
-              <div data-landing-motion="section">
+              <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">How we build</p>
-                <h2 id="principles-title" data-landing-motion="type" className="marketing-type-line mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]">
-                  Clarity before complexity.
-                </h2>
+                <TypedText
+                  as="h2"
+                  id="principles-title"
+                  text="Clarity before complexity."
+                  className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]"
+                />
                 <p className="mt-5 max-w-lg leading-7 text-[var(--acade-text-muted)]">
                   Academic tools should reduce uncertainty. Every AcadeGrade feature is designed to make progress visible, calculations explainable, and the next decision easier.
                 </p>

@@ -7,19 +7,70 @@
   display: inline-block;
 }
 
-.marketing-phrase-loop {
-  display: inline-grid;
-  min-width: min(24ch, 100%);
+.marketing-hero-type-loop {
+  display: grid;
+  position: relative;
+  margin-top: 0.12em;
+  width: min(100%, 13ch);
 }
 
-.marketing-phrase-loop > span {
+.marketing-hero-type-sizer,
+.marketing-hero-type-output {
   grid-area: 1 / 1;
-  opacity: 0;
+  display: block;
 }
 
-.marketing-phrase-loop > span:first-child {
-  opacity: 1;
+.marketing-hero-type-sizer {
+  visibility: hidden;
+  pointer-events: none;
 }
+
+.marketing-hero-type-output {
+  color: var(--acade-primary);
+}
+
+.marketing-hero-type-output[data-phrase-index='1'] {
+  color: var(--acade-gold);
+}
+
+.marketing-hero-type-output[data-phrase-index='2'] {
+  background: linear-gradient(90deg, var(--acade-primary), var(--acade-gold));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.marketing-type-caret {
+  display: inline-block;
+  width: 0.075em;
+  height: 0.82em;
+  margin-left: 0.08em;
+  translate: 0 0.08em;
+  background: currentColor;
+  border-radius: 999px;
+  vertical-align: baseline;
+}
+
+.hero-art-frame {
+  isolation: isolate;
+  contain: layout paint;
+}
+
+.hero-art-image {
+  opacity: 0;
+  transform: translate3d(1rem, 0, 0) scale(0.985);
+  will-change: opacity, transform;
+}
+
+.hero-art-image-primary {
+  z-index: 3;
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.hero-art-image-secondary { z-index: 2; }
+.hero-art-image-tertiary { z-index: 1; }
 
 .marketing-type-line {
   display: inline-block;
@@ -41,15 +92,29 @@
   to { clip-path: inset(0 0 0 0); }
 }
 
-@keyframes landing-phrase-cycle {
-  0%, 27% { opacity: 1; transform: translateY(0); }
-  31%, 96% { opacity: 0; transform: translateY(-0.35em); }
-  97%, 100% { opacity: 0; transform: translateY(0.35em); }
-}
-
 @keyframes landing-color-flow {
   from { background-position: 0% 50%; }
   to { background-position: 200% 50%; }
+}
+
+@keyframes landing-caret-blink {
+  0%, 44% { opacity: 1; }
+  45%, 100% { opacity: 0; }
+}
+
+@keyframes landing-hero-art-cycle {
+  0%, 27% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  32%, 96% {
+    opacity: 0;
+    transform: translate3d(-0.75rem, 0, 0) scale(0.992);
+  }
+  97%, 100% {
+    opacity: 0;
+    transform: translate3d(1rem, 0, 0) scale(0.985);
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -68,8 +133,6 @@
     animation: landing-text-enter var(--landing-duration, 460ms) cubic-bezier(0.16, 1, 0.3, 1) var(--landing-delay, 0ms) both;
   }
 
-  [data-landing-motion='hero'] { --landing-duration: 560ms; --landing-distance: 14px; }
-  [data-landing-motion='hero-copy'] { --landing-duration: 500ms; --landing-delay: 90ms; --landing-distance: 12px; }
   [data-landing-motion='words'] { --landing-distance: 10px; }
   [data-landing-motion='words'] > span:nth-child(2) { --landing-delay: 100ms; }
   [data-landing-motion='words'] > span:nth-child(3) { --landing-delay: 200ms; }
@@ -83,12 +146,16 @@
     animation: landing-type-reveal 850ms steps(21, end) both;
   }
 
-  .marketing-phrase-loop > span {
-    animation: landing-phrase-cycle 9s ease-in-out infinite;
+  .marketing-type-caret {
+    animation: landing-caret-blink 720ms steps(1, end) infinite;
   }
 
-  .marketing-phrase-loop > span:nth-child(2) { animation-delay: 3s; }
-  .marketing-phrase-loop > span:nth-child(3) { animation-delay: 6s; }
+  .hero-art-image {
+    animation: landing-hero-art-cycle 15s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  }
+
+  .hero-art-image-secondary { animation-delay: 5s; }
+  .hero-art-image-tertiary { animation-delay: 10s; }
 
   [data-text-effect='color-flow'] {
     background-image: linear-gradient(90deg, var(--acade-primary), var(--acade-gold), var(--acade-primary));
@@ -119,15 +186,15 @@
     clip-path: none !important;
   }
 
-  .marketing-phrase-loop > span {
+  .marketing-type-caret { display: none !important; }
+
+  .hero-art-image {
     animation: none !important;
     opacity: 0 !important;
     transform: none !important;
   }
 
-  .marketing-phrase-loop > span:first-child {
-    opacity: 1 !important;
-  }
+  .hero-art-image-primary { opacity: 1 !important; }
 
   [data-text-effect='color-flow'] {
     animation: none !important;

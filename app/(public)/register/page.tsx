@@ -33,6 +33,7 @@ import { Select } from '@/components/ui/Select';
 import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 import { AuthProgress, AuthShell } from '@/components/auth';
 import { navigationSpring } from '@/lib/ui/motion';
+import { AUTH_TEXT_MOTION_CLASS } from '@/components/marketing/PublicTextMotion';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -1018,7 +1019,7 @@ export default function RegisterWizard() {
   if (signupsDisabled) {
     return (
       <AuthShell
-        className="auth-expressive"
+        className={AUTH_TEXT_MOTION_CLASS}
         eyebrow="Account availability"
         title="Registration is paused"
         description="New account creation is temporarily unavailable. Existing students can still sign in and use their records."
@@ -1042,7 +1043,7 @@ export default function RegisterWizard() {
 
   return (
     <AuthShell
-      className="auth-expressive"
+      className={AUTH_TEXT_MOTION_CLASS}
       eyebrow="Student onboarding"
       title="Create your academic record"
       description={isSuccess

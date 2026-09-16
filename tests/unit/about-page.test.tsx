@@ -31,9 +31,25 @@ describe('AboutPage public scale', () => {
     });
 
     expect(heroHeading).toHaveClass('text-[clamp(2.5rem,5vw,4rem)]');
-    expect(heroHeading).toHaveAttribute('data-landing-motion', 'heading');
+    expect(heroHeading).toHaveAttribute('data-public-text-motion', 'directional');
+    expect(heroHeading).toHaveAttribute('aria-label', DEFAULT_ABOUT_CONTENT.headline);
     expect(principlesHeading).toHaveClass('text-[clamp(2rem,3vw,2.75rem)]');
-    expect(principlesHeading).toHaveAttribute('data-landing-motion', 'type');
+    expect(principlesHeading).toHaveAttribute('data-public-text-motion', 'typed');
+    expect(principlesHeading).toHaveAttribute('aria-label', 'Clarity before complexity.');
     expect(screen.getByRole('link', { name: /build your academic record/i })).toHaveClass('marketing-edge-cta');
+  });
+
+  it('keeps the complete expressive copy available in the rendered HTML', async () => {
+    const { container } = render(<AboutPage />);
+
+    await screen.findByRole('heading', {
+      level: 1,
+      name: DEFAULT_ABOUT_CONTENT.headline,
+    });
+
+    expect(container.querySelector('[data-public-text-motion="directional"]')?.textContent)
+      .toBe(DEFAULT_ABOUT_CONTENT.headline);
+    expect(container.querySelector('[data-public-text-motion="typed"]')?.textContent)
+      .toBe('Clarity before complexity.');
   });
 });
