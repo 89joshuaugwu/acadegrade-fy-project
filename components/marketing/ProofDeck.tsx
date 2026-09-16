@@ -2,7 +2,7 @@
 
 import { Children, useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 
-/** Equalize sticky release edges without fixing any card's content height. */
+/** Measure the completed stack so the deck has a short, visible release runway. */
 export function ProofDeck({ children }: { children: ReactNode }) {
   const deckRef = useRef<HTMLOListElement>(null);
 

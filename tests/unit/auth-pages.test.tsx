@@ -69,6 +69,7 @@ describe('LoginPage presentation and behavior', () => {
     renderPage(<LoginPage />);
 
     const main = screen.getByRole('main', { name: 'Welcome back' });
+    expect(main.closest('.auth-expressive')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Know where you stand before the next result' })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: 'Choose colour theme' })).toBeInTheDocument();
     expect(within(main).getByRole('form', { name: 'Sign in with email' })).toBeInTheDocument();
@@ -228,6 +229,7 @@ describe('RegisterPage presentation', () => {
     renderPage(<RegisterPage />);
 
     expect(await screen.findByRole('main', { name: 'Create your academic record' })).toBeInTheDocument();
+    expect(screen.getByRole('main', { name: 'Create your academic record' }).closest('.auth-expressive')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Build a record you can trust' })).toBeInTheDocument();
     const progress = screen.getByRole('navigation', { name: 'Registration progress' });
     expect(within(progress).getByText('Step 1 of 4')).toBeInTheDocument();

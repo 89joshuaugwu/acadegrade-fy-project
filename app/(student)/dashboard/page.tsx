@@ -23,7 +23,7 @@ import { RecentResults } from '@/components/dashboard/RecentResults';
 import { StandingOverview } from '@/components/dashboard/StandingOverview';
 import { TrendChart } from '@/components/charts/TrendChart';
 import { Card } from '@/components/ui/Card';
-import { LandingMotion } from '@/components/marketing/LandingMotion';
+import { LandingMotion, ReplayTypingText } from '@/components/marketing/LandingMotion';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -166,7 +166,7 @@ export default function DashboardPage() {
     <LandingMotion>
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
       <header data-landing-motion="section" id="tour-welcome" className="max-w-2xl py-1">
-        <p className="text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">Academic overview</p>
+        <p className="dashboard-overview-pulse text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">Academic overview</p>
         <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
           Hello, {firstName}.
         </h1>
@@ -259,7 +259,7 @@ export default function DashboardPage() {
                 </button>
               </div>
             ) : (
-              <p className="text-sm leading-6 text-[var(--acade-text)]">{aiSummary}</p>
+              <ReplayTypingText text={aiSummary || ''} className="text-sm leading-6 text-[var(--acade-text)]" />
             )}
           </div>
 

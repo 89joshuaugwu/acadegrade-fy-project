@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
   BookOpenCheck,
-  BrainCircuit,
   ChartNoAxesCombined,
+  FileOutput,
   FileScan,
   ShieldCheck,
 } from 'lucide-react';
@@ -42,12 +43,19 @@ const capabilities = [
     href: '/features/result-scanner',
   },
   {
-    icon: BrainCircuit,
+    brandImage: '/acadegradeailogo.png',
     label: 'Plan',
-    title: 'Insights grounded in your record',
+    title: 'AcadeMind insights grounded in your record',
     description: 'Explore trend explanations, risk signals, forecasts, and what-if scenarios without presenting them as official advice.',
     detail: 'Trend context · forecasts · what-if planning',
     href: '/features/ai-insights',
+  },
+  {
+    icon: FileOutput,
+    label: 'Present',
+    title: 'Transcripts ready to export and share',
+    description: 'Generate an unofficial transcript, download a useful copy, or create a private link that you can revoke when it is no longer needed.',
+    detail: 'PDF and HTML export · private share links · revocable access',
   },
 ] as const;
 
@@ -70,12 +78,16 @@ export default function FeaturesPage() {
           description="Begin with the basics, then unlock more context as your academic history grows. Every layer remains understandable on its own."
         />
         <div className="mt-12 grid gap-px overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-border)] md:grid-cols-2">
-          {capabilities.map(({ icon: Icon, label, title, description, detail, ...item }, index) => {
+          {capabilities.map(({ label, title, description, detail, ...item }, index) => {
             const content = (
               <>
                 <div className="flex items-start justify-between gap-5">
                   <div className="flex size-11 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
-                    <Icon size={21} aria-hidden="true" />
+                    {'brandImage' in item ? (
+                      <Image src={item.brandImage} alt="AcadeMind" width={24} height={24} className="size-6 object-contain" />
+                    ) : 'icon' in item ? (
+                      <item.icon size={21} aria-hidden="true" />
+                    ) : null}
                   </div>
                   <span className="font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">0{index + 1}</span>
                 </div>

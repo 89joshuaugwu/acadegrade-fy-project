@@ -64,7 +64,7 @@ export default function AboutPage() {
         <main className="overflow-hidden">
           <section className="relative border-b border-[var(--acade-border-subtle)]">
             <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
-              <div data-landing-motion="section" className="lg:col-span-7">
+              <div className="lg:col-span-7">
                 <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
                   About AcadeGrade
                 </p>
@@ -75,17 +75,17 @@ export default function AboutPage() {
                   </>
                 ) : (
                   <>
-                    <h1 className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.04] tracking-[-0.045em]">
+                    <h1 data-landing-motion="heading" className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.04] tracking-[-0.045em]">
                       {data.headline}
                     </h1>
-                    <p className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
+                    <p data-landing-motion="hero-copy" className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
                       {data.platformDescription}
                     </p>
                   </>
                 )}
 
                 <div className="mt-9 flex flex-col gap-3 lg:flex-row">
-                  <LinkButton href="/register" size="lg" className="w-full whitespace-nowrap lg:w-auto">
+                  <LinkButton href="/register" size="lg" className="marketing-edge-cta w-full whitespace-nowrap lg:w-auto">
                     Build your academic record <ArrowRight size={18} aria-hidden="true" />
                   </LinkButton>
                   <LinkButton href="/calculator" variant="outline" size="lg" className="w-full whitespace-nowrap lg:w-auto">
@@ -117,7 +117,7 @@ export default function AboutPage() {
             <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
               <div data-landing-motion="section">
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">How we build</p>
-                <h2 id="principles-title" className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]">
+                <h2 id="principles-title" data-landing-motion="type" className="marketing-type-line mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]">
                   Clarity before complexity.
                 </h2>
                 <p className="mt-5 max-w-lg leading-7 text-[var(--acade-text-muted)]">

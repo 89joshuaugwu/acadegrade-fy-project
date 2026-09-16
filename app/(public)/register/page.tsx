@@ -346,7 +346,7 @@ function Step1Account({ onNext }: { onNext: () => void }) {
           className="text-center tracking-[0.5em] font-mono text-lg"
         />
         
-        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleVerifyOtp} disabled={isLoading || otpCode.length !== 6} className="mt-2">
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleVerifyOtp} disabled={isLoading || otpCode.length !== 6} className="marketing-edge-cta mt-2">
           {isLoading ? 'Verifying...' : 'Verify Email'}
         </Button>
         
@@ -419,7 +419,7 @@ function Step1Account({ onNext }: { onNext: () => void }) {
         </>
       )}
       
-      <Button type="button" variant="primary" size="lg" fullWidth onClick={handleSendOtp} disabled={isLoading} className="mt-2">
+      <Button type="button" variant="primary" size="lg" fullWidth onClick={handleSendOtp} disabled={isLoading} className="marketing-edge-cta mt-2">
         {isLoading ? (authMethod === 'google' ? 'Saving...' : 'Sending Code...') : 'Continue'} <ArrowRight size={18} />
       </Button>
     </div>
@@ -533,7 +533,7 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
         <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
           <ArrowLeft size={18} />
         </Button>
-        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext} className="marketing-edge-cta">
           Continue <ArrowRight size={18} />
         </Button>
       </div>
@@ -681,7 +681,7 @@ function Step3RecordMode({
         <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
           <ArrowLeft size={18} />
         </Button>
-        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext} className="marketing-edge-cta">
           {modeVal === 'fromScratch' ? 'Create Account' : 'Continue'} <ArrowRight size={18} />
         </Button>
       </div>
@@ -776,7 +776,7 @@ function Step4PastSemesters({ onNext, onBack }: { onNext: () => void, onBack: ()
         }} className="px-4 shrink-0">
           <ArrowLeft size={18} />
         </Button>
-        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext}>
+        <Button type="button" variant="primary" size="lg" fullWidth onClick={handleNext} className="marketing-edge-cta">
           Looks Good <Check size={18} className="ml-1" />
         </Button>
       </div>
@@ -1018,6 +1018,7 @@ export default function RegisterWizard() {
   if (signupsDisabled) {
     return (
       <AuthShell
+        className="auth-expressive"
         eyebrow="Account availability"
         title="Registration is paused"
         description="New account creation is temporarily unavailable. Existing students can still sign in and use their records."
@@ -1041,6 +1042,7 @@ export default function RegisterWizard() {
 
   return (
     <AuthShell
+      className="auth-expressive"
       eyebrow="Student onboarding"
       title="Create your academic record"
       description={isSuccess

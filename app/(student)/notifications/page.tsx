@@ -197,21 +197,13 @@ export default function NotificationsPage() {
                     notif.read ? 'bg-transparent' : 'bg-[var(--acade-primary-dim)]'
                   )}
                 >
-                  {notif.read ? (
-                    <div className="flex gap-4 p-4 sm:p-6">
-                      <NotificationContent notification={notif} />
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      aria-label={`Mark “${notif.title}” as read`}
-                      onClick={() => handleMarkAsRead(notif.id)}
+                  <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 p-4 sm:gap-4 sm:p-6">
+                    <NotificationContent
+                      notification={notif}
                       disabled={pendingAction !== null}
-                      className="flex w-full gap-4 p-4 text-left transition-colors hover:bg-[var(--acade-primary-dim)]/80 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acade-primary)] motion-reduce:transition-none sm:p-6"
-                    >
-                      <NotificationContent notification={notif} />
-                    </button>
-                  )}
+                      onMarkAsRead={() => handleMarkAsRead(notif.id)}
+                    />
+                  </div>
 
                   {notif.actionUrl && (
                     <Button
@@ -235,19 +227,44 @@ export default function NotificationsPage() {
   );
 }
 
-function NotificationContent({ notification }: { notification: NotificationWithId }) {
+function NotificationContent({
+  notification,
+  disabled,
+  onMarkAsRead,
+}: {
+  notification: NotificationWithId;
+  disabled: boolean;
+  onMarkAsRead: () => void;
+}) {
   return (
     <>
-      <div className="mt-1 shrink-0">
-        <div className="flex size-10 items-center justify-center rounded-full border border-[var(--acade-border)] bg-[var(--acade-surface)]">
-          {ICONS[notification.type as keyof typeof ICONS] || ICONS.info}
-        </div>
+      <div className="mt-0.5 shrink-0">
+        {notification.read ? (
+          <span
+            aria-label={`Read: ${notification.title}`}
+            data-state="read"
+            className="flex size-10 items-center justify-center rounded-full border border-[var(--acade-success)]/35 bg-[var(--acade-success)]/10 text-[var(--acade-success)]"
+          >
+            <CheckCircle2 size={20} aria-hidden="true" />
+          </span>
+        ) : (
+          <button
+            type="button"
+            aria-label={`Mark “${notification.title}” as read`}
+            data-state="unread"
+            onClick={onMarkAsRead}
+            disabled={disabled}
+            className="flex size-10 items-center justify-center rounded-full border border-[var(--acade-primary)]/40 bg-[var(--acade-surface)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
+          >
+            {ICONS[notification.type as keyof typeof ICONS] || ICONS.info}
+          </button>
+        )}
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
           <h2 className={cn(
-            'text-[length:var(--text-base)] font-bold',
+            'min-w-0 break-words text-[length:var(--text-base)] font-bold',
             notification.read ? 'text-[var(--acade-text)]' : 'text-[var(--acade-primary-glow)]'
           )}>
             {notification.title}
@@ -258,16 +275,10 @@ function NotificationContent({ notification }: { notification: NotificationWithI
             </span>
           )}
         </div>
-        <p className="mt-1 text-[length:var(--text-sm)] leading-relaxed text-[var(--acade-text-muted)]">
+        <p className="mt-1 [overflow-wrap:anywhere] text-[length:var(--text-sm)] leading-relaxed text-[var(--acade-text-muted)]">
           {notification.message}
         </p>
       </div>
-
-      {!notification.read && (
-        <span className="flex shrink-0 items-center" aria-hidden="true">
-          <span className="size-2.5 rounded-full bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]" />
-        </span>
-      )}
     </>
   );
 }

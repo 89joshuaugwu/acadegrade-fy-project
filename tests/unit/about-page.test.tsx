@@ -31,6 +31,9 @@ describe('AboutPage public scale', () => {
     });
 
     expect(heroHeading).toHaveClass('text-[clamp(2.5rem,5vw,4rem)]');
+    expect(heroHeading).toHaveAttribute('data-landing-motion', 'heading');
     expect(principlesHeading).toHaveClass('text-[clamp(2rem,3vw,2.75rem)]');
+    expect(principlesHeading).toHaveAttribute('data-landing-motion', 'type');
+    expect(screen.getByRole('link', { name: /build your academic record/i })).toHaveClass('marketing-edge-cta');
   });
 });

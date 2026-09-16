@@ -9,10 +9,11 @@ const mocks = vi.hoisted(() => ({
   setRTDB: vi.fn(),
   toastError: vi.fn(),
   shouldReduceMotion: false,
+  user: { uid: 'student-1' },
 }));
 
 vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ user: { uid: 'student-1' } }),
+  useAuth: () => ({ user: mocks.user }),
 }));
 
 vi.mock('@/hooks/useReducedMotion', () => ({
@@ -76,7 +77,11 @@ describe('notification accessibility', () => {
         { read: true }
       );
     });
-    expect(mocks.setRTDB).toHaveBeenCalledWith('notif_counts/student-1/unread', 0);
+    await waitFor(() => {
+      expect(mocks.setRTDB).toHaveBeenCalledWith('notif_counts/student-1/unread', 0);
+      expect(screen.queryByRole('button', { name: 'Mark “Semester updated” as read' })).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Read: Semester updated')).toHaveAttribute('data-state', 'read');
+    });
   });
 
   it('does not animate notification entries when reduced motion is requested', async () => {

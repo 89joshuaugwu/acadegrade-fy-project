@@ -9,6 +9,7 @@ import {
   SmartAutomation,
 } from '@/components/marketing';
 import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
+import FeaturesPage from '@/app/(public)/features/page';
 
 const { subscribeToDocumentMock } = vi.hoisted(() => ({
   subscribeToDocumentMock: vi.fn(),
@@ -16,6 +17,13 @@ const { subscribeToDocumentMock } = vi.hoisted(() => ({
 
 vi.mock('@/lib/firebase/firestore', () => ({
   subscribeToDocument: subscribeToDocumentMock,
+}));
+
+vi.mock('@/components/marketing/PublicPage', () => ({
+  PublicPage: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EditorialHero: () => null,
+  ProductCta: () => null,
+  SectionIntro: () => null,
 }));
 
 beforeEach(() => {
@@ -31,7 +39,10 @@ describe('AcadeGrade landing presentation', () => {
     const { container } = render(<HomeHero />);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: /see the path behind every result/i })
+      screen.getByRole('heading', {
+        level: 1,
+        name: /see the path behind every result.*understand your cgpa.*spot courses at risk.*plan the next semester/i,
+      })
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveAttribute(
       'href',
@@ -42,8 +53,21 @@ describe('AcadeGrade landing presentation', () => {
       '/calculator'
     );
     expect(screen.getByText(/private by default/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/record results\. understand progress\. plan what comes next\./i)).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /student holding a phone showing the acadegrade academic dashboard/i })).toBeInTheDocument();
+    expect(screen.getByText(/record\. understand\. plan\./i)).toBeInTheDocument();
+    expect(container.querySelector('[data-hero-type-loop]')).toHaveClass('marketing-hero-type-loop');
+    expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveClass('marketing-edge-cta');
+    const heroArt = screen.getByRole('figure', { name: /students using acadegrade to review results and scan academic records/i });
+    const heroImages = Array.from(heroArt.querySelectorAll('img'));
+    expect(heroImages).toHaveLength(3);
+    expect(heroImages.map((image) => decodeURIComponent(image.getAttribute('src') || ''))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Smiling Student Showcasing Academic Dashboard.png'),
+        expect.stringContaining('heroimage2.png'),
+        expect.stringContaining('heroimage3.png'),
+      ])
+    );
+    expect(heroImages[0]).toHaveAttribute('alt', 'Student holding a phone showing the AcadeGrade academic dashboard');
+    expect(heroImages[0]).toHaveClass('hero-art-image-primary');
     expect(screen.getByText(/session and level aware/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('marketing-stagger');
     expect(container.querySelector('canvas')).not.toBeInTheDocument();
@@ -68,6 +92,7 @@ describe('AcadeGrade landing presentation', () => {
     expect(stages.every(stage => stage.querySelector('.academic-proof-card'))).toBe(true);
     expect(screen.getByRole('table', { name: /illustrative semester result inputs/i }).parentElement).toHaveClass('hidden', 'sm:block');
     expect(screen.getByRole('list', { name: /illustrative courses on small screens/i })).toHaveClass('sm:hidden');
+    expect(screen.getByText(/u = credit units/i)).toBeInTheDocument();
     expect(screen.getByText(/records you enter/i)).toBeInTheDocument();
     expect(screen.getByText(/does not replace an official university record/i)).toBeInTheDocument();
   });
@@ -131,6 +156,16 @@ describe('mobile app availability', () => {
     render(<MobileAppDownload />);
 
     expect(screen.getByRole('link', { name: /download for ios/i })).toHaveAttribute('href', '/app/download/ios');
+  });
+});
+
+describe('Features page capability coverage', () => {
+  it('identifies AcadeMind with its logo and explains transcript export and sharing', () => {
+    render(<FeaturesPage />);
+
+    expect(screen.getByRole('img', { name: 'AcadeMind' })).toHaveAttribute('src', expect.stringContaining('acadegradeailogo.png'));
+    expect(screen.getByRole('heading', { name: /transcripts ready to export and share/i })).toBeInTheDocument();
+    expect(screen.getByText(/pdf and html export/i)).toBeInTheDocument();
   });
 });
 

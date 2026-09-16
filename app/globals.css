@@ -462,8 +462,6 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   background-size: 100% 32px, 100% 100%;
 }
 
-/* Each invisible slot ends at the same stack baseline. Different card heights
-   therefore cannot collapse the heading peeks when the deck leaves view. */
 @media (min-width: 1024px) {
   .academic-proof-slot + .academic-proof-slot {
     margin-top: 2rem;
@@ -471,10 +469,21 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 }
 
 @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
+  .academic-proof-deck {
+    position: relative;
+  }
+
+  .academic-proof-deck::after {
+    /* A generated child extends the sticky containing block; padding cannot,
+       and caused the final card to release above the 03 heading. */
+    content: '';
+    display: block;
+    height: var(--proof-stack-height, 0px);
+  }
+
   .academic-proof-slot {
     position: sticky;
     top: calc(96px + var(--proof-offset));
-    min-height: calc(var(--proof-stack-height, 0px) - var(--proof-offset));
     pointer-events: none;
   }
 
@@ -605,18 +614,25 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 .public-atmosphere {
   position: relative;
   isolation: isolate;
-  contain: paint;
-  background-color: var(--acade-void);
+  background-color: transparent;
+}
+
+.public-atmosphere::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
   background-image:
     linear-gradient(color-mix(in srgb, var(--acade-void) 18%, transparent), color-mix(in srgb, var(--acade-void) 18%, transparent)),
     url('/light-background.png');
-  background-attachment: scroll;
-  background-position: center top;
-  background-repeat: repeat-y;
-  background-size: max(100vw, 75rem) auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: translateZ(0);
 }
 
-.dark .public-atmosphere {
+.dark .public-atmosphere::before {
   background-image:
     linear-gradient(color-mix(in srgb, var(--acade-void) 24%, transparent), color-mix(in srgb, var(--acade-void) 24%, transparent)),
     url('/dark-background.png');
@@ -629,12 +645,6 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
 .dark .public-atmosphere-section {
   background-color: color-mix(in srgb, var(--acade-void) 58%, transparent);
-}
-
-@media (max-width: 767px) {
-  .public-atmosphere {
-    background-attachment: scroll;
-  }
 }
 
 .public-mobile-menu-link:focus-visible {

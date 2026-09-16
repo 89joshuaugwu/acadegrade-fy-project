@@ -69,6 +69,7 @@ export function AcademicProof() {
                 </tbody>
               </table>
             </div>
+            <p className="mt-4 text-right font-[family-name:var(--font-geist-mono)] text-[11px] text-[var(--acade-text-faint)]">u = credit units</p>
           </div>
 
           <div className="academic-proof-card min-w-0 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">

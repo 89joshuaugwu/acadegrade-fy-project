@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -115,6 +115,36 @@ describe('Transcript safety states', () => {
     expect(screen.getByRole('button', { name: /print html/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /share link/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /download pdf/i })).toBeInTheDocument();
+  });
+
+  it('uses a wrapping mobile action layout and keeps long shared URLs inside their card', async () => {
+    mocks.queryCollection
+      .mockResolvedValueOnce([{
+        id: 'semester-1',
+        label: 'Year 3 — First Semester',
+        session: '2025/2026',
+        level: 300,
+        semester: 1,
+        gpa: 4.2,
+        pi: 4.1,
+        creditLoaded: 18,
+        isComplete: true,
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'share-with-a-very-long-identifier-that-must-not-widen-the-card',
+        expiresAt: new Date(Date.now() + 86_400_000),
+      }]);
+
+    render(<TranscriptPage />);
+
+    const actions = await screen.findByRole('group', { name: /transcript export options/i });
+    expect(actions).toHaveClass('grid', 'grid-cols-2');
+    expect(within(actions).getByRole('button', { name: /download pdf/i })).toHaveClass('w-full', 'min-w-0');
+
+    const sharedLink = screen.getByRole('link', { name: /open shared transcript/i });
+    expect(sharedLink).toHaveAttribute('title', expect.stringContaining('/share/share-with-a-very-long-identifier'));
+    expect(sharedLink).toHaveClass('truncate', 'min-w-0');
   });
 
   it('labels shared-link actions and uses an accessible, dismissible delete dialog', async () => {

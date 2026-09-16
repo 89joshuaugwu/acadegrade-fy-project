@@ -13,6 +13,12 @@ const { chromium } = require('@playwright/test');
     await page.goto(process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000');
     await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(() => document.querySelector('.academic-proof-deck').style.getPropertyValue('--proof-stack-height'));
+    const atmosphere = await page.locator('.public-atmosphere').evaluate(el => {
+      const style = getComputedStyle(el, '::before');
+      return { position: style.position, repeat: style.backgroundRepeat };
+    });
+    assert.equal(atmosphere.position, 'fixed', 'Landing artwork should remain anchored while content scrolls');
+    assert.equal(atmosphere.repeat, 'no-repeat, no-repeat', 'Landing artwork must not tile vertically');
     const expressiveMotion = await page.evaluate(() => ({
       phrase: getComputedStyle(document.querySelector('.marketing-phrase-loop > span')).animationName,
       color: getComputedStyle(document.querySelector('[data-text-effect="color-flow"]')).animationName,
@@ -21,15 +27,20 @@ const { chromium } = require('@playwright/test');
     for (const width of [1440, 1024]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-      const bottom = await page.locator('.academic-proof-deck').evaluate(el => el.getBoundingClientRect().bottom + scrollY);
-      for (const remaining of [600, 450, 300]) {
-        await page.evaluate(y => scrollTo(0, y), bottom - remaining);
+      const approachGaps = await page.locator('.academic-proof-slot').evaluateAll(slots => slots.slice(1).map((slot, index) => {
+        const previousCard = slots[index].querySelector('.academic-proof-card');
+        return slot.offsetTop - (slots[index].offsetTop + previousCard.offsetHeight);
+      }));
+      approachGaps.forEach(gap => assert.ok(gap <= 40, `${width}px: proof cards must approach without dead space; gap=${gap}`));
+      const settledScroll = await page.locator('.academic-proof-slot:last-child').evaluate(el => el.getBoundingClientRect().top + scrollY - (96 + 3 * 64));
+      for (const progress of [0, 100, 200]) {
+        await page.evaluate(y => scrollTo(0, y), settledScroll + progress);
         await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         const tops = await page.locator('.academic-proof-card').evaluateAll(cards => cards.map(card => card.getBoundingClientRect().top));
         for (let i = 1; i < tops.length; i++) {
-          assert.ok(Math.abs(tops[i] - tops[i - 1] - 64) < 2, `${width}px / ${remaining}px remaining: lost heading peek, tops=${tops}`);
+          assert.ok(Math.abs(tops[i] - tops[i - 1] - 64) < 2, `${width}px / ${progress}px after settle: lost heading peek, tops=${tops}`);
         }
-        if (width === 1440 && remaining === 600) await page.screenshot({ path: '.superdesign/tmp/deck-release.png' });
+        if (width === 1440 && progress === 100) await page.screenshot({ path: '.superdesign/tmp/deck-release.png' });
       }
     }
     // The app's manual theme must win over the opposite OS preference.
@@ -82,8 +93,20 @@ const { chromium } = require('@playwright/test');
     const reducedExpressiveMotion = await page.evaluate(() => ({
       phrase: getComputedStyle(document.querySelector('.marketing-phrase-loop > span')).animationName,
       color: getComputedStyle(document.querySelector('[data-text-effect="color-flow"]')).animationName,
+      heroImages: Array.from(document.querySelectorAll('.hero-art-image')).map(image => ({
+        animation: getComputedStyle(image).animationName,
+        opacity: getComputedStyle(image).opacity,
+      })),
     }));
-    assert.deepEqual(reducedExpressiveMotion, { phrase: 'none', color: 'none' });
+    assert.deepEqual(reducedExpressiveMotion, {
+      phrase: 'none',
+      color: 'none',
+      heroImages: [
+        { animation: 'none', opacity: '1' },
+        { animation: 'none', opacity: '0' },
+        { animation: 'none', opacity: '0' },
+      ],
+    });
     const staticCards = await page.locator('.academic-proof-card').evaluateAll(cards => cards.map(card => ({ top: card.getBoundingClientRect().top, bottom: card.getBoundingClientRect().bottom })));
     for (let i = 1; i < staticCards.length; i++) assert.ok(staticCards[i].top >= staticCards[i - 1].bottom + 20, 'Reduced-motion deck remains readable');
     const noJS = await browser.newContext({ javaScriptEnabled: false });

@@ -14,10 +14,17 @@ import { formatDistanceToNow } from 'date-fns';
 
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false);
+  const [locallyReadIds, setLocallyReadIds] = useState<Set<string>>(() => new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { unreadCount, notifications, loading } = useNotifications();
   const shouldReduceMotion = useReducedMotion();
+
+  const isRead = (id: string, read: boolean) => read || locallyReadIds.has(id);
+  const locallyResolvedCount = notifications.filter(
+    (notification) => !notification.read && locallyReadIds.has(notification.id),
+  ).length;
+  const effectiveUnreadCount = Math.max(0, unreadCount - locallyResolvedCount);
 
   // Click outside to close
   useEffect(() => {
@@ -52,15 +59,31 @@ export function NotificationDropdown() {
   const handleMarkAllRead = async () => {
     if (!notifications || !user) return;
     try {
-      const unread = notifications.filter(n => !n.read);
+      const unread = notifications.filter((notification) => !isRead(notification.id, notification.read));
       if (unread.length === 0) return;
       
       await Promise.all(
         unread.map(n => updateDocument(`notifications/${user.uid}/items/${n.id}`, { read: true }))
       );
       await setRTDB(`notif_counts/${user.uid}/unread`, 0);
+      setLocallyReadIds((current) => new Set([...current, ...unread.map((notification) => notification.id)]));
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleMarkRead = async (id: string) => {
+    if (!user) return;
+    const notification = notifications.find((item) => item.id === id);
+    if (!notification || isRead(notification.id, notification.read)) return;
+
+    try {
+      await updateDocument(`notifications/${user.uid}/items/${id}`, { read: true });
+      const nextUnreadCount = Math.max(0, effectiveUnreadCount - 1);
+      await setRTDB(`notif_counts/${user.uid}/unread`, nextUnreadCount);
+      setLocallyReadIds((current) => new Set(current).add(id));
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -82,9 +105,10 @@ export function NotificationDropdown() {
         aria-label="Notifications"
         aria-expanded={isOpen}
         aria-haspopup="true"
+        aria-controls="notification-dropdown"
       >
         <Bell size={20} />
-        {unreadCount > 0 && (
+        {effectiveUnreadCount > 0 && (
           <span className="absolute top-1 right-1.5 flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-primary)] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--acade-primary)] border-2 border-[var(--acade-surface)]"></span>
@@ -95,17 +119,21 @@ export function NotificationDropdown() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            id="notification-dropdown"
+            role="dialog"
+            aria-label="Notifications"
+            aria-modal="false"
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.95 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute -right-2 sm:right-0 mt-2 w-[calc(100vw-32px)] max-w-[360px] sm:w-80 bg-[var(--acade-deep)]/95 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] z-50 overflow-hidden origin-top-right"
+            className="fixed inset-x-3 top-[4.25rem] z-50 flex w-auto max-h-[min(65dvh,28rem)] origin-top-right flex-col overflow-hidden rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)]/95 shadow-[0_8px_30px_rgb(0,0,0,0.5)] backdrop-blur-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 sm:max-h-[28rem]"
           >
-            <div className="flex items-center justify-between p-4 border-b border-[var(--acade-border)]">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--acade-border)] p-4">
               <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
                 Notifications
               </h3>
-              {unreadCount > 0 && (
+              {effectiveUnreadCount > 0 && (
                 <button 
                   onClick={handleMarkAllRead}
                   className="text-[length:var(--text-xs)] text-[var(--acade-primary)] hover:text-[var(--acade-primary-glow)] font-semibold transition-colors flex items-center gap-1"
@@ -115,49 +143,63 @@ export function NotificationDropdown() {
               )}
             </div>
 
-            <div className="max-h-[320px] overflow-y-auto overscroll-contain">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {loading ? (
                 <div className="p-8 flex justify-center">
                   <div className="size-6 rounded-full border-2 border-[var(--acade-primary)] border-t-transparent animate-spin" />
                 </div>
               ) : notifications.length > 0 ? (
                 <div className="flex flex-col">
-                  {notifications.map((notif) => (
-                    <div 
-                      key={notif.id} 
-                      className={cn(
-                        "p-4 border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)] transition-colors flex gap-3",
-                        !notif.read ? "bg-[var(--acade-primary)]/5" : ""
-                      )}
-                    >
-                      <div className="shrink-0 mt-0.5 bg-[var(--acade-deep)] p-1.5 rounded-full border border-[var(--acade-border)]">
-                        {getIcon(notif.type)}
-                      </div>
-                      <div className="flex flex-col gap-1 flex-1">
-                        <div className="flex justify-between items-start gap-2">
-                          <span className={cn(
-                            "text-[length:var(--text-sm)] font-bold font-[family-name:var(--font-dm-sans)]",
-                            !notif.read ? "text-[var(--acade-text)]" : "text-[var(--acade-text-muted)]"
-                          )}>
-                            {notif.title}
+                  {notifications.map((notif) => {
+                    const notificationIsRead = isRead(notif.id, notif.read);
+                    return (
+                      <article
+                        key={notif.id}
+                        className={cn(
+                          "grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 border-b border-[var(--acade-border-subtle)] p-4 transition-colors hover:bg-[var(--acade-overlay)]",
+                          !notificationIsRead ? "bg-[var(--acade-primary)]/5" : ""
+                        )}
+                      >
+                        {notificationIsRead ? (
+                          <span
+                            aria-label={`Read: ${notif.title}`}
+                            data-state="read"
+                            className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--acade-success)]/35 bg-[var(--acade-success)]/10 text-[var(--acade-success)]"
+                          >
+                            <CheckCircle2 size={17} aria-hidden="true" />
                           </span>
-                          {notif.createdAt && (
-                            <span className="text-[10px] text-[var(--acade-text-faint)] whitespace-nowrap mt-0.5">
-                              {formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true })}
+                        ) : (
+                          <button
+                            type="button"
+                            aria-label={`Mark “${notif.title}” as read`}
+                            data-state="unread"
+                            onClick={() => void handleMarkRead(notif.id)}
+                            className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[var(--acade-primary)]/40 bg-[var(--acade-deep)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+                          >
+                            {getIcon(notif.type)}
+                          </button>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex min-w-0 flex-col gap-0.5">
+                            <span className={cn(
+                              "min-w-0 break-words text-[length:var(--text-sm)] font-bold font-[family-name:var(--font-dm-sans)]",
+                              !notificationIsRead ? "text-[var(--acade-text)]" : "text-[var(--acade-text-muted)]"
+                            )}>
+                              {notif.title}
                             </span>
-                          )}
+                            {notif.createdAt && (
+                              <span className="text-[10px] text-[var(--acade-text-faint)]">
+                                {formatDistanceToNow(notif.createdAt.toDate(), { addSuffix: true })}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 line-clamp-2 [overflow-wrap:anywhere] text-[length:var(--text-xs)] leading-relaxed text-[var(--acade-text-muted)]">
+                            {notif.message}
+                          </p>
                         </div>
-                        <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] line-clamp-2 leading-relaxed pr-4">
-                          {notif.message}
-                        </p>
-                      </div>
-                      {!notif.read && (
-                        <div className="shrink-0 flex items-center self-center ml-1">
-                          <div className="w-2 h-2 rounded-full bg-[var(--acade-primary)] shadow-[0_0_6px_var(--acade-primary)]" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                      </article>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="p-8 text-center flex flex-col items-center gap-2">
@@ -169,7 +211,7 @@ export function NotificationDropdown() {
               )}
             </div>
 
-            <div className="p-2 border-t border-[var(--acade-border)] bg-[var(--acade-deep)]">
+            <div className="shrink-0 border-t border-[var(--acade-border)] bg-[var(--acade-deep)] p-2">
               <Link 
                 href="/notifications" 
                 onClick={() => setIsOpen(false)}

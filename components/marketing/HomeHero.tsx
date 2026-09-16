@@ -1,6 +1,8 @@
 import Image from 'next/image';
 import { ArrowRight, BadgeCheck, CalendarRange, LockKeyhole, Route, Scale } from 'lucide-react';
 import heroStudent from '../../mobile-app-images/Smiling Student Showcasing Academic Dashboard.png';
+import heroStudentDashboard from '../../mobile-app-images/heroimage2.png';
+import heroStudentScanner from '../../mobile-app-images/heroimage3.png';
 import { LinkButton } from '@/components/ui';
 
 function TrajectoryField() {
@@ -31,23 +33,31 @@ export function HomeHero() {
               Your degree, made easier to read
             </div>
 
-            <p aria-label="Record results. Understand progress. Plan what comes next." className="flex items-center font-[family-name:var(--font-geist-mono)] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
-              <span aria-hidden="true" className="marketing-phrase-loop">
-                <span>Record results.</span>
-                <span>Understand progress.</span>
-                <span>Plan what comes next.</span>
-              </span>
+            <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
+              Record. Understand. Plan.
             </p>
 
-            <h1 data-landing-motion="hero" id="home-hero-title" className="mt-6 max-w-[11ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.75rem,5.6vw,4.25rem)] font-bold leading-[1.01] tracking-[-0.052em] text-[var(--acade-text)]">
-              See the <span data-text-effect="color-flow">path</span> behind every result.
+            <h1
+              data-landing-motion="hero"
+              id="home-hero-title"
+              aria-label="See the path behind every result. Understand your CGPA. Spot courses at risk. Plan the next semester."
+              className="mt-6 max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.75rem,5.6vw,4.25rem)] font-bold leading-[1.01] tracking-[-0.052em] text-[var(--acade-text)]"
+            >
+              <span aria-hidden="true">
+                <span className="block">See the <span data-text-effect="color-flow">path</span> behind every result.</span>
+                <span data-hero-type-loop="" className="marketing-phrase-loop marketing-hero-type-loop" role="presentation">
+                  <span>Understand your CGPA.</span>
+                  <span>Spot courses at risk.</span>
+                  <span>Plan the next semester.</span>
+                </span>
+              </span>
             </h1>
             <p data-landing-motion="hero-copy" className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
               Record each semester, understand your CGPA and performance signals, then plan your next academic move with evidence you can inspect.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center">
-              <LinkButton href="/register" size="lg" className="group w-full whitespace-nowrap lg:w-auto">
+              <LinkButton href="/register" size="lg" className="marketing-edge-cta group w-full whitespace-nowrap lg:w-auto">
                 Start your academic record
                 <ArrowRight className="size-4 transition-transform duration-150 group-hover:translate-x-0.5" aria-hidden="true" />
               </LinkButton>
@@ -62,15 +72,39 @@ export function HomeHero() {
             </div>
           </div>
 
-          <div className="relative self-end lg:col-span-6">
+          <figure
+            aria-label="Students using AcadeGrade to review results and scan academic records"
+            className="hero-art-frame relative mx-auto aspect-[6/7] w-full max-w-[35rem] self-end lg:col-span-6"
+          >
             <div className="absolute bottom-12 left-1/2 h-[72%] w-[88%] -translate-x-1/2 rounded-[50%] bg-[var(--acade-primary-dim)] opacity-80" aria-hidden="true" />
-            <Image src={heroStudent} alt="Student holding a phone showing the AcadeGrade academic dashboard" width={1199} height={1312} priority sizes="(max-width: 1023px) 100vw, 50vw" className="relative mx-auto max-h-[460px] w-full object-contain object-bottom sm:max-h-[560px] lg:max-h-[650px]" />
+            <Image
+              src={heroStudent}
+              alt="Student holding a phone showing the AcadeGrade academic dashboard"
+              fill
+              priority
+              sizes="(max-width: 1023px) min(100vw, 35rem), 35rem"
+              className="hero-art-image hero-art-image-primary object-contain object-bottom"
+            />
+            <Image
+              src={heroStudentDashboard}
+              alt=""
+              fill
+              sizes="(max-width: 1023px) min(100vw, 35rem), 35rem"
+              className="hero-art-image hero-art-image-secondary object-contain object-bottom"
+            />
+            <Image
+              src={heroStudentScanner}
+              alt=""
+              fill
+              sizes="(max-width: 1023px) min(100vw, 35rem), 35rem"
+              className="hero-art-image hero-art-image-tertiary object-contain object-bottom"
+            />
             <div className="absolute bottom-7 right-0 hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 shadow-[var(--shadow-popover)] sm:block lg:right-2">
               <p className="text-xs font-semibold text-[var(--acade-text-faint)]">CURRENT TRAJECTORY</p>
               <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-2xl font-semibold">3.71 <span className="text-sm text-[var(--acade-success)]">+0.08</span></p>
               <p className="mt-1 text-xs text-[var(--acade-text-muted)]">after 117 recorded credits</p>
             </div>
-          </div>
+          </figure>
         </div>
       </div>
 

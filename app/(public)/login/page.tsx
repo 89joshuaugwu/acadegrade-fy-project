@@ -139,6 +139,7 @@ export default function LoginPage() {
 
   return (
     <AuthShell
+      className="auth-expressive"
       eyebrow="Student access"
       title="Welcome back"
       description="Sign in to continue tracking your academic progress."
@@ -230,6 +231,7 @@ export default function LoginPage() {
             size="lg"
             fullWidth
             loading={isSubmitting}
+            className="marketing-edge-cta"
             loadingLabel="Signing in…"
           >
             Sign in <ArrowRight size={18} aria-hidden="true" />

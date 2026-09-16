@@ -289,13 +289,17 @@ export default function TranscriptPage() {
           </p>
         </div>
         
-        <div className="flex items-center gap-3 w-full overflow-x-auto pb-2 sm:w-auto sm:overflow-visible sm:pb-0 scrollbar-hide">
+        <div
+          role="group"
+          aria-label="Transcript export options"
+          className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end"
+        >
           {/* Photo Toggle */}
           <button
             type="button"
             onClick={() => setShowPhoto(prev => !prev)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[length:var(--text-xs)] font-medium transition-all",
+              "flex min-h-12 min-w-0 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2 py-1.5 text-[length:var(--text-xs)] font-medium transition-all sm:w-auto sm:px-3",
               showPhoto
                 ? "border-[var(--acade-primary)] bg-[var(--acade-primary)]/10 text-[var(--acade-primary)]"
                 : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)]"
@@ -306,16 +310,16 @@ export default function TranscriptPage() {
             {showPhoto ? 'Photo On' : 'Photo Off'}
           </button>
 
-          <Button variant="outline" size="sm" onClick={handlePrint}>
-            <Printer size={16} className="mr-2" />
+          <Button variant="outline" size="sm" onClick={handlePrint} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
+            <Printer size={16} className="shrink-0" aria-hidden="true" />
             Print HTML
           </Button>
-          <Button variant="outline" size="sm" onClick={handleShareLink} disabled={sharing}>
-            <Link2 size={16} className={cn("mr-2", sharing && "animate-spin")} />
+          <Button variant="outline" size="sm" onClick={handleShareLink} disabled={sharing} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
+            <Link2 size={16} className={cn("shrink-0", sharing && "animate-spin")} aria-hidden="true" />
             {sharing ? 'Creating...' : 'Share Link'}
           </Button>
-          <Button variant="primary" size="sm" onClick={handleDownload} disabled={downloading}>
-            <Download size={16} className={cn("mr-2", downloading && "animate-bounce")} />
+          <Button variant="primary" size="sm" onClick={handleDownload} disabled={downloading} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
+            <Download size={16} className={cn("shrink-0", downloading && "animate-bounce")} aria-hidden="true" />
             Download PDF
           </Button>
         </div>
@@ -333,16 +337,23 @@ export default function TranscriptPage() {
               const url = `${window.location.origin}/share/${link.id}`;
               const expiresAt = link.expiresAt?.toDate?.() || new Date(link.expiresAt);
               return (
-                <div key={link.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--acade-deep)] p-3 rounded-lg border border-[var(--acade-border-subtle)]">
-                  <div className="flex-1 truncate">
+                <div key={link.id} className="grid min-w-0 grid-cols-1 gap-3 rounded-lg border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0 overflow-hidden">
                     <div className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-1">
                       Expires: {new Date(expiresAt).toLocaleDateString()}
                     </div>
-                    <a href={url} target="_blank" rel="noreferrer" className="text-[length:var(--text-sm)] font-mono text-[var(--acade-text)] hover:text-[var(--acade-primary)] truncate block">
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label="Open shared transcript"
+                      title={url}
+                      className="block min-w-0 max-w-full truncate font-mono text-[length:var(--text-sm)] text-[var(--acade-text)] hover:text-[var(--acade-primary)]"
+                    >
                       {url}
                     </a>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
