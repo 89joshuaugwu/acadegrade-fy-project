@@ -19,7 +19,7 @@ export function AuthProgress({
   return (
     <nav aria-label={label} className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between gap-4">
-        <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.14em] text-[var(--acade-text-muted)]">
+        <p key={safeStep} className="auth-progress-label text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.14em] text-[var(--acade-text-muted)]">
           {steps[safeStep - 1] ?? 'Getting started'}
         </p>
         <p className="shrink-0 text-[length:var(--text-xs)] tabular-nums text-[var(--acade-text-muted)]">

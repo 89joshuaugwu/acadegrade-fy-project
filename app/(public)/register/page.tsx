@@ -33,7 +33,7 @@ import { Select } from '@/components/ui/Select';
 import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 import { AuthProgress, AuthShell } from '@/components/auth';
 import { navigationSpring } from '@/lib/ui/motion';
-import { AUTH_TEXT_MOTION_CLASS } from '@/components/marketing/PublicTextMotion';
+import { AUTH_TEXT_MOTION_CLASS, DirectionalText } from '@/components/marketing/PublicTextMotion';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -331,9 +331,11 @@ function Step1Account({ onNext }: { onNext: () => void }) {
   if (showOtp) {
     return (
       <div className="flex flex-col gap-4">
-        <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
-          Verify Your Email
-        </h2>
+        <DirectionalText
+          as="h2"
+          text="Verify Your Email"
+          className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2"
+        />
         <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
           We sent a 6-digit verification code to <strong>{getValues('email')}</strong>. Please enter it below to proceed. The code expires in 5 minutes.
         </p>

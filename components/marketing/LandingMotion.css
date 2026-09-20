@@ -134,8 +134,11 @@
   }
 
   [data-landing-motion='words'] { --landing-distance: 10px; }
-  [data-landing-motion='words'] > span:nth-child(2) { --landing-delay: 100ms; }
-  [data-landing-motion='words'] > span:nth-child(3) { --landing-delay: 200ms; }
+  [data-landing-motion='words'] > span:nth-child(2) { --landing-delay: 80ms; }
+  [data-landing-motion='words'] > span:nth-child(3) { --landing-delay: 160ms; }
+  [data-landing-motion='words'] > span:nth-child(4) { --landing-delay: 240ms; }
+  [data-landing-motion='words'] > span:nth-child(5) { --landing-delay: 320ms; }
+  [data-landing-motion='words'] > span:nth-child(6) { --landing-delay: 400ms; }
   [data-landing-motion='capture'] { --landing-duration: 420ms; --landing-distance: 10px; }
   [data-landing-motion='note'] { --landing-delay: 100ms; --landing-distance: 10px; }
   [data-landing-motion='heading'] { --landing-duration: 420ms; --landing-distance: 8px; }

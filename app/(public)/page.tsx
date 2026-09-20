@@ -33,10 +33,20 @@ export default function LandingPage() {
 
               <div className="mobile-showcase-copy relative z-20 px-5 pb-24 pt-8 sm:px-8 md:w-[45%] md:py-10" data-landing-motion="section">
                 <p data-landing-motion="type" className="marketing-type-line text-sm font-semibold text-[var(--acade-primary)]">AcadeGrade for mobile</p>
-                <h2 id="mobile-product-title" className="mt-2 max-w-[17ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-semibold leading-[1.06] tracking-[-0.04em]">
-                  Your academic record, ready when you are.
+                <h2
+                  data-landing-motion="words"
+                  id="mobile-product-title"
+                  className="mt-2 max-w-[17ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-semibold leading-[1.06] tracking-[-0.04em]"
+                >
+                  <span>Your academic record,</span>{' '}<span>ready when you are.</span>
                 </h2>
-                <p className="mt-4 max-w-[58ch] text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base sm:leading-7">Review results, scan a result slip, check your trajectory and keep your unofficial transcript within reach.</p>
+                <p
+                  data-landing-motion=""
+                  style={{ '--landing-delay': '160ms' } as React.CSSProperties}
+                  className="mt-4 max-w-[58ch] text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base sm:leading-7"
+                >
+                  Review results, scan a result slip, check your trajectory and keep your unofficial transcript within reach.
+                </p>
                 <MobileAppDownload className="mt-5 flex-wrap justify-start [&>*]:shrink-0 [&>*]:whitespace-nowrap" />
               </div>
 

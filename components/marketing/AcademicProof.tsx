@@ -17,7 +17,7 @@ export function AcademicProof() {
       <div className="academic-proof-grid mx-auto grid max-w-[1200px] items-start gap-10 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-12 lg:gap-16 lg:px-8 lg:py-24">
         <div className="academic-proof-copy lg:sticky lg:top-28 lg:col-span-5">
           <div>
-            <p className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
+            <p data-landing-motion="type" className="text-sm font-semibold text-[var(--acade-primary)]">Calculation you can follow</p>
             <h2 id="academic-proof-title" className="mt-3 max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,4vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.04em] text-[var(--acade-text)]">
               A result becomes useful when its basis stays visible.
             </h2>

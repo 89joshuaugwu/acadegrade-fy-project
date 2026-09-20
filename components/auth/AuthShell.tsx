@@ -1,6 +1,7 @@
 import { BookOpenCheck, ChartNoAxesCombined, ShieldCheck } from 'lucide-react';
 import { Card, Logo, ThemeControl } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
+import { TypedText } from '@/components/marketing/PublicTextMotion';
 
 const defaultProofItems = [
   'Keep every semester in one clear record',
@@ -116,9 +117,11 @@ export function AuthShell({
         />
 
         <div className="relative max-w-xl pt-10 xl:pt-14">
-          <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
-            Academic clarity, semester by semester
-          </p>
+          <TypedText
+            as="p"
+            text="Academic clarity, semester by semester"
+            className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]"
+          />
           <h2
             id={`${titleId}-proof`}
             className="mt-4 max-w-lg font-[family-name:var(--font-bricolage)] text-[length:clamp(2rem,3.2vw,3rem)] font-bold leading-[1.04] tracking-[-0.035em]"
@@ -139,7 +142,8 @@ export function AuthShell({
               return (
                 <li
                   key={item}
-                  className="flex items-start gap-3 text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]"
+                  className="auth-proof-item flex items-start gap-3 text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]"
+                  style={{ '--auth-item-index': index } as React.CSSProperties}
                 >
                   <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-primary)]">
                     <Icon className="size-4" aria-hidden="true" />
@@ -172,9 +176,11 @@ export function AuthShell({
               className="overflow-hidden rounded-[var(--radius-dialog)] border-[var(--acade-border)] p-5 shadow-[var(--shadow-popover)] sm:p-7"
             >
               {eyebrow && (
-                <p className="mb-3 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">
-                  {eyebrow}
-                </p>
+                <TypedText
+                  as="p"
+                  text={eyebrow}
+                  className="mb-3 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]"
+                />
               )}
               <h1
                 id={titleId}
@@ -198,7 +204,7 @@ export function AuthShell({
               )}
             </Card>
 
-            <p className="mt-5 text-center text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
+            <p className="auth-disclaimer mt-5 text-center text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
               Your academic data stays attached to your account and is never changed by signing in.
             </p>
           </div>

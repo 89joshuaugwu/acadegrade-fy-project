@@ -40,7 +40,7 @@ export function HomeHero() {
               Your degree, made easier to read
             </div>
 
-            <p className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
+            <p data-landing-motion="type" className="font-[family-name:var(--font-geist-mono)] text-xs font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
               Record. Understand. Plan.
             </p>
 
@@ -51,7 +51,11 @@ export function HomeHero() {
               <span className="block">See the <span data-text-effect="color-flow">path</span> behind every result.</span>
               <HeroTypedPhrases phrases={heroPhrases} />
             </h1>
-            <p className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]">
+            <p
+              data-landing-motion=""
+              style={{ '--landing-delay': '150ms', '--landing-distance': '12px' } as React.CSSProperties}
+              className="mt-6 max-w-[55ch] text-[length:var(--text-lg)] leading-8 text-[var(--acade-text-muted)]"
+            >
               Record each semester, understand your CGPA and performance signals, then plan your next academic move with evidence you can inspect.
             </p>
 
@@ -66,8 +70,20 @@ export function HomeHero() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-[var(--acade-text-muted)]">
-              <span className="inline-flex items-center gap-2"><LockKeyhole className="size-4 text-[var(--acade-success)]" aria-hidden="true" />Private by default</span>
-              <span className="inline-flex items-center gap-2"><BadgeCheck className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />Calculation basis included</span>
+              <span
+                data-landing-motion=""
+                style={{ '--landing-delay': '200ms', '--landing-distance': '8px' } as React.CSSProperties}
+                className="inline-flex items-center gap-2"
+              >
+                <LockKeyhole className="size-4 text-[var(--acade-success)]" aria-hidden="true" />Private by default
+              </span>
+              <span
+                data-landing-motion=""
+                style={{ '--landing-delay': '280ms', '--landing-distance': '8px' } as React.CSSProperties}
+                className="inline-flex items-center gap-2"
+              >
+                <BadgeCheck className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />Calculation basis included
+              </span>
             </div>
           </div>
 

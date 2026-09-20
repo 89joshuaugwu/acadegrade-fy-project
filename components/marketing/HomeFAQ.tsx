@@ -29,12 +29,17 @@ export function HomeFAQ() {
             <MessageCircleQuestion className="size-5" aria-hidden="true" />
           </div>
           <h2
+            data-landing-motion="words"
             id="home-faq-title"
             className="mt-5 max-w-[12ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,4vw,3rem)] font-semibold leading-[1.08] tracking-[-0.035em] text-[var(--acade-text)]"
           >
-            Clear answers before you begin.
+            <span>Clear</span>{' '}<span>answers</span>{' '}<span>before</span>{' '}<span>you</span>{' '}<span>begin.</span>
           </h2>
-          <p className="mt-5 max-w-[42ch] text-base leading-7 text-[var(--acade-text-muted)]">
+          <p
+            data-landing-motion=""
+            style={{ '--landing-delay': '160ms' } as React.CSSProperties}
+            className="mt-5 max-w-[42ch] text-base leading-7 text-[var(--acade-text-muted)]"
+          >
             AcadeGrade is built to help you understand and manage your academic journey without blurring the line between personal planning and official records.
           </p>
           <LinkButton href="/register" variant="outline" className="group mt-7">

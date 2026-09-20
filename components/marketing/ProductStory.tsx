@@ -27,7 +27,7 @@ export function ProductStory() {
       <div className="mx-auto max-w-[1200px] px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="grid gap-5 border-b border-[var(--acade-border)] pb-9 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-7">
-            <p className="text-sm font-semibold text-[var(--acade-primary)]">A practical academic rhythm</p>
+            <p data-landing-motion="type" className="text-sm font-semibold text-[var(--acade-primary)]">A practical academic rhythm</p>
             <h2 data-landing-motion="words" id="product-story-title" className="mt-3 font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3.5vw,2.75rem)] font-semibold tracking-[-0.035em]">
               <span>Record.</span>{' '}<span data-text-effect="color-flow">Understand.</span>{' '}<span>Plan.</span>
             </h2>

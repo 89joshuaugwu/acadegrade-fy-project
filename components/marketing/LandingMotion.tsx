@@ -30,7 +30,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
           (entry.target as HTMLElement).dataset.landingEntered = 'true';
           observer?.unobserve(entry.target);
         });
-      }, { threshold: 0.15 });
+      }, { threshold: 0 });
       targets.forEach((target) => {
         if (!target.dataset.landingEntered) observer?.observe(target);
       });

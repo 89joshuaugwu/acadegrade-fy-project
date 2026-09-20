@@ -14,7 +14,7 @@ export function SmartAutomation() {
     <>
       <section aria-labelledby="ocr-title" className="public-atmosphere-section border-b border-[var(--acade-border-subtle)]">
         <div className="mx-auto max-w-[1200px] px-4 py-12 text-center sm:px-6 sm:py-16 lg:px-8 lg:py-24">
-          <p className="text-sm font-semibold text-[var(--acade-primary)]">OCR-assisted result capture</p>
+          <p data-landing-motion="type" className="text-sm font-semibold text-[var(--acade-primary)]">OCR-assisted result capture</p>
           <h2 id="ocr-title" className="mx-auto mt-3 max-w-[17ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,4vw,3.25rem)] font-semibold leading-[1.06] tracking-[-0.04em]">
             Turn a result slip into fields you can review.
           </h2>
@@ -51,7 +51,7 @@ export function SmartAutomation() {
             <span className="flex size-12 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
               <Image src="/acadegradeailogo.png" alt="AcadeMind" width={24} height={24} className="size-6 object-contain" />
             </span>
-            <p className="mt-6 text-sm font-semibold text-[var(--acade-primary)]">AcadeMind insights</p>
+            <p data-landing-motion="type" className="mt-6 text-sm font-semibold text-[var(--acade-primary)]">AcadeMind insights</p>
             <h2 id="ai-title" className="mt-2 max-w-[14ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3.5vw,2.75rem)] font-semibold leading-tight tracking-[-0.035em]">
               Ask better questions about what comes next.
             </h2>
