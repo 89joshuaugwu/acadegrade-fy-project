@@ -498,6 +498,64 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
 
 }
 
+/* ─── Mobile & Tablet: Connected Ledger ────────────────────────────────────
+   Below the desktop sticky-stack breakpoint the four proof cards sit in
+   normal document flow. A thin gradient line and glowing step-dot connect
+   them into a visible audit chain, reinforcing the "basis stays visible"
+   headline without triggering sticky / gesture conflicts on touchscreens.
+   ───────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  /* Room for the dot + line on the left of every slot */
+  .academic-proof-slot {
+    position: relative;
+    padding-left: 1.75rem;
+  }
+
+  /* Gradient line segment — connects current card to the next */
+  .academic-proof-slot:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    /* horizontally centered on the 10px dot */
+    left: 0.3125rem;
+    /* starts just below the dot */
+    top: 1.875rem;
+    /* spans the space-y-6 (1.5rem) gap between slots */
+    bottom: -1.5rem;
+    width: 1px;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--acade-primary) 48%, transparent),
+      color-mix(in srgb, var(--acade-primary) 10%, transparent)
+    );
+  }
+
+  /* Step indicator dot */
+  .academic-proof-slot::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 1.25rem;
+    width: 0.625rem;   /* 10px */
+    height: 0.625rem;
+    border-radius: 9999px;
+    background: var(--acade-primary);
+    /* Subtle halo ring */
+    box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--acade-primary) 18%, transparent);
+  }
+
+  /* Terminal dot on the final "Degree Outlook" card — slightly larger
+     with a soft glow to signal the destination of the audit trail */
+  .academic-proof-slot:last-child::after {
+    width: 0.75rem;
+    height: 0.75rem;
+    left: -0.0625rem;
+    top: 1.1875rem;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--acade-primary) 14%, transparent),
+      0 0 10px 3px color-mix(in srgb, var(--acade-primary) 20%, transparent);
+  }
+}
+
 .mobile-showcase-art {
   object-fit: contain;
   object-position: center bottom;
