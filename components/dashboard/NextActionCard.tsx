@@ -28,8 +28,19 @@ export function NextActionCard({ action }: { action: DashboardNextAction }) {
   const Icon = tone.icon;
 
   return (
-    <Card className="relative h-full overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--acade-primary)]/70 to-transparent" aria-hidden="true" />
+    <Card
+      className={cn(
+        'relative h-full overflow-hidden',
+        action.tone === 'warning' && 'dashboard-warning-card'
+      )}
+    >
+      <div className="absolute inset-x-0 top-0 h-px" aria-hidden="true"
+        style={{
+          background: action.tone === 'warning'
+            ? 'linear-gradient(90deg, transparent, var(--acade-warning), transparent)'
+            : 'linear-gradient(90deg, transparent, color-mix(in srgb, var(--acade-primary) 70%, transparent), transparent)',
+        }}
+      />
       <div className="flex h-full flex-col">
         <div className={cn('flex size-11 items-center justify-center rounded-[var(--radius-control)]', tone.iconClass)}>
           <Icon className="size-5" aria-hidden="true" />

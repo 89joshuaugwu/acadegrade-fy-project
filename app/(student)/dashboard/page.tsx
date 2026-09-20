@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCGPA } from '@/hooks/useCGPA';
 import { useProfile } from '@/hooks/useProfile';
 import { getDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
+import { getGreeting } from '@/lib/utils/format';
 import {
   buildDashboardSummary,
   type DashboardCourseRecord,
@@ -132,6 +133,7 @@ export default function DashboardPage() {
     ? (isPIMode ? latestSemester.pi : latestSemester.gpa)
     : 0;
   const firstName = profile?.fullName?.split(' ')[0] || user?.displayName?.split(' ')[0] || 'Student';
+  const greeting = getGreeting();
   const nextAction = useMemo(() => getDashboardNextAction({
     hasAcademicData,
     atRiskCount,
@@ -166,9 +168,32 @@ export default function DashboardPage() {
     <LandingMotion>
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
       <header data-landing-motion="section" id="tour-welcome" className="max-w-2xl py-1">
-        <p className="dashboard-overview-pulse text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">Academic overview</p>
-        <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
-          Hello, {firstName}.
+        {/* Status beacon row */}
+        <div className="flex items-center gap-2">
+          <span className="relative flex size-2" aria-hidden="true">
+            <span
+              className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60"
+              style={{ animation: 'dashboard-ping 2.4s cubic-bezier(0,0,0.2,1) infinite' }}
+            />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+          </span>
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">
+            Academic overview
+          </p>
+        </div>
+        {/* Greeting with waving hand */}
+        <h1 className="mt-2 flex items-center gap-3 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
+          {greeting}, {firstName}.
+          <span
+            aria-hidden="true"
+            className="inline-block select-none"
+            style={{
+              transformOrigin: '70% 70%',
+              animation: 'hand-wave 1.8s ease-in-out 0.6s 1 both',
+            }}
+          >
+            👋
+          </span>
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base">
           {hasAcademicData
@@ -230,10 +255,10 @@ export default function DashboardPage() {
         </Card>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--acade-gold)]/80 to-transparent" aria-hidden="true" />
+          <div className="absolute inset-x-0 top-0 h-px dashboard-ai-sweep" aria-hidden="true" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
+              <span className="dashboard-ai-icon-glow flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
                 <Image src="/acadegradeailogo.png" alt="" width={26} height={26} className="object-contain" />
               </span>
               <div className="min-w-0">

@@ -45,7 +45,17 @@ export function StandingOverview({
 
   return (
     <Card padding="none" className="relative h-full overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[var(--acade-primary)] via-[var(--acade-gold)] to-transparent" aria-hidden="true" />
+      <div
+        className="absolute inset-x-0 top-0 h-px"
+        aria-hidden="true"
+        style={{
+          background:
+            'linear-gradient(90deg, var(--acade-primary), var(--acade-gold), var(--acade-primary), transparent)',
+          backgroundSize: '200% auto',
+          animation: 'dashboard-standing-shimmer 10s linear infinite',
+        }}
+      />
+
       <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
         <div className="min-w-0">
           <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">
