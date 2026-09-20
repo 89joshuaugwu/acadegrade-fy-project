@@ -194,10 +194,39 @@ export function ReplayTypingText({
       <span aria-hidden="true" className="marketing-replay-fallback block" data-typing-fallback="">{text}</span>
       {active ? (
         <span aria-hidden="true" className="absolute inset-0 block" data-typing-output="">
-          {text.slice(0, visibleLength)}
+          {visibleLength > 3 ? (
+            <>
+              {/* Settled text — normal color */}
+              <span>{text.slice(0, visibleLength - 3)}</span>
+              {/* Frontier — the live typing edge gets a gold gradient highlight */}
+              <span
+                style={{
+                  background: 'linear-gradient(90deg, var(--acade-text), var(--acade-gold))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                {text.slice(visibleLength - 3, visibleLength)}
+              </span>
+            </>
+          ) : (
+            // Still in the first few chars — color everything
+            <span
+              style={{
+                background: 'linear-gradient(90deg, var(--acade-primary), var(--acade-gold))',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {text.slice(0, visibleLength)}
+            </span>
+          )}
           <span className="marketing-type-caret" />
         </span>
       ) : null}
     </p>
   );
 }
+
