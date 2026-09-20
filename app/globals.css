@@ -474,17 +474,22 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   }
 
   .academic-proof-deck::after {
-    /* A generated child extends the sticky containing block; padding cannot,
-       and caused the final card to release above the 03 heading. */
+    /* Compact release runway so the completed 4-card stack can be appreciated
+       before releasing cleanly without a giant gap or card collapse. */
     content: '';
     display: block;
-    height: var(--proof-stack-height, 0px);
+    height: var(--proof-stack-height, 96px);
   }
 
   .academic-proof-slot {
     position: sticky;
     top: calc(96px + var(--proof-offset));
+    margin-bottom: var(--proof-extra-bottom, 0px);
     pointer-events: none;
+  }
+
+  .academic-proof-slot + .academic-proof-slot {
+    margin-top: var(--proof-pull-top, 2rem);
   }
 
   .academic-proof-slot > .academic-proof-card {

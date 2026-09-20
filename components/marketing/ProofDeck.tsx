@@ -10,9 +10,24 @@ export function ProofDeck({ children }: { children: ReactNode }) {
     const deck = deckRef.current;
     if (!deck || typeof ResizeObserver === 'undefined') return;
     const cards = Array.from(deck.querySelectorAll<HTMLElement>('.academic-proof-card'));
+    const slots = Array.from(deck.querySelectorAll<HTMLElement>('.academic-proof-slot'));
+
     const measure = () => {
-      const stackHeight = Math.max(...cards.map((card, index) => card.getBoundingClientRect().height + index * 64));
-      deck.style.setProperty('--proof-stack-height', `${stackHeight}px`);
+      const heights = cards.map(card => card.getBoundingClientRect().height);
+      const bottomOffsets = heights.map((h, i) => i * 64 + h);
+      const stackBottom = Math.max(...bottomOffsets);
+
+      let prevExtraBottom = 0;
+      slots.forEach((slot, i) => {
+        const extraBottom = stackBottom - (i * 64 + (heights[i] || 0));
+        slot.style.setProperty('--proof-extra-bottom', `${extraBottom}px`);
+        if (i > 0) {
+          slot.style.setProperty('--proof-pull-top', `calc(2rem - ${prevExtraBottom}px)`);
+        }
+        prevExtraBottom = extraBottom;
+      });
+
+      deck.style.setProperty('--proof-stack-height', '96px');
     };
     const observer = new ResizeObserver(measure);
     cards.forEach(card => observer.observe(card));
