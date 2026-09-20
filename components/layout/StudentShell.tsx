@@ -268,7 +268,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       <main id="main-content" className="relative min-h-screen w-full min-w-0 max-w-full flex-1 overflow-x-clip pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:ml-[calc(var(--student-rail-width)+2rem)] lg:w-auto lg:max-w-none lg:pb-0">
         <header
           aria-label="Student page context"
-          className="sticky top-0 hidden min-h-[var(--shell-header-height)] items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]/94 px-8 backdrop-blur-md lg:flex"
+          className="sticky top-0 relative hidden min-h-[var(--shell-header-height)] items-center justify-between gap-4 bg-[var(--acade-void)]/94 px-8 backdrop-blur-md lg:flex"
           style={{ zIndex: 'var(--z-sticky)' }}
         >
           <div className="min-w-0">
@@ -283,7 +283,19 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             <ThemeControl compact />
             <NotificationDropdown />
           </div>
+          {/* Animated shimmer line — replaces the static bottom border */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-px"
+            aria-hidden="true"
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, var(--acade-primary), var(--acade-gold), var(--acade-primary), transparent)',
+              backgroundSize: '200% auto',
+              animation: 'dashboard-standing-shimmer 8s linear infinite',
+            }}
+          />
         </header>
+
         {announcement && (
           <div className="bg-[var(--acade-gold)]/10 border-b border-[var(--acade-gold)]/20 px-4 py-3 flex items-start sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3 text-[var(--acade-gold)]">

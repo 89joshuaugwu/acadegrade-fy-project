@@ -168,6 +168,7 @@ export default function DashboardPage() {
     <LandingMotion>
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
       <header data-landing-motion="section" id="tour-welcome" className="max-w-2xl py-1">
+
         {/* Status beacon row */}
         <div className="flex items-center gap-2">
           <span className="relative flex size-2" aria-hidden="true">
@@ -200,7 +201,9 @@ export default function DashboardPage() {
             ? 'See your current standing, the records that changed most recently, and the clearest next step.'
             : 'Start with one semester. AcadeGrade will build the picture as your record grows.'}
         </p>
+        {/* Shimmer line — bottom separator under the header */}
       </header>
+
 
       <section data-landing-motion="card" aria-label="Academic standing and next action" className="grid min-w-0 items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
         <StandingOverview
