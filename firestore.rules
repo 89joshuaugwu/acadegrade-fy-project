@@ -87,5 +87,19 @@ service cloud.firestore {
     match /_matric_numbers/{docId} {
       allow read, write: if false;
     }
+
+    // AI provider credentials, routing, and audit records are available only
+    // through Firebase Admin in server routes. Client SDK callers are denied.
+    match /_ai_runtime/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /_ai_secrets/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /_ai_audit/{document=**} {
+      allow read, write: if false;
+    }
   }
 }
