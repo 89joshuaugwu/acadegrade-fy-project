@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateMultimodalGeminiContent } from '@/lib/ai/manager';
+import { generateMultimodalGeminiContentWithMetadata } from '@/lib/ai/manager';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       return rateLimitResponse(rateLimit, `Result scanning limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);
     }
 
-    let geminiResponse;
+    let generated;
 
     if (mimeType === 'application/pdf') {
       try {
@@ -71,41 +71,41 @@ export async function POST(req: NextRequest) {
 
         if (isClean) {
           // Use cheaper text-only extraction
-          geminiResponse = await generateMultimodalGeminiContent([`${PROMPT}\n\nDocument Text:\n${text}`], 'application/json');
+          generated = await generateMultimodalGeminiContentWithMetadata([`${PROMPT}\n\nDocument Text:\n${text}`], 'application/json');
         } else {
           // Fallback to sending the PDF document directly to Gemini
-          geminiResponse = await generateMultimodalGeminiContent([
+          generated = await generateMultimodalGeminiContentWithMetadata([
             { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
             PROMPT
           ], 'application/json');
         }
       } catch (pdfErr) {
         // If pdf-parse fails entirely, just send to Gemini
-        geminiResponse = await generateMultimodalGeminiContent([
+        generated = await generateMultimodalGeminiContentWithMetadata([
           { inlineData: { data: base64Data, mimeType: 'application/pdf' } },
           PROMPT
         ], 'application/json');
       }
     } else if (mimeType.startsWith('image/')) {
-      geminiResponse = await generateMultimodalGeminiContent([
+      generated = await generateMultimodalGeminiContentWithMetadata([
         { inlineData: { data: base64Data, mimeType } },
         PROMPT
       ], 'application/json');
     }
 
-    if (!geminiResponse) {
+    if (!generated?.text) {
       throw new Error('No response from AI');
     }
 
-    const parsed = JSON.parse(geminiResponse);
+    const parsed = JSON.parse(generated.text);
     if (!Array.isArray(parsed)) throw new Error('AI returned an invalid course list.');
     const courses = parsed.slice(0, 100);
-    logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 200, durationMs: timer(), provider: 'gemini' });
+    logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 200, durationMs: timer(), provider: generated.providerId });
     return NextResponse.json({ courses }, { headers: { 'X-RateLimit-Remaining': String(rateLimit.remaining) } });
 
   } catch (error: any) {
     console.error('Extract error:', error);
     logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 500, durationMs: timer(), provider: 'gemini', error: error?.message });
-    return NextResponse.json({ error: error.message || 'Extraction failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Extraction failed' }, { status: 500 });
   }
 }

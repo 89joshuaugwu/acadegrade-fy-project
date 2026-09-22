@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeForecast, getTrendDirection } from '@/lib/ai/forecast';
-import { generateDeepInsight } from '@/lib/ai/manager';
+import { generateForecastResponseWithMetadata, getAiConfigRevision } from '@/lib/ai/manager';
 import { adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
@@ -56,7 +56,8 @@ export async function POST(request: NextRequest) {
     }
 
     const analyticsRef = adminDb.collection('analytics').doc(uid);
-    const inputSignature = JSON.stringify({ piHistory, cgpaHistory });
+    const configRevision = await getAiConfigRevision();
+    const inputSignature = JSON.stringify({ piHistory, cgpaHistory, configRevision, promptRevision: 1 });
     const analyticsSnapshot = await analyticsRef.get();
     const cachedForecast = analyticsSnapshot.data()?.forecast;
     const cachedAt = timestampMillis(cachedForecast?.lastUpdated);
@@ -84,7 +85,8 @@ export async function POST(request: NextRequest) {
       Do not use quotes in your response.
     `;
 
-    const trendLabel = (await generateDeepInsight(prompt)).trim();
+    const generated = await generateForecastResponseWithMetadata(prompt);
+    const trendLabel = generated.text.trim();
     const forecastData = {
       slope,
       projected,
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
       trendDirection,
       lastUpdated: new Date(),
       inputSignature,
+      provenance: { providerId: generated.providerId, modelId: generated.modelId, configRevision: generated.configRevision },
     };
 
     try {
@@ -121,7 +124,7 @@ export async function POST(request: NextRequest) {
       console.error('Analytics write failed (non-fatal):', dbError);
     }
 
-    logApiCall({ endpoint: '/api/ai/forecast', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'deepseek' });
+    logApiCall({ endpoint: '/api/ai/forecast', category: 'ai', uid, status: 200, durationMs: timer(), provider: generated.providerId });
     return NextResponse.json(forecastData, {
       headers: {
         'X-RateLimit-Remaining': String(rateLimit.remaining),
@@ -131,6 +134,6 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Forecast route error:', error);
     logApiCall({ endpoint: '/api/ai/forecast', category: 'ai', uid, status: 500, durationMs: timer(), provider: 'deepseek', error: error?.message });
-    return NextResponse.json({ error: error?.message || 'Failed to generate forecast' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to generate forecast' }, { status: 500 });
   }
 }

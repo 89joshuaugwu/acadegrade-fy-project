@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateFastResponse } from '@/lib/ai/manager';
+import { generateFastResponseWithMetadata } from '@/lib/ai/manager';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
@@ -80,7 +80,8 @@ export async function POST(request: NextRequest) {
         Do not repeat the math. Do not give generic advice. Keep it under 20 words.
       `;
       try {
-        feasibilityNote = (await generateFastResponse(prompt)).trim() || buildLocalFeasibilityNote(requiredGPA);
+        const generated = await generateFastResponseWithMetadata(prompt);
+        feasibilityNote = generated.text.trim() || buildLocalFeasibilityNote(requiredGPA);
       } catch (providerError: any) {
         console.error('WhatIf AI provider unavailable:', providerError);
         feasibilityNote = buildLocalFeasibilityNote(requiredGPA);
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'groq' });
+    logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'managed-or-bootstrap' });
     return NextResponse.json({
       requiredGPA,
       requiredAvgScore,

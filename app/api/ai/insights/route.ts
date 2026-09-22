@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateDeepInsightJSON } from '@/lib/ai/manager';
+import { generateDeepInsightJSONWithMetadata, getAiConfigRevision } from '@/lib/ai/manager';
 import { adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
@@ -47,7 +47,10 @@ export async function POST(request: NextRequest) {
             : undefined,
         }
       : undefined;
-    const inputSignature = JSON.stringify({ semesterData, academicContext });
+    const settingsDoc = await adminDb.collection('config').doc('settings').get();
+    const basePrompt = settingsDoc.data()?.aiSystemPrompt || 'You are an expert academic advisor at a top Nigerian University.';
+    const configRevision = await getAiConfigRevision();
+    const inputSignature = JSON.stringify({ semesterData, academicContext, configRevision, promptRevision: basePrompt });
 
     const analyticsRef = adminDb.collection('analytics').doc(uid);
     const analyticsDoc = await analyticsRef.get();
@@ -76,8 +79,6 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse(rateLimit, `Written Analysis limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);
     }
 
-    const settingsDoc = await adminDb.collection('config').doc('settings').get();
-    const basePrompt = settingsDoc.data()?.aiSystemPrompt || 'You are an expert academic advisor at a top Nigerian University.';
     const prompt = `
       ${basePrompt}
 
@@ -106,13 +107,14 @@ export async function POST(request: NextRequest) {
       }
     `;
 
-    const insightData = await generateDeepInsightJSON<InsightResponse>(prompt);
+    const generated = await generateDeepInsightJSONWithMetadata<InsightResponse>(prompt);
+    const insightData = generated.data;
     await analyticsRef.set({
-      lastInsight: { timestamp: new Date(), data: insightData, inputSignature },
+      lastInsight: { timestamp: new Date(), data: insightData, inputSignature, provenance: generated.provenance },
       insightsStale: false,
     }, { merge: true });
 
-    logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'deepseek' });
+    logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid, status: 200, durationMs: timer(), provider: generated.provenance.providerId });
     return NextResponse.json(insightData, {
       headers: {
         'X-RateLimit-Remaining': String(rateLimit.remaining),
