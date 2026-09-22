@@ -1,8 +1,5 @@
 export const AD_PLACEMENT_IDS = [
   'dashboard.overview',
-  'results.summary',
-  'ocr.result',
-  'insights.summary',
 ] as const;
 
 export type AdPlacementId = typeof AD_PLACEMENT_IDS[number];

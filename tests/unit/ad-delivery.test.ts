@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AdsConfig, AdCampaign } from '@/lib/ads/types';
 import {
+  getCampaignStatus,
   getEligibleCampaigns,
   pruneImpressionHistory,
   selectWeightedCampaign,
@@ -71,6 +72,28 @@ describe('ad eligibility', () => {
         impressionHistory: { capped: [NOW - 1_000, NOW - 2_000] },
       }
     ).map((item) => item.id)).toEqual(['eligible']);
+  });
+});
+
+describe('campaign status', () => {
+  it('reports a scheduled active campaign truthfully', () => {
+    const future = campaign({
+      schedule: { startsAt: '2026-09-16T00:00:00.000Z', endsAt: null },
+    });
+
+    expect(getCampaignStatus(config([future]), future, NOW)).toEqual({
+      label: 'Scheduled',
+      tone: 'muted',
+    });
+  });
+
+  it('reports a live campaign as paused when global delivery is off', () => {
+    const active = campaign();
+
+    expect(getCampaignStatus(config([active], false), active, NOW)).toEqual({
+      label: 'Paused',
+      tone: 'muted',
+    });
   });
 });
 

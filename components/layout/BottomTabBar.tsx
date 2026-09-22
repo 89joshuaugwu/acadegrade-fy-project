@@ -19,6 +19,7 @@ const TAB_ICONS: Record<NavigationIcon, React.ElementType> = {
   analytics: BrainCircuit,
   activity: BrainCircuit,
   ads: Megaphone,
+  ai: BrainCircuit,
   settings: LayoutDashboard,
 };
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Activity, Settings, LogOut, Shield, Megaphone } from 'lucide-react';
+import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Activity, Settings, LogOut, Shield, Megaphone, BrainCircuit } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
@@ -19,6 +19,7 @@ const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
   courses: BookOpen,
   analytics: BarChart3,
   activity: Activity,
+  ai: BrainCircuit,
   ads: Megaphone,
   settings: Settings,
   results: BookOpen,
@@ -51,13 +52,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
         <div className="flex items-center gap-2 font-[family-name:var(--font-bricolage)] text-lg font-bold text-[var(--acade-text)]">
           <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--acade-primary-dim)]"><Shield size={20} className="text-[var(--acade-primary)]" /></span>
-          <span>AcadeGrade Admin</span>
+          <span className="truncate">{routeMeta.title}</span>
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
           type="button"
           className="flex size-12 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
-          aria-label="Open menu"
+          aria-label={`Open ${routeMeta.title} navigation`}
+          aria-expanded={drawerOpen}
         >
           <Menu size={24} />
         </button>
@@ -82,7 +84,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation */}
-          <nav aria-label="Primary" className="flex flex-col gap-1.5">
+          <nav aria-label="Admin primary navigation" className="flex flex-col gap-1.5">
             {adminNavigation.map((tab) => {
               const active = isRouteActive(pathname, tab.href);
               const Icon = ADMIN_ICONS[tab.icon];
@@ -90,6 +92,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  aria-current={active ? 'page' : undefined}
                   className={cn(
                     "flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors font-[family-name:var(--font-dm-sans)]",
                     active
@@ -107,7 +110,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         {/* Footer — email + sign out */}
         <div className="mt-auto p-6 flex flex-col gap-2">
-          <div className="px-3 py-2 rounded-lg bg-[var(--acade-overlay)]/30 text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] truncate text-center">
+          <div title={user?.email || undefined} className="px-3 py-2 rounded-lg bg-[var(--acade-overlay)]/30 text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] truncate text-center">
             {user?.email}
           </div>
           <ThemeControl className="w-full" />

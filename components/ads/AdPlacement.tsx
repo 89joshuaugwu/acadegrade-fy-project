@@ -78,30 +78,36 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
     let cancelled = false;
 
     async function chooseCampaign() {
+      setCampaign(null);
+      recordedCampaign.current = null;
+
       let rawConfig = config;
+      let legacyConfig: AdsConfig | null = null;
       if (rawConfig === undefined) {
         const { getDocument } = await import('@/lib/firebase/firestore');
         const settings = await getDocument<{
           adsConfig?: unknown;
           advertBanners?: unknown;
         }>('config/settings');
-        rawConfig = safeParseAdsConfig(settings?.adsConfig)
-          ?? legacyBannersToAdsConfig(settings?.advertBanners);
+        rawConfig = safeParseAdsConfig(settings?.adsConfig);
+        legacyConfig = legacyBannersToAdsConfig(settings?.advertBanners);
       }
-      const parsed = safeParseAdsConfig(rawConfig);
-      if (!parsed || cancelled) return;
 
       const currentTime = now ?? Date.now();
       const history = readHistory();
-      const eligible = getEligibleCampaigns(parsed, placement, {
-        now: currentTime,
-        impressionHistory: history,
-      });
       const day = new Date(currentTime).toISOString().slice(0, 10);
-      const selected = selectWeightedCampaign(
-        eligible,
-        `${seed ?? getViewerSeed()}:${placement}:${day}`
+
+      const candidates = [safeParseAdsConfig(rawConfig), legacyConfig].filter(
+        (candidate): candidate is AdsConfig => candidate !== null
       );
+      const selected = candidates.map((candidate) => selectWeightedCampaign(
+        getEligibleCampaigns(candidate, placement, {
+          now: currentTime,
+          impressionHistory: history,
+        }),
+        `${seed ?? getViewerSeed()}:${placement}:${day}`
+      )).find((candidate): candidate is AdCampaign => candidate !== null);
+
       if (!selected || cancelled) return;
 
       if (recordedCampaign.current !== selected.id) {

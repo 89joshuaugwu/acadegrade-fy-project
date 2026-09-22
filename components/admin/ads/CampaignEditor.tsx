@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
+import { Copy, Trash2 } from 'lucide-react';
 import { Button, Card, Input, Switch, Textarea } from '@/components/ui';
 import type { AdCampaign, AdPlacementConfig } from '@/lib/ads/types';
 
@@ -9,6 +9,8 @@ interface CampaignEditorProps {
   placements: AdPlacementConfig[];
   onChange: (campaign: AdCampaign) => void;
   onRemove: () => void;
+  onDuplicate: () => void;
+  status: { label: string; tone: 'success' | 'muted' };
 }
 
 function toLocalDateTime(value: string | null) {
@@ -22,7 +24,7 @@ function fromLocalDateTime(value: string) {
   return value ? new Date(value).toISOString() : null;
 }
 
-export function CampaignEditor({ campaign, placements, onChange, onRemove }: CampaignEditorProps) {
+export function CampaignEditor({ campaign, placements, onChange, onRemove, onDuplicate, status }: CampaignEditorProps) {
   const update = <Key extends keyof AdCampaign>(key: Key, value: AdCampaign[Key]) => {
     onChange({ ...campaign, [key]: value });
   };
@@ -35,8 +37,10 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove }: Cam
             <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
               {campaign.name}
             </h2>
-            <span className="rounded-full border border-[var(--acade-border)] px-2.5 py-1 text-xs font-medium text-[var(--acade-text-muted)]">
-              House
+            <span className={status.tone === 'success'
+              ? 'rounded-full border border-[var(--acade-success)]/30 bg-[var(--acade-success-dim)] px-2.5 py-1 text-xs font-medium text-[var(--acade-success)]'
+              : 'rounded-full border border-[var(--acade-border)] px-2.5 py-1 text-xs font-medium text-[var(--acade-text-muted)]'}>
+              {status.label}
             </span>
           </div>
           <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">
@@ -49,6 +53,14 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove }: Cam
             onCheckedChange={(active) => update('active', active)}
             aria-label={`Activate ${campaign.name}`}
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Duplicate ${campaign.name}`}
+            onClick={onDuplicate}
+          >
+            <Copy className="size-4" aria-hidden="true" />
+          </Button>
           <Button
             variant="ghost"
             size="sm"

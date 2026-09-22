@@ -10,6 +10,28 @@ interface EligibilityContext {
   impressionHistory?: AdImpressionHistory;
 }
 
+export interface CampaignStatus {
+  label: 'Draft' | 'Scheduled' | 'Live' | 'Paused' | 'Expired';
+  tone: 'success' | 'muted';
+}
+
+export function getCampaignStatus(config: AdsConfig, campaign: AdCampaign, now = Date.now()): CampaignStatus {
+  if (!campaign.active) return { label: 'Draft', tone: 'muted' };
+
+  const startsAt = campaign.schedule.startsAt ? Date.parse(campaign.schedule.startsAt) : null;
+  const endsAt = campaign.schedule.endsAt ? Date.parse(campaign.schedule.endsAt) : null;
+  if (startsAt !== null && now < startsAt) return { label: 'Scheduled', tone: 'muted' };
+  if (endsAt !== null && now >= endsAt) return { label: 'Expired', tone: 'muted' };
+
+  const hasLivePlacement = campaign.placementIds.some((id) => (
+    config.placements.some((placement) => placement.id === id && placement.enabled)
+  ));
+  if (!config.enabled || !config.deliveryModes.house || !hasLivePlacement) {
+    return { label: 'Paused', tone: 'muted' };
+  }
+  return { label: 'Live', tone: 'success' };
+}
+
 export function pruneImpressionHistory(timestamps: number[], now: number, windowHours: number) {
   const cutoff = now - (windowHours * 60 * 60 * 1_000);
   return timestamps.filter((timestamp) => (

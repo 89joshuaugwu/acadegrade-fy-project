@@ -37,6 +37,7 @@ const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
   analytics: BarChart3,
   activity: Activity,
   ads: Megaphone,
+  ai: BrainCircuit,
   settings: Settings,
   results: BookOpen,
   insights: BrainCircuit,

@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import { Megaphone, Plus, ShieldCheck } from 'lucide-react';
-import { Button, Card, Switch } from '@/components/ui';
+import { Button, Card, Modal, Switch } from '@/components/ui';
 import { EmptyState } from '@/components/shared';
 import { parseAdsConfig } from '@/lib/ads/config';
 import type { AdCampaign, AdsConfig } from '@/lib/ads/types';
+import { getCampaignStatus } from '@/lib/ads/delivery';
 import { CampaignEditor } from './CampaignEditor';
 
 interface AdsEditorProps {
@@ -41,8 +42,22 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
   const [config, setConfig] = useState(initialConfig);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [campaignToDelete, setCampaignToDelete] = useState<AdCampaign | null>(null);
 
   const activeCampaigns = config.campaigns.filter((campaign) => campaign.active).length;
+
+  const duplicateCampaign = (campaign: AdCampaign) => {
+    const suffix = config.campaigns.filter((item) => item.id.startsWith(`${campaign.id}-copy`)).length + 1;
+    setConfig({
+      ...config,
+      campaigns: [...config.campaigns, {
+        ...campaign,
+        id: `${campaign.id}-copy-${suffix}`,
+        name: `${campaign.name} copy`,
+        active: false,
+      }],
+    });
+  };
 
   const save = async () => {
     setError(null);
@@ -170,10 +185,9 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
               ...config,
               campaigns: config.campaigns.map((item, itemIndex) => itemIndex === index ? updated : item),
             })}
-            onRemove={() => setConfig({
-              ...config,
-              campaigns: config.campaigns.filter((_, itemIndex) => itemIndex !== index),
-            })}
+            onRemove={() => setCampaignToDelete(campaign)}
+            onDuplicate={() => duplicateCampaign(campaign)}
+            status={getCampaignStatus(config, campaign)}
           />
         ))}
       </section>
@@ -189,6 +203,26 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
           Save ads configuration
         </Button>
       </div>
+      <Modal
+        open={campaignToDelete !== null}
+        onClose={() => setCampaignToDelete(null)}
+        title={`Delete ${campaignToDelete?.name ?? 'campaign'}?`}
+        description="This removes the campaign from this unsaved configuration."
+        confirm={{
+          label: 'Delete campaign',
+          onConfirm: () => {
+            if (campaignToDelete) {
+              setConfig((current) => ({
+                ...current,
+                campaigns: current.campaigns.filter((campaign) => campaign.id !== campaignToDelete.id),
+              }));
+            }
+            setCampaignToDelete(null);
+          },
+        }}
+      >
+        <p className="text-sm text-[var(--acade-text-muted)]">You can discard this change before saving.</p>
+      </Modal>
     </div>
   );
 }

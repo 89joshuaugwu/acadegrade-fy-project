@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdPlacement } from '@/components/ads/AdPlacement';
 import type { AdsConfig } from '@/lib/ads/types';
@@ -81,5 +81,35 @@ describe('AdPlacement', () => {
       .toBeInTheDocument();
     expect(screen.getByRole('link', { name: /learn more/i }))
       .toHaveAttribute('href', 'https://example.com/legacy');
+  });
+
+  it('falls back to an active legacy banner when typed delivery is disabled', async () => {
+    mocks.getDocument.mockResolvedValueOnce({
+      adsConfig: config(false),
+      advertBanners: [{
+        id: 'legacy-banner',
+        imageUrl: 'https://cdn.example.com/legacy.png',
+        linkUrl: 'https://example.com/legacy',
+        isActive: true,
+      }],
+    });
+
+    render(<AdPlacement placement="dashboard.overview" seed="student-1" now={1_788_768_000_000} />);
+
+    expect(await screen.findByRole('link', { name: /learn more/i }))
+      .toHaveAttribute('href', 'https://example.com/legacy');
+  });
+
+  it('clears a selected campaign when a later configuration disables delivery', async () => {
+    const view = render(<AdPlacement placement="dashboard.overview" config={config()} seed="student-1" />);
+    expect(await screen.findByRole('complementary', { name: 'Featured from AcadeGrade' }))
+      .toBeInTheDocument();
+
+    view.rerender(<AdPlacement placement="dashboard.overview" config={config(false)} seed="student-1" />);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('complementary', { name: 'Featured from AcadeGrade' }))
+        .not.toBeInTheDocument();
+    });
   });
 });

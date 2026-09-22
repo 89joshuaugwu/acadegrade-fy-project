@@ -2,14 +2,16 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { AdminAuthorizationError, requireAdmin } from '@/lib/api/admin-auth';
 import { encryptSecret, type SupportedProviderId } from '@/lib/ai/secrets';
-import { createManagedRuntimeConfig, SUPPORTED_PROVIDERS, toMaskedAdminProjection } from '@/lib/ai/runtime-config';
+import { createManagedRuntimeConfig, SUPPORTED_PROVIDERS, toMaskedAdminProjection, type StoredAiSecret } from '@/lib/ai/runtime-config';
 
 const noStore = { 'Cache-Control': 'private, no-store' };
 class RevisionConflictError extends Error {}
+class InvalidAiConfigurationError extends Error {}
 
 function errorResponse(error: unknown) {
   if (error instanceof AdminAuthorizationError) return NextResponse.json({ error: error.message }, { status: error.status, headers: noStore });
   if (error instanceof RevisionConflictError) return NextResponse.json({ error: 'AI configuration changed. Refresh and try again.' }, { status: 409, headers: noStore });
+  if (error instanceof InvalidAiConfigurationError) return NextResponse.json({ error: error.message }, { status: 400, headers: noStore });
   return NextResponse.json({ error: 'Unable to manage AI configuration.' }, { status: 500, headers: noStore });
 }
 
@@ -17,10 +19,45 @@ function isProviderId(value: unknown): value is SupportedProviderId {
   return typeof value === 'string' && value in SUPPORTED_PROVIDERS;
 }
 
+function isStoredSecret(value: unknown): value is StoredAiSecret {
+  if (!value || typeof value !== 'object') return false;
+  const secret = value as Record<string, unknown>;
+  return typeof secret.secretId === 'string'
+    && isProviderId(secret.providerId)
+    && ['active', 'inactive', 'retired'].includes(String(secret.state))
+    && secret.version === 1
+    && typeof secret.ciphertext === 'string'
+    && typeof secret.iv === 'string'
+    && typeof secret.tag === 'string';
+}
+
 async function writeAudit(actor: { uid: string; email: string }, operation: string, resourceId: string) {
   await adminDb.collection('_ai_audit').doc(`${Date.now()}-${Math.random().toString(36).slice(2)}`).set({
     actorUid: actor.uid, actorEmail: actor.email, operation, resourceId, createdAt: new Date(),
   });
+}
+
+async function assertActiveRoutingSecrets(routing: unknown, revision: number) {
+  let config;
+  try {
+    config = createManagedRuntimeConfig({ source: 'managed', revision, routes: routing });
+  } catch (error) {
+    throw new InvalidAiConfigurationError(error instanceof Error ? error.message : 'Invalid AI routing configuration.');
+  }
+
+  const targets = Object.values(config.routes).flatMap((route) => route?.chain ?? []);
+  const uniqueSecretIds = [...new Set(targets.map((target) => target.secretId))];
+  const records = await Promise.all(uniqueSecretIds.map(async (secretId) => ({
+    secretId,
+    snapshot: await adminDb.collection('_ai_secrets').doc(secretId!).get(),
+  })));
+  for (const { secretId, snapshot } of records) {
+    const target = targets.find((item) => item.secretId === secretId);
+    const secret = snapshot.exists ? snapshot.data() : null;
+    if (!target || !isStoredSecret(secret) || secret.state !== 'active' || secret.providerId !== target.providerId) {
+      throw new InvalidAiConfigurationError(`Routing credential ${secretId} is unavailable or inactive.`);
+    }
+  }
 }
 
 export async function POST(request: Request) {
@@ -42,6 +79,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ secretId: body.secretId, state: body.state }, { headers: noStore });
     }
     if ((body.operation === 'save-routing' || body.operation === 'activate-managed') && Number.isSafeInteger(body.expectedRevision)) {
+      if (body.operation === 'save-routing') {
+        await assertActiveRoutingSecrets(body.routing, Number(body.expectedRevision) + 1);
+      }
       const configRef = adminDb.collection('_ai_runtime').doc('config');
       const result = await adminDb.runTransaction(async (transaction) => {
         const current = await transaction.get(configRef);
@@ -69,7 +109,11 @@ export async function GET(request: Request) {
       adminDb.collection('_ai_runtime').doc('config').get(),
       adminDb.collection('_ai_secrets').get(),
     ]);
-    return NextResponse.json({ providers: SUPPORTED_PROVIDERS, config: config.exists ? config.data() : null, secrets: secrets.docs.map((item) => toMaskedAdminProjection(item.data())) }, { headers: noStore });
+    const maskedSecrets = secrets.docs
+      .map((item) => item.data())
+      .filter(isStoredSecret)
+      .map(toMaskedAdminProjection);
+    return NextResponse.json({ providers: SUPPORTED_PROVIDERS, config: config.exists ? config.data() : null, secrets: maskedSecrets }, { headers: noStore });
   } catch (error) {
     return errorResponse(error);
   }

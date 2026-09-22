@@ -33,6 +33,7 @@ const STUDENT_ICONS: Record<NavigationIcon, React.ElementType> = {
   analytics: BrainCircuit,
   activity: BrainCircuit,
   ads: Megaphone,
+  ai: BrainCircuit,
   settings: Settings,
 };
 

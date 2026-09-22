@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AdsEditor } from '@/components/admin/ads/AdsEditor';
@@ -57,6 +57,37 @@ describe('AdsEditor', () => {
         deliveryMode: 'house',
         active: false,
       }],
+    });
+  });
+
+  it('duplicates a campaign and confirms deletion before removing it', async () => {
+    const user = userEvent.setup();
+    const initial = {
+      ...createDefaultAdsConfig(),
+      campaigns: [{
+        id: 'dashboard-message',
+        name: 'Dashboard message',
+        placementIds: ['dashboard.overview' as const],
+        deliveryMode: 'house' as const,
+        active: false,
+        schedule: { startsAt: null, endsAt: null },
+        weight: 1,
+        frequencyCap: { maxImpressions: 3, windowHours: 24 },
+        creative: { imageUrl: '', altText: '', headline: 'Study smarter', body: '', ctaLabel: '' },
+        linkUrl: '',
+      }],
+    };
+    render(<AdsEditor initialConfig={initial} legacyBannerCount={0} onSave={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Duplicate Dashboard message' }));
+    expect(screen.getAllByRole('heading', { name: /Dashboard message/ })).toHaveLength(2);
+
+    await user.click(screen.getByRole('button', { name: 'Delete Dashboard message' }));
+    expect(screen.getByRole('dialog', { name: 'Delete Dashboard message?' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete campaign' }));
+    await waitFor(() => {
+      expect(screen.getAllByRole('heading', { name: /Dashboard message/ })).toHaveLength(1);
     });
   });
 });

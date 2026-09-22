@@ -18,7 +18,6 @@ function validConfig() {
     },
     placements: [
       { id: 'dashboard.overview' as const, name: 'Dashboard overview', enabled: true },
-      { id: 'results.summary' as const, name: 'Results summary', enabled: false },
     ],
     campaigns: [
       {
@@ -44,6 +43,21 @@ function validConfig() {
 }
 
 describe('ads configuration validation', () => {
+  it('allows only the mounted dashboard overview placement', () => {
+    expect(createDefaultAdsConfig().placements).toEqual([
+      { id: 'dashboard.overview', name: 'Dashboard overview', enabled: true },
+    ]);
+
+    const unsupportedPlacement = validConfig();
+    unsupportedPlacement.placements[0] = {
+      id: 'results.summary' as any,
+      name: 'Results summary',
+      enabled: true,
+    };
+    expect(() => parseAdsConfig(unsupportedPlacement))
+      .toThrow('uses an unsupported placement id');
+  });
+
   it('accepts and normalizes a safe house-ad configuration', () => {
     const parsed = parseAdsConfig(validConfig());
 
@@ -85,7 +99,7 @@ describe('ads configuration validation', () => {
   it('rejects invalid placement references, schedules, weights, and caps', () => {
     const missingPlacement: any = validConfig();
     missingPlacement.campaigns[0].placementIds = ['ocr.result'];
-    expect(() => parseAdsConfig(missingPlacement)).toThrow('references a disabled or missing placement');
+    expect(() => parseAdsConfig(missingPlacement)).toThrow('uses an unsupported placement id');
 
     const reversedSchedule: any = validConfig();
     reversedSchedule.campaigns[0].schedule = {

@@ -26,6 +26,11 @@ describe('route metadata', () => {
     expect(isRouteActive('/admin/ads', '/admin/ads')).toBe(true);
     expect(getRouteMeta('/admin/ads')).toEqual({ title: 'Advertising' });
   });
+
+  it('makes AI Operations a discoverable admin destination', () => {
+    expect(isRouteActive('/admin/ai', '/admin/ai')).toBe(true);
+    expect(getRouteMeta('/admin/ai')).toEqual({ title: 'AI Operations' });
+  });
 });
 
 describe('RouteAnnouncer', () => {

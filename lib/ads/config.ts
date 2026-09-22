@@ -16,9 +16,6 @@ export class AdsConfigValidationError extends Error {
 
 const PLACEMENT_NAMES: Record<AdPlacementId, string> = {
   'dashboard.overview': 'Dashboard overview',
-  'results.summary': 'Results summary',
-  'ocr.result': 'OCR result',
-  'insights.summary': 'Insights summary',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {

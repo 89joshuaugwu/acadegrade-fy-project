@@ -17,15 +17,16 @@ export type EncryptedSecret = {
 };
 
 const DECRYPTION_ERROR = 'Unable to decrypt AI secret';
+const deploymentMasterKey = () => process.env.AI_CONFIG_MASTER_KEY ?? process.env.AI_SECRETS_MASTER_KEY;
 
 function parseMasterKey(encodedKey: string | undefined): Buffer {
   if (!encodedKey || encodedKey.trim() !== encodedKey) {
-    throw new Error('AI_SECRETS_MASTER_KEY must be a base64-encoded 32-byte value');
+    throw new Error('AI_CONFIG_MASTER_KEY must be a base64-encoded 32-byte value');
   }
 
   const key = Buffer.from(encodedKey, 'base64');
   if (key.length !== 32 || key.toString('base64') !== encodedKey) {
-    throw new Error('AI_SECRETS_MASTER_KEY must be a base64-encoded 32-byte value');
+    throw new Error('AI_CONFIG_MASTER_KEY must be a base64-encoded 32-byte value');
   }
 
   return key;
@@ -42,7 +43,7 @@ function serializeContext(context: SecretContext): Buffer {
 export function encryptSecret(
   plaintext: string,
   context: SecretContext,
-  encodedKey = process.env.AI_SECRETS_MASTER_KEY
+  encodedKey = deploymentMasterKey()
 ): EncryptedSecret {
   if (!plaintext) {
     throw new Error('AI secret value must not be empty');
@@ -65,7 +66,7 @@ export function encryptSecret(
 export function decryptSecret(
   record: EncryptedSecret,
   context: SecretContext,
-  encodedKey = process.env.AI_SECRETS_MASTER_KEY
+  encodedKey = deploymentMasterKey()
 ): string {
   try {
     if (record.version !== 1) throw new Error('Unsupported secret version');

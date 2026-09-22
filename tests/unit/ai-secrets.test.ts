@@ -22,4 +22,15 @@ describe('AI secret encryption', () => {
   it('masks a key without exposing more than its suffix', () => {
     expect(maskSecret('abcdefgh')).toBe('••••efgh');
   });
+
+  it('uses AI_CONFIG_MASTER_KEY as the canonical deployment key', () => {
+    const previous = process.env.AI_CONFIG_MASTER_KEY;
+    process.env.AI_CONFIG_MASTER_KEY = key;
+    try {
+      const encrypted = encryptSecret('canonical-secret', context);
+      expect(decryptSecret(encrypted, context)).toBe('canonical-secret');
+    } finally {
+      process.env.AI_CONFIG_MASTER_KEY = previous;
+    }
+  });
 });
