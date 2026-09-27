@@ -19,8 +19,11 @@ routing revision is saved and activated.
 1. Open **Admin > AI Operations**.
 2. Add or rotate a provider key. The server encrypts it; the page never
    reloads plaintext, ciphertext, or a pre-filled credential.
-3. Choose the mode, approved model, and active credential for each feature.
-4. Select **Save and activate routing**. The server rejects a route whose
+3. Add model IDs to the relevant provider catalog and create named key slots.
+   For Gemini, use separate slots such as `ocr` and `fallback` when those
+   workloads should use different keys. Choose the mode, model, and active
+   credential for each feature.
+4. Select **Save models and routing**. The server rejects a route whose
    credential is missing, inactive, or belongs to a different provider.
 5. To temporarily stop a provider, use the emergency disable procedure below.
 
@@ -44,6 +47,7 @@ audit records live in private Firestore collections denied to client SDK
 callers. The server returns masked metadata only and never returns plaintext
 credentials, ciphertext, encryption context, or provider request bodies.
 
-Use the fixed provider/model registry. Do not add arbitrary provider base URLs:
-that would allow unreviewed destinations to receive student records or result
-documents.
+Providers and API destinations remain fixed in code. Admins may enter model
+IDs for those providers; a format check does not prove the model exists or
+supports the selected workload. Confirm model availability and OCR support
+with the provider before saving a route that handles student data.

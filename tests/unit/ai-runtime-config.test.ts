@@ -32,6 +32,27 @@ describe('AI runtime configuration', () => {
     expect(config.routes.extract?.chain[0].providerId).toBe('gemini');
   });
 
+  it('accepts operator-supplied model IDs for known providers and rejects endpoint-like names', () => {
+    const providerModels = {
+      groq: ['llama-future-1'],
+      openrouter: ['vendor/model-next:free'],
+      gemini: ['gemini-next-version'],
+    };
+    const config = createManagedRuntimeConfig({
+      ...validManagedInput,
+      providerModels,
+      routes: {
+        ...validManagedInput.routes,
+        extract: { mode: 'single', chain: [{ providerId: 'gemini', modelId: 'gemini-next-version', secretId: 'gemini-ocr' }] },
+        forecast: { mode: 'disabled', chain: [] },
+        whatif: { mode: 'disabled', chain: [] },
+        insights: { mode: 'disabled', chain: [] },
+      },
+    });
+    expect(config.routes.extract?.chain[0].modelId).toBe('gemini-next-version');
+    expect(() => createManagedRuntimeConfig({ ...config, providerModels: { ...providerModels, gemini: ['https://example.test/model'] } })).toThrow('Invalid gemini model IDs');
+  });
+
   it('returns masked key metadata only', () => {
     const projection = toMaskedAdminProjection({
       secretId: 'groq-primary', providerId: 'groq', state: 'active',

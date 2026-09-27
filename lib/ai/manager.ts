@@ -8,7 +8,6 @@ import { getAiRuntimeConfig, type AiFeature, type AiRouteTarget, type StoredAiSe
 import { safeParseJSON, extractJsonObjectAndParse } from '@/lib/utils/safeParseJSON';
 
 export type AiGenerationResult = { text: string; providerId: SupportedProviderId; modelId: string; configRevision: number };
-const retryable = (error: any) => { const status = Number(error?.status ?? error?.response?.status); return status === 429 || status >= 500 || !status; };
 const publicProviderError = (error: any) => [400, 401, 403].includes(Number(error?.status ?? error?.response?.status)) ? new Error('AI provider authentication failed') : new Error('AI provider unavailable');
 
 function bootstrapKey(providerId: SupportedProviderId, feature: AiFeature) {
@@ -48,7 +47,7 @@ async function generate(feature: AiFeature, prompt: string | any[], responseMime
       const text = await invoke(target, apiKey, prompt, responseMimeType);
       if (!text) throw new Error('AI provider unavailable');
       return { text, providerId: target.providerId, modelId: target.modelId, configRevision: config.revision };
-    } catch (error) { if (!retryable(error)) throw publicProviderError(error); lastError = error; }
+    } catch (error) { lastError = error; }
   }
   throw publicProviderError(lastError);
 }

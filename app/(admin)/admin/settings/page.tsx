@@ -222,9 +222,11 @@ export default function AdminSettingsPage() {
           <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">AI System Prompt</h2>
         </div>
         <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
-          This prompt instructs Gemini 3.1 Flash-Lite how to respond to academic insights. Modifying this will affect all AI generations.
+          This prompt guides academic insights, whichever provider and model is selected in AI Operations. It does not change OCR, forecasts, or the what-if planner.
         </p>
+        <label htmlFor="academic-insights-prompt" className="sr-only">Academic insights system prompt</label>
         <textarea
+          id="academic-insights-prompt"
           value={settings.aiSystemPrompt || ''}
           onChange={(e) => setSettings({ ...settings, aiSystemPrompt: e.target.value })}
           rows={10}

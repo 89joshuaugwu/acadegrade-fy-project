@@ -109,11 +109,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Footer — email + sign out */}
-        <div className="mt-auto p-6 flex flex-col gap-2">
-          <div title={user?.email || undefined} className="px-3 py-2 rounded-lg bg-[var(--acade-overlay)]/30 text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] truncate text-center">
+        <div className="mt-auto flex min-w-0 flex-col gap-2 border-t border-[var(--acade-border)] p-3">
+          <div className="min-w-0 break-all rounded-lg bg-[var(--acade-overlay)]/30 px-2 py-2 text-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
             {user?.email}
           </div>
-          <ThemeControl className="w-full" />
+          <ThemeControl compact className="w-full" />
           <button
             type="button"
             onClick={handleSignOut}

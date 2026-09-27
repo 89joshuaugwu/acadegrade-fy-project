@@ -14,6 +14,10 @@ export interface AdminAiSecretProjection {
   providerId: AdminAiProviderId;
   state: 'active' | 'inactive' | 'retired';
   version: number;
+  label?: string;
+  modelId?: string;
+  priority?: number;
+  purpose?: 'general' | 'ocr' | 'fallback';
 }
 
 export type AdminAiFeature = 'insights' | 'forecast' | 'whatif' | 'extract';
@@ -30,6 +34,7 @@ export interface AdminAiRoute {
 export interface AdminAiConfig {
   source: 'bootstrap' | 'managed';
   revision: number;
+  providerModels?: Record<AdminAiProviderId, string[]>;
   routes: Partial<Record<AdminAiFeature, AdminAiRoute>>;
 }
 export interface AdminAiSnapshot {
@@ -59,7 +64,9 @@ export async function getAdminAiSnapshot(token: string): Promise<AdminAiSnapshot
 export async function upsertAdminAiSecret(
   token: string,
   providerId: AdminAiProviderId,
+  secretId: string,
   value: string,
+  details?: { label: string; modelId: string; priority: number; purpose: 'general' | 'ocr' | 'fallback' },
 ): Promise<AdminAiSecretProjection> {
   const response = await fetch('/api/admin/ai', {
     method: 'POST',
@@ -70,8 +77,9 @@ export async function upsertAdminAiSecret(
     body: JSON.stringify({
       operation: 'upsert-secret',
       providerId,
-      secretId: `${providerId}-primary`,
+      secretId,
       value,
+      ...details,
     }),
   });
   if (!response.ok) throw new AdminAiClientError(await getErrorMessage(response));
@@ -87,11 +95,12 @@ export async function saveAdminAiRouting(
   token: string,
   expectedRevision: number,
   routing: Record<AdminAiFeature, AdminAiRoute>,
+  providerModels: Record<AdminAiProviderId, string[]>,
 ): Promise<AdminAiConfig> {
   const response = await fetch('/api/admin/ai', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ operation: 'save-routing', expectedRevision, routing }),
+    body: JSON.stringify({ operation: 'save-routing', expectedRevision, routing, providerModels }),
   });
   if (!response.ok) throw new AdminAiClientError(await getErrorMessage(response));
   const body = await response.json() as { config?: AdminAiConfig };

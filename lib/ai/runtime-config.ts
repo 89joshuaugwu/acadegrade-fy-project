@@ -26,6 +26,7 @@ export type AiRoute = { mode: AiMode; chain: AiRouteTarget[] };
 export type AiRuntimeConfig = {
   source: 'bootstrap' | 'managed';
   revision: number;
+  providerModels?: Record<SupportedProviderId, string[]>;
   routes: Partial<Record<AiFeature, AiRoute>>;
 };
 
@@ -33,6 +34,10 @@ export type StoredAiSecret = EncryptedSecret & {
   secretId: string;
   providerId: SupportedProviderId;
   state: 'active' | 'inactive' | 'retired';
+  label?: string;
+  modelId?: string;
+  priority?: number;
+  purpose?: 'general' | 'ocr' | 'fallback';
   updatedAt?: unknown;
 };
 
@@ -43,7 +48,25 @@ function isProviderId(value: unknown): value is SupportedProviderId {
   return typeof value === 'string' && value in SUPPORTED_PROVIDERS;
 }
 
-function parseRoute(feature: AiFeature, value: unknown, managed: boolean): AiRoute {
+const MODEL_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:/+-]{0,127}$/;
+
+export function parseProviderModels(value: unknown): Record<SupportedProviderId, string[]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Provider models must be an object');
+  const input = value as Record<string, unknown>;
+  if (Object.keys(input).some((key) => !isProviderId(key))) throw new Error('Unsupported AI provider in model catalog');
+  const result = {} as Record<SupportedProviderId, string[]>;
+  for (const providerId of Object.keys(SUPPORTED_PROVIDERS) as SupportedProviderId[]) {
+    const models = input[providerId];
+    if (!Array.isArray(models) || models.length < 1 || models.length > 20 || models.some((model) => typeof model !== 'string' || !MODEL_ID_PATTERN.test(model) || model.includes('://'))) {
+      throw new Error(`Invalid ${providerId} model IDs`);
+    }
+    if (new Set(models).size !== models.length) throw new Error(`Duplicate ${providerId} model IDs`);
+    result[providerId] = models;
+  }
+  return result;
+}
+
+function parseRoute(feature: AiFeature, value: unknown, managed: boolean, providerModels: Record<SupportedProviderId, string[]>): AiRoute {
   if (!value || typeof value !== 'object') throw new Error(`Missing AI route for ${feature}`);
   const route = value as { mode?: unknown; chain?: unknown };
   if (!MODES.includes(route.mode as AiMode)) throw new Error('Unsupported AI mode');
@@ -52,13 +75,14 @@ function parseRoute(feature: AiFeature, value: unknown, managed: boolean): AiRou
   if ((mode === 'disabled' || mode === 'local-only') && route.chain.length !== 0) throw new Error('Local AI route must not have providers');
   if (mode === 'single' && route.chain.length !== 1) throw new Error('Single AI route requires one provider');
   if (mode === 'fallback-chain' && route.chain.length < 2) throw new Error('Fallback AI route requires at least two providers');
+  if (route.chain.length > 12) throw new Error('AI route exceeds 12 ordered targets');
 
   const requiredCapability = feature === 'extract' ? 'multimodal' : 'text';
   const chain = route.chain.map((candidate) => {
     if (!candidate || typeof candidate !== 'object') throw new Error('Invalid AI route target');
     const target = candidate as { providerId?: unknown; modelId?: unknown; secretId?: unknown };
     if (!isProviderId(target.providerId)) throw new Error('Unsupported AI provider');
-    if (typeof target.modelId !== 'string' || !SUPPORTED_PROVIDERS[target.providerId].models.includes(target.modelId)) {
+    if (typeof target.modelId !== 'string' || !providerModels[target.providerId].includes(target.modelId)) {
       throw new Error('Unsupported AI model');
     }
     if (!SUPPORTED_PROVIDERS[target.providerId].capabilities.includes(requiredCapability)) {
@@ -74,16 +98,19 @@ function parseRoute(feature: AiFeature, value: unknown, managed: boolean): AiRou
 
 export function parseAiRuntimeConfig(value: unknown): AiRuntimeConfig {
   if (!value || typeof value !== 'object') throw new Error('Invalid AI runtime config');
-  const input = value as { source?: unknown; revision?: unknown; routes?: unknown };
+  const input = value as { source?: unknown; revision?: unknown; routes?: unknown; providerModels?: unknown };
   if (input.source !== 'bootstrap' && input.source !== 'managed') throw new Error('Invalid AI runtime source');
   if (!Number.isSafeInteger(input.revision) || (input.revision as number) < 0) throw new Error('Invalid AI runtime revision');
   if (!input.routes || typeof input.routes !== 'object') throw new Error('Invalid AI routes');
+  const providerModels = input.providerModels === undefined
+    ? Object.fromEntries(Object.entries(SUPPORTED_PROVIDERS).map(([id, provider]) => [id, [...provider.models]])) as Record<SupportedProviderId, string[]>
+    : parseProviderModels(input.providerModels);
   const routesInput = input.routes as Record<string, unknown>;
   const routes: Partial<Record<AiFeature, AiRoute>> = {};
   for (const feature of FEATURES) {
-    if (routesInput[feature] !== undefined) routes[feature] = parseRoute(feature, routesInput[feature], input.source === 'managed');
+    if (routesInput[feature] !== undefined) routes[feature] = parseRoute(feature, routesInput[feature], input.source === 'managed', providerModels);
   }
-  return { source: input.source, revision: input.revision as number, routes };
+  return { source: input.source, revision: input.revision as number, providerModels, routes };
 }
 
 export function createManagedRuntimeConfig(value: unknown): AiRuntimeConfig {
@@ -118,6 +145,10 @@ export function toMaskedAdminProjection(secret: StoredAiSecret) {
     providerId: secret.providerId,
     state: secret.state,
     version: secret.version,
+    ...(secret.label ? { label: secret.label } : {}),
+    ...(secret.modelId ? { modelId: secret.modelId } : {}),
+    ...(secret.priority ? { priority: secret.priority } : {}),
+    ...(secret.purpose ? { purpose: secret.purpose } : {}),
   };
 }
 

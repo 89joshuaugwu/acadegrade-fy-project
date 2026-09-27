@@ -57,4 +57,17 @@ describe('/api/admin/ai', () => {
     expect(JSON.stringify(body)).not.toContain('gsk_value');
     expect(firebase.secretSet).toHaveBeenCalledWith(expect.objectContaining({ ciphertext: expect.any(String) }), { merge: true });
   });
+
+  it('keeps multiple named slots provider-scoped', async () => {
+    const response = await POST(adminRequest({
+      operation: 'upsert-secret', providerId: 'gemini', secretId: 'gemini-ocr', value: 'private-value',
+    }));
+    expect(response.status).toBe(200);
+    expect(firebase.secretSet).toHaveBeenCalledWith(expect.objectContaining({ secretId: 'gemini-ocr', providerId: 'gemini' }), { merge: true });
+
+    const rejected = await POST(adminRequest({
+      operation: 'upsert-secret', providerId: 'groq', secretId: 'gemini-ocr', value: 'wrong-provider',
+    }));
+    expect(rejected.status).toBe(400);
+  });
 });
