@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getEmailDeliveryCredential } from './managed-credentials';
 
 import {
   adminNewUserEmail,
@@ -20,25 +21,9 @@ export {
   welcomeEmail,
 };
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
-
-const otpTransporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.OTP_GMAIL_USER || process.env.GMAIL_USER,
-    pass: process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS,
-  },
-});
+function transport(account: { user: string; pass: string }) {
+  return nodemailer.createTransport({ host: 'smtp.gmail.com', port: 587, secure: false, auth: account });
+}
 
 /**
  * Send a general notification email.
@@ -48,20 +33,21 @@ const otpTransporter = nodemailer.createTransport({
  */
 export async function sendEmail(to: string, subject: string, html: string) {
   try {
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_PASS) {
-      console.warn('Email credentials missing. Skipping email send to:', to);
+    const account = await getEmailDeliveryCredential('general');
+    if (!account) {
+      console.warn('General email credentials missing. Skipping email send.');
       return;
     }
 
-    await transporter.sendMail({
-      from: `"AcadeGrade" <${process.env.GMAIL_USER}>`,
+    await transport(account).sendMail({
+      from: `"AcadeGrade" <${account.user}>`,
       to,
       subject,
       html,
       text: htmlToPlainText(html),
     });
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('Failed to send general email:', error instanceof Error ? error.name : 'Delivery error');
   }
 }
 
@@ -72,14 +58,13 @@ export async function sendEmail(to: string, subject: string, html: string) {
  * clients never receive a false success response when no OTP was sent.
  */
 export async function sendOtpEmail(to: string, subject: string, html: string) {
-  const otpUser = process.env.OTP_GMAIL_USER || process.env.GMAIL_USER;
-  const otpPass = process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS;
-  if (!otpUser || !otpPass) {
+  const account = await getEmailDeliveryCredential('otp');
+  if (!account) {
     throw new Error('OTP email credentials are not configured');
   }
 
-  await otpTransporter.sendMail({
-    from: `"AcadeGrade Auth" <${otpUser}>`,
+  await transport(account).sendMail({
+    from: `"AcadeGrade Auth" <${account.user}>`,
     to,
     subject,
     html,

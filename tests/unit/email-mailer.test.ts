@@ -3,16 +3,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mailSpies = vi.hoisted(() => ({
   generalSend: vi.fn(),
   otpSend: vi.fn(),
-  transportCount: 0,
 }));
 
 vi.mock('nodemailer', () => ({
   default: {
-    createTransport: vi.fn(() => {
-      const sendMail = mailSpies.transportCount === 0 ? mailSpies.generalSend : mailSpies.otpSend;
-      mailSpies.transportCount += 1;
-      return { sendMail };
-    }),
+    createTransport: vi.fn((options: { auth: { user: string } }) => ({
+      sendMail: options.auth.user.startsWith('otp@') ? mailSpies.otpSend : mailSpies.generalSend,
+    })),
+  },
+}));
+
+vi.mock('@/lib/email/managed-credentials', () => ({
+  getEmailDeliveryCredential: async (kind: 'general' | 'otp') => {
+    const user = kind === 'otp' ? process.env.OTP_GMAIL_USER || process.env.GMAIL_USER : process.env.GMAIL_USER;
+    const pass = kind === 'otp' ? process.env.OTP_GMAIL_PASS || process.env.GMAIL_PASS : process.env.GMAIL_PASS;
+    return user && pass ? { user, pass } : null;
   },
 }));
 

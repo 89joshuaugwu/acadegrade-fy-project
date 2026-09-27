@@ -30,7 +30,7 @@ async function invoke(target: AiRouteTarget, apiKey: string, prompt: string | an
   const response = await new GoogleGenAI({ apiKey }).models.generateContent({ model: target.modelId, contents: prompt, config: { maxOutputTokens: responseMimeType ? 2048 : 1024, temperature: responseMimeType ? 0.2 : 0.65, ...(responseMimeType ? { responseMimeType } : {}) } });
   return response.text || '';
 }
-async function generate(feature: AiFeature, prompt: string | any[], responseMimeType?: string): Promise<AiGenerationResult> {
+async function generate(feature: AiFeature, prompt: string | any[], responseMimeType?: string, validateResponse?: (text: string) => void): Promise<AiGenerationResult> {
   const config = await getAiRuntimeConfig(adminDb);
   if (config.source !== 'managed') throw new Error('AI routing is not configured');
   const route = config.routes[feature];
@@ -42,6 +42,7 @@ async function generate(feature: AiFeature, prompt: string | any[], responseMime
       if (!apiKey) throw new Error('AI provider unavailable');
       const text = await invoke(target, apiKey, prompt, responseMimeType);
       if (!text) throw new Error('AI provider unavailable');
+      validateResponse?.(text);
       return { text, providerId: target.providerId, modelId: target.modelId, configRevision: config.revision };
     } catch (error) { lastError = error; }
   }
@@ -60,7 +61,7 @@ function parseJson<T>(text: string, label: string): T { const cleaned = text.rep
 export async function generateGeminiJSON<T>(prompt: string): Promise<T> { return parseJson<T>(await generateGeminiContent(prompt), 'gemini-json'); }
 export async function generateDeepInsightJSON<T>(prompt: string): Promise<T> { return parseJson<T>(await generateDeepInsight(prompt), 'insight-json'); }
 export async function generateDeepInsightJSONWithMetadata<T>(prompt: string): Promise<{ data: T; provenance: Omit<AiGenerationResult, 'text'> }> {
-  const result = await generateDeepInsightWithMetadata(prompt);
+  const result = await generate('insights', prompt, undefined, (text) => { parseJson<T>(text, 'insight-json'); });
   const { text, ...provenance } = result;
   return { data: parseJson<T>(text, 'insight-json'), provenance };
 }

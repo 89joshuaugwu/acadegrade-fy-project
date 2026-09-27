@@ -24,6 +24,7 @@ import { ErrorState } from '@/components/shared';
 import type { SemesterWithId } from '@/types/semester';
 import type { Course } from '@/types/course';
 import type { InsightResponse, ForecastResponse } from '@/types/ai';
+import { resolveInsightRefresh } from '@/lib/ai/insight-refresh-state';
 
 type TabType = 'forecast' | 'whatif' | 'risk' | 'analysis';
 const TABS: { id: TabType; label: string }[] = [
@@ -298,13 +299,16 @@ export default function InsightsPage() {
         });
 
         if (res.ok) {
-          const insightData = await res.json();
+          const insightData = await res.json() as InsightResponse & { stale?: boolean; staleMessage?: string };
+          const refreshResult = resolveInsightRefresh(analyticsData?.lastInsight, insightData);
           analyticsData = {
             ...analyticsData,
-            lastInsight: { data: insightData, timestamp: new Date() },
-            insightsStale: false,
+            lastInsight: refreshResult.lastInsight,
+            insightsStale: refreshResult.insightsStale,
           };
-          if (forceRefresh) {
+          if (!refreshResult.refreshed) {
+            toast.error(insightData.staleMessage || 'Live analysis is unavailable. Showing the last saved insight.');
+          } else if (forceRefresh) {
              await setDocument(`analytics/${user.uid}`, { insightsStale: false });
           }
         } else if (res.status === 429) {

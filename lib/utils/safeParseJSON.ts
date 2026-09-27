@@ -10,12 +10,8 @@ export function safeParseJSON<T = unknown>(raw: string, label = 'payload'): Safe
   try {
     return { ok: true, value: JSON.parse(raw) as T };
   } catch (err) {
-    const msg = (err as Error)?.message ?? String(err);
-    const preview = raw.length > 1000 ? raw.slice(0, 1000) + '...[truncated]' : raw;
-    // Use your app logger instead of console.error if available
-    console.error(`[JSON PARSE ERROR] ${label} length=${raw.length} error=${msg}`);
-    console.error(`[JSON PARSE ERROR] ${label} preview: ${preview}`);
-    return { ok: false, error: msg, rawPreview: preview, rawLength: raw.length };
+    // Parse errors can quote the input, which may contain student records.
+    return { ok: false, error: 'Invalid JSON', rawPreview: '', rawLength: raw.length };
   }
 }
 
@@ -26,7 +22,7 @@ export function safeParseJSON<T = unknown>(raw: string, label = 'payload'): Safe
 export function extractJsonObjectAndParse<T = unknown>(raw: string, label = 'payload-extract'): SafeParseResult<T> {
   const start = raw.indexOf('{');
   if (start === -1) {
-    return { ok: false, error: 'No opening brace found', rawPreview: raw.slice(0, 200), rawLength: raw.length };
+    return { ok: false, error: 'No opening brace found', rawPreview: '', rawLength: raw.length };
   }
 
   let depth = 0;
@@ -50,15 +46,13 @@ export function extractJsonObjectAndParse<T = unknown>(raw: string, label = 'pay
   if (end === -1) {
     // Truncated — never closed. Try trimming to the last complete field and closing braces manually,
     // or just fail cleanly here.
-    return { ok: false, error: 'Unterminated JSON object (likely truncated by max_tokens)', rawPreview: raw.slice(0, 200), rawLength: raw.length };
+    return { ok: false, error: 'Unterminated JSON object (likely truncated by max_tokens)', rawPreview: '', rawLength: raw.length };
   }
 
   const candidate = raw.slice(start, end + 1);
   try {
     return { ok: true, value: JSON.parse(candidate) as T };
   } catch (err) {
-    const msg = (err as Error)?.message ?? String(err);
-    return { ok: false, error: msg, rawPreview: candidate.slice(0, 1000), rawLength: candidate.length };
+    return { ok: false, error: 'Invalid JSON object', rawPreview: '', rawLength: candidate.length };
   }
 }
-

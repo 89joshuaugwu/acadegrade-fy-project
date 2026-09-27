@@ -101,5 +101,10 @@ service cloud.firestore {
     match /_ai_audit/{document=**} {
       allow read, write: if false;
     }
+
+    // Gmail App Passwords are encrypted and managed only by server routes.
+    match /_email_secrets/{document=**} {
+      allow read, write: if false;
+    }
   }
 }

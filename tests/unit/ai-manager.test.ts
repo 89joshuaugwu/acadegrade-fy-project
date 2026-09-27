@@ -15,7 +15,7 @@ vi.mock('@/lib/firebase/admin', () => ({
 }));
 vi.mock('groq-sdk', () => ({ default: class { chat = { completions: { create: groq.create } }; } }));
 
-import { generateFastResponseWithMetadata } from '@/lib/ai/manager';
+import { generateDeepInsightJSONWithMetadata, generateFastResponseWithMetadata } from '@/lib/ai/manager';
 
 describe('managed AI manager', () => {
   it('does not call an environment provider key before managed routing is activated', async () => {
@@ -72,5 +72,29 @@ describe('managed AI manager', () => {
     await expect(generateFastResponseWithMetadata('hello')).resolves.toMatchObject({ text: 'third key worked', configRevision: 10 });
     expect(runtime.secretGet.mock.calls.map(([id]) => id)).toEqual(['groq-key-1', 'groq-key-2', 'groq-key-3']);
     expect(groq.create).toHaveBeenCalledTimes(3);
+  });
+
+  it('tries the next insight target when the first returns text instead of JSON', async () => {
+    process.env.AI_SECRETS_MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
+    const { encryptSecret } = await import('@/lib/ai/secrets');
+    runtime.get.mockResolvedValue({ exists: true, data: () => ({
+      source: 'managed', revision: 11,
+      routes: {
+        insights: { mode: 'fallback-chain', chain: [1, 2].map((number) => ({ providerId: 'groq', modelId: 'llama-3.3-70b-versatile', secretId: `groq-insight-${number}` })) },
+        forecast: { mode: 'disabled', chain: [] }, whatif: { mode: 'disabled', chain: [] }, extract: { mode: 'disabled', chain: [] },
+      },
+    }) });
+    runtime.secretGet.mockImplementation(async (secretId: string) => ({ exists: true, data: () => ({
+      secretId, providerId: 'groq', state: 'active',
+      ...encryptSecret(secretId, { secretId, providerId: 'groq' }),
+    }) }));
+    groq.create.mockReset();
+    groq.create.mockResolvedValueOnce({ choices: [{ message: { content: 'We need to think about the private student record first' } }] });
+    groq.create.mockResolvedValueOnce({ choices: [{ message: { content: '{"strengths":["Improving"],"concerns":[],"recommendations":["Keep studying"],"degreeOutlook":"On track"}' } }] });
+
+    await expect(generateDeepInsightJSONWithMetadata('student data')).resolves.toMatchObject({
+      data: { strengths: ['Improving'] }, provenance: { configRevision: 11 },
+    });
+    expect(groq.create).toHaveBeenCalledTimes(2);
   });
 });

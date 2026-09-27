@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { Skeleton } from '@/components/ui/Skeleton';
 import toast from 'react-hot-toast';
+import { EmailSettings } from '@/components/admin/email/EmailSettings';
 
 interface AppSettings {
   aiSystemPrompt?: string;
@@ -214,6 +215,8 @@ export default function AdminSettingsPage() {
         <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Platform Settings</h1>
         <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">Configure global application behavior.</p>
       </div>
+
+      <EmailSettings />
 
       {/* AI System Prompt */}
       <Card variant="default" padding="lg">

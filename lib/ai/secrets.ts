@@ -6,7 +6,7 @@ export type SupportedProviderId = 'groq' | 'openrouter' | 'gemini';
 
 export type SecretContext = {
   secretId: string;
-  providerId: SupportedProviderId;
+  providerId: SupportedProviderId | 'smtp';
 };
 
 export type EncryptedSecret = {
