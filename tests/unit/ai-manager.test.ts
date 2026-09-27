@@ -18,6 +18,15 @@ vi.mock('groq-sdk', () => ({ default: class { chat = { completions: { create: gr
 import { generateFastResponseWithMetadata } from '@/lib/ai/manager';
 
 describe('managed AI manager', () => {
+  it('does not call an environment provider key before managed routing is activated', async () => {
+    runtime.get.mockResolvedValue({ exists: false });
+    groq.create.mockReset();
+    process.env.GROQ_API_KEY_1 = 'environment-key-must-not-run';
+
+    await expect(generateFastResponseWithMetadata('hello')).rejects.toThrow('AI routing is not configured');
+    expect(groq.create).not.toHaveBeenCalled();
+  });
+
   it('uses a managed Groq credential and returns safe provenance', async () => {
     process.env.AI_SECRETS_MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
     const { encryptSecret } = await import('@/lib/ai/secrets');

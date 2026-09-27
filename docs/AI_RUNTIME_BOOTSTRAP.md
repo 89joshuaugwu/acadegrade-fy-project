@@ -11,8 +11,9 @@ high-entropy 32-byte base64 value. It encrypts provider credentials before they
 are written to the private `_ai_secrets` collection. Never expose it to the
 browser, commit it to the repository, or place it in Firebase client config.
 
-Environment provider keys remain only as a bootstrap fallback until a managed
-routing revision is saved and activated.
+AI requests require an activated managed routing revision. Provider keys left
+in `.env.local` are not used as a fallback, and the local What-if endpoint
+reports provider failure instead of substituting generated-looking guidance.
 
 ## Operator workflow
 

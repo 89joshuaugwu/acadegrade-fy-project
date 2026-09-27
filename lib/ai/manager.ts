@@ -10,11 +10,6 @@ import { safeParseJSON, extractJsonObjectAndParse } from '@/lib/utils/safeParseJ
 export type AiGenerationResult = { text: string; providerId: SupportedProviderId; modelId: string; configRevision: number };
 const publicProviderError = (error: any) => [400, 401, 403].includes(Number(error?.status ?? error?.response?.status)) ? new Error('AI provider authentication failed') : new Error('AI provider unavailable');
 
-function bootstrapKey(providerId: SupportedProviderId, feature: AiFeature) {
-  if (providerId === 'groq') return process.env.GROQ_API_KEY_1 || process.env.GROQ_API_KEY_2;
-  if (providerId === 'openrouter') return process.env.OPENROUTER_API_KEY;
-  return feature === 'insights' ? process.env.INSIGHT_GEMINI_KEY || process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2 : process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_2;
-}
 async function managedKey(target: AiRouteTarget) {
   if (!target.secretId) throw new Error('AI provider unavailable');
   const snapshot = await adminDb.collection('_ai_secrets').doc(target.secretId).get();
@@ -37,12 +32,13 @@ async function invoke(target: AiRouteTarget, apiKey: string, prompt: string | an
 }
 async function generate(feature: AiFeature, prompt: string | any[], responseMimeType?: string): Promise<AiGenerationResult> {
   const config = await getAiRuntimeConfig(adminDb);
+  if (config.source !== 'managed') throw new Error('AI routing is not configured');
   const route = config.routes[feature];
   if (!route || route.mode === 'disabled' || route.mode === 'local-only') throw new Error('AI generation disabled');
   let lastError: unknown;
   for (const target of route.chain) {
     try {
-      const apiKey = config.source === 'managed' ? await managedKey(target) : bootstrapKey(target.providerId, feature);
+      const apiKey = await managedKey(target);
       if (!apiKey) throw new Error('AI provider unavailable');
       const text = await invoke(target, apiKey, prompt, responseMimeType);
       if (!text) throw new Error('AI provider unavailable');

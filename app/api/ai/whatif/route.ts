@@ -9,14 +9,6 @@ const WHAT_IF_LIMITS = [
   { name: 'daily', limit: 20, windowMs: 24 * 60 * 60 * 1000 },
 ];
 
-function buildLocalFeasibilityNote(requiredGPA: number): string {
-  if (requiredGPA <= 2) return 'This target is comfortably achievable if you maintain steady progress each semester.';
-  if (requiredGPA <= 3) return 'This target is achievable with consistent coursework and a stable semester performance.';
-  if (requiredGPA <= 4) return 'This target is realistic, but it requires focused and consistently strong semester results.';
-  if (requiredGPA <= 4.5) return 'This is an ambitious target that requires excellent performance across nearly every remaining course.';
-  return 'This target is extremely demanding and leaves almost no room for weak grades.';
-}
-
 export async function POST(request: NextRequest) {
   const timer = apiTimer();
   let uid: string | null = null;
@@ -61,9 +53,8 @@ export async function POST(request: NextRequest) {
         rateLimit = await checkRateLimit(uid, 'ai_whatif', WHAT_IF_LIMITS);
       } catch (rateLimitError: any) {
         console.error('WhatIf rate limiter unavailable:', rateLimitError);
-        feasibilityNote = buildLocalFeasibilityNote(requiredGPA);
-        logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'local-fallback', error: 'Rate limiter unavailable; AI provider skipped' });
-        return NextResponse.json({ requiredGPA, requiredAvgScore, feasibilityNote, aiEnhanced: false });
+        logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 503, durationMs: timer(), provider: 'rate-limiter', error: 'Rate limiter unavailable' });
+        return NextResponse.json({ error: 'AI guidance is temporarily unavailable.' }, { status: 503 });
       }
       if (!rateLimit.allowed) {
         logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 429, durationMs: timer(), provider: 'groq', error: 'Per-user rate limit exceeded' });
@@ -81,12 +72,12 @@ export async function POST(request: NextRequest) {
       `;
       try {
         const generated = await generateFastResponseWithMetadata(prompt);
-        feasibilityNote = generated.text.trim() || buildLocalFeasibilityNote(requiredGPA);
+        feasibilityNote = generated.text.trim();
+        if (!feasibilityNote) throw new Error('AI provider returned an empty response');
       } catch (providerError: any) {
         console.error('WhatIf AI provider unavailable:', providerError);
-        feasibilityNote = buildLocalFeasibilityNote(requiredGPA);
-        logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 200, durationMs: timer(), provider: 'local-fallback', error: providerError?.message });
-        return NextResponse.json({ requiredGPA, requiredAvgScore, feasibilityNote, aiEnhanced: false });
+        logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 503, durationMs: timer(), provider: 'managed', error: providerError?.message });
+        return NextResponse.json({ error: providerError?.message === 'AI routing is not configured' ? providerError.message : 'AI guidance provider is unavailable.' }, { status: 503 });
       }
     }
 
