@@ -19,6 +19,7 @@ import {
 } from '@/lib/dashboard/summary';
 import { getDashboardNextAction } from '@/lib/dashboard/next-action';
 import { AdPlacement } from '@/components/ads/AdPlacement';
+import { ProviderPlacement } from '@/components/ads/ProviderPlacement';
 import { NextActionCard } from '@/components/dashboard/NextActionCard';
 import { RecentResults } from '@/components/dashboard/RecentResults';
 import { StandingOverview } from '@/components/dashboard/StandingOverview';
@@ -303,6 +304,7 @@ export default function DashboardPage() {
       </section>
 
       <AdPlacement placement="dashboard.overview" seed={user?.uid} />
+      <ProviderPlacement />
     </div>
     </LandingMotion>
   );

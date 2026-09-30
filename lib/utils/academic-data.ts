@@ -87,6 +87,7 @@ export const ACADEMIC_DEPARTMENTS = [
   "Business and Entrepreneurship Education",
   "Chemical Engineering",
   "Chemistry Education",
+  "Computer Engineering",
   "Computer Science",
   "Computer Science Education",
   "Continuing Education and Development Studies",

@@ -14,10 +14,12 @@ import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
+import { getIdToken, signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
 import { DEFAULT_UNIVERSITY } from '@/lib/utils/constants';
-import { NIGERIAN_UNIVERSITIES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES } from '@/lib/utils/academic-data';
+import { DEFAULT_ACADEMIC_CATALOG, loadAcademicCatalog } from '@/lib/academic-catalog/client';
+import { missingAcademicNames } from '@/lib/academic-catalog/suggestions';
+import type { AcademicCatalogNames } from '@/lib/academic-catalog/merge';
 import type { StudentLevel, PastSemesterEntry } from '@/types/user';
 import { isStudentProfileComplete } from '@/lib/auth/profile';
 import {
@@ -430,7 +432,7 @@ function Step1Account({ onNext }: { onNext: () => void }) {
 }
 
 // ----- STEP 2 -----
-function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => void }) {
+function Step2Programme({ onNext, onBack, catalog, suggestToCatalog, onSuggestToggle }: { onNext: () => void, onBack: () => void, catalog: AcademicCatalogNames, suggestToCatalog: boolean, onSuggestToggle: (enabled: boolean) => void }) {
   const { register, trigger, formState: { errors }, control, watch } = useFormContext<FormData>();
   
   const handleNext = async () => {
@@ -460,27 +462,32 @@ function Step2Programme({ onNext, onBack }: { onNext: () => void, onBack: () => 
       <h2 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)] mb-2">
         Academic Details
       </h2>
+      <p className="text-sm text-[var(--acade-text-muted)]">Missing an option? Type its name to use it immediately.</p>
       
       <Input label="University" placeholder="University Name" list="universities" error={errors.university?.message} {...register('university')} />
       <datalist id="universities">
-        {NIGERIAN_UNIVERSITIES.map(uni => (
+        {catalog.universities.map(uni => (
           <option key={uni} value={uni} />
         ))}
       </datalist>
 
       <Input label="Department" placeholder="e.g. Computer Science" list="departments" error={errors.department?.message} {...register('department')} />
       <datalist id="departments">
-        {ACADEMIC_DEPARTMENTS.map(dept => (
+        {catalog.departments.map(dept => (
           <option key={dept} value={dept} />
         ))}
       </datalist>
 
       <Input label="Programme" placeholder="e.g. B.Sc Computer Science" list="programmes" error={errors.programme?.message} {...register('programme')} />
       <datalist id="programmes">
-        {ACADEMIC_PROGRAMMES.map(prog => (
+        {catalog.programmes.map(prog => (
           <option key={prog} value={prog} />
         ))}
       </datalist>
+      <label className="flex items-start gap-3 text-sm text-[var(--acade-text-muted)]">
+        <input type="checkbox" checked={suggestToCatalog} onChange={(event) => onSuggestToggle(event.target.checked)} className="mt-1 accent-[var(--acade-primary)]" />
+        Suggest my custom school, department, or programme for the shared list after registration. An admin will review it first.
+      </label>
       
       <div className="flex flex-col gap-1.5">
         <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)] mb-1 block">Course Duration (Years)</label>
@@ -799,6 +806,14 @@ export default function RegisterWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [signupsDisabled, setSignupsDisabled] = useState(false);
+  const [academicCatalog, setAcademicCatalog] = useState<AcademicCatalogNames>(DEFAULT_ACADEMIC_CATALOG);
+  const [suggestToCatalog, setSuggestToCatalog] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void loadAcademicCatalog().then((loaded) => { if (active) setAcademicCatalog(loaded); });
+    return () => { active = false; };
+  }, []);
 
   const registrationSteps = ['Account', 'Academic details', 'Record setup', 'Confirm history'] as const;
 
@@ -952,6 +967,18 @@ export default function RegisterWizard() {
         await signInWithEmail(data.email.trim().toLowerCase(), data.password!);
       }
 
+      if (suggestToCatalog) {
+        const token = await getIdToken();
+        if (token) {
+          const suggestions = missingAcademicNames(data, academicCatalog);
+          void Promise.allSettled(suggestions.map((suggestion) => fetch('/api/academic-catalog/suggestions', {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(suggestion),
+          })));
+        }
+      }
+
       sessionStorage.removeItem(REGISTRATION_DRAFT_KEY);
       setIsSuccess(true);
       setCurrentStep(5);
@@ -1091,7 +1118,7 @@ export default function RegisterWizard() {
                 )}
                 {currentStep === 2 && (
                   <motion.div key="step2" initial={shouldReduceMotion ? { opacity: 1 } : { x: -18, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={shouldReduceMotion ? { opacity: 0 } : { x: 18, opacity: 0 }} transition={shouldReduceMotion ? { duration: 0 } : navigationSpring}>
-                    <Step2Programme onNext={() => setCurrentStep(3)} onBack={() => setCurrentStep(1)} />
+                    <Step2Programme onNext={() => setCurrentStep(3)} onBack={() => setCurrentStep(1)} catalog={academicCatalog} suggestToCatalog={suggestToCatalog} onSuggestToggle={setSuggestToCatalog} />
                   </motion.div>
                 )}
                 {currentStep === 3 && (

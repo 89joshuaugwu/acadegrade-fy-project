@@ -106,5 +106,10 @@ service cloud.firestore {
     match /_email_secrets/{document=**} {
       allow read, write: if false;
     }
+
+    // Academic catalog suggestions are moderated through server routes only.
+    match /_academic_catalog_suggestions/{document=**} {
+      allow read, write: if false;
+    }
   }
 }

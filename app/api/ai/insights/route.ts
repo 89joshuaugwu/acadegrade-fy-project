@@ -5,6 +5,7 @@ import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import type { InsightResponse } from '@/types/ai';
+import { shouldEnforceInsightCooldown } from '@/lib/ai/insight-cooldown';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
@@ -63,8 +64,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(analyticsData.lastInsight.data, { headers: { 'X-AI-Cache': 'HIT' } });
     }
 
-    // A forced refresh can never bypass the strict 12-hour per-user generation boundary.
-    if (forceRegenerate && analyticsData?.lastInsight?.data && ageMs < TWELVE_HOURS_MS) {
+    if (shouldEnforceInsightCooldown(forceRegenerate, Boolean(analyticsData?.lastInsight?.data), ageMs)) {
       const retryAfterSeconds = Math.max(1, Math.ceil((TWELVE_HOURS_MS - ageMs) / 1000));
       logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid, status: 429, durationMs: timer(), provider: 'deepseek', error: '12-hour regeneration cooldown' });
       return NextResponse.json(

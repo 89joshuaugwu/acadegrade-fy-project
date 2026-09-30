@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AdsEditor } from '@/components/admin/ads/AdsEditor';
+import { LegacyBannerEditor } from '@/components/admin/ads/LegacyBannerEditor';
 import { createDefaultAdsConfig } from '@/lib/ads/config';
 import { parseAdminAdsMutation } from '@/lib/ads/admin-schema';
 
@@ -13,6 +14,34 @@ describe('parseAdminAdsMutation', () => {
       .toThrow('Unsupported ads request field: apiKey');
     expect(() => parseAdminAdsMutation({ config: { ...config, enabled: 'yes' } }))
       .toThrow('Ads enabled must be a boolean');
+  });
+});
+
+describe('LegacyBannerEditor', () => {
+  it('keeps existing banners and saves only the edited legacy banner array', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<LegacyBannerEditor initialBanners={[{ id: 'existing', imageUrl: 'https://example.com/old.png', linkUrl: '', isActive: true }]} onSave={onSave} />);
+
+    await user.type(screen.getByRole('textbox', { name: 'Target link for advert 1' }), 'https://example.com');
+    await user.click(screen.getByRole('button', { name: 'Save Adverts' }));
+
+    expect(onSave).toHaveBeenCalledWith([{ id: 'existing', imageUrl: 'https://example.com/old.png', linkUrl: 'https://example.com', isActive: true }]);
+  });
+
+  it('adds and deactivates a banner without changing the existing one', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<LegacyBannerEditor initialBanners={[{ id: 'existing', imageUrl: 'https://example.com/old.png', linkUrl: '', isActive: true }]} onSave={onSave} />);
+
+    await user.click(screen.getByRole('button', { name: 'Add Advert' }));
+    await user.click(screen.getByRole('switch', { name: 'Activate advert 2' }));
+    await user.click(screen.getByRole('button', { name: 'Save Adverts' }));
+
+    expect(onSave).toHaveBeenCalledWith([
+      { id: 'existing', imageUrl: 'https://example.com/old.png', linkUrl: '', isActive: true },
+      expect.objectContaining({ imageUrl: '', linkUrl: '', isActive: false }),
+    ]);
   });
 });
 

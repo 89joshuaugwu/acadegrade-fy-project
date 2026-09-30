@@ -1,0 +1,15 @@
+# Android ads and APK release controls
+
+The admin screens are `/admin/ads` (Android AdMob) and `/admin/mobile-release` (APK update notice). Both are off until an administrator saves enabled settings. Mobile reads public, validated configuration; it does not receive admin credentials.
+
+## Android AdMob beta
+
+The checked-in Expo plugin uses Google's sample Android App ID, and enabled development placements always request Google's test banner unit. A sample iOS App ID is supplied only to avoid a future shared-Expo build crash; no iOS ads or iOS-folder changes are in this phase. Keep **Use test ads** on for APK development. Native SDK/plugin changes need a new Android build; Expo Go does not include this SDK. The dashboard and results overview are the only banner placements. No ad blocks a form, OCR, or an Insights refresh. The app delays ad measurement, requests UMP consent before SDK initialization, and loads no ad when consent does not permit requests. Configure the privacy message in AdMob before beta testing outside your own test devices. Rewarded unit ID is reserved and does not grant a refresh yet.
+
+Before any production-ad build, obtain and review the real AdMob app ID and unit IDs, update the native plugin app ID, build a new APK, confirm privacy/consent requirements for your audience, then enable live delivery in admin only after test-device and account readiness checks. The current sample-ID build intentionally suppresses live delivery even if live mode is chosen in admin. APK-only distribution may receive limited ad serving until the app is linked to a supported store and reviewed. Do not test production units on developer devices.
+
+## APK update notice
+
+Build number comes from Android's installed native version code, currently initialized as `1` in `app.json`; the admin `Latest build` must exceed that number to show an update. `Minimum supported build` makes only *lower* installed builds mandatory. If set to `0`, the `Allow users to ignore` switch controls whether all older builds receive an optional or mandatory notice. Admins upload optional notice artwork in the release editor; Save publishes the hosted image URL with the release record. Set the APK download URL to an HTTPS location you control, test that it opens and installs before publishing a mandatory notice, and use the admin enable switch as the emergency kill switch. Optional metadata uses a 24-hour cache; mandatory-capable notices revalidate on app resume so the kill switch can take effect promptly (subject to the API's short HTTP cache). Invalid or unavailable metadata fails open; a mandatory notice offers a temporary continue action if Android cannot open the download URL. A dead HTTPS page that the OS opens is not yet detected. Only Download now opens the link.
+
+Do not enable a mandatory release until the APK has been tested on an older installed build and the download URL is proven reachable. Roll back by disabling the notice in admin. A currently open modal re-checks when the app next resumes; verify this with an older-build device before relying on the kill switch operationally.

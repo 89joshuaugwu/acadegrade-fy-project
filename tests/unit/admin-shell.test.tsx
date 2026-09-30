@@ -24,6 +24,7 @@ describe('AdminShell', () => {
     const navigation = screen.getByRole('navigation', { name: 'Admin primary navigation' });
     expect(navigation).toContainElement(screen.getByRole('link', { name: 'AI Operations' }));
     expect(screen.getByRole('link', { name: 'AI Operations' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Academic catalog' })).toHaveAttribute('href', '/admin/academic-catalog');
     expect(screen.getByRole('button', { name: 'Open AI Operations navigation' })).toHaveAttribute('aria-expanded', 'false');
   });
 });

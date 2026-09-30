@@ -52,6 +52,7 @@ describe('managed AI manager', () => {
   });
 
   it('tries three ordered keys when earlier keys fail', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     process.env.AI_SECRETS_MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
     const { encryptSecret } = await import('@/lib/ai/secrets');
     runtime.get.mockResolvedValue({ exists: true, data: () => ({
@@ -67,14 +68,19 @@ describe('managed AI manager', () => {
       ...encryptSecret(secretId, { secretId, providerId: 'groq' }),
     }) }));
     groq.create.mockReset();
-    groq.create.mockRejectedValueOnce({ status: 401 }).mockRejectedValueOnce({ status: 429 }).mockResolvedValueOnce({ choices: [{ message: { content: 'third key worked' } }] });
+    groq.create.mockRejectedValueOnce({ status: 401, message: 'private student record and API key' }).mockRejectedValueOnce({ status: 429 }).mockResolvedValueOnce({ choices: [{ message: { content: 'third key worked' } }] });
 
     await expect(generateFastResponseWithMetadata('hello')).resolves.toMatchObject({ text: 'third key worked', configRevision: 10 });
     expect(runtime.secretGet.mock.calls.map(([id]) => id)).toEqual(['groq-key-1', 'groq-key-2', 'groq-key-3']);
     expect(groq.create).toHaveBeenCalledTimes(3);
+    expect(warning).toHaveBeenCalledWith('[AI target failed]', { feature: 'whatif', providerId: 'groq', modelId: 'llama-3.3-70b-versatile', secretId: 'groq-key-1', category: 'provider_auth', status: 401 });
+    expect(warning).toHaveBeenCalledWith('[AI target failed]', { feature: 'whatif', providerId: 'groq', modelId: 'llama-3.3-70b-versatile', secretId: 'groq-key-2', category: 'provider_rate_limit', status: 429 });
+    expect(JSON.stringify(warning.mock.calls)).not.toContain('private student record');
+    warning.mockRestore();
   });
 
   it('tries the next insight target when the first returns text instead of JSON', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     process.env.AI_SECRETS_MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
     const { encryptSecret } = await import('@/lib/ai/secrets');
     runtime.get.mockResolvedValue({ exists: true, data: () => ({
@@ -96,5 +102,8 @@ describe('managed AI manager', () => {
       data: { strengths: ['Improving'] }, provenance: { configRevision: 11 },
     });
     expect(groq.create).toHaveBeenCalledTimes(2);
+    expect(warning).toHaveBeenCalledWith('[AI target failed]', { feature: 'insights', providerId: 'groq', modelId: 'llama-3.3-70b-versatile', secretId: 'groq-insight-1', category: 'invalid_response', status: null });
+    expect(JSON.stringify(warning.mock.calls)).not.toContain('student data');
+    warning.mockRestore();
   });
 });

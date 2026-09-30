@@ -33,10 +33,12 @@ export const adminNavigation: NavigationItem[] = [
   { href: '/admin/dashboard', label: 'Overview', icon: 'dashboard' },
   { href: '/admin/users', label: 'Users', icon: 'users' },
   { href: '/admin/courses', label: 'Course catalogue', icon: 'courses' },
+  { href: '/admin/academic-catalog', label: 'Academic catalog', icon: 'courses' },
   { href: '/admin/analytics', label: 'Analytics', icon: 'analytics' },
   { href: '/admin/api-analytics', label: 'API monitor', icon: 'activity' },
   { href: '/admin/ai', label: 'AI Operations', icon: 'ai' },
   { href: '/admin/ads', label: 'Advertising', icon: 'ads' },
+  { href: '/admin/mobile-release', label: 'Android release', icon: 'settings' },
   { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -73,10 +75,12 @@ export function getRouteMeta(pathname: string): RouteMeta {
     '/admin/dashboard': { title: 'Admin overview' },
     '/admin/users': { title: 'Users' },
     '/admin/courses': { title: 'Course catalogue' },
+    '/admin/academic-catalog': { title: 'Academic catalog' },
     '/admin/analytics': { title: 'Analytics' },
     '/admin/api-analytics': { title: 'API monitor' },
     '/admin/ai': { title: 'AI Operations' },
     '/admin/ads': { title: 'Advertising' },
+    '/admin/mobile-release': { title: 'Android release' },
     '/admin/settings': { title: 'Admin settings' },
   };
   if (known[current]) return known[current];

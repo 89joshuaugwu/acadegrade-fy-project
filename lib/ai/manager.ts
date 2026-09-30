@@ -9,14 +9,37 @@ import { safeParseJSON, extractJsonObjectAndParse } from '@/lib/utils/safeParseJ
 
 export type AiGenerationResult = { text: string; providerId: SupportedProviderId; modelId: string; configRevision: number };
 const publicProviderError = (error: any) => [400, 401, 403].includes(Number(error?.status ?? error?.response?.status)) ? new Error('AI provider authentication failed') : new Error('AI provider unavailable');
+type TargetFailureCategory = 'credential_missing' | 'credential_inactive' | 'credential_decrypt' | 'credential_error' | 'provider_auth' | 'provider_rate_limit' | 'provider_rejected' | 'provider_unavailable' | 'provider_error' | 'empty_response' | 'invalid_response';
+class AiTargetFailure extends Error {
+  constructor(readonly category: TargetFailureCategory) { super(category); }
+}
+function providerStatus(error: unknown): number | null {
+  const candidate = error as { status?: unknown; response?: { status?: unknown } } | null;
+  const status = Number(candidate?.status ?? candidate?.response?.status);
+  return Number.isInteger(status) && status >= 400 && status <= 599 ? status : null;
+}
+function targetFailureCategory(error: unknown, stage: 'credential' | 'provider' | 'validation', status: number | null): TargetFailureCategory {
+  if (error instanceof AiTargetFailure) return error.category;
+  if (stage === 'credential') return 'credential_error';
+  if (stage === 'validation') return 'invalid_response';
+  if (status === 401 || status === 403) return 'provider_auth';
+  if (status === 429) return 'provider_rate_limit';
+  if (status === 400 || status === 422) return 'provider_rejected';
+  if (status !== null && status >= 500) return 'provider_unavailable';
+  return 'provider_error';
+}
 
 async function managedKey(target: AiRouteTarget) {
-  if (!target.secretId) throw new Error('AI provider unavailable');
+  if (!target.secretId) throw new AiTargetFailure('credential_missing');
   const snapshot = await adminDb.collection('_ai_secrets').doc(target.secretId).get();
-  if (!snapshot.exists) throw new Error('AI provider unavailable');
+  if (!snapshot.exists) throw new AiTargetFailure('credential_missing');
   const secret = snapshot.data() as StoredAiSecret;
-  if (secret.state !== 'active' || secret.providerId !== target.providerId) throw new Error('AI provider unavailable');
-  return decryptSecret(secret, { secretId: target.secretId, providerId: target.providerId });
+  if (secret.state !== 'active' || secret.providerId !== target.providerId) throw new AiTargetFailure('credential_inactive');
+  try {
+    return decryptSecret(secret, { secretId: target.secretId, providerId: target.providerId });
+  } catch {
+    throw new AiTargetFailure('credential_decrypt');
+  }
 }
 async function invoke(target: AiRouteTarget, apiKey: string, prompt: string | any[], responseMimeType?: string): Promise<string> {
   if (target.providerId === 'groq') {
@@ -37,14 +60,25 @@ async function generate(feature: AiFeature, prompt: string | any[], responseMime
   if (!route || route.mode === 'disabled' || route.mode === 'local-only') throw new Error('AI generation disabled');
   let lastError: unknown;
   for (const target of route.chain) {
+    let stage: 'credential' | 'provider' | 'validation' = 'credential';
     try {
       const apiKey = await managedKey(target);
-      if (!apiKey) throw new Error('AI provider unavailable');
+      if (!apiKey) throw new AiTargetFailure('credential_missing');
+      stage = 'provider';
       const text = await invoke(target, apiKey, prompt, responseMimeType);
-      if (!text) throw new Error('AI provider unavailable');
+      if (!text) throw new AiTargetFailure('empty_response');
+      stage = 'validation';
       validateResponse?.(text);
       return { text, providerId: target.providerId, modelId: target.modelId, configRevision: config.revision };
-    } catch (error) { lastError = error; }
+    } catch (error) {
+      lastError = error;
+      const status = providerStatus(error);
+      // Only fixed identifiers and categories: never include provider error text, prompts, responses, or keys.
+      console.warn('[AI target failed]', {
+        feature, providerId: target.providerId, modelId: target.modelId,
+        secretId: target.secretId ?? null, category: targetFailureCategory(error, stage, status), status,
+      });
+    }
   }
   throw publicProviderError(lastError);
 }
