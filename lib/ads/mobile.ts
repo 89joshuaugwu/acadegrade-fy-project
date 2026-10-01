@@ -4,6 +4,8 @@ export interface MobileAdsConfig {
   testMode: boolean;
   placements: { dashboard: boolean; results: boolean };
   bannerUnitId: string;
+  dashboardBannerUnitId?: string;
+  resultsBannerUnitId?: string;
   rewardedUnitId: string;
 }
 
@@ -14,14 +16,16 @@ export function createDefaultMobileAdsConfig(): MobileAdsConfig {
     testMode: true,
     placements: { dashboard: false, results: false },
     bannerUnitId: '',
+    dashboardBannerUnitId: '',
+    resultsBannerUnitId: '',
     rewardedUnitId: '',
   };
 }
 
-function exactRecord(value: unknown, keys: string[], label: string): Record<string, unknown> {
+function exactRecord(value: unknown, keys: string[], label: string, optional: string[] = []): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object.`);
   const result = value as Record<string, unknown>;
-  if (Object.keys(result).some(key => !keys.includes(key)) || keys.some(key => !(key in result))) {
+  if (Object.keys(result).some(key => !keys.includes(key) && !optional.includes(key)) || keys.some(key => !(key in result))) {
     throw new Error(`${label} has missing or unsupported fields.`);
   }
   return result;
@@ -35,7 +39,7 @@ function unit(value: unknown, label: string): string {
 }
 
 export function parseMobileAdsConfig(value: unknown): MobileAdsConfig {
-  const data = exactRecord(value, ['version', 'enabled', 'testMode', 'placements', 'bannerUnitId', 'rewardedUnitId'], 'Android ads');
+  const data = exactRecord(value, ['version', 'enabled', 'testMode', 'placements', 'bannerUnitId', 'rewardedUnitId'], 'Android ads', ['dashboardBannerUnitId', 'resultsBannerUnitId']);
   const placements = exactRecord(data.placements, ['dashboard', 'results'], 'Android placements');
   if (data.version !== 1) throw new Error('Unsupported Android ads version.');
   if (typeof data.enabled !== 'boolean' || typeof data.testMode !== 'boolean' ||
@@ -43,14 +47,18 @@ export function parseMobileAdsConfig(value: unknown): MobileAdsConfig {
     throw new Error('Android ad switches must be boolean.');
   }
   const bannerUnitId = unit(data.bannerUnitId, 'Banner unit');
+  const dashboardBannerUnitId = unit(data.dashboardBannerUnitId ?? bannerUnitId, 'Dashboard banner unit');
+  const resultsBannerUnitId = unit(data.resultsBannerUnitId ?? bannerUnitId, 'Results banner unit');
   const rewardedUnitId = unit(data.rewardedUnitId, 'Rewarded unit');
-  if (data.enabled && !data.testMode && (placements.dashboard || placements.results) && !bannerUnitId) {
-    throw new Error('A production banner unit is required before live banner delivery.');
+  if (data.enabled && !data.testMode) {
+    if (placements.dashboard && !dashboardBannerUnitId) throw new Error('A Dashboard banner ad unit ID is required before live delivery.');
+    if (placements.results && !resultsBannerUnitId) throw new Error('A Results banner ad unit ID is required before live delivery.');
   }
   return {
     version: 1, enabled: data.enabled, testMode: data.testMode,
     placements: { dashboard: placements.dashboard as boolean, results: placements.results as boolean },
-    bannerUnitId, rewardedUnitId,
+    // Preserve the shared field for installed clients that predate placement IDs.
+    bannerUnitId: dashboardBannerUnitId || resultsBannerUnitId, dashboardBannerUnitId, resultsBannerUnitId, rewardedUnitId,
   };
 }
 

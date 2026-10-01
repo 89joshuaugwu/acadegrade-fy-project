@@ -29,6 +29,31 @@ export default function AdminAdsPage() {
   const [providerError, setProviderError] = useState<string | null>(null);
   const [mobileConfig, setMobileConfig] = useState<MobileAdsConfig | null>(null);
   const [mobileError, setMobileError] = useState<string | null>(null);
+  const [iosConfig, setIosConfig] = useState<MobileAdsConfig | null>(null);
+  const [iosError, setIosError] = useState<string | null>(null);
+
+  const loadIos = useCallback(async () => {
+    if (!user) return;
+    setIosError(null);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/ads/ios', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not load iOS ads.');
+      setIosConfig(body.config);
+    } catch (cause) { setIosError(cause instanceof Error ? cause.message : 'Could not load iOS ads.'); }
+  }, [user]);
+  useEffect(() => { void loadIos(); }, [loadIos]);
+
+  const saveIos = async (config: MobileAdsConfig) => {
+    if (!user) throw new Error('Your admin session is unavailable.');
+    const token = await user.getIdToken();
+    const response = await fetch('/api/admin/ads/ios', { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || 'Could not save iOS ads.');
+    setIosConfig(body.config);
+    toast.success('iOS ad settings saved.');
+  };
 
   const loadMobile = useCallback(async () => {
     if (!user) return;
@@ -188,6 +213,9 @@ export default function AdminAdsPage() {
           {mobileError ? <Card padding="none"><ErrorState title="Android ads are unavailable" description={mobileError} onRetry={() => { void loadMobile(); }} /></Card>
             : mobileConfig ? <MobileAdsEditor initialConfig={mobileConfig} onSave={saveMobile} />
             : <Skeleton className="h-56 rounded-2xl" aria-label="Loading Android ad settings" />}
+          {iosError ? <Card padding="none"><ErrorState title="iOS ads are unavailable" description={iosError} onRetry={() => { void loadIos(); }} /></Card>
+            : iosConfig ? <MobileAdsEditor platform="iOS" initialConfig={iosConfig} onSave={saveIos} />
+            : <Skeleton className="h-56 rounded-2xl" aria-label="Loading iOS ad settings" />}
           <h2 className="text-2xl font-semibold text-[var(--acade-text)]">Legacy House banners</h2>
           {legacyError ? (
             <Card padding="none"><ErrorState title="Dashboard banners are unavailable" description={legacyError} onRetry={() => { void loadLegacy(); }} /></Card>

@@ -44,4 +44,17 @@ describe('Android ads routes', () => {
     expect(response.status).toBe(200);
     expect(state.set).toHaveBeenCalledWith(expect.objectContaining({ enabled: true, testMode: true }));
   });
+
+  it('saves and delivers separate placement units', async () => {
+    const config = { version: 1, enabled: true, testMode: false, placements: { dashboard: true, results: true },
+      bannerUnitId: '', dashboardBannerUnitId: 'ca-app-pub-1111111111111111/1111111111',
+      resultsBannerUnitId: 'ca-app-pub-1111111111111111/2222222222', rewardedUnitId: '' };
+    expect((await adminPut(new Request('https://example.com/api/admin/ads/mobile', {
+      method: 'PUT', body: JSON.stringify({ config }),
+    }))).status).toBe(200);
+    const saved = state.set.mock.calls[0][0];
+    expect(saved).toMatchObject({ dashboardBannerUnitId: config.dashboardBannerUnitId, resultsBannerUnitId: config.resultsBannerUnitId });
+    state.get.mockResolvedValue({ data: () => saved });
+    expect(await (await publicGet()).json()).toMatchObject({ dashboardBannerUnitId: config.dashboardBannerUnitId, resultsBannerUnitId: config.resultsBannerUnitId });
+  });
 });
