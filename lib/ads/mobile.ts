@@ -7,6 +7,7 @@ export interface MobileAdsConfig {
   dashboardBannerUnitId?: string;
   resultsBannerUnitId?: string;
   rewardedUnitId: string;
+  rewardedEnabled?: boolean;
 }
 
 export function createDefaultMobileAdsConfig(): MobileAdsConfig {
@@ -19,6 +20,7 @@ export function createDefaultMobileAdsConfig(): MobileAdsConfig {
     dashboardBannerUnitId: '',
     resultsBannerUnitId: '',
     rewardedUnitId: '',
+    rewardedEnabled: false,
   };
 }
 
@@ -39,7 +41,7 @@ function unit(value: unknown, label: string): string {
 }
 
 export function parseMobileAdsConfig(value: unknown): MobileAdsConfig {
-  const data = exactRecord(value, ['version', 'enabled', 'testMode', 'placements', 'bannerUnitId', 'rewardedUnitId'], 'Android ads', ['dashboardBannerUnitId', 'resultsBannerUnitId']);
+  const data = exactRecord(value, ['version', 'enabled', 'testMode', 'placements', 'bannerUnitId', 'rewardedUnitId'], 'Android ads', ['dashboardBannerUnitId', 'resultsBannerUnitId', 'rewardedEnabled']);
   const placements = exactRecord(data.placements, ['dashboard', 'results'], 'Android placements');
   if (data.version !== 1) throw new Error('Unsupported Android ads version.');
   if (typeof data.enabled !== 'boolean' || typeof data.testMode !== 'boolean' ||
@@ -50,6 +52,9 @@ export function parseMobileAdsConfig(value: unknown): MobileAdsConfig {
   const dashboardBannerUnitId = unit(data.dashboardBannerUnitId ?? bannerUnitId, 'Dashboard banner unit');
   const resultsBannerUnitId = unit(data.resultsBannerUnitId ?? bannerUnitId, 'Results banner unit');
   const rewardedUnitId = unit(data.rewardedUnitId, 'Rewarded unit');
+  const rewardedEnabled = data.rewardedEnabled ?? false;
+  if (typeof rewardedEnabled !== 'boolean') throw new Error('Rewarded switch must be boolean.');
+  if (data.enabled && rewardedEnabled && !data.testMode && !rewardedUnitId) throw new Error('A Rewarded ad unit ID is required before live reward delivery.');
   if (data.enabled && !data.testMode) {
     if (placements.dashboard && !dashboardBannerUnitId) throw new Error('A Dashboard banner ad unit ID is required before live delivery.');
     if (placements.results && !resultsBannerUnitId) throw new Error('A Results banner ad unit ID is required before live delivery.');
@@ -58,7 +63,7 @@ export function parseMobileAdsConfig(value: unknown): MobileAdsConfig {
     version: 1, enabled: data.enabled, testMode: data.testMode,
     placements: { dashboard: placements.dashboard as boolean, results: placements.results as boolean },
     // Preserve the shared field for installed clients that predate placement IDs.
-    bannerUnitId: dashboardBannerUnitId || resultsBannerUnitId, dashboardBannerUnitId, resultsBannerUnitId, rewardedUnitId,
+    bannerUnitId: dashboardBannerUnitId || resultsBannerUnitId, dashboardBannerUnitId, resultsBannerUnitId, rewardedUnitId, rewardedEnabled,
   };
 }
 

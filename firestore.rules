@@ -78,6 +78,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Reward grants, replay tombstones and daily budgets are server-owned.
+    // Even admins/owners must use authenticated server routes, not client SDKs.
+    match /_reward_sessions/{document=**} {
+      allow read, write: if false;
+    }
+    match /_reward_transactions/{document=**} {
+      allow read, write: if false;
+    }
+    match /_reward_daily/{document=**} {
+      allow read, write: if false;
+    }
+
     // Registration tickets and normalized matric reservations are created and
     // consumed only by Firebase Admin inside server routes.
     match /_registration_tickets/{docId} {

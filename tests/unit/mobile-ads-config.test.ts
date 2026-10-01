@@ -42,4 +42,11 @@ describe('Android ad configuration', () => {
   it('rejects unknown fields', () => {
     expect(() => parseMobileAdsConfig({ ...createDefaultMobileAdsConfig(), secret: 'x' })).toThrow();
   });
+  it('requires an explicit rewarded opt-in and a unit for live rewards', () => {
+    const defaults = createDefaultMobileAdsConfig();
+    expect(defaults.rewardedEnabled).toBe(false);
+    expect(() => parseMobileAdsConfig({ ...defaults, rewardedEnabled: 'true' })).toThrow();
+    expect(() => parseMobileAdsConfig({ ...defaults, enabled: true, testMode: false, rewardedEnabled: true })).toThrow('Rewarded');
+    expect(parseMobileAdsConfig({ ...defaults, enabled: true, testMode: false, rewardedEnabled: true, rewardedUnitId: results }).rewardedEnabled).toBe(true);
+  });
 });
