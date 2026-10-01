@@ -9,7 +9,8 @@ export function MobileAdsEditor({ initialConfig, onSave, platform = 'Android' }:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const configured = (!draft.placements.dashboard || Boolean(draft.dashboardBannerUnitId)) &&
-    (!draft.placements.results || Boolean(draft.resultsBannerUnitId));
+    (!draft.placements.results || Boolean(draft.resultsBannerUnitId)) &&
+    (!draft.rewardedEnabled || Boolean(draft.rewardedUnitId));
   const status = !draft.enabled ? 'Off' : draft.testMode ? 'Test ads enabled' : configured ? 'Live IDs enabled; serving unverified' : 'Incomplete';
   const save = async () => {
     setError(''); setSaving(true);
@@ -19,7 +20,7 @@ export function MobileAdsEditor({ initialConfig, onSave, platform = 'Android' }:
   };
   const headingId = `${platform.toLowerCase()}-ads-heading`;
   return <section aria-labelledby={headingId} className="space-y-4">
-    <div><h2 id={headingId} className="text-2xl font-semibold text-[var(--acade-text)]">{platform} AdMob</h2><p className="mt-1 text-sm text-[var(--acade-text-muted)]">Status: {status}. The native SDK and app ID require a new {platform} build; these controls select delivery after installation.</p>{platform === 'iOS' && <p className="mt-2 text-sm text-[var(--acade-text-muted)]">Save iOS ad units here for the upcoming iOS integration. Ad rendering is not connected in the iOS app yet.</p>}</div>
+    <div><h2 id={headingId} className="text-2xl font-semibold text-[var(--acade-text)]">{platform} AdMob</h2><p className="mt-1 text-sm text-[var(--acade-text-muted)]">{platform === 'iOS' ? 'Configuration only — integration pending.' : `Selected configuration: ${status}.`} Changes take effect only after saving. The native SDK and app ID require a new {platform} build; these controls select delivery after installation.</p>{platform === 'iOS' && <p className="mt-2 text-sm text-[var(--acade-text-muted)]">Save iOS ad units here for the upcoming iOS integration. Ad rendering is not connected in the iOS app yet.</p>}</div>
     <Card padding="lg"><div className="grid gap-5 sm:grid-cols-2">
       {([['enabled', `Enable ${platform} ads`], ['testMode', 'Use test ads']] as const).map(([field, label]) => <div key={field} className="flex items-center justify-between gap-3"><div><p className="font-medium text-[var(--acade-text)]">{label}</p>{field === 'testMode' && <p className="text-xs text-[var(--acade-text-muted)]">Keep on for development and device testing.</p>}</div><Switch aria-label={label} checked={draft[field]} onCheckedChange={value => setDraft({ ...draft, [field]: value })} /></div>)}
       {([['dashboard', 'Dashboard overview banner'], ['results', 'Results overview banner']] as const).map(([field, label]) => <div key={field} className="flex items-center justify-between gap-3"><p className="font-medium text-[var(--acade-text)]">{label}</p><Switch aria-label={label} checked={draft.placements[field]} onCheckedChange={value => setDraft({ ...draft, placements: { ...draft.placements, [field]: value } })} /></div>)}

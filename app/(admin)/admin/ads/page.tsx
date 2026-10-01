@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { AdsEditor } from '@/components/admin/ads/AdsEditor';
+import { AdvertisingSections } from '@/components/admin/ads/AdvertisingSections';
 import { ProviderEditor } from '@/components/admin/ads/ProviderEditor';
 import { MobileAdsEditor } from '@/components/admin/ads/MobileAdsEditor';
 import { LegacyBannerEditor, type LegacyBanner } from '@/components/admin/ads/LegacyBannerEditor';
@@ -16,6 +17,13 @@ import type { MobileAdsConfig } from '@/lib/ads/mobile';
 interface AdsPayload {
   config: AdsConfig;
   legacyBannerCount: number;
+}
+
+function AdsLoading({ label }: { label: string }) {
+  return <div role="status" aria-label={label} aria-busy="true">
+    <span className="sr-only">{label}</span>
+    <Skeleton className="h-56 rounded-2xl" />
+  </div>;
 }
 
 export default function AdminAdsPage() {
@@ -176,56 +184,57 @@ export default function AdminAdsPage() {
       <PageHeader
         eyebrow="Operations / monetization"
         title="Advertising"
-        description="Manage optional first-party placements without interrupting authentication, saving, or required student flows."
+        description="Manage website promotions and ad networks, Android placements, and upcoming iOS ad settings. Each section saves independently."
         seam="none"
         sticky={false}
         className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8"
       />
 
-      {loading ? (
-        <div aria-busy="true" aria-label="Loading ads configuration" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <Skeleton className="h-64 rounded-2xl" />
-            <Skeleton className="h-64 rounded-2xl" />
-          </div>
-          <Skeleton className="h-56 rounded-2xl" />
-          <Skeleton className="h-72 rounded-2xl" />
-        </div>
-      ) : error ? (
-        <Card padding="none">
-          <ErrorState
-            title="Advertising controls are unavailable"
-            description={error}
-            onRetry={() => { void load(); }}
-          />
-        </Card>
-      ) : payload ? (
-        <>
-          <h2 className="text-2xl font-semibold text-[var(--acade-text)]">Web and first-party campaigns</h2>
-          <AdsEditor
-            initialConfig={payload.config}
-            legacyBannerCount={payload.legacyBannerCount}
-            onSave={save}
-          />
-          {providerError ? <Card padding="none"><ErrorState title="Provider settings are unavailable" description={providerError} onRetry={() => { void loadProviders(); }} /></Card>
-            : providerConfig ? <ProviderEditor initialConfig={providerConfig} onSave={saveProviders} />
-            : <Skeleton className="h-56 rounded-2xl" aria-label="Loading provider settings" />}
-          {mobileError ? <Card padding="none"><ErrorState title="Android ads are unavailable" description={mobileError} onRetry={() => { void loadMobile(); }} /></Card>
+      <AdvertisingSections id="ads-platform" label="Advertising platform" sections={[
+        {
+          id: 'web', label: 'Web',
+          description: 'Website-only controls. Choose your own promotions or external ad networks; neither changes mobile ad delivery.',
+          content: <AdvertisingSections id="web-ads" label="Web advertising type" sections={[
+            {
+              id: 'promotions', label: 'My promotions',
+              description: 'Create your own product or partner messages. Save house campaigns separately from older banners.',
+              content: <>
+                {loading ? <AdsLoading label="Loading house campaigns" />
+                  : error ? <Card padding="none"><ErrorState title="House campaigns are unavailable" description={error} onRetry={() => { void load(); }} /></Card>
+                  : payload ? <AdsEditor initialConfig={payload.config} legacyBannerCount={payload.legacyBannerCount} onSave={save} /> : null}
+                <details className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 sm:p-6">
+                  <summary className="cursor-pointer text-lg font-semibold text-[var(--acade-text)]">Legacy house banners — existing promotions</summary>
+                  <p className="my-4 text-sm leading-6 text-[var(--acade-text-muted)]">These are older image-and-link promotions, not another ad network. They remain separately stored and can be used as dashboard fallback. No banners are automatically migrated or deleted.</p>
+                  {legacyError ? <Card padding="none"><ErrorState title="Legacy banners are unavailable" description={legacyError} onRetry={() => { void loadLegacy(); }} /></Card>
+                    : legacyBanners ? <LegacyBannerEditor initialBanners={legacyBanners} onSave={saveLegacy} />
+                    : <AdsLoading label="Loading legacy banners" />}
+                </details>
+              </>,
+            },
+            {
+              id: 'networks', label: 'Ad networks',
+              description: 'AdSense and Adsterra have their own enable switches and save button. House-campaign delivery does not control them.',
+              content: providerError ? <Card padding="none"><ErrorState title="Provider settings are unavailable" description={providerError} onRetry={() => { void loadProviders(); }} /></Card>
+                : providerConfig ? <ProviderEditor initialConfig={providerConfig} onSave={saveProviders} />
+                : <AdsLoading label="Loading provider settings" />,
+            },
+          ]} />,
+        },
+        {
+          id: 'android', label: 'Android',
+          description: 'Configure Android AdMob banners and rewarded Insights refresh. These settings save independently of web and iOS ads.',
+          content: mobileError ? <Card padding="none"><ErrorState title="Android ads are unavailable" description={mobileError} onRetry={() => { void loadMobile(); }} /></Card>
             : mobileConfig ? <MobileAdsEditor initialConfig={mobileConfig} onSave={saveMobile} />
-            : <Skeleton className="h-56 rounded-2xl" aria-label="Loading Android ad settings" />}
-          {iosError ? <Card padding="none"><ErrorState title="iOS ads are unavailable" description={iosError} onRetry={() => { void loadIos(); }} /></Card>
+            : <AdsLoading label="Loading Android ad settings" />,
+        },
+        {
+          id: 'ios', label: 'iOS',
+          description: 'Configuration only — ad rendering is not connected in the iOS app yet. Save placement IDs here in preparation for integration.',
+          content: iosError ? <Card padding="none"><ErrorState title="iOS ads are unavailable" description={iosError} onRetry={() => { void loadIos(); }} /></Card>
             : iosConfig ? <MobileAdsEditor platform="iOS" initialConfig={iosConfig} onSave={saveIos} />
-            : <Skeleton className="h-56 rounded-2xl" aria-label="Loading iOS ad settings" />}
-          <h2 className="text-2xl font-semibold text-[var(--acade-text)]">Legacy House banners</h2>
-          {legacyError ? (
-            <Card padding="none"><ErrorState title="Dashboard banners are unavailable" description={legacyError} onRetry={() => { void loadLegacy(); }} /></Card>
-          ) : legacyBanners ? (
-            <LegacyBannerEditor initialBanners={legacyBanners} onSave={saveLegacy} />
-          ) : (
-            <Skeleton className="h-56 rounded-2xl" aria-label="Loading dashboard banners" />
-          )}
-        </>
-      ) : null}
+            : <AdsLoading label="Loading iOS ad settings" />,
+        },
+      ]} />
     </div>
   );
 }

@@ -57,8 +57,8 @@ export function LegacyBannerEditor({ initialBanners, onSave }: {
     <Card padding="lg">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">Dashboard banners</h2>
-          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Legacy sponsored banners appear in the dashboard modal. The first active banner is shown until dismissed for 6 hours. These save separately from campaigns.</p>
+          <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">Legacy dashboard banners</h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)]">Older image-and-link house promotions. Valid active banners can appear inline when no eligible new campaign is selected, with at most one view per banner every 6 hours in this browser. These save separately from house campaigns and do not use a pop-up modal.</p>
         </div>
         <Button size="sm" onClick={() => setBanners((current) => [...current, { id: Date.now().toString(), imageUrl: '', linkUrl: '', isActive: true }])}>
           <Plus size={16} /> Add Advert

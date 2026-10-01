@@ -11,6 +11,7 @@ interface CampaignEditorProps {
   onRemove: () => void;
   onDuplicate: () => void;
   status: { label: string; tone: 'success' | 'muted' };
+  unsaved?: boolean;
 }
 
 function toLocalDateTime(value: string | null) {
@@ -24,7 +25,7 @@ function fromLocalDateTime(value: string) {
   return value ? new Date(value).toISOString() : null;
 }
 
-export function CampaignEditor({ campaign, placements, onChange, onRemove, onDuplicate, status }: CampaignEditorProps) {
+export function CampaignEditor({ campaign, placements, onChange, onRemove, onDuplicate, status, unsaved = false }: CampaignEditorProps) {
   const update = <Key extends keyof AdCampaign>(key: Key, value: AdCampaign[Key]) => {
     onChange({ ...campaign, [key]: value });
   };
@@ -40,7 +41,7 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
             <span className={status.tone === 'success'
               ? 'rounded-full border border-[var(--acade-success)]/30 bg-[var(--acade-success-dim)] px-2.5 py-1 text-xs font-medium text-[var(--acade-success)]'
               : 'rounded-full border border-[var(--acade-border)] px-2.5 py-1 text-xs font-medium text-[var(--acade-text-muted)]'}>
-              {status.label}
+              {status.label === 'Live' ? 'Eligible' : status.label}{unsaved ? ' (unsaved)' : ''}
             </span>
           </div>
           <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">
@@ -91,8 +92,8 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
             className="h-12 w-full rounded-xl border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-4 text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20"
           >
             <option value="house">House / internal</option>
-            <option value="rewarded" disabled>Rewarded (coming later)</option>
-            <option value="third-party" disabled>Third-party (coming later)</option>
+            <option value="rewarded" disabled>Rewarded (not for house campaigns)</option>
+            <option value="third-party" disabled>Third-party (use Ad networks)</option>
           </select>
         </div>
       </div>

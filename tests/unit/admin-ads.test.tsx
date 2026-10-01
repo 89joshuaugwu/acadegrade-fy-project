@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { AdsEditor } from '@/components/admin/ads/AdsEditor';
@@ -46,7 +46,7 @@ describe('LegacyBannerEditor', () => {
 });
 
 describe('AdsEditor', () => {
-  it('exposes the global and placement controls with future delivery modes disabled', () => {
+  it('exposes house-only and placement controls with other delivery modes disabled', () => {
     render(
       <AdsEditor
         initialConfig={createDefaultAdsConfig()}
@@ -55,11 +55,11 @@ describe('AdsEditor', () => {
       />
     );
 
-    expect(screen.getByRole('switch', { name: 'Enable all typed ad delivery' })).not.toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Enable house campaign delivery' })).not.toBeChecked();
     expect(screen.getByRole('switch', { name: 'Enable dashboard overview placement' })).toBeChecked();
     expect(screen.getByRole('switch', { name: 'Enable rewarded delivery' })).toBeDisabled();
     expect(screen.getByRole('switch', { name: 'Enable third-party delivery' })).toBeDisabled();
-    expect(screen.getByText(/2 legacy banners remain active/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 legacy banner records/i)).toBeInTheDocument();
   });
 
   it('adds a valid inactive house campaign and submits the edited configuration', async () => {
@@ -77,7 +77,7 @@ describe('AdsEditor', () => {
     expect(screen.getByRole('heading', { name: 'New house campaign' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Activate New house campaign' })).not.toBeChecked();
 
-    await user.click(screen.getByRole('button', { name: 'Save ads configuration' }));
+    await user.click(screen.getByRole('button', { name: 'Save house campaigns' }));
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave.mock.calls[0][0]).toMatchObject({
       enabled: false,
@@ -87,6 +87,34 @@ describe('AdsEditor', () => {
         active: false,
       }],
     });
+  });
+
+  it('can discard campaign changes without publishing or deleting saved campaigns', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(<AdsEditor initialConfig={createDefaultAdsConfig()} legacyBannerCount={0} onSave={onSave} />);
+    await user.click(screen.getByRole('button', { name: 'Add campaign' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(screen.queryByRole('heading', { name: 'New house campaign' })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Saved configuration');
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('preserves edits made while a house-campaign save is in flight', async () => {
+    const user = userEvent.setup();
+    let finishSave!: () => void;
+    const onSave = vi.fn(() => new Promise<void>(resolve => { finishSave = resolve; }));
+    render(<AdsEditor initialConfig={createDefaultAdsConfig()} legacyBannerCount={0} onSave={onSave} />);
+    await user.click(screen.getByRole('button', { name: 'Add campaign' }));
+    await user.click(screen.getByRole('button', { name: 'Save house campaigns' }));
+    await user.clear(screen.getByRole('textbox', { name: 'Campaign name' }));
+    await user.type(screen.getByRole('textbox', { name: 'Campaign name' }), 'Later edit');
+    await act(async () => { finishSave(); });
+    expect(screen.getByRole('textbox', { name: 'Campaign name' })).toHaveValue('Later edit');
+    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes');
+    await user.click(screen.getByRole('button', { name: 'Discard changes' }));
+    expect(screen.getByRole('textbox', { name: 'Campaign name' })).toHaveValue('New house campaign');
   });
 
   it('duplicates a campaign and confirms deletion before removing it', async () => {

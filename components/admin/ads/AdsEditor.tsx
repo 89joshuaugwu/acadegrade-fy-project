@@ -40,11 +40,13 @@ function createCampaignDraft(config: AdsConfig): AdCampaign {
 
 export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEditorProps) {
   const [config, setConfig] = useState(initialConfig);
+  const [savedConfig, setSavedConfig] = useState(initialConfig);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [campaignToDelete, setCampaignToDelete] = useState<AdCampaign | null>(null);
 
   const activeCampaigns = config.campaigns.filter((campaign) => campaign.active).length;
+  const dirty = JSON.stringify(config) !== JSON.stringify(savedConfig);
 
   const duplicateCampaign = (campaign: AdCampaign) => {
     const suffix = config.campaigns.filter((item) => item.id.startsWith(`${campaign.id}-copy`)).length + 1;
@@ -65,7 +67,8 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
     try {
       const validated = parseAdsConfig(config);
       await onSave(validated);
-      setConfig(validated);
+      setConfig(current => JSON.stringify(current) === JSON.stringify(config) ? validated : current);
+      setSavedConfig(validated);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to save ads configuration.');
     } finally {
@@ -83,22 +86,22 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
                 <Megaphone className="size-5" aria-hidden="true" />
               </div>
               <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-                Global delivery
+                House campaign delivery
               </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-                This kill switch controls every campaign in the typed ads system. Required flows never contain placements.
+                Controls these web house campaigns only. Ad networks, legacy banners, Android, and iOS have separate settings. Changes take effect after saving.
               </p>
             </div>
             <Switch
               checked={config.enabled}
               onCheckedChange={(enabled) => setConfig({ ...config, enabled })}
-              aria-label="Enable all typed ad delivery"
+              aria-label="Enable house campaign delivery"
             />
           </div>
           <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[var(--acade-border-subtle)] pt-5 sm:grid-cols-3">
             <Metric label="Campaigns" value={config.campaigns.length} />
-            <Metric label="Active" value={activeCampaigns} />
-            <Metric label="Live placements" value={config.placements.filter((item) => item.enabled).length} />
+            <Metric label="Marked active" value={activeCampaigns} />
+            <Metric label="Selected placements" value={config.placements.filter((item) => item.enabled).length} />
           </div>
         </Card>
 
@@ -108,11 +111,11 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
             Safe by default
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-            House campaigns are available now. Rewarded and third-party delivery remain locked until consent, policy, and provider controls exist.
+            House campaigns display your own product or partner messages. Manage external providers under Web / Ad networks and rewarded refresh under Android.
           </p>
           {legacyBannerCount > 0 && (
             <p className="mt-4 rounded-xl bg-[var(--acade-overlay)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)]">
-              {legacyBannerCount} legacy banners remain active through the backward-compatible dashboard modal.
+              {legacyBannerCount} legacy banner records are stored separately. Review their active switches in the legacy section below.
             </p>
           )}
         </Card>
@@ -122,15 +125,15 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-              Delivery modes
+              House campaign delivery modes
             </h2>
             <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Future modes are visible for planning but cannot be enabled or saved as active.</p>
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           <ModeControl label="House / internal" description="First-party product and partner messages." checked={config.deliveryModes.house} onChange={(house) => setConfig({ ...config, deliveryModes: { ...config.deliveryModes, house } })} />
-          <ModeControl label="Rewarded" description="Future opt-in value exchange." checked={false} disabled ariaLabel="Enable rewarded delivery" />
-          <ModeControl label="Third-party" description="Future consented ad-network inventory." checked={false} disabled ariaLabel="Enable third-party delivery" />
+          <ModeControl label="Rewarded" description="Not available for house campaigns. Configure rewarded refresh in Android." checked={false} disabled ariaLabel="Enable rewarded delivery" />
+          <ModeControl label="Third-party" description="Not available for house campaigns. Configure providers in Web / Ad networks." checked={false} disabled ariaLabel="Enable third-party delivery" />
         </div>
       </Card>
 
@@ -172,7 +175,7 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
           <Card padding="none">
             <EmptyState
               icon={<Megaphone className="size-9" aria-hidden="true" />}
-              title="No typed campaigns yet"
+              title="No house campaigns yet"
               description="Create a house campaign when you have a message that adds value without blocking a task."
             />
           </Card>
@@ -188,6 +191,7 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
             onRemove={() => setCampaignToDelete(campaign)}
             onDuplicate={() => duplicateCampaign(campaign)}
             status={getCampaignStatus(config, campaign)}
+            unsaved={dirty}
           />
         ))}
       </section>
@@ -198,9 +202,11 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
         </div>
       )}
 
-      <div className="sticky bottom-4 flex justify-end rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)]/95 p-3 shadow-[var(--shadow-float)] backdrop-blur">
+      <div className="sticky bottom-4 flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)]/95 p-3 shadow-[var(--shadow-float)] backdrop-blur">
+        <p role="status" className="mr-auto text-sm text-[var(--acade-text-muted)]">{dirty ? 'Unsaved changes — house campaigns only' : 'Saved configuration — serving not verified'}</p>
+        <Button variant="ghost" disabled={!dirty || saving} onClick={() => { setConfig(savedConfig); setError(null); }}>Discard changes</Button>
         <Button loading={saving} loadingLabel="Saving ads configuration…" onClick={save}>
-          Save ads configuration
+          Save house campaigns
         </Button>
       </div>
       <Modal

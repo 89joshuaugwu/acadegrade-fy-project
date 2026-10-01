@@ -21,7 +21,7 @@ export function ProviderEditor({ initialConfig, onSave }: { initialConfig: Provi
   };
   return <section aria-labelledby="provider-heading" className="space-y-4">
     <div><h2 id="provider-heading" className="font-[family-name:var(--font-bricolage)] text-2xl font-semibold text-[var(--acade-text)]">Web ad providers</h2>
-      <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Optional inventory on the student dashboard. Enabled here does not confirm provider approval or ad fill. House banners remain available while accounts are reviewed.</p></div>
+      <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Optional inventory on the student dashboard. Status labels describe your selected configuration; changes take effect after saving. Enabled does not confirm provider approval or ad fill. These controls are independent of house campaigns.</p></div>
     <div className="grid gap-4 lg:grid-cols-2">
       <Card padding="lg"><div className="flex items-start justify-between gap-4"><div><h3 className="text-lg font-semibold text-[var(--acade-text)]">Google AdSense</h3><p className="text-sm text-[var(--acade-text-muted)]">Status: {status.adsense}</p></div><Switch aria-label="Enable AdSense" checked={config.adsense.enabled} onCheckedChange={(enabled) => setConfig({ ...config, adsense: { ...config.adsense, enabled } })} /></div>
         <p className="mt-3 text-sm text-[var(--acade-text-muted)]">Uses the official AdSense SDK and ad unit only when enabled with both IDs. Account and site approval are still required.</p>
