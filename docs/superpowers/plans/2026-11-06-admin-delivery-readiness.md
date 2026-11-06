@@ -4,7 +4,7 @@
 
 **Goal:** Make update/ad readiness observable and repair confirmed delivery defects without bypassing consent or changing live configuration.
 
-**Architecture:** Preserve existing Next.js/React Native contracts and the AcadeGrade visual identity. Keep optional automatic update checks cached for 24 hours; add an explicit forced check and explain installed/latest build eligibility. Separate provider account requirements from code status. No new libraries.
+**Architecture:** Preserve existing Next.js/React Native contracts and the AcadeGrade visual identity. The operator subsequently requested a six-hour optional update cache (superseding the original 24-hour cache); add an explicit forced check and explain installed/latest build eligibility. Separate provider account requirements from code status. No new libraries.
 
 **Spec:** The user's 2026-11-06 approved incumbent-admin improvement approach, screenshots, and investigation recorded in the workspace `todo.md`.
 
@@ -35,5 +35,12 @@
 
 ## Progress ledger
 
+- PAUSED again by explicit user request on 2026-11-06. All current agents stopped/closed; implementation and final independent review halted. Preserve working tree; no commits/deployments/APK builds. Resume by checking current diffs and review checkpoint, then remaining stage-3 feature rewards and final operational/device verification. Main final summary and root todo record the test evidence.
+- Interrupted reviewer checkpoint: isolated checks reproduced delayed six-hour refresh scheduling, automatic-check/manual-check interference, and a reward watchdog leaving parent analysis loading active. These require coordinator triage and regression fixes on resume; passing suites do not establish readiness for rollout.
+
 - Investigation complete: public build-15 configuration verified; installed-phone build not directly observed; EAS latest successful build is 14. Existing release cache retains optional metadata for 24 hours.
 - Implementation started; task completion requires current tests, not historical results.
+- Ruling: six-hour foreground timer plus cache-aware launch/resume checks replace 24-hour optional checks at the operator's request. Exact closed-app Android scheduling is not promised; the cost is that an inactive app sees metadata on its next launch/resume.
+- Tasks 1–5 code implemented. Settings manual check, ad privacy options, group navigation, safe release preview/minimum enforcement and in-flight save preservation have focused regression coverage.
+- Scope extension approved: separate feature-credit stages 1–2 and Android house-promotion bridge; see `../specs/2026-11-06-feature-credits-design.md` and `2026-11-06-android-house-bridge.md`. Rewarded scanner/Forecast/What-if paths remain explicitly pending, not falsely enabled.
+- Verification checkpoint: full Android suite 112 passed; full web suite 94 files, 427 passed plus 1 expected failure. Both typechecks and targeted web lint pass; Impeccable reports no findings on changed core UI targets. Independent review remains in progress. No deployment/commit/APK build/live settings mutations.

@@ -27,6 +27,12 @@ const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
   transcript: BookOpen,
 };
 
+const NAV_GROUPS = [
+  { label: 'Platform', items: adminNavigation.slice(0, 4) },
+  { label: 'Monitoring', items: adminNavigation.filter(item => ['/admin/analytics', '/admin/api-analytics', '/admin/ai', '/admin/usage'].includes(item.href)) },
+  { label: 'Delivery & settings', items: adminNavigation.filter(item => ['/admin/ads', '/admin/mobile-release', '/admin/settings'].includes(item.href)) },
+];
+
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user } = useAuth();
@@ -84,8 +90,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation */}
-          <nav aria-label="Admin primary navigation" className="flex flex-col gap-1.5">
-            {adminNavigation.map((tab) => {
+          <nav aria-label="Admin primary navigation" className="flex flex-col gap-6">
+            {NAV_GROUPS.map(group => <div key={group.label} role="group" aria-label={group.label} className="space-y-1">
+              <p className="mb-2 px-4 text-xs font-medium text-[var(--acade-text-muted)]">{group.label}</p>
+            {group.items.map((tab) => {
               const active = isRouteActive(pathname, tab.href);
               const Icon = ADMIN_ICONS[tab.icon];
               return (
@@ -94,7 +102,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                   href={tab.href}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    "flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors font-[family-name:var(--font-dm-sans)]",
+                    "flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] font-[family-name:var(--font-dm-sans)]",
                     active
                       ? "border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]"
                       : "border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
@@ -105,6 +113,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
+            </div>)}
           </nav>
         </div>
 

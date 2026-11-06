@@ -5,12 +5,9 @@ import { adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
+import { resolveFeatureWindows } from '@/lib/usage/server';
 
 const FORECAST_CACHE_MS = 60 * 60 * 1000;
-const FORECAST_LIMITS = [
-  { name: 'hourly', limit: 2, windowMs: 60 * 60 * 1000 },
-  { name: 'daily', limit: 8, windowMs: 24 * 60 * 60 * 1000 },
-];
 
 function timestampMillis(value: any): number {
   if (!value) return 0;
@@ -66,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(cachedForecast, { headers: { 'X-AI-Cache': 'HIT' } });
     }
 
-    const rateLimit = await checkRateLimit(uid, 'ai_forecast', FORECAST_LIMITS);
+    const rateLimit = await checkRateLimit(uid, 'ai_forecast', await resolveFeatureWindows('forecast'));
     if (!rateLimit.allowed) {
       logApiCall({ endpoint: '/api/ai/forecast', category: 'ai', uid, status: 429, durationMs: timer(), provider: 'deepseek', error: 'Per-user rate limit exceeded' });
       return rateLimitResponse(rateLimit, `Forecast limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);

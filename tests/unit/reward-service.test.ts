@@ -17,6 +17,32 @@ describe('server rewarded refresh entitlement', () => {
     store.docs.set('config/mobileAds', { ...config });
     service = new RewardService(store.db, () => now);
   });
+  it('reads a missing daily summary without creating documents, even while disabled', async () => {
+    store.docs.set('config/mobileAds', { ...config, enabled: false });
+    const before = [...store.docs.entries()];
+    expect(await service.dailySummary('alice')).toEqual({
+      earnedToday: 0, usedToday: 0, earnRemaining: 2, resetAtUTC: Date.UTC(2026, 9, 2),
+    });
+    expect([...store.docs.entries()]).toEqual(before);
+  });
+  it('summarizes grants and successful uses only, isolates owners and resets at UTC midnight', async () => {
+    const first = await earned();
+    await service.release(await service.acquire('alice', first.sessionId));
+    await service.grant(callback(first)); // Duplicate callbacks never increase the summary.
+    const second = await session(); await service.grant(callback(second, 'tx2'));
+    await service.complete(await service.acquire('alice', first.sessionId), {});
+    const before = [...store.docs.entries()];
+    expect(await service.dailySummary('alice')).toEqual({
+      earnedToday: 2, usedToday: 1, earnRemaining: 0, resetAtUTC: Date.UTC(2026, 9, 2),
+    });
+    expect(await service.dailySummary('bob')).toMatchObject({ earnedToday: 0, usedToday: 0, earnRemaining: 2 });
+    expect([...store.docs.entries()]).toEqual(before);
+    now = Date.UTC(2026, 9, 2);
+    expect(await service.dailySummary('alice')).toEqual({
+      earnedToday: 0, usedToday: 0, earnRemaining: 2, resetAtUTC: Date.UTC(2026, 9, 3),
+    });
+    expect((await service.status('alice', second.sessionId)).status).toBe('earned');
+  });
   it('creates Android-only sessions and fails closed on either disabled switch', async () => {
     expect(await session()).toMatchObject({ unitId: 'ca-app-pub-3940256099942544/5224354917', userId: 'alice' });
     await expect(service.createSession('alice', 'ios')).rejects.toThrow();

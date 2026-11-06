@@ -3,13 +3,10 @@ import { generateMultimodalGeminiContentWithMetadata } from '@/lib/ai/manager';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
+import { resolveFeatureWindows } from '@/lib/usage/server';
 // pdf-parse is required dynamically inside the handler
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const OCR_LIMITS = [
-  { name: 'fifteen_minutes', limit: 5, windowMs: 15 * 60 * 1000 },
-  { name: 'daily', limit: 20, windowMs: 24 * 60 * 60 * 1000 },
-];
 
 const PROMPT = `Extract course results from the provided academic result slip.
 Return ONLY a JSON array of objects representing each course. 
@@ -52,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid or oversized result file.' }, { status: 413 });
     }
 
-    const rateLimit = await checkRateLimit(uid, 'results_extract', OCR_LIMITS);
+    const rateLimit = await checkRateLimit(uid, 'results_extract', await resolveFeatureWindows('ocr'));
     if (!rateLimit.allowed) {
       logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 429, durationMs: timer(), provider: 'gemini', error: 'Per-user rate limit exceeded' });
       return rateLimitResponse(rateLimit, `Result scanning limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);

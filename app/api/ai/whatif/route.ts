@@ -3,11 +3,7 @@ import { generateFastResponseWithMetadata } from '@/lib/ai/manager';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
-
-const WHAT_IF_LIMITS = [
-  { name: 'five_minutes', limit: 3, windowMs: 5 * 60 * 1000 },
-  { name: 'daily', limit: 20, windowMs: 24 * 60 * 60 * 1000 },
-];
+import { resolveFeatureWindows } from '@/lib/usage/server';
 
 export async function POST(request: NextRequest) {
   const timer = apiTimer();
@@ -50,7 +46,7 @@ export async function POST(request: NextRequest) {
     } else {
       let rateLimit;
       try {
-        rateLimit = await checkRateLimit(uid, 'ai_whatif', WHAT_IF_LIMITS);
+        rateLimit = await checkRateLimit(uid, 'ai_whatif', await resolveFeatureWindows('whatif'));
       } catch (rateLimitError: any) {
         console.error('WhatIf rate limiter unavailable:', rateLimitError);
         logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 503, durationMs: timer(), provider: 'rate-limiter', error: 'Rate limiter unavailable' });

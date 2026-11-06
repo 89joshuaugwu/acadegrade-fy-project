@@ -61,10 +61,27 @@ describe('reward backend route integration', () => {
     const url = (raw: string) => `/api/ads/rewards/ssv?${raw}&signature=${sign('sha256', Buffer.from(raw), pair.privateKey).toString('base64url')}&key_id=123`;
     expect(await (await ssv(request(url(query)))).json()).toMatchObject({ verified: true, granted: true });
     expect(await (await ssv(request(url(query)))).json()).toMatchObject({ duplicate: true, granted: false });
+    expect(await rewards.dailySummary('alice')).toMatchObject({ earnedToday: 1, usedToday: 0, earnRemaining: 1 });
+    // Even a valid ten-coin demo callback buys exactly one Written Analysis use.
+    expect((await insight(s.sessionId)).status).toBe(200);
+    expect(await (await ssv(request(url(query)))).json()).toMatchObject({ duplicate: true, granted: false });
+    expect((await insight(s.sessionId)).status).toBe(409);
+    expect(await rewards.dailySummary('alice')).toMatchObject({ earnedToday: 1, usedToday: 1, earnRemaining: 1 });
     expect((await ssv(request(url(query).replace('reward_amount=10', 'reward_amount=1')))).status).toBe(400);
     const validation = `ad_unit=5224354917&reward_amount=10&reward_item=coins&timestamp=${Date.now()}&transaction_id=verify-tool`;
     expect(await (await ssv(request(url(validation)))).json()).toMatchObject({ verified: true, validationOnly: true, granted: false });
     vi.unstubAllGlobals();
+  });
+  it('never grants a demo reward from unsigned or partially session-bound callbacks', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [{ keyId: 123, pem }] }))));
+    const s = await rewards.createSession('alice', 'android');
+    const query = `ad_unit=5224354917&custom_data=${s.sessionId}&reward_amount=10&reward_item=coins&timestamp=${Date.now()}&transaction_id=unbound`;
+    expect((await ssv(request(`/api/ads/rewards/ssv?${query}&user_id=alice`))).status).toBe(400);
+    const signed = `${query}&signature=${sign('sha256', Buffer.from(query), pair.privateKey).toString('base64url')}&key_id=123`;
+    expect((await ssv(request(`/api/ads/rewards/ssv?${signed}`))).status).toBe(400);
+    expect(await rewards.status('alice', s.sessionId)).toMatchObject({ status: 'pending' });
+    expect(await rewards.dailySummary('alice')).toMatchObject({ earnedToday: 0, usedToday: 0, earnRemaining: 2 });
+    expect([...store.docs.keys()].filter(key => key.startsWith('_reward_transactions/'))).toHaveLength(0);
   });
   it('keeps the existing cooldown for ordinary requests and rejects pending/spoofed credits', async () => {
     expect((await insight()).status).toBe(429);

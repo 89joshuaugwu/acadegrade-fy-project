@@ -22,6 +22,7 @@ import { GradeTable } from '@/components/cgpa/GradeTable';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { ResultsTour } from '@/components/onboarding/ResultsTour';
+import { FeatureCredits } from '@/components/ai/FeatureCredits';
 
 const generateRandomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -384,6 +385,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
       {/* Modals */}
       <Modal open={isImportSlipOpen} onClose={() => setIsImportSlipOpen(false)} title="Import Result Slip">
+        {isImportSlipOpen && <FeatureCredits feature="ocr" refreshKey={String(uploadingSlip)} />}
         <div className="flex flex-col gap-4 mt-2">
           <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
             Scan your result slip with your phone camera, or choose an existing image or PDF. AcadeGrade will extract the courses and scores for you to review.

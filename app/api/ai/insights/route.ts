@@ -4,16 +4,13 @@ import { adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
+import { resolveFeatureWindows } from '@/lib/usage/server';
 import type { InsightResponse } from '@/types/ai';
 import { shouldEnforceInsightCooldown } from '@/lib/ai/insight-cooldown';
 import { RewardError, rewards, type RewardLease } from '@/lib/ads/reward';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
-const INSIGHT_LIMITS = [
-  { name: 'hourly', limit: 2, windowMs: 60 * 60 * 1000 },
-  { name: 'daily', limit: 3, windowMs: TWENTY_FOUR_HOURS_MS },
-];
 
 function timestampMillis(value: any): number {
   if (!value) return 0;
@@ -84,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rewarded ceilings are separate from the ordinary Written Analysis quota.
-    const rateLimit = rewardLease ? null : await checkRateLimit(uid, 'ai_insights', INSIGHT_LIMITS);
+    const rateLimit = rewardLease ? null : await checkRateLimit(uid, 'ai_insights', await resolveFeatureWindows('insights'));
     if (rateLimit && !rateLimit.allowed) {
       logApiCall({ endpoint: '/api/ai/insights', category: 'ai', uid, status: 429, durationMs: timer(), provider: 'deepseek', error: 'Per-user rate limit exceeded' });
       return rateLimitResponse(rateLimit, `Written Analysis limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);

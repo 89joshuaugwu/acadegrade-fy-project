@@ -184,19 +184,20 @@ describe('semester detail load failure', () => {
       screen.getByLabelText('Scan with camera'),
       new File(['camera-result'], 'camera-result.jpg', { type: 'image/jpeg' })
     );
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const extractionCalls = () => fetchMock.mock.calls.filter(([url]) => url === '/api/results/extract');
+    await waitFor(() => expect(extractionCalls()).toHaveLength(1));
 
     await user.upload(
       screen.getByLabelText('Choose image or PDF'),
       new File(['saved-result'], 'saved-result.pdf', { type: 'application/pdf' })
     );
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(extractionCalls()).toHaveLength(2));
 
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+    expect(extractionCalls().map(([url]) => url)).toEqual([
       '/api/results/extract',
       '/api/results/extract',
     ]);
-    expect(fetchMock.mock.calls.map(([, request]) => JSON.parse(request.body).mimeType)).toEqual([
+    expect(extractionCalls().map(([, request]) => JSON.parse(request.body).mimeType)).toEqual([
       'image/jpeg',
       'application/pdf',
     ]);

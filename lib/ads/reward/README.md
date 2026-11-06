@@ -38,6 +38,31 @@ device in AdMob, then use your own unit from a release/test APK. Confirm Test Ad
 labelling before interacting. Keep ordinary users' delivery off during this
 check; see the detailed rollout guide in `docs/android-ads-and-release-operations.md`.
 
+### Diagnosing a phone stuck at “Check ad reward status”
+
+That label means the app has a saved session, not an earned entitlement. The
+Android client now explicitly reports pending versus confirmed/ready status,
+and warns that demo completion does not prove SSV confirmation. Only signed
+SSV can change pending to earned, including in test mode. No client event,
+timer, status request, or daily-summary read grants credit.
+
+Reward HTTP operations have a 10-second deadline covering authentication,
+fetch and body parsing, with abort and no-store caching. Ad preparation and
+load have separate 45-second watchdogs; display/close has a 180-second watchdog.
+Post-close confirmation stops after 15 checks or a 30-second polling window
+(an in-flight status check can add up to 10 seconds). The app stops spinning
+and keeps an unconfirmed session recoverable rather than claiming it earned a
+refresh. Analysis waiting is bounded at 120 seconds; the server may still
+finish after the UI deadline, so check the saved session before retrying.
+
+If confirmation never arrives, inspect the deployed callback logs and the
+server-owned session through authorized operator tools. Confirm the API origin,
+public callback reachability, unit ID, exact reward item/amount, session binding,
+signature verification and enabled switches. This repository change does not
+verify production configuration or perform a live ad/callback test. Cancel a
+pending session only if abandoning it: a later callback cannot reward a cancelled
+session. Earned/processing sessions cannot be cancelled out of their credit.
+
 Verification follows [Google's SSV specification](https://developers.google.com/admob/android/ssv)
 using [Google's rotating ECDSA public keys](https://www.gstatic.com/admob/reward/verifier-keys.json).
 The exact encoded query before `&signature=` is verified without reordering or
@@ -63,6 +88,24 @@ Session and Insights calls require the existing Firebase bearer token.
   `rewardSessionId`. This requests fresh generation even without
   `forceRegenerate`. Only a verified, unexpired, UID-bound credit bypasses the
   ordinary 12-hour refresh cooldown and ordinary user quota.
+
+### Read-only daily summary integration
+
+`rewards.dailySummary(uid)` (class method in `lib/ads/reward/service.ts`) returns
+`RewardDailySummary`, re-exported from `lib/ads/reward/index.ts`:
+
+```ts
+{ earnedToday: number; usedToday: number; earnRemaining: number; resetAtUTC: number }
+```
+
+`resetAtUTC` is Unix milliseconds at the next UTC midnight. Reads use the
+existing `_reward_daily` document and do not create missing documents, require
+ads to be enabled, mutate counters, or mint credits. Missing daily counts are
+zero; `earnRemaining` is `max(0, 2 - earnedToday)`. `usedToday` counts successful
+committed uses, not active processing leases. These are Written Analysis-only
+counters, not a wallet or a balance of currently redeemable credits: earned
+sessions can carry over from yesterday. A calling route must authenticate the
+user and pass the verified UID. No summary HTTP endpoint is added here.
 
 ## Safety and limits
 

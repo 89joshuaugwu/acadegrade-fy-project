@@ -24,6 +24,13 @@ interface Daily {
   leases?: Record<string, { id: string; until: number }>;
 }
 export interface RewardLease { uid: string; sessionId: string; leaseId: string; day: string }
+export interface RewardDailySummary {
+  earnedToday: number;
+  usedToday: number;
+  earnRemaining: number;
+  /** Unix milliseconds for the next UTC midnight. */
+  resetAtUTC: number;
+}
 
 export class RewardService {
   constructor(private readonly db: Firestore, private readonly clock = Date.now) {}
@@ -33,6 +40,21 @@ export class RewardService {
   }
   private day(now: number) { return new Date(now).toISOString().slice(0, 10); }
   private dailyRef(uid: string, day: string) { return this.db.collection('_reward_daily').doc(`${hash(uid)}_${day}`); }
+  /** Read-only Written Analysis counters, not an available-credit balance.
+   * Outstanding credits can span days; processing leases are not successful uses.
+   */
+  async dailySummary(uid: string): Promise<RewardDailySummary> {
+    const now = this.clock();
+    const day = this.day(now);
+    const daily: Daily = (await this.dailyRef(uid, day).get()).data() ?? {};
+    const earnedToday = daily.earned ?? 0;
+    return {
+      earnedToday,
+      usedToday: daily.used ?? 0,
+      earnRemaining: Math.max(0, 2 - earnedToday),
+      resetAtUTC: Date.parse(`${day}T00:00:00.000Z`) + DAY,
+    };
+  }
   private async config(tx: Transaction) {
     const config = safeMobileAdsConfig((await tx.get(this.db.collection('config').doc('mobileAds'))).data());
     // Absent optional switch is disabled; never bootstrap delivery from env.

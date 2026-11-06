@@ -25,6 +25,7 @@ import type { SemesterWithId } from '@/types/semester';
 import type { Course } from '@/types/course';
 import type { InsightResponse, ForecastResponse } from '@/types/ai';
 import { resolveInsightRefresh } from '@/lib/ai/insight-refresh-state';
+import { FeatureCredits } from '@/components/ai/FeatureCredits';
 
 type TabType = 'forecast' | 'whatif' | 'risk' | 'analysis';
 const TABS: { id: TabType; label: string }[] = [
@@ -35,10 +36,10 @@ const TABS: { id: TabType; label: string }[] = [
 ];
 
 const RATE_LIMIT_GUIDANCE: Record<TabType, string> = {
-  forecast: 'Forecasts are cached for one hour. You can generate up to 2 new forecasts per hour and 8 per day.',
-  whatif: 'Adjust the calculator freely, then request guidance when ready: 3 AI requests per 5 minutes and 20 per day.',
+  forecast: 'Forecasts are cached for one hour. New forecasts allow up to 2 requests per hour; your current daily allowance is shown below.',
+  whatif: 'Adjust the calculator freely, then request guidance when ready: up to 3 AI requests per 5 minutes, within your daily allowance.',
   risk: 'Risk Analysis reads your saved forecast and results, so opening this tab does not consume an AI request.',
-  analysis: 'Written Analysis remains cached and readable. Regeneration unlocks after 12 hours and is limited to 3 per day.',
+  analysis: 'Written Analysis remains cached and readable. Free regeneration unlocks after 12 hours, within your daily allowance. Verified ad rewards are separate.',
 };
 
 interface AnalyticsDoc {
@@ -816,6 +817,7 @@ export default function InsightsPage() {
       </div>
 
       {/* Tab Content */}
+      {activeTab !== 'risk' && <FeatureCredits feature={activeTab === 'analysis' ? 'insights' : activeTab} refreshKey={String(refreshing)} />}
       <div
         key={activeTab}
         role="tabpanel"

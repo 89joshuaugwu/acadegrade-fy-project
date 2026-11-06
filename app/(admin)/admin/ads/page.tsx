@@ -6,6 +6,8 @@ import { AdsEditor } from '@/components/admin/ads/AdsEditor';
 import { AdvertisingSections } from '@/components/admin/ads/AdvertisingSections';
 import { ProviderEditor } from '@/components/admin/ads/ProviderEditor';
 import { MobileAdsEditor } from '@/components/admin/ads/MobileAdsEditor';
+import { MobileHouseAdsEditor } from '@/components/admin/ads/MobileHouseAdsEditor';
+import { parseHouseConfig, type HouseConfig } from '@/lib/ads/house';
 import { LegacyBannerEditor, type LegacyBanner } from '@/components/admin/ads/LegacyBannerEditor';
 import { ErrorState, PageHeader } from '@/components/shared';
 import { Card, Skeleton } from '@/components/ui';
@@ -37,10 +39,33 @@ export default function AdminAdsPage() {
   const [providerError, setProviderError] = useState<string | null>(null);
   const [mobileConfig, setMobileConfig] = useState<MobileAdsConfig | null>(null);
   const [mobileError, setMobileError] = useState<string | null>(null);
+  const [houseConfig, setHouseConfig] = useState<HouseConfig | null>(null);
+  const [houseError, setHouseError] = useState<string | null>(null);
   const [iosConfig, setIosConfig] = useState<MobileAdsConfig | null>(null);
   const [iosError, setIosError] = useState<string | null>(null);
   const [platform, setPlatform] = useState('web');
   const [webSection, setWebSection] = useState('promotions');
+  const loadHouse = useCallback(async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      setHouseError(null);
+      const response = await fetch('/api/admin/ads/house', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'Could not load Android house promotions.');
+      setHouseConfig(parseHouseConfig(body.config));
+    } catch (cause) { setHouseError(cause instanceof Error ? cause.message : 'Could not load Android house promotions.'); }
+  }, [user]);
+  useEffect(() => { void loadHouse(); }, [loadHouse]);
+  const saveHouse = async (config: HouseConfig) => {
+    if (!user) throw new Error('Your admin session is unavailable.');
+    const token = await user.getIdToken();
+    const response = await fetch('/api/admin/ads/house', { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ config }) });
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || 'Could not save Android house promotions.');
+    setHouseConfig(parseHouseConfig(body.config));
+    toast.success('Android house promotions saved.');
+  };
   const navigateFromHouse = (destination: 'networks' | 'android') => {
     if (destination === 'android') setPlatform('android');
     else { setPlatform('web'); setWebSection('networks'); }
@@ -229,10 +254,15 @@ export default function AdminAdsPage() {
         },
         {
           id: 'android', label: 'Android',
-          description: 'Configure Android AdMob banners and rewarded Insights refresh. These settings save independently of web and iOS ads.',
-          content: mobileError ? <Card padding="none"><ErrorState title="Android ads are unavailable" description={mobileError} onRetry={() => { void loadMobile(); }} /></Card>
+          description: 'Android house promotions and AdMob each save independently of web and iOS ads.',
+          content: <>
+            {houseError ? <Card padding="none"><ErrorState title="Android house promotions are unavailable" description={houseError} onRetry={() => { void loadHouse(); }} /></Card>
+              : houseConfig ? <MobileHouseAdsEditor initialConfig={houseConfig} onSave={saveHouse} />
+              : <AdsLoading label="Loading Android house promotions" />}
+            {mobileError ? <Card padding="none"><ErrorState title="Android ads are unavailable" description={mobileError} onRetry={() => { void loadMobile(); }} /></Card>
             : mobileConfig ? <MobileAdsEditor initialConfig={mobileConfig} onSave={saveMobile} />
-            : <AdsLoading label="Loading Android ad settings" />,
+            : <AdsLoading label="Loading Android ad settings" />}
+          </>,
         },
         {
           id: 'ios', label: 'iOS',

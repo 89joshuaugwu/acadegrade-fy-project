@@ -23,7 +23,8 @@ describe('AdminShell', () => {
     expect(within(delivery).getByRole('link', { name: 'Advertising' })).toHaveAttribute('href', '/admin/ads');
     expect(within(delivery).getByRole('link', { name: 'Android release' })).toHaveAttribute('href', '/admin/mobile-release');
     expect(screen.getByRole('group', { name: 'Monitoring' })).toContainElement(screen.getByRole('link', { name: 'AI Operations' }));
-    expect(within(screen.getByRole('navigation', { name: 'Admin primary navigation' })).getAllByRole('link')).toHaveLength(10);
+    expect(screen.getByRole('link', { name: 'Feature credits' })).toHaveAttribute('href', '/admin/usage');
+    expect(within(screen.getByRole('navigation', { name: 'Admin primary navigation' })).getAllByRole('link')).toHaveLength(11);
   });
   it('keeps the tablet header above the content until the desktop rail appears', () => {
     render(<AdminShell><p>Content</p></AdminShell>);
