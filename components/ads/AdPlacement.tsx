@@ -72,14 +72,14 @@ function recordImpression(history: AdImpressionHistory, campaign: AdCampaign, no
 
 export function AdPlacement({ placement, config, seed, now, className }: AdPlacementProps) {
   const [campaign, setCampaign] = useState<AdCampaign | null>(null);
-  const recordedCampaign = useRef<string | null>(null);
+  const placementElement = useRef<HTMLElement | null>(null);
+  const recordedCreatives = useRef(new Set<string>());
 
   useEffect(() => {
     let cancelled = false;
 
     async function chooseCampaign() {
       setCampaign(null);
-      recordedCampaign.current = null;
 
       let rawConfig = config;
       let legacyConfig: AdsConfig | null = null;
@@ -110,10 +110,6 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
 
       if (!selected || cancelled) return;
 
-      if (recordedCampaign.current !== selected.id) {
-        recordImpression(history, selected, currentTime);
-        recordedCampaign.current = selected.id;
-      }
       setCampaign(selected);
     }
 
@@ -122,6 +118,35 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
     });
     return () => { cancelled = true; };
   }, [config, now, placement, seed]);
+
+  useEffect(() => {
+    const element = placementElement.current;
+    // Explicit fail-closed fallback: keep optional content, but do not consume a
+    // frequency allowance when the browser cannot establish its visibility.
+    if (!campaign || !element || typeof IntersectionObserver !== 'function') return;
+    const creativeKey = JSON.stringify([placement, campaign.id, campaign.creative, campaign.linkUrl]);
+    if (recordedCreatives.current.has(creativeKey)) return;
+    let active = true;
+    const observer = new IntersectionObserver((entries) => {
+      if (!active || !entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) return;
+      if (recordedCreatives.current.has(creativeKey)) return;
+      const currentTime = now ?? Date.now();
+      const history = readHistory();
+      const recent = pruneImpressionHistory(history[campaign.id] ?? [], currentTime, campaign.frequencyCap.windowHours);
+      // Another placement may have consumed the allowance since selection.
+      if (recent.length < campaign.frequencyCap.maxImpressions) {
+        recordImpression(history, campaign, currentTime);
+      }
+      recordedCreatives.current.add(creativeKey);
+      active = false;
+      observer.disconnect();
+    }, { threshold: 0.5 });
+    observer.observe(element);
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
+  }, [campaign, now, placement]);
 
   if (!campaign) return null;
 
@@ -162,6 +187,7 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
 
   return (
     <aside
+      ref={placementElement}
       aria-label="Featured from AcadeGrade"
       className={cn(
         'overflow-hidden rounded-2xl border border-[var(--acade-primary)]/20 bg-[var(--acade-deep)] shadow-[var(--shadow-card)]',

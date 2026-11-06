@@ -1,9 +1,13 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdPlacement } from '@/components/ads/AdPlacement';
 import type { AdsConfig } from '@/lib/ads/types';
 
 const mocks = vi.hoisted(() => ({ getDocument: vi.fn() }));
+const historyKey = 'acadegrade:ads:impressions:v1';
+const now = 1_788_768_000_000;
+let observers: { notify: (ratio: number) => void; disconnect: ReturnType<typeof vi.fn> }[];
 
 vi.mock('@/lib/firebase/firestore', () => ({
   getDocument: mocks.getDocument,
@@ -44,6 +48,79 @@ describe('AdPlacement', () => {
   beforeEach(() => {
     localStorage.clear();
     mocks.getDocument.mockReset();
+    observers = [];
+    vi.stubGlobal('IntersectionObserver', class {
+      disconnect = vi.fn();
+      constructor(callback: IntersectionObserverCallback) {
+        observers.push({
+          notify: (ratio) => act(() => callback([
+            { isIntersecting: ratio > 0, intersectionRatio: ratio } as IntersectionObserverEntry,
+          ], this as unknown as IntersectionObserver)),
+          disconnect: this.disconnect,
+        });
+      }
+      observe() {}
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('does not consume a cap for a selected below-fold or less-than-half-visible creative', () => {
+    render(<AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} />);
+    expect(screen.getByText('House promotion')).toBeInTheDocument();
+    expect(localStorage.getItem(historyKey)).toBeNull();
+    observers.at(-1)!.notify(0);
+    observers.at(-1)!.notify(0.49);
+    expect(localStorage.getItem(historyKey)).toBeNull();
+  });
+
+  it('records once at half visibility, including repeated callbacks and equivalent config refreshes', () => {
+    const view = render(<StrictMode><AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} /></StrictMode>);
+    expect(localStorage.getItem(historyKey)).toBeNull();
+    observers.at(-1)!.notify(0.5);
+    observers.at(-1)!.notify(1);
+    view.rerender(<StrictMode><AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} /></StrictMode>);
+    observers.at(-1)!.notify(1);
+    expect(JSON.parse(localStorage.getItem(historyKey)!)).toEqual({ 'insights-launch': [now] });
+  });
+
+  it('ignores queued visibility after disabling or replacing a creative', () => {
+    const view = render(<AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} />);
+    expect(observers).toHaveLength(1);
+    const stale = observers.at(-1)!;
+    const replacement = config();
+    replacement.campaigns[0].id = 'replacement';
+    view.rerender(<AdPlacement placement="dashboard.overview" config={replacement} seed="student-1" now={now} />);
+    expect(stale.disconnect).toHaveBeenCalled();
+    stale.notify(1);
+    expect(localStorage.getItem(historyKey)).toBeNull();
+    const current = observers.at(-1)!;
+    current.notify(1);
+    expect(JSON.parse(localStorage.getItem(historyKey)!)).toEqual({ replacement: [now] });
+    view.rerender(<AdPlacement placement="dashboard.overview" config={config(false)} seed="student-1" now={now} />);
+    current.notify(1);
+    expect(screen.queryByText('House promotion')).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem(historyKey)!)).toEqual({ replacement: [now] });
+  });
+
+  it('fails closed for impression counting when visibility observation is unavailable', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+    render(<AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} />);
+    expect(screen.getByText('House promotion')).toBeInTheDocument();
+    expect(localStorage.getItem(historyKey)).toBeNull();
+  });
+
+  it('reads current storage when visible instead of overwriting newer impressions', () => {
+    render(<AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} />);
+    expect(observers).toHaveLength(1);
+    localStorage.setItem(historyKey, JSON.stringify({ 'insights-launch': [now - 1], other: [now - 2] }));
+    observers.at(-1)!.notify(1);
+    expect(JSON.parse(localStorage.getItem(historyKey)!)).toEqual({ 'insights-launch': [now - 1, now], other: [now - 2] });
+  });
+
+  it('preserves stored caps during selection', () => {
+    localStorage.setItem(historyKey, JSON.stringify({ 'insights-launch': [now - 3, now - 2, now - 1] }));
+    const { container } = render(<AdPlacement placement="dashboard.overview" config={config()} seed="student-1" now={now} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('silently renders nothing when delivery is disabled', () => {

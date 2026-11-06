@@ -9,7 +9,9 @@ declare global { interface Window { adsbygoogle?: Record<string, unknown>[] } }
 const requestedUnits = new WeakSet<HTMLElement>();
 
 export function ProviderPlacement({ config: supplied }: { config?: ProviderConfig }) {
-  const [config, setConfig] = useState<ProviderConfig | null>(supplied ?? null);
+  const [fetched, setFetched] = useState<{ config: ProviderConfig; signal: AbortSignal } | null>(null);
+  // Supplied settings are authoritative on every render, not just on mount.
+  const config = supplied ?? (fetched && !fetched.signal.aborted ? fetched.config : null);
   const adsenseUnit = useRef<HTMLModElement | null>(null);
   useEffect(() => {
     if (supplied) return;
@@ -17,7 +19,11 @@ export function ProviderPlacement({ config: supplied }: { config?: ProviderConfi
     fetch('/api/ads/providers', { signal: controller.signal }).then((response) => {
       if (!response.ok) throw new Error('Unavailable');
       return response.json();
-    }).then((body) => setConfig(safeParseProviderConfig(body.config))).catch(() => setConfig(null));
+    }).then((body) => {
+      if (!controller.signal.aborted) setFetched({ config: safeParseProviderConfig(body.config), signal: controller.signal });
+    }).catch(() => {
+      if (!controller.signal.aborted) setFetched(null);
+    });
     return () => controller.abort();
   }, [supplied]);
   useEffect(() => {

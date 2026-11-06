@@ -1,12 +1,59 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { StrictMode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProviderPlacement } from '@/components/ads/ProviderPlacement';
 import { createDefaultProviderConfig } from '@/lib/ads/providers';
 
 vi.mock('next/script', () => ({ default: ({ src }: { src: string }) => <div data-testid="adsense-sdk" data-src={src} /> }));
 
 describe('ProviderPlacement', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('No live requests in tests')));
+    window.adsbygoogle = [];
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete window.adsbygoogle;
+  });
+
+  it('uses current supplied settings when enabling, changing units and links, then disabling', () => {
+    const view = render(<ProviderPlacement config={createDefaultProviderConfig()} />);
+    const enabled = createDefaultProviderConfig();
+    enabled.adsense = { enabled: true, publisherId: 'ca-pub-1234567890123456', slotId: '1234567890' };
+    enabled.adsterra = { enabled: true, smartLinkUrl: 'https://example.com/first' };
+    view.rerender(<ProviderPlacement config={enabled} />);
+    const firstUnit = document.querySelector('ins.adsbygoogle');
+    expect(firstUnit).toHaveAttribute('data-ad-slot', '1234567890');
+    const changed = { ...enabled, adsense: { ...enabled.adsense, slotId: '9876543210' }, adsterra: { enabled: true, smartLinkUrl: 'https://example.com/second' } };
+    view.rerender(<ProviderPlacement config={changed} />);
+    expect(document.querySelector('ins.adsbygoogle')).not.toBe(firstUnit);
+    expect(document.querySelector('ins.adsbygoogle')).toHaveAttribute('data-ad-slot', '9876543210');
+    expect(window.adsbygoogle).toHaveLength(2);
+    expect(screen.getByRole('link', { name: 'View sponsored offer' })).toHaveAttribute('href', 'https://example.com/second');
+    view.rerender(<ProviderPlacement config={createDefaultProviderConfig()} />);
+    expect(view.container).toBeEmptyDOMElement();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('clears supplied settings while loading and ignores a superseded fetched response', async () => {
+    let finish!: (value: Response) => void;
+    vi.mocked(fetch).mockReturnValueOnce(new Promise<Response>((resolve) => { finish = resolve; }));
+    const enabled = createDefaultProviderConfig();
+    enabled.adsterra = { enabled: true, smartLinkUrl: 'https://example.com/old' };
+    const view = render(<ProviderPlacement config={enabled} />);
+    view.rerender(<ProviderPlacement />);
+    expect(view.container).toBeEmptyDOMElement();
+    const signal = vi.mocked(fetch).mock.calls[0][1]?.signal;
+    view.rerender(<ProviderPlacement config={createDefaultProviderConfig()} />);
+    expect(signal?.aborted).toBe(true);
+    await act(async () => { finish(Response.json({ config: enabled })); });
+    expect(view.container).toBeEmptyDOMElement();
+    // A stale fetch must not reappear when supplied props are removed again.
+    view.rerender(<ProviderPlacement />);
+    expect(view.container).toBeEmptyDOMElement();
+    await act(async () => {});
+    expect(view.container).toBeEmptyDOMElement();
+  });
   it('renders nothing and loads no SDK when providers are off', () => {
     const { container } = render(<ProviderPlacement config={createDefaultProviderConfig()} />);
     expect(container).toBeEmptyDOMElement();

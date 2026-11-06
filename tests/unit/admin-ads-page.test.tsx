@@ -31,6 +31,38 @@ function mockApi(houseError = false) {
 }
 
 describe('Advertising page arrangement', () => {
+  it('navigates directly from house campaigns to the separate provider and Android editors', async () => {
+    mockApi();
+    const user = userEvent.setup();
+    render(<AdminAdsPage />);
+    await user.click(await screen.findByRole('button', { name: 'Manage web ad networks' }));
+    expect(screen.getByRole('tab', { name: 'Ad networks' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Ad networks' })).toHaveFocus();
+    await user.click(screen.getByRole('tab', { name: 'My promotions' }));
+    await user.click(screen.getByRole('button', { name: 'Manage Android rewarded ads' }));
+    expect(screen.getByRole('tab', { name: 'Android' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Android' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Save Android ad settings' })).toBeVisible();
+  });
+  it('keeps provider and mobile drafts across tabs while saving only the chosen editor', async () => {
+    const fetchMock = mockApi();
+    const user = userEvent.setup();
+    render(<AdminAdsPage />);
+    await user.click(await screen.findByRole('button', { name: 'Manage web ad networks' }));
+    await user.type(screen.getByRole('textbox', { name: 'Publisher ID' }), 'ca-pub-1111111111111111');
+    await user.click(screen.getByRole('tab', { name: 'Android' }));
+    await user.type(screen.getByRole('textbox', { name: 'Results banner ad unit ID' }), 'ca-app-pub-1111111111111111/2222222222');
+    await user.click(screen.getByRole('tab', { name: 'iOS' }));
+    await user.type(screen.getByRole('textbox', { name: 'Results banner ad unit ID' }), 'ca-app-pub-2222222222222222/3333333333');
+    await user.click(screen.getByRole('tab', { name: 'Web' }));
+    expect(screen.getByRole('textbox', { name: 'Publisher ID' })).toHaveValue('ca-pub-1111111111111111');
+    await user.click(screen.getByRole('button', { name: 'Save provider settings' }));
+    await user.click(screen.getByRole('tab', { name: 'Android' }));
+    expect(screen.getByRole('textbox', { name: 'Results banner ad unit ID' })).toHaveValue('ca-app-pub-1111111111111111/2222222222');
+    await user.click(screen.getByRole('tab', { name: 'iOS' }));
+    expect(screen.getByRole('textbox', { name: 'Results banner ad unit ID' })).toHaveValue('ca-app-pub-2222222222222222/3333333333');
+    expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'PUT').map(([url]) => url)).toEqual(['/api/admin/ads/providers']);
+  });
   it('announces loading within the selected platform', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise<Response>(() => {}));
     const user = userEvent.setup();

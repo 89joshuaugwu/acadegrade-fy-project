@@ -13,6 +13,7 @@ interface AdsEditorProps {
   initialConfig: AdsConfig;
   legacyBannerCount: number;
   onSave: (config: AdsConfig) => Promise<void>;
+  onNavigate?: (destination: 'networks' | 'android') => void;
 }
 
 function createCampaignDraft(config: AdsConfig): AdCampaign {
@@ -38,7 +39,7 @@ function createCampaignDraft(config: AdsConfig): AdCampaign {
   };
 }
 
-export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEditorProps) {
+export function AdsEditor({ initialConfig, legacyBannerCount, onSave, onNavigate }: AdsEditorProps) {
   const [config, setConfig] = useState(initialConfig);
   const [savedConfig, setSavedConfig] = useState(initialConfig);
   const [saving, setSaving] = useState(false);
@@ -89,7 +90,7 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
                 House campaign delivery
               </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-                Controls these web house campaigns only. Ad networks, legacy banners, Android, and iOS have separate settings. Changes take effect after saving.
+                Dashboard-only web promotions. Enable delivery, select a placement, and activate a campaign; save to apply.
               </p>
             </div>
             <Switch
@@ -111,8 +112,12 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
             Safe by default
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-            House campaigns display your own product or partner messages. Manage external providers under Web / Ad networks and rewarded refresh under Android.
+            Your own product or partner messages. Provider and mobile settings save independently.
           </p>
+          {onNavigate && <div className="mt-3 flex flex-col items-start gap-2">
+            <Button variant="ghost" onClick={() => onNavigate('networks')}>Manage web ad networks</Button>
+            <Button variant="ghost" onClick={() => onNavigate('android')}>Manage Android rewarded ads</Button>
+          </div>}
           {legacyBannerCount > 0 && (
             <p className="mt-4 rounded-xl bg-[var(--acade-overlay)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)]">
               {legacyBannerCount} legacy banner records are stored separately. Review their active switches in the legacy section below.
@@ -125,21 +130,19 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave }: AdsEdito
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-              House campaign delivery modes
+              House campaign format
             </h2>
-            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Future modes are visible for planning but cannot be enabled or saved as active.</p>
+            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">First-party messages only. Rewarded ads and external networks are configured separately.</p>
           </div>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="mt-5">
           <ModeControl label="House / internal" description="First-party product and partner messages." checked={config.deliveryModes.house} onChange={(house) => setConfig({ ...config, deliveryModes: { ...config.deliveryModes, house } })} />
-          <ModeControl label="Rewarded" description="Not available for house campaigns. Configure rewarded refresh in Android." checked={false} disabled ariaLabel="Enable rewarded delivery" />
-          <ModeControl label="Third-party" description="Not available for house campaigns. Configure providers in Web / Ad networks." checked={false} disabled ariaLabel="Enable third-party delivery" />
         </div>
       </Card>
 
       <Card padding="lg">
         <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">Placements</h2>
-        <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Enable only surfaces where an optional promotion will not interrupt the student.</p>
+        <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Only Dashboard overview is connected on web; these settings do not add ads to other pages.</p>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {config.placements.map((placement) => (
             <div key={placement.id} className="flex min-h-20 items-center justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4">
@@ -246,16 +249,12 @@ function ModeControl({
   label,
   description,
   checked,
-  onChange = () => undefined,
-  disabled = false,
-  ariaLabel,
+  onChange,
 }: {
   label: string;
   description: string;
   checked: boolean;
-  onChange?: (checked: boolean) => void;
-  disabled?: boolean;
-  ariaLabel?: string;
+  onChange: (checked: boolean) => void;
 }) {
   return (
     <div className="flex items-start justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4">
@@ -263,7 +262,7 @@ function ModeControl({
         <p className="font-medium text-[var(--acade-text)]">{label}</p>
         <p className="mt-1 text-xs leading-5 text-[var(--acade-text-muted)]">{description}</p>
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} aria-label={ariaLabel ?? `Enable ${label.toLowerCase()} delivery`} />
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={`Enable ${label.toLowerCase()} delivery`} />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
@@ -17,6 +17,21 @@ vi.mock('@/components/ui', () => ({ ThemeControl: () => <div aria-label="Theme c
 import { AdminShell } from '@/components/layout/AdminShell';
 
 describe('AdminShell', () => {
+  it('groups navigation without dropping any admin destination', () => {
+    render(<AdminShell><p>Content</p></AdminShell>);
+    const delivery = screen.getByRole('group', { name: 'Delivery & settings' });
+    expect(within(delivery).getByRole('link', { name: 'Advertising' })).toHaveAttribute('href', '/admin/ads');
+    expect(within(delivery).getByRole('link', { name: 'Android release' })).toHaveAttribute('href', '/admin/mobile-release');
+    expect(screen.getByRole('group', { name: 'Monitoring' })).toContainElement(screen.getByRole('link', { name: 'AI Operations' }));
+    expect(within(screen.getByRole('navigation', { name: 'Admin primary navigation' })).getAllByRole('link')).toHaveLength(10);
+  });
+  it('keeps the tablet header above the content until the desktop rail appears', () => {
+    render(<AdminShell><p>Content</p></AdminShell>);
+    const shell = screen.getByRole('main').parentElement;
+    expect(shell).toHaveClass('lg:flex-row');
+    expect(shell).not.toHaveClass('md:flex-row');
+    expect(screen.getByRole('main')).toHaveClass('min-w-0');
+  });
   it('announces the current section and marks the active desktop destination', () => {
     render(<AdminShell><p>AI page content</p></AdminShell>);
 

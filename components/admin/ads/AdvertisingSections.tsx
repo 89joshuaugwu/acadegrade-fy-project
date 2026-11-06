@@ -9,12 +9,14 @@ interface Section {
   content: ReactNode;
 }
 
-export function AdvertisingSections({ id, label, sections }: { id: string; label: string; sections: Section[] }) {
-  const [selected, setSelected] = useState(sections[0]?.id);
+export function AdvertisingSections({ id, label, sections, selectedId, onSelect }: { id: string; label: string; sections: Section[]; selectedId?: string; onSelect?: (id: string) => void }) {
+  const [localSelected, setLocalSelected] = useState(sections[0]?.id);
+  const selected = selectedId ?? localSelected;
+  const setSelected = (sectionId: string) => { setLocalSelected(sectionId); onSelect?.(sectionId); };
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <div role="tablist" aria-label={label} className="flex flex-wrap gap-2 border-b border-[var(--acade-border)] pb-3">
         {sections.map((section, index) => (
           <button

@@ -39,6 +39,14 @@ export default function AdminAdsPage() {
   const [mobileError, setMobileError] = useState<string | null>(null);
   const [iosConfig, setIosConfig] = useState<MobileAdsConfig | null>(null);
   const [iosError, setIosError] = useState<string | null>(null);
+  const [platform, setPlatform] = useState('web');
+  const [webSection, setWebSection] = useState('promotions');
+  const navigateFromHouse = (destination: 'networks' | 'android') => {
+    if (destination === 'android') setPlatform('android');
+    else { setPlatform('web'); setWebSection('networks'); }
+    const tabId = destination === 'android' ? 'ads-platform-android-tab' : 'web-ads-networks-tab';
+    document.getElementById(tabId)?.focus();
+  };
 
   const loadIos = useCallback(async () => {
     if (!user) return;
@@ -182,7 +190,6 @@ export default function AdminAdsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Operations / monetization"
         title="Advertising"
         description="Manage website promotions and ad networks, Android placements, and upcoming iOS ad settings. Each section saves independently."
         seam="none"
@@ -190,18 +197,18 @@ export default function AdminAdsPage() {
         className="-mx-4 -mt-4 sm:-mx-6 sm:-mt-6 md:-mx-8 md:-mt-8"
       />
 
-      <AdvertisingSections id="ads-platform" label="Advertising platform" sections={[
+      <AdvertisingSections id="ads-platform" label="Advertising platform" selectedId={platform} onSelect={setPlatform} sections={[
         {
           id: 'web', label: 'Web',
-          description: 'Website-only controls. Choose your own promotions or external ad networks; neither changes mobile ad delivery.',
-          content: <AdvertisingSections id="web-ads" label="Web advertising type" sections={[
+          description: 'Dashboard-only web placements. Mobile delivery is configured separately.',
+          content: <AdvertisingSections id="web-ads" label="Web advertising type" selectedId={webSection} onSelect={setWebSection} sections={[
             {
               id: 'promotions', label: 'My promotions',
-              description: 'Create your own product or partner messages. Save house campaigns separately from older banners.',
+              description: 'House campaigns and legacy banners save independently.',
               content: <>
                 {loading ? <AdsLoading label="Loading house campaigns" />
                   : error ? <Card padding="none"><ErrorState title="House campaigns are unavailable" description={error} onRetry={() => { void load(); }} /></Card>
-                  : payload ? <AdsEditor initialConfig={payload.config} legacyBannerCount={payload.legacyBannerCount} onSave={save} /> : null}
+                  : payload ? <AdsEditor initialConfig={payload.config} legacyBannerCount={payload.legacyBannerCount} onSave={save} onNavigate={navigateFromHouse} /> : null}
                 <details className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 sm:p-6">
                   <summary className="cursor-pointer text-lg font-semibold text-[var(--acade-text)]">Legacy house banners — existing promotions</summary>
                   <p className="my-4 text-sm leading-6 text-[var(--acade-text-muted)]">These are older image-and-link promotions, not another ad network. They remain separately stored and can be used as dashboard fallback. No banners are automatically migrated or deleted.</p>
@@ -213,7 +220,7 @@ export default function AdminAdsPage() {
             },
             {
               id: 'networks', label: 'Ad networks',
-              description: 'AdSense and Adsterra have their own enable switches and save button. House-campaign delivery does not control them.',
+              description: 'AdSense units and Adsterra SmartLink use separate enable switches and one provider save.',
               content: providerError ? <Card padding="none"><ErrorState title="Provider settings are unavailable" description={providerError} onRetry={() => { void loadProviders(); }} /></Card>
                 : providerConfig ? <ProviderEditor initialConfig={providerConfig} onSave={saveProviders} />
                 : <AdsLoading label="Loading provider settings" />,

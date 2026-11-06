@@ -6,6 +6,8 @@ import { parseMobileAdsConfig, type MobileAdsConfig } from '@/lib/ads/mobile';
 
 export function MobileAdsEditor({ initialConfig, onSave, platform = 'Android' }: { initialConfig: MobileAdsConfig; onSave: (config: MobileAdsConfig) => Promise<void>; platform?: 'Android' | 'iOS' }) {
   const [draft, setDraft] = useState(() => parseMobileAdsConfig(initialConfig));
+  const [savedConfig, setSavedConfig] = useState(draft);
+  const dirty = JSON.stringify(draft) !== JSON.stringify(savedConfig);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const configured = (!draft.placements.dashboard || Boolean(draft.dashboardBannerUnitId)) &&
@@ -14,13 +16,18 @@ export function MobileAdsEditor({ initialConfig, onSave, platform = 'Android' }:
   const status = !draft.enabled ? 'Off' : draft.testMode ? 'Test ads enabled' : configured ? 'Live IDs enabled; serving unverified' : 'Incomplete';
   const save = async () => {
     setError(''); setSaving(true);
-    try { const config = parseMobileAdsConfig(draft); await onSave(config); setDraft(config); }
+    try {
+      const config = parseMobileAdsConfig(draft);
+      await onSave(config);
+      setDraft(current => JSON.stringify(current) === JSON.stringify(draft) ? config : current);
+      setSavedConfig(config);
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message.replace(/Android/g, platform) : `Could not save ${platform} ads.`); }
     finally { setSaving(false); }
   };
   const headingId = `${platform.toLowerCase()}-ads-heading`;
   return <section aria-labelledby={headingId} className="space-y-4">
-    <div><h2 id={headingId} className="text-2xl font-semibold text-[var(--acade-text)]">{platform} AdMob</h2><p className="mt-1 text-sm text-[var(--acade-text-muted)]">{platform === 'iOS' ? 'Configuration only — integration pending.' : `Selected configuration: ${status}.`} Changes take effect only after saving. The native SDK and app ID require a new {platform} build; these controls select delivery after installation.</p>{platform === 'iOS' && <p className="mt-2 text-sm text-[var(--acade-text-muted)]">Save iOS ad units here for the upcoming iOS integration. Ad rendering is not connected in the iOS app yet.</p>}</div>
+    <div><h2 id={headingId} className="text-2xl font-semibold text-[var(--acade-text)]">{platform} AdMob</h2><p className="mt-1 text-sm text-[var(--acade-text-muted)]">{platform === 'iOS' ? 'Configuration only — integration pending. Ad rendering is not connected in the iOS app yet.' : `Selected configuration: ${status}. Save to apply delivery settings to an installed build; SDK or app ID changes require a new Android build.`}</p></div>
     <Card padding="lg"><div className="grid gap-5 sm:grid-cols-2">
       {([['enabled', `Enable ${platform} ads`], ['testMode', 'Use test ads']] as const).map(([field, label]) => <div key={field} className="flex items-center justify-between gap-3"><div><p className="font-medium text-[var(--acade-text)]">{label}</p>{field === 'testMode' && <p className="text-xs text-[var(--acade-text-muted)]">Keep on for development and device testing.</p>}</div><Switch aria-label={label} checked={draft[field]} onCheckedChange={value => setDraft({ ...draft, [field]: value })} /></div>)}
       {([['dashboard', 'Dashboard overview banner'], ['results', 'Results overview banner']] as const).map(([field, label]) => <div key={field} className="flex items-center justify-between gap-3"><p className="font-medium text-[var(--acade-text)]">{label}</p><Switch aria-label={label} checked={draft.placements[field]} onCheckedChange={value => setDraft({ ...draft, placements: { ...draft.placements, [field]: value } })} /></div>)}
@@ -28,8 +35,21 @@ export function MobileAdsEditor({ initialConfig, onSave, platform = 'Android' }:
     </div>
     <div className="mt-6 grid gap-4 sm:grid-cols-2">{([['dashboardBannerUnitId', 'Dashboard banner ad unit ID'], ['resultsBannerUnitId', 'Results banner ad unit ID'], ['rewardedUnitId', platform === 'Android' ? 'Rewarded ad unit ID' : 'Rewarded ad unit ID (reserved)']] as const).map(([field, label]) => <label key={field} className="block text-sm font-medium text-[var(--acade-text)]">{label}<input value={draft[field] ?? ''} onChange={event => setDraft({ ...draft, [field]: event.target.value })} placeholder="ca-app-pub-0000000000000000/0000000000" className="mt-1 w-full rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-3 text-[var(--acade-text)]" /></label>)}</div>
     <p className="mt-3 text-sm text-[var(--acade-text-muted)]">{platform === 'Android' ? 'Rewarded refresh requires the deployed verification callback configured in AdMob. Test ads also require server confirmation.' : 'iOS rewarded refresh remains reserved for its native integration.'} Live status does not guarantee an AdMob account review or ad fill.</p>
+    {platform === 'Android' && <details className="mt-4 border-t border-[var(--acade-border)] pt-4">
+      <summary className="cursor-pointer font-medium text-[var(--acade-text)]">Saved but no ad? Check delivery prerequisites</summary>
+      <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-[var(--acade-text-muted)]">
+        <li>Confirm the installed build includes AdMob, then enable ads and the intended Dashboard or Results placement.</li>
+        <li>Test mode uses SDK test units; a test ad does not verify live unit IDs, account approval, or fill. Turn test mode off only with valid live IDs.</li>
+        <li>Configure and publish the applicable UMP consent forms in AdMob Privacy &amp; messaging. The SDK must permit ad requests; these switches cannot override consent.</li>
+        <li>For live delivery, check AdMob app/account readiness, unit IDs, connectivity, and device logs. A saved configuration alone cannot verify serving.</li>
+      </ul>
+    </details>}
     {error && <p role="alert" className="mt-3 text-sm text-[var(--acade-danger)]">{error}</p>}
-    <div className="mt-5"><Button loading={saving} onClick={() => void save()}>Save {platform} ad settings</Button></div>
+    <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--acade-border)] pt-4">
+      <p role="status" className="mr-auto text-sm text-[var(--acade-text-muted)]">{dirty ? `Unsaved changes — ${platform} only` : platform === 'iOS' ? 'Saved configuration only — integration pending' : 'Saved configuration — serving not verified'}</p>
+      <Button variant="ghost" disabled={!dirty || saving} onClick={() => { setDraft(savedConfig); setError(''); }}>Discard changes</Button>
+      <Button loading={saving} loadingLabel={`Saving ${platform} settings…`} onClick={() => void save()}>Save {platform} ad settings</Button>
+    </div>
     </Card>
   </section>;
 }

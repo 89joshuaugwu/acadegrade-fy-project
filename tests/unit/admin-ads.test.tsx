@@ -46,7 +46,7 @@ describe('LegacyBannerEditor', () => {
 });
 
 describe('AdsEditor', () => {
-  it('exposes house-only and placement controls with other delivery modes disabled', () => {
+  it('exposes house-only controls without inert modes', () => {
     render(
       <AdsEditor
         initialConfig={createDefaultAdsConfig()}
@@ -57,8 +57,8 @@ describe('AdsEditor', () => {
 
     expect(screen.getByRole('switch', { name: 'Enable house campaign delivery' })).not.toBeChecked();
     expect(screen.getByRole('switch', { name: 'Enable dashboard overview placement' })).toBeChecked();
-    expect(screen.getByRole('switch', { name: 'Enable rewarded delivery' })).toBeDisabled();
-    expect(screen.getByRole('switch', { name: 'Enable third-party delivery' })).toBeDisabled();
+    expect(screen.queryByRole('switch', { name: 'Enable rewarded delivery' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Enable third-party delivery' })).not.toBeInTheDocument();
     expect(screen.getByText(/2 legacy banner records/i)).toBeInTheDocument();
   });
 

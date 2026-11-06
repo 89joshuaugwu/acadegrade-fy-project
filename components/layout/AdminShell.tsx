@@ -45,19 +45,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--acade-void)] flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[var(--acade-void)] flex flex-col lg:flex-row">
       <a href="#admin-main-content" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-[var(--acade-primary)] px-4 py-3 text-[var(--acade-on-primary)] focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
       <RouteAnnouncer title={routeMeta.title} />
-      {/* Mobile Header — Red-tinted admin strip */}
-      <header className="sticky top-0 flex h-[var(--shell-header-height)] items-center justify-between border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
-        <div className="flex items-center gap-2 font-[family-name:var(--font-bricolage)] text-lg font-bold text-[var(--acade-text)]">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-[var(--acade-primary-dim)]"><Shield size={20} className="text-[var(--acade-primary)]" /></span>
+      {/* Mobile and tablet header */}
+      <header className="sticky top-0 flex h-[var(--shell-header-height)] shrink-0 items-center justify-between gap-3 border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
+        <div className="flex min-w-0 items-center gap-2 font-[family-name:var(--font-bricolage)] text-lg font-bold text-[var(--acade-text)]">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--acade-primary-dim)]"><Shield size={20} className="text-[var(--acade-primary)]" /></span>
           <span className="truncate">{routeMeta.title}</span>
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
           type="button"
-          className="flex size-12 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
+          className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
           aria-label={`Open ${routeMeta.title} navigation`}
           aria-expanded={drawerOpen}
         >
@@ -65,7 +65,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      {/* Desktop Sidebar — Red-tinted admin */}
+      {/* Desktop sidebar */}
       <aside aria-label="Admin navigation" className="fixed inset-y-0 left-0 hidden w-[var(--admin-rail-width)] flex-col overflow-y-auto border-r border-[var(--acade-border)] bg-[var(--acade-deep)] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
         <div className="p-6">
           {/* Admin Identity Header */}
@@ -126,7 +126,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <main id="admin-main-content" className="relative min-h-screen flex-1 lg:ml-[var(--admin-rail-width)]">
+      <main id="admin-main-content" className="relative min-h-screen min-w-0 flex-1 lg:ml-[var(--admin-rail-width)]">
         <div className="mx-auto h-full w-full max-w-[1440px] p-4 sm:p-6 md:p-8">
           {children}
         </div>
