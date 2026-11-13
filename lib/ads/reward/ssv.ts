@@ -60,7 +60,10 @@ export function createSsvVerifier(fetcher: typeof fetch = (...args) => fetch(...
     // Google signs its original query bytes. Hosts/proxies may re-encode a space
     // ("Insights refresh") as %20 or +, so check both spellings of the same signed
     // content. Only a genuine Google signature over one of them is accepted.
-    const signedSpellings = Array.from(new Set([match[1], match[1].replace(/\+/g, '%20'), match[1].replace(/%20/g, '+')]));
+    const decoded = (() => { try { return decodeURIComponent(match[1].replace(/\+/g, '%20')); } catch { return match[1]; } })();
+    // Raw, either space encoding, and the decoded text (a real space), which some
+    // AdMob reference verifiers sign over. All are the same parameters and values.
+    const signedSpellings = Array.from(new Set([match[1], match[1].replace(/\+/g, '%20'), match[1].replace(/%20/g, '+'), decoded]));
     const signatureBytes = Buffer.from(signature, 'base64url');
     if (!key || !signedSpellings.some((content) => verify('sha256', Buffer.from(content, 'utf8'), key, signatureBytes))) {
       // Diagnostics for AdMob's "Verify URL" tool only: it carries no user_id/custom_data,
