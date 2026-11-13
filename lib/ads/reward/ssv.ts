@@ -62,7 +62,14 @@ export function createSsvVerifier(fetcher: typeof fetch = (...args) => fetch(...
     // content. Only a genuine Google signature over one of them is accepted.
     const signedSpellings = Array.from(new Set([match[1], match[1].replace(/\+/g, '%20'), match[1].replace(/%20/g, '+')]));
     const signatureBytes = Buffer.from(signature, 'base64url');
-    if (!key || !signedSpellings.some((content) => verify('sha256', Buffer.from(content, 'utf8'), key, signatureBytes))) throw new RewardError('Invalid SSV signature');
+    if (!key || !signedSpellings.some((content) => verify('sha256', Buffer.from(content, 'utf8'), key, signatureBytes))) {
+      // Diagnostics for AdMob's "Verify URL" tool only: it carries no user_id/custom_data,
+      // so the signed text holds no personal data. Real callbacks are never logged.
+      if (!params.has('user_id') && !params.has('custom_data')) {
+        console.warn('[ssv] verify-tool mismatch', { keyFound: Boolean(key), keyCount: keys.size, signed: match[1], rawUrl: url.slice(0, 600) });
+      }
+      throw new RewardError('Invalid SSV signature');
+    }
     const required = (name: string) => {
       const value = params.get(name);
       if (!value) throw new RewardError(`Missing SSV ${name}`);
