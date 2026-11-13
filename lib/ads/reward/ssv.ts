@@ -57,7 +57,12 @@ export function createSsvVerifier(fetcher: typeof fetch = (...args) => fetch(...
     // A newly rotated key triggers an early refresh, bounded to once per minute.
     if (!keys.has(match[3]) && Date.now() - fetchedAt >= 60000) await refresh();
     const key = keys.get(match[3]);
-    if (!key || !verify('sha256', Buffer.from(match[1], 'utf8'), key, Buffer.from(signature, 'base64url'))) throw new RewardError('Invalid SSV signature');
+    // Google signs its original query bytes. Hosts/proxies may re-encode a space
+    // ("Insights refresh") as %20 or +, so check both spellings of the same signed
+    // content. Only a genuine Google signature over one of them is accepted.
+    const signedSpellings = Array.from(new Set([match[1], match[1].replace(/\+/g, '%20'), match[1].replace(/%20/g, '+')]));
+    const signatureBytes = Buffer.from(signature, 'base64url');
+    if (!key || !signedSpellings.some((content) => verify('sha256', Buffer.from(content, 'utf8'), key, signatureBytes))) throw new RewardError('Invalid SSV signature');
     const required = (name: string) => {
       const value = params.get(name);
       if (!value) throw new RewardError(`Missing SSV ${name}`);

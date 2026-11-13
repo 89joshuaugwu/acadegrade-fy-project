@@ -23,7 +23,10 @@ describe('Google rewarded ECDSA SSV', () => {
   it('rejects tampering, re-encoding, and unknown keys', async () => {
     const { verify } = verifier();
     await expect(verify(signed().replace('reward_amount=10', 'reward_amount=1'))).rejects.toThrow();
-    await expect(verify(signed().replace('user%20one', 'user+one'))).rejects.toThrow();
+    // A space re-encoded by a proxy (%20 <-> +) is the same signed content and is accepted...
+    await expect(verify(signed().replace('user%20one', 'user+one'))).resolves.toMatchObject({ userId: 'user one' });
+    // ...but changing the value itself (a literal plus) is still tampering.
+    await expect(verify(signed().replace('user%20one', 'user%2Bone'))).rejects.toThrow();
     await expect(verify(signed(raw, '999'))).rejects.toThrow();
   });
   it('rejects duplicate signed fields and unsigned appended fields', async () => {
