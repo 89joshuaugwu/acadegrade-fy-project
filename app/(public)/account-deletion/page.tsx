@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Globe, Smartphone, Trash2 } from 'lucide-react';
 import { LegalContact, legalLinkClass } from '@/components/marketing/LegalContact';
-import { Placeholder } from '@/components/marketing/LegalPage';
 import { EditorialHero, PublicPage } from '@/components/marketing/PublicPage';
 import { createPageMetadata } from '@/lib/seo/site';
 import { contactHref, getContactEmail } from '@/lib/site/contact';
@@ -88,9 +87,9 @@ export default async function AccountDeletionPage() {
             <h2 id="kept-title" className={sectionHeading}>What may be kept for a while, and why</h2>
             <ul className="mt-6 list-disc space-y-3 pl-6 text-[1.0625rem] leading-7">
               <li>A record that a deletion happened, without your user ID, so we can show the request was completed.</li>
-              <li>Copies in backups, for <Placeholder>RETENTION PERIOD</Placeholder>, until they are overwritten.</li>
+              <li>Copies in backups, for up to 30 days, until they are overwritten.</li>
               <li>Request logs held by our hosting provider and by AI providers you used (some keep abuse-monitoring logs for up to 55 days), under their own retention rules.</li>
-              <li>Your profile photo on our image service, where automatic removal is not available, for <Placeholder>RETENTION PERIOD</Placeholder>.</li>
+              <li>Your profile photo on our image service, where automatic removal is not available, for up to 30 days.</li>
               <li>Emails and push notifications that were already delivered to you.</li>
               <li>Information we must keep by law or to deal with fraud or a dispute, only for as long as needed.</li>
             </ul>
@@ -106,7 +105,7 @@ export default async function AccountDeletionPage() {
             First try <Link className={legalLinkClass} href="/forgot-password">resetting your password</Link>. If you still can&apos;t get in, ask us to delete your account: contact <LegalContact email={email} subject={DELETION_SUBJECT} /> with the subject “Account deletion request” and the email address on your account.
           </p>
           <p className="mt-4 text-[1.0625rem] leading-8 text-[var(--acade-text-muted)]">
-            We will confirm the request comes from the account holder before deleting anything, and complete it within <Placeholder>RESPONSE TIME — e.g., 21 days</Placeholder>. Never send us your password or a verification code.
+            We will confirm the request comes from the account holder before deleting anything, and complete it within 21 days. Never send us your password or a verification code.
           </p>
           <p className="mt-4 text-[1.0625rem] leading-8 text-[var(--acade-text-muted)]">
             More about your data and rights is in the <Link className={legalLinkClass} href="/privacy">Privacy notice</Link>.

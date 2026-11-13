@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalContact, legalLinkClass } from '@/components/marketing/LegalContact';
-import { LegalPage, Placeholder, type LegalSection } from '@/components/marketing/LegalPage';
+import { LegalPage, type LegalSection } from '@/components/marketing/LegalPage';
 import { createPageMetadata } from '@/lib/seo/site';
 import { getContactEmail } from '@/lib/site/contact';
 import { DEFAULT_LEGAL_VERSION } from '@/lib/user/requirements';
@@ -23,7 +23,7 @@ function termsSections(email: string | null): LegalSection[] {
       id: 'agreement',
       title: 'Agreement and eligibility',
       content: <>
-        <p>These terms are an agreement between you and <Placeholder>OPERATOR NAME</Placeholder>, which operates AcadeGrade, for the AcadeGrade website, Android app and related services. By creating an account or using AcadeGrade you agree to these terms and acknowledge our <Link className={legalLinkClass} href="/privacy">Privacy notice</Link>.</p>
+        <p>These terms are an agreement between you and Joshua Chimaobie Ugwu, who operates AcadeGrade from Enugu State, Nigeria, for the AcadeGrade website, Android app and related services. By creating an account or using AcadeGrade you agree to these terms and acknowledge our <Link className={legalLinkClass} href="/privacy">Privacy notice</Link>.</p>
         <p><strong>Age.</strong> When you sign up we ask whether you are 18 or older. You must answer truthfully. If you are under 18 you can use AcadeGrade to record and track your results, but AI features, result scanning and earning coins are not available to you, and you should make sure a parent or guardian knows you use AcadeGrade. If you turn 18 you can update your age in Settings. We may restrict or correct an account whose age answer we believe is wrong.</p>
         <p>If you use AcadeGrade for another person or organisation, you confirm that you are authorised to accept these terms for them.</p>
       </>,
@@ -111,7 +111,7 @@ function termsSections(email: string | null): LegalSection[] {
       id: 'law-contact',
       title: 'Governing law and contact',
       content: <>
-        <p>These terms are governed by the laws of <Placeholder>GOVERNING LAW — e.g., Federal Republic of Nigeria</Placeholder>, without affecting any consumer rights you have under the law where you live.</p>
+        <p>These terms are governed by the laws of the Federal Republic of Nigeria, without affecting any consumer rights you have under the law where you live.</p>
         <p>Questions about these terms: {contact}, or the <Link className={legalLinkClass} href="/support">support page</Link>.</p>
       </>,
     },

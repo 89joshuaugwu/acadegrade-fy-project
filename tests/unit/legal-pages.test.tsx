@@ -29,13 +29,15 @@ beforeEach(() => {
 });
 
 describe('Privacy notice', () => {
-  it('shows no draft banner, is versioned like config/legal, and keeps placeholders visible', async () => {
+  it('shows no draft banner, is versioned like config/legal, and names the operator with no placeholders left', async () => {
     const { container } = await renderServer(PrivacyPage);
 
     expect(container).not.toHaveTextContent('Draft — pending legal review');
     expect(screen.getByText('2026-11-13')).toBeInTheDocument();
-    const placeholders = Array.from(container.querySelectorAll('[data-legal-placeholder]')).map((el) => el.textContent);
-    expect(placeholders).toEqual(expect.arrayContaining(['[OPERATOR NAME]', '[DPO CONTACT]', '[RETENTION PERIOD]']));
+    expect(container.querySelectorAll('[data-legal-placeholder]')).toHaveLength(0);
+    expect(container).toHaveTextContent('operated by Joshua Chimaobie Ugwu');
+    expect(container).toHaveTextContent('Google AdSense and Adsterra');
+    expect(container).toHaveTextContent('up to 30 days');
   });
 
   it('covers every required topic', async () => {
@@ -92,8 +94,9 @@ describe('Terms of use', () => {
     expect(text).toMatch(/There are no refunds for coins/);
     expect(text).toMatch(/ask you to agree to it again/);
     expect(text).toMatch(/under 18/);
-    expect(Array.from(container.querySelectorAll('[data-legal-placeholder]')).map((el) => el.textContent))
-      .toContain('[GOVERNING LAW — e.g., Federal Republic of Nigeria]');
+    expect(container.querySelectorAll('[data-legal-placeholder]')).toHaveLength(0);
+    expect(text).toMatch(/governed by the laws of the Federal Republic of Nigeria/);
+    expect(text).toMatch(/Joshua Chimaobie Ugwu/);
     expect(container).not.toHaveTextContent('support@acadegrade.com');
   });
 });

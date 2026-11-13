@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalContact, legalLinkClass } from '@/components/marketing/LegalContact';
-import { LegalPage, Placeholder, type LegalSection } from '@/components/marketing/LegalPage';
+import { LegalPage, type LegalSection } from '@/components/marketing/LegalPage';
 import { createPageMetadata } from '@/lib/seo/site';
 import { getContactEmail } from '@/lib/site/contact';
 import { DEFAULT_LEGAL_VERSION } from '@/lib/user/requirements';
@@ -25,8 +25,8 @@ function privacySections(email: string | null): LegalSection[] {
       id: 'who-we-are',
       title: 'Who runs AcadeGrade',
       content: <>
-        <p>AcadeGrade is operated by <Placeholder>OPERATOR NAME</Placeholder>, <Placeholder>OPERATOR ADDRESS</Placeholder> (<Placeholder>REGISTRATION NUMBER, IF ANY</Placeholder>). The operator is the data controller for the information described in this notice.</p>
-        <p>Contact us about privacy at {contact}. Our data protection officer can be reached at <Placeholder>DPO CONTACT</Placeholder>.</p>
+        <p>AcadeGrade is operated by Joshua Chimaobie Ugwu, an individual based in Enugu State, Nigeria. The operator is the data controller for the information described in this notice.</p>
+        <p>Contact us about privacy at {contact}. Our data protection contact is Joshua Chimaobie Ugwu, who can be reached at the same address.</p>
         <p>This notice covers the AcadeGrade website, the Android app and the services behind them. AcadeGrade is a personal academic planning tool. It is not affiliated with, issued by or verified by any university.</p>
       </>,
     },
@@ -97,7 +97,7 @@ function privacySections(email: string | null): LegalSection[] {
           <li>Vercel: website hosting and server functions.</li>
           <li>Cloudinary: profile photos.</li>
           <li>Groq and OpenRouter: AI processing, with your consent.</li>
-          <li>Partner ad networks shown on the website after you allow ads, currently <Placeholder>AD PARTNERS — e.g., Adsterra</Placeholder>.</li>
+          <li>Partner ad networks shown on the website after you allow ads, currently Google AdSense and Adsterra.</li>
         </ul>
         <p>If you create a share link, anyone with the link can see the record it contains until the link expires (30 days) or you delete your account. Shared records are labelled as self-reported and unofficial.</p>
         <p>We may disclose information when the law requires it, to protect users or the service, or as part of a reorganisation of the operator with equivalent protection.</p>
@@ -118,15 +118,15 @@ function privacySections(email: string | null): LegalSection[] {
         <table>
           <thead><tr><th scope="col">Information</th><th scope="col">How long</th></tr></thead>
           <tbody>
-            <tr><td>Account, profile and academic records, saved AI analysis, notifications</td><td>While your account is open. Deleted when you delete your account. Copies in backups: <Placeholder>RETENTION PERIOD</Placeholder>.</td></tr>
-            <tr><td>Share-link snapshots</td><td>The link stops working 30 days after it is created. The snapshot is deleted when you delete your account; automatic clean-up of expired snapshots: <Placeholder>RETENTION PERIOD</Placeholder>.</td></tr>
+            <tr><td>Account, profile and academic records, saved AI analysis, notifications</td><td>While your account is open. Deleted when you delete your account. Copies in backups: up to 30 days.</td></tr>
+            <tr><td>Share-link snapshots</td><td>The link stops working 30 days after it is created. An expired snapshot can no longer be viewed, and it is deleted when you revoke the link or delete your account.</td></tr>
             <tr><td>Verification codes</td><td>Expire after 5 minutes.</td></tr>
             <tr><td>Rewarded-ad sessions (Android)</td><td>Expire after 30 minutes and are marked for deletion a day later.</td></tr>
             <tr><td>Coin balance and coin history (stored under a one-way hash of your user ID)</td><td>While your account is open. Deleted when you delete your account.</td></tr>
-            <tr><td>Request, security and rate-limit records linked to your account</td><td><Placeholder>RETENTION PERIOD</Placeholder>, and deleted when you delete your account.</td></tr>
+            <tr><td>Request, security and rate-limit records linked to your account</td><td>Up to 90 days, and deleted when you delete your account.</td></tr>
             <tr><td>Scanned result-slip files</td><td>Not stored. They are processed during the scan only. AI providers may keep request logs as described above.</td></tr>
-            <tr><td>Profile photo</td><td>Until you replace it or delete your account. Cached copies on the image network: <Placeholder>RETENTION PERIOD</Placeholder>.</td></tr>
-            <tr><td>Emails we have sent, and logs held by our hosting and AI providers</td><td><Placeholder>RETENTION PERIOD</Placeholder>.</td></tr>
+            <tr><td>Profile photo</td><td>Until you replace it or delete your account. Cached copies on the image network: up to 30 days.</td></tr>
+            <tr><td>Emails we have sent, and logs held by our hosting and AI providers</td><td>Our own server logs: up to 90 days. Our hosting, email and AI providers keep their own logs under their own policies.</td></tr>
             <tr><td>Your cookie choice</td><td>Up to 180 days on your device.</td></tr>
           </tbody>
         </table>
@@ -139,7 +139,7 @@ function privacySections(email: string | null): LegalSection[] {
       content: <>
         <p><strong>On the website,</strong> we use necessary storage to keep you signed in, remember your theme and remember your cookie choice. These need no consent. Ads and analytics cookies are used only if you choose “Allow ads &amp; analytics” in the cookie choices panel; with “Necessary only”, AdSense and partner ads are not loaded. You can change your choice at any time from <a className={legalLinkClass} href="#cookie-choices">Cookie choices</a>, also linked in the footer of every page.</p>
         <p>When you allow ads, third-party vendors including Google use cookies to serve ads based on your prior visits to this and other websites. Google&apos;s use of advertising cookies lets it and its partners serve ads based on those visits. You can opt out of personalised advertising in <a className={legalLinkClass} href="https://adssettings.google.com" rel="noopener noreferrer" target="_blank">Google Ads Settings</a>.</p>
-        <p><strong>In the Android app,</strong> Google AdMob shows ads and may use your device&apos;s advertising ID. <Placeholder>ANDROID AD CONSENT — describe the consent message shown in the app</Placeholder>. Rewarded ads are optional: you choose to watch one to earn coins that unlock extra AI requests. Coins have no cash value.</p>
+        <p><strong>In the Android app,</strong> Google AdMob shows ads and may use your device&apos;s advertising ID. Where the law requires it, the app shows Google&apos;s consent message before any ad loads, and you can change your choice later from the app&apos;s privacy options. If consent cannot be confirmed, the app does not request ads. For users under 18, or whose age is not yet confirmed, ads are limited to content suitable for all ages and are not personalised. Rewarded ads are optional: you choose to watch one to earn coins that unlock extra AI requests. Coins have no cash value.</p>
       </>,
     },
     {
@@ -162,7 +162,7 @@ function privacySections(email: string | null): LegalSection[] {
           <li><strong>Objection and restriction:</strong> you can object to processing based on our legitimate interests, and to direct marketing at any time.</li>
           <li><strong>Automated estimates:</strong> you can ask a person to review how a calculation or forecast about you was produced.</li>
         </ul>
-        <p>For anything you cannot do in the app, contact {contact}. We may need to confirm your identity. We aim to respond within <Placeholder>RESPONSE TIME — e.g., 21 days</Placeholder>.</p>
+        <p>For anything you cannot do in the app, contact {contact}. We may need to confirm your identity. We aim to respond within 21 days.</p>
       </>,
     },
     {
