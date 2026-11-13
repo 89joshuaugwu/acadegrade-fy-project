@@ -7,6 +7,8 @@ import type { CumulativeResult } from '@/types/course';
 import type { DegreeClass } from '@/types/analytics';
 import type { SemesterSummary } from '@/types/semester';
 import { DEGREE_CLASSES } from '@/lib/utils/constants';
+import { computeCumulativeCGPA } from '@/lib/cgpa/calculator';
+import { resolveDegreeClass } from '@/lib/cgpa/degreeClass';
 
 interface CGPAState {
   cgpa: number;
@@ -38,17 +40,9 @@ export function useCGPA(): CGPAState {
       };
     }
 
-    let totalWeightedGPA = 0;
-    let totalWeightedPI = 0;
-    let totalCredits = 0;
     const history: SemesterSummary[] = [];
 
     for (const sem of semesters) {
-      if (sem.creditLoaded > 0) {
-        totalWeightedGPA += sem.gpa * sem.creditLoaded;
-        totalWeightedPI += sem.pi * sem.creditLoaded;
-        totalCredits += sem.creditLoaded;
-      }
       history.push({
         semesterId: sem.id,
         label: sem.label,
@@ -59,13 +53,9 @@ export function useCGPA(): CGPAState {
       });
     }
 
-    const cgpa = totalCredits > 0 ? totalWeightedGPA / totalCredits : 0;
-    const pi = totalCredits > 0 ? totalWeightedPI / totalCredits : 0;
-
-    const degreeClass =
-      DEGREE_CLASSES.find(
-        (dc) => cgpa >= dc.minCGPA && cgpa <= dc.maxCGPA
-      ) ?? DEGREE_CLASSES[DEGREE_CLASSES.length - 1];
+    // Shared academic rules: credit-weighted CGPA, rounded lower-bound class
+    const { cgpa, pi, totalCredits } = computeCumulativeCGPA(semesters);
+    const degreeClass = resolveDegreeClass(cgpa);
 
     return {
       cgpa,

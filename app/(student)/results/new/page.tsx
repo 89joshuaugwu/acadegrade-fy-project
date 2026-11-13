@@ -9,13 +9,14 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useSemesters } from '@/hooks/useSemesters';
-import { queryCollection, setDocument } from '@/lib/firebase/firestore';
-import { getAcademicPlan, slotKey } from '@/lib/academic/timeline';
-import type { SemesterWithId } from '@/types/semester';
+import { getAcademicPlan } from '@/lib/academic/timeline';
+import { createSemesterForSlot } from '../create-semester';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ResultsTour } from '@/components/onboarding/ResultsTour';
+import { HelpButton } from '@/components/help/HelpDrawer';
+import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 
 export default function NewSemesterPage() {
   const router = useRouter();
@@ -31,27 +32,12 @@ export default function NewSemesterPage() {
     setCreating(true);
     
     try {
-      const collectionPath = `users/${user.uid}/semesters`;
-      const latest = await queryCollection<SemesterWithId>(collectionPath);
-      const duplicate = latest.some(
-        (semester) => slotKey(Number(semester.level), Number(semester.semester)) === nextSlot.key
-      );
-      if (duplicate) {
+      const created = await createSemesterForSlot(user.uid, nextSlot);
+      if (created.status === 'duplicate') {
         toast('Semester already exists. Your timeline will refresh to the next available slot.');
         return;
       }
-
-      const id = `slot_${nextSlot.level}_${nextSlot.semester}`;
-      await setDocument(`${collectionPath}/${id}`, {
-        label: nextSlot.label,
-        session: nextSlot.session,
-        level: nextSlot.level,
-        semester: nextSlot.semester,
-        gpa: 0,
-        pi: 0,
-        creditLoaded: 0,
-        isComplete: false,
-      });
+      const id = created.id;
 
       toast.success('Semester created');
       router.replace(`/results/${id}`);
@@ -68,12 +54,13 @@ export default function NewSemesterPage() {
     <div className="max-w-2xl mx-auto pb-10">
       <ResultsTour />
       <div className="flex items-center gap-4 mb-8">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="px-2">
-          <ArrowLeft size={20} />
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="px-2" aria-label="Go back">
+          <ArrowLeft size={20} aria-hidden="true" />
         </Button>
-        <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+        <h1 className="min-w-0 flex-1 text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
           Add New Semester
         </h1>
+        <HelpButton entryId={STUDENT_HELP.newSemester} source={studentHelpSource} />
       </div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

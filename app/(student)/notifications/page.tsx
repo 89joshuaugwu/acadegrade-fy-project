@@ -12,6 +12,10 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { queryCollection, updateDocument, deleteDocument } from '@/lib/firebase/firestore';
 import { setRTDB } from '@/lib/firebase/rtdb';
 import { Button } from '@/components/ui/Button';
+import { LinkButton } from '@/components/ui/LinkButton';
+import { Modal } from '@/components/ui/Modal';
+import { HelpButton } from '@/components/help/HelpDrawer';
+import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 import { cn } from '@/lib/utils/cn';
 import type { NotificationWithId } from '@/types/analytics';
 
@@ -33,6 +37,8 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const closeConfirmClear = useCallback(() => setConfirmClear(false), []);
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -111,8 +117,10 @@ export default function NotificationsPage() {
       );
       await setRTDB(`notif_counts/${user.uid}/unread`, 0);
       setNotifications([]);
+      setConfirmClear(false);
     } catch (err) {
       console.error('Failed to clear notifications:', err);
+      setConfirmClear(false);
       toast.error('Could not clear notifications. Try again.');
     } finally {
       setPendingAction(null);
@@ -134,7 +142,7 @@ export default function NotificationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] flex items-center gap-2">
-            <Bell size={24} /> Notifications
+            <Bell size={24} aria-hidden="true" /> Notifications
           </h1>
           <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
             You have {unreadCount} unread message{unreadCount !== 1 && 's'}.
@@ -142,18 +150,29 @@ export default function NotificationsPage() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2">
+          <HelpButton entryId={STUDENT_HELP.notifications} source={studentHelpSource} />
           {unreadCount > 0 && (
             <Button variant="outline" size="sm" onClick={handleMarkAllRead} loading={pendingAction === 'mark-all'} disabled={pendingAction !== null}>
-              <CheckCheck size={16} className="mr-2" /> Mark all read
+              <CheckCheck size={16} className="mr-2" aria-hidden="true" /> Mark all read
             </Button>
           )}
           {notifications.length > 0 && (
-            <Button variant="danger" size="sm" onClick={handleClearAll} loading={pendingAction === 'clear-all'} disabled={pendingAction !== null} className="bg-[var(--acade-danger-dim)] text-[var(--acade-danger)] hover:bg-[var(--acade-danger)] hover:text-white border-transparent">
-              <Trash2 size={16} className="mr-2" /> Clear all
+            <Button variant="danger" size="sm" onClick={() => setConfirmClear(true)} disabled={pendingAction !== null} aria-haspopup="dialog" className="bg-[var(--acade-danger-dim)] text-[var(--acade-danger)] hover:bg-[var(--acade-danger)] hover:text-white border-transparent">
+              <Trash2 size={16} className="mr-2" aria-hidden="true" /> Clear all
             </Button>
           )}
         </div>
       </div>
+
+      <Modal
+        open={confirmClear}
+        onClose={closeConfirmClear}
+        title="Clear all notifications?"
+        description={`This deletes all ${notifications.length} ${notifications.length === 1 ? 'notification' : 'notifications'} in your inbox. It cannot be undone.`}
+        confirm={{ label: 'Clear all', onConfirm: () => void handleClearAll(), loading: pendingAction === 'clear-all' }}
+      >
+        <p className="text-sm leading-6 text-[var(--acade-text-muted)]">Your results, semesters and alert settings are not affected.</p>
+      </Modal>
 
       <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden shadow-sm">
         {loadError ? (
@@ -170,9 +189,9 @@ export default function NotificationsPage() {
         ) : notifications.length === 0 ? (
           <div className="p-12 text-center text-[var(--acade-text-muted)]">
             <div className="mx-auto w-16 h-16 bg-[var(--acade-deep)] rounded-full flex items-center justify-center mb-4">
-              <Bell size={24} className="text-[var(--acade-text-faint)]" />
+              <Bell size={24} className="text-[var(--acade-text-muted)]" aria-hidden="true" />
             </div>
-            <h3 className="font-bold text-[var(--acade-text)] text-[length:var(--text-lg)]">All caught up!</h3>
+            <h2 className="font-bold text-[var(--acade-text)] text-[length:var(--text-lg)]">All caught up!</h2>
             <p className="text-[length:var(--text-sm)] mt-1">Check back later for updates on your academic progress.</p>
           </div>
         ) : (
@@ -206,16 +225,14 @@ export default function NotificationsPage() {
                   </div>
 
                   {notif.actionUrl && (
-                    <Button
+                    <LinkButton
+                      href={notif.actionUrl}
                       variant="outline"
                       size="sm"
-                      className="mb-4 ml-16 sm:mb-6"
-                      onClick={() => {
-                        window.location.href = notif.actionUrl!;
-                      }}
+                      className="mb-4 ml-[4.75rem] sm:mb-6 sm:ml-[5.5rem]"
                     >
-                      View Details
-                    </Button>
+                      View details
+                    </LinkButton>
                   )}
                 </motion.article>
               ))}
@@ -243,7 +260,7 @@ function NotificationContent({
           <span
             aria-label={`Read: ${notification.title}`}
             data-state="read"
-            className="flex size-10 items-center justify-center rounded-full border border-[var(--acade-success)]/35 bg-[var(--acade-success)]/10 text-[var(--acade-success)]"
+            className="flex size-12 items-center justify-center rounded-full border border-[var(--acade-success)]/35 bg-[var(--acade-success)]/10 text-[var(--acade-success)]"
           >
             <CheckCircle2 size={20} aria-hidden="true" />
           </span>
@@ -254,7 +271,7 @@ function NotificationContent({
             data-state="unread"
             onClick={onMarkAsRead}
             disabled={disabled}
-            className="flex size-10 items-center justify-center rounded-full border border-[var(--acade-primary)]/40 bg-[var(--acade-surface)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
+            className="flex size-12 items-center justify-center rounded-full border border-[var(--acade-primary)]/40 bg-[var(--acade-surface)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] disabled:cursor-wait disabled:opacity-60 motion-reduce:transition-none"
           >
             {ICONS[notification.type as keyof typeof ICONS] || ICONS.info}
           </button>
@@ -270,7 +287,7 @@ function NotificationContent({
             {notification.title}
           </h2>
           {notification.createdAt?.toMillis && (
-            <span className="shrink-0 whitespace-nowrap text-[length:var(--text-xs)] text-[var(--acade-text-faint)]">
+            <span className="shrink-0 whitespace-nowrap text-xs text-[var(--acade-text-muted)]">
               {formatDistanceToNow(notification.createdAt.toMillis(), { addSuffix: true })}
             </span>
           )}

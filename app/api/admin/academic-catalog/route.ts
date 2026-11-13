@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { requireAdmin } from '@/lib/api/admin-auth';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { DEFAULT_CATALOG } from '@/lib/academic-catalog/defaults';
 import { createInitialCatalog, mutateCatalog, type CatalogMutation, type CatalogSnapshot } from '@/lib/academic-catalog/model';
 
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     const mutation = parseMutation(await request.json());
     const reference = adminDb.collection('config').doc('academicCatalog');
     const updated = await adminDb.runTransaction(async (transaction) => {
@@ -55,6 +56,11 @@ export async function PATCH(request: Request) {
       const next = mutateCatalog(catalogFromDocument(document), mutation);
       transaction.set(reference, next);
       return next;
+    });
+    await writeAdminAudit({
+      actorUid: actor?.uid, actorEmail: actor?.email ?? '', action: `academic-catalog.${mutation.action}`,
+      target: 'id' in mutation ? `config/academicCatalog#${mutation.id}` : 'config/academicCatalog',
+      after: { ...mutation, revision: updated.revision },
     });
     return NextResponse.json(updated, { headers });
   } catch (error) {

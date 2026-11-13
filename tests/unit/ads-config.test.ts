@@ -3,7 +3,9 @@ import {
   createDefaultAdsConfig,
   legacyBannersToAdsConfig,
   parseAdsConfig,
+  parseStoredAdsConfig,
   safeParseAdsConfig,
+  withKnownPlacements,
 } from '@/lib/ads/config';
 import { parseAdminSettingsMutation } from '@/lib/admin/settings-schema';
 
@@ -43,9 +45,10 @@ function validConfig() {
 }
 
 describe('ads configuration validation', () => {
-  it('allows only the mounted dashboard overview placement', () => {
+  it('allows only mounted placements, with the Results placement off by default', () => {
     expect(createDefaultAdsConfig().placements).toEqual([
       { id: 'dashboard.overview', name: 'Dashboard overview', enabled: true },
+      { id: 'results.overview', name: 'Results overview', enabled: false },
     ]);
 
     const unsupportedPlacement = validConfig();
@@ -56,6 +59,19 @@ describe('ads configuration validation', () => {
     };
     expect(() => parseAdsConfig(unsupportedPlacement))
       .toThrow('uses an unsupported placement id');
+  });
+
+  it('accepts older saved configurations without the Results placement and lists it as off for editing', () => {
+    const older = parseAdsConfig(validConfig());
+    expect(older.placements.map((placement) => placement.id)).toEqual(['dashboard.overview']);
+    const editable = withKnownPlacements(older);
+    expect(editable.placements).toEqual([
+      { id: 'dashboard.overview', name: 'Dashboard overview', enabled: true },
+      { id: 'results.overview', name: 'Results overview', enabled: false },
+    ]);
+    expect(editable.campaigns).toEqual(older.campaigns);
+    expect(withKnownPlacements(editable)).toEqual(editable);
+    expect(parseAdsConfig(editable)).toEqual(editable);
   });
 
   it('accepts and normalizes a safe house-ad configuration', () => {
@@ -115,6 +131,38 @@ describe('ads configuration validation', () => {
     const invalidCap = validConfig();
     invalidCap.campaigns[0].frequencyCap.maxImpressions = 0;
     expect(() => parseAdsConfig(invalidCap)).toThrow('maxImpressions must be between 1 and 100');
+  });
+
+  it('rejects campaign URLs with embedded credentials when saving', () => {
+    const link = validConfig();
+    link.campaigns[0].linkUrl = 'https://user:secret@example.com/offer';
+    expect(() => parseAdsConfig(link)).toThrow('Campaign 1 linkUrl must not include a username or password');
+    const image = validConfig();
+    image.campaigns[0].creative.imageUrl = 'https://user@cdn.example.com/a.png';
+    expect(() => parseAdsConfig(image)).toThrow('Campaign 1 imageUrl must not include a username or password');
+  });
+
+  it('drops only the stored campaigns that fail validation when reading for delivery', () => {
+    const stored = validConfig();
+    stored.campaigns.push(
+      { ...stored.campaigns[0], id: 'credentialed', name: 'Credentialed', linkUrl: 'https://user:secret@example.com/' },
+      { ...stored.campaigns[0] },
+    );
+    const { config, skipped } = parseStoredAdsConfig(stored);
+    expect(config.campaigns.map((campaign) => campaign.id)).toEqual(['study-planner']);
+    expect(skipped).toEqual([
+      expect.stringMatching(/Credentialed.*username or password/),
+      expect.stringMatching(/duplicate/i),
+    ]);
+    expect(safeParseAdsConfig(stored)?.campaigns.map((campaign) => campaign.id)).toEqual(['study-planner']);
+    expect(() => parseAdsConfig(stored)).toThrow();
+  });
+
+  it('skips a credentialed legacy banner without hiding the others', () => {
+    expect(legacyBannersToAdsConfig([
+      { id: 'safe', imageUrl: 'https://cdn.example.com/a.png', linkUrl: '', isActive: true },
+      { id: 'credentialed', imageUrl: 'https://cdn.example.com/b.png', linkUrl: 'https://user:pw@example.com/', isActive: true },
+    ])?.campaigns.map((campaign) => campaign.id)).toEqual(['safe']);
   });
 
   it('fails closed at the public runtime boundary', () => {

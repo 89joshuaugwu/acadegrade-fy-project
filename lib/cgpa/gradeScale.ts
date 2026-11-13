@@ -1,23 +1,17 @@
 import type { Grade, GradeScaleEntry } from '@/types/course';
 import { GRADE_SCALE } from '@/lib/utils/constants';
+import { gradeFromScore } from './academicRules';
 
 /**
  * Look up grade and grade point from a total score.
- * Uses the Nigerian 5-point grade scale.
+ * Uses the Nigerian 5-point grade scale with lower-bound bands (no gaps for
+ * fractional totals); see gradeFromScore in ./academicRules.
  */
 export function lookupGrade(
   totalScore: number,
   scale: GradeScaleEntry[] = GRADE_SCALE
 ): { grade: Grade; gradePoint: number } {
-  const entry = scale.find(
-    (s) => totalScore >= s.minScore && totalScore <= s.maxScore
-  );
-
-  if (!entry) {
-    return { grade: 'F', gradePoint: 0 };
-  }
-
-  return { grade: entry.grade, gradePoint: entry.gradePoint };
+  return gradeFromScore(totalScore, scale);
 }
 
 /**

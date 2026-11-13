@@ -74,15 +74,15 @@ describe('HeroTypedPhrases', () => {
     vi.restoreAllMocks();
   });
 
-  it('types each phrase in sequence while keeping a stable accessible first phrase', () => {
+  it('types each phrase in sequence while staying out of the accessibility tree', () => {
     vi.useFakeTimers();
     const { container } = render(
       <HeroTypedPhrases phrases={heroPhrases} typeIntervalMs={10} holdDelayMs={100} switchDelayMs={20} />
     );
 
-    const loop = screen.getByLabelText(heroPhrases[0]);
+    const loop = container.querySelector('[data-hero-type-loop]');
     const output = container.querySelector('[data-typing-output]');
-    expect(loop).toHaveAccessibleName(heroPhrases[0]);
+    expect(loop).toHaveAttribute('aria-hidden', 'true');
     expect(container.querySelector('.marketing-hero-type-sizer')).toHaveTextContent(heroPhrases[2]);
     expect(output).toHaveTextContent('');
 
@@ -117,7 +117,7 @@ describe('HeroTypedPhrases', () => {
 
   it('server-renders the complete first phrase and the longest sizing phrase', () => {
     const markup = renderToStaticMarkup(<HeroTypedPhrases phrases={heroPhrases} />);
-    expect(markup).toContain(`aria-label="${heroPhrases[0]}"`);
+    expect(markup).toContain('aria-hidden="true"');
     expect(markup).toContain(heroPhrases[0]);
     expect(markup).toContain(heroPhrases[2]);
     expect(markup).not.toContain('data-typing-active');

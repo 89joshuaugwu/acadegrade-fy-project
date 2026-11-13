@@ -4,18 +4,27 @@ import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { resolveFeatureWindows } from '@/lib/usage/server';
+import { coins, RewardError, type CoinHold } from '@/lib/ads/reward';
+import { checkPlatformAccess } from '@/lib/platform/settings-server';
+import { aiAgeGate } from '@/lib/user/age';
+import { chargedFailureResponse, chargedHeaders, freeCoinHeaders, readCoinSpend, refundQuietly, rewardErrorResponse, withCoinHint } from '@/lib/ads/reward/http';
 
 export async function POST(request: NextRequest) {
   const timer = apiTimer();
   let uid: string | null = null;
+  let hold: CoinHold | undefined;
+  let charged = false;
   try {
     const verifiedUser = await getVerifiedApiUser(request);
     if (!verifiedUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     uid = verifiedUser.uid;
+    const blocked = await checkPlatformAccess({ feature: 'ai_whatif', email: verifiedUser.email }) ?? await aiAgeGate(uid);
+    if (blocked) return blocked;
 
     const body = await request.json();
+    const coinRequestId = readCoinSpend(body);
     const currentCGPA = Number(body.currentCGPA);
     const totalCredits = Number(body.totalCredits);
     const targetCGPA = Number(body.targetCGPA);
@@ -39,6 +48,8 @@ export async function POST(request: NextRequest) {
     const requiredAvgScore = (requiredGPA / 5) * 100;
 
     let feasibilityNote = '';
+    let charge: { spent: number; balance: number } | undefined;
+    // Impossible/secured targets are answered locally: no provider call, never charged.
     if (requiredGPA > 5) {
       feasibilityNote = "Mathematically impossible. The required GPA exceeds the maximum 5.0 scale.";
     } else if (requiredGPA < 0) {
@@ -53,8 +64,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'AI guidance is temporarily unavailable.' }, { status: 503 });
       }
       if (!rateLimit.allowed) {
-        logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 429, durationMs: timer(), provider: 'groq', error: 'Per-user rate limit exceeded' });
-        return rateLimitResponse(rateLimit, `AI guidance limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);
+        if (!coinRequestId) {
+          logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 429, durationMs: timer(), provider: 'groq', error: 'Per-user rate limit exceeded' });
+          return withCoinHint(rateLimitResponse(rateLimit, `AI guidance limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`), uid, 'whatif');
+        }
+        // Free path refused (consuming nothing): reserve the coin price instead.
+        hold = await coins.reserve(uid, 'whatif', coinRequestId);
+        charged = true;
       }
 
       const prompt = `
@@ -62,7 +78,7 @@ export async function POST(request: NextRequest) {
         They want to reach a target CGPA of ${targetCGPA}.
         They have ${remainingSemesters} semesters left, taking ~${creditLoad} units per semester.
         Mathematically, they need to maintain a GPA of ${requiredGPA.toFixed(2)} for all remaining semesters (approx. ${requiredAvgScore.toFixed(1)}% average score).
-        
+
         Write EXACTLY ONE concise, encouraging, and highly specific sentence analyzing the feasibility of this goal.
         Do not repeat the math. Do not give generic advice. Keep it under 20 words.
       `;
@@ -73,7 +89,16 @@ export async function POST(request: NextRequest) {
       } catch (providerError: any) {
         console.error('WhatIf AI provider unavailable:', providerError);
         logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 503, durationMs: timer(), provider: 'managed', error: providerError?.message });
+        if (hold) {
+          await refundQuietly(hold);
+          hold = undefined;
+          return chargedFailureResponse('AI guidance');
+        }
         return NextResponse.json({ error: providerError?.message === 'AI routing is not configured' ? providerError.message : 'AI guidance provider is unavailable.' }, { status: 503 });
+      }
+      if (hold) {
+        charge = await coins.commit(hold);
+        hold = undefined;
       }
     }
 
@@ -83,10 +108,13 @@ export async function POST(request: NextRequest) {
       requiredAvgScore,
       feasibilityNote,
       aiEnhanced: true,
-    });
+    }, { headers: charge ? chargedHeaders(charge) : freeCoinHeaders(coinRequestId) });
   } catch (error: any) {
+    if (hold) await refundQuietly(hold);
+    if (error instanceof RewardError) return rewardErrorResponse(error);
     console.error('WhatIf Error:', error);
-    logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: 500, durationMs: timer(), provider: 'groq', error: error?.message });
+    logApiCall({ endpoint: '/api/ai/whatif', category: 'ai', uid, status: charged ? 503 : 500, durationMs: timer(), provider: 'groq', error: error?.message });
+    if (charged) return chargedFailureResponse('AI guidance');
     return NextResponse.json({ error: 'Failed to calculate what-if scenario' }, { status: 500 });
   }
 }

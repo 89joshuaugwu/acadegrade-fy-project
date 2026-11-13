@@ -3,17 +3,19 @@
 import { useEffect, useState } from 'react';
 import { Menu } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { IconButton, LinkButton, Logo, ThemeControl } from '@/components/ui';
 import { PublicMobileMenu } from './PublicMobileMenu';
+import '@/components/marketing/marketing.css';
 
 interface NavbarProps {
   className?: string;
 }
 
 const navLinks = [
-  { label: 'Features', href: '/#features' },
+  { label: 'Features', href: '/features' },
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'About', href: '/about' },
   { label: 'Calculator', href: '/calculator' },
@@ -21,6 +23,7 @@ const navLinks = [
 
 export function Navbar({ className }: NavbarProps) {
   const { user, loading } = useAuth();
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -53,15 +56,22 @@ export function Navbar({ className }: NavbarProps) {
           <Logo href="/" size="md" />
 
           <div className="hidden items-center justify-center gap-1 lg:flex">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="flex min-h-12 items-center rounded-xl px-4 text-sm font-medium text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const current = pathname === link.href || (link.href !== '/' && !link.href.includes('#') && pathname?.startsWith(`${link.href}/`));
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  aria-current={current ? 'page' : undefined}
+                  className={cn(
+                    'flex min-h-12 items-center rounded-xl px-4 text-sm font-medium transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]',
+                    current ? 'text-[var(--acade-text)]' : 'text-[var(--acade-text-muted)]'
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="hidden items-center justify-end gap-2 lg:flex">

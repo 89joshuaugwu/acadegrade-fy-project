@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo, useState, useRef, useEffect } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
 import type { SemesterSummary } from '@/types/semester';
 
 interface TrendChartProps {
@@ -44,7 +45,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
   // Constants for pure SVG rendering
   const width = 800;
   const height = 320;
-  const padding = { top: 40, right: 30, bottom: 40, left: 30 };
+  const padding = { top: 24, right: 24, bottom: 16, left: 24 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -128,7 +129,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             {showCGPA && (
               <div className="flex flex-col">
                 <span className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums transition-all">
-                  {activeData?.cgpa.toFixed(2)}
+                  {formatCgpa(activeData?.cgpa)}
                 </span>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]" />
@@ -139,7 +140,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             {showPI && (
               <div className="flex flex-col">
                 <span className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums transition-all">
-                  {activeData?.pi.toFixed(2)}
+                  {formatCgpa(activeData?.pi)}
                 </span>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-[var(--acade-gold)] shadow-[0_0_8px_var(--acade-gold)]" />
@@ -152,7 +153,19 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
       </div>
 
       {/* Pure SVG + Framer Motion Render Engine */}
-      <div className="w-full h-64 md:h-80 relative select-none touch-none">
+      <div className="w-full h-60 md:h-[280px] relative select-none pl-8">
+        {/* Axis text is HTML, not SVG text: the SVG stretches non-uniformly and would squash it on phones. */}
+        <div aria-hidden="true" data-axis="y" className="pointer-events-none absolute inset-y-0 left-0 w-8">
+          {[0, 1, 2, 3, 4, 5].map((val) => (
+            <span
+              key={`y-${val}`}
+              className="absolute right-1 -translate-y-1/2 text-xs tabular-nums text-[var(--acade-text-muted)]"
+              style={{ top: `${(getY(val) / height) * 100}%` }}
+            >
+              {val.toFixed(1)}
+            </span>
+          ))}
+        </div>
         <svg
           ref={svgRef}
           role="img"
@@ -192,10 +205,7 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
               const y = getY(val);
               return (
                 <g key={`grid-${val}`}>
-                  <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--acade-border-subtle)" strokeDasharray="4 4" />
-                  <text x={padding.left - 10} y={y} fill="var(--acade-text-faint)" fontSize="12" fontWeight="500" textAnchor="end" dominantBaseline="middle" fontFamily="var(--font-geist-mono)">
-                    {val.toFixed(1)}
-                  </text>
+                  <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--acade-border-subtle)" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
                 </g>
               );
             })}
@@ -376,6 +386,24 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
           />
         </svg>
       </div>
+      <div aria-hidden="true" data-axis="x" className="relative -mt-4 ml-8 h-5">
+        {data.map((d, i) => {
+          // At most about five labels; the table below lists every semester.
+          const step = Math.max(1, Math.ceil(data.length / 5));
+          if (i !== 0 && i !== data.length - 1 && i % step !== 0) return null;
+          if (i !== data.length - 1 && data.length - 1 - i < step && i !== 0) return null;
+          const edge = data.length === 1 ? '-translate-x-1/2' : i === 0 ? 'translate-x-0' : i === data.length - 1 ? '-translate-x-full' : '-translate-x-1/2';
+          return (
+            <span
+              key={`x-${i}`}
+              className={cn('absolute top-0 max-w-[7rem] truncate text-xs text-[var(--acade-text-muted)]', edge)}
+              style={{ left: `${(getX(i) / width) * 100}%` }}
+            >
+              {d.name}
+            </span>
+          );
+        })}
+      </div>
       <table className="sr-only" aria-label="Semester GPA and PI values">
         <thead>
           <tr>
@@ -390,8 +418,8 @@ export function TrendChart({ semesters, metric, showForecast = false, forecastPo
             <tr key={semester.semesterId}>
               <th scope="row">{semester.label}</th>
               <td>{semester.session}</td>
-              <td>{semester.gpa.toFixed(2)}</td>
-              <td>{semester.pi.toFixed(2)}</td>
+              <td>{formatCgpa(semester.gpa)}</td>
+              <td>{formatCgpa(semester.pi)}</td>
             </tr>
           ))}
         </tbody>

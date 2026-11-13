@@ -7,6 +7,7 @@ import { PublicFooter } from '@/components/layout/PublicShell';
 import { PageTransition } from '@/components/shared/PageTransition';
 import { Button, LinkButton } from '@/components/ui';
 import { DEFAULT_ABOUT_CONTENT, type AboutContent } from '@/lib/about/content';
+import { contactHref } from '@/lib/site/contact-email';
 import { LandingMotion } from '@/components/marketing/LandingMotion';
 import { DirectionalText, TypedText } from '@/components/marketing/PublicTextMotion';
 
@@ -63,27 +64,24 @@ export default function AboutPage() {
       <LandingMotion>
       <PageTransition>
         <main className="overflow-hidden">
-          <section className="relative border-b border-[var(--acade-border-subtle)]">
+          <section className="relative">
             <div className="mx-auto grid max-w-[1200px] gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8 lg:py-28">
               <div className="lg:col-span-7">
-                <p className="mb-5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">
-                  About AcadeGrade
-                </p>
                 <DirectionalText
                   as="h1"
                   text={data.headline}
                   accentWords={2}
-                  className="max-w-[13ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.5rem,5vw,4rem)] font-bold leading-[1.04] tracking-[-0.045em]"
+                  className="max-w-[16ch] text-balance font-[family-name:var(--font-bricolage)] text-[clamp(2.125rem,5vw,4rem)] font-bold leading-[1.03] tracking-[-0.04em]"
                 />
-                <p className="mt-6 max-w-2xl text-[clamp(1rem,1.7vw,1.2rem)] leading-8 text-[var(--acade-text-muted)]">
+                <p className="mt-6 max-w-[56ch] text-[1.0625rem] leading-8 text-[var(--acade-text-muted)] sm:text-lg">
                   {data.platformDescription}
                 </p>
 
                 <div className="mt-9 flex flex-col gap-3 lg:flex-row">
-                  <LinkButton href="/register" size="lg" className="marketing-edge-cta w-full whitespace-nowrap lg:w-auto">
-                    Build your academic record <ArrowRight size={18} aria-hidden="true" />
+                  <LinkButton href="/register" size="lg" className="marketing-edge-cta marketing-press group w-full whitespace-nowrap lg:w-auto">
+                    Build your academic record <ArrowRight size={18} className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
                   </LinkButton>
-                  <LinkButton href="/calculator" variant="outline" size="lg" className="w-full whitespace-nowrap lg:w-auto">
+                  <LinkButton href="/calculator" variant="outline" size="lg" className="marketing-press w-full whitespace-nowrap lg:w-auto">
                     Try the calculator
                   </LinkButton>
                 </div>
@@ -99,10 +97,6 @@ export default function AboutPage() {
               </div>
 
               <div data-landing-motion="card" className="relative lg:col-span-5">
-                <div aria-hidden="true" className="mb-5 hidden items-center gap-2 lg:flex">
-                  <span className="h-px w-14 bg-[var(--acade-primary)]" />
-                  <span className="h-px w-5 bg-[var(--acade-gold)]" />
-                </div>
                 <DegreeSignal />
               </div>
             </div>
@@ -111,63 +105,55 @@ export default function AboutPage() {
           <section aria-labelledby="principles-title" className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
             <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--acade-primary)]">How we build</p>
                 <TypedText
                   as="h2"
                   id="principles-title"
                   text="Clarity before complexity."
-                  className="mt-4 max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]"
+                  className="max-w-md font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.04em]"
                 />
-                <p className="mt-5 max-w-lg leading-7 text-[var(--acade-text-muted)]">
+                <p className="mt-5 max-w-lg text-[1.0625rem] leading-8 text-[var(--acade-text-muted)]">
                   Academic tools should reduce uncertainty. Every AcadeGrade feature is designed to make progress visible, calculations explainable, and the next decision easier.
                 </p>
               </div>
 
-              <div className="divide-y divide-[var(--acade-border-subtle)] border-y border-[var(--acade-border-subtle)]">
-                {principles.map(({ icon: Icon, title, description }, index) => (
-                  <article data-landing-motion="card" key={title} className="grid gap-4 py-7 sm:grid-cols-[3rem_1fr] sm:gap-5">
-                    <div className="flex size-11 items-center justify-center rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-primary)]">
-                      <Icon size={20} aria-hidden="true" />
-                    </div>
-                    <div>
-                      <div className="flex items-baseline justify-between gap-4">
-                        <h3 className="text-lg font-bold">{title}</h3>
-                        <span className="font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">0{index + 1}</span>
-                      </div>
-                      <p className="mt-2 max-w-xl leading-7 text-[var(--acade-text-muted)]">{description}</p>
-                    </div>
+              <div className="grid gap-2">
+                {principles.map(({ icon: Icon, title, description }) => (
+                  <article data-landing-motion="card" key={title} className="rounded-[var(--radius-surface)] bg-[var(--acade-surface)] p-6 sm:p-7">
+                    <h3 className="flex items-center gap-3 font-[family-name:var(--font-bricolage)] text-xl font-bold tracking-[-0.02em]">
+                      <Icon size={22} className="shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+                      {title}
+                    </h3>
+                    <p className="mt-2 max-w-[60ch] text-[1.0625rem] leading-7 text-[var(--acade-text-muted)]">{description}</p>
                   </article>
                 ))}
               </div>
             </div>
           </section>
 
-          <section className="border-y border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
+          <section aria-label="Mission and commitment" className="bg-[var(--acade-deep)]">
             <div className="mx-auto grid max-w-[1200px] gap-6 px-4 py-14 sm:px-6 lg:grid-cols-2 lg:px-8 lg:py-20">
-              <article data-landing-motion="card" className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
-                <Target className="text-[var(--acade-primary)]" size={25} aria-hidden="true" />
-                <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">Our mission</p>
-                <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-2xl font-bold leading-tight sm:text-3xl">{data.mission}</h2>
+              <article data-landing-motion="card" className="rounded-[var(--radius-dialog)] bg-[var(--acade-primary-dim)] p-6 sm:p-10">
+                <h2 className="flex items-center gap-3 text-lg font-semibold text-[var(--acade-text)]"><Target size={22} className="text-[var(--acade-primary)]" aria-hidden="true" />Our mission</h2>
+                <p className="mt-6 font-[family-name:var(--font-bricolage)] text-2xl font-semibold leading-snug tracking-[-0.02em] sm:text-[1.875rem] sm:leading-[1.25]">{data.mission}</p>
               </article>
-              <article data-landing-motion="card" className="rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 sm:p-8">
-                <ShieldCheck className="text-[var(--acade-success)]" size={25} aria-hidden="true" />
-                <p className="mt-8 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">Our commitment</p>
-                <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-2xl font-bold leading-tight sm:text-3xl">{data.trustStatement}</h2>
+              <article data-landing-motion="card" className="rounded-[var(--radius-dialog)] bg-[var(--acade-surface)] p-6 sm:p-10">
+                <h2 className="flex items-center gap-3 text-lg font-semibold text-[var(--acade-success)]"><ShieldCheck size={22} aria-hidden="true" />Our commitment</h2>
+                <p className="mt-6 font-[family-name:var(--font-bricolage)] text-2xl font-semibold leading-snug tracking-[-0.02em] sm:text-[1.875rem] sm:leading-[1.25]">{data.trustStatement}</p>
               </article>
             </div>
           </section>
 
           <section className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
-            <div className="flex flex-col justify-between gap-8 rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-primary)] p-7 text-[var(--acade-on-primary)] shadow-[var(--shadow-card)] sm:p-10 md:flex-row md:items-end">
+            <div className="flex flex-col justify-between gap-8 rounded-[var(--radius-dialog)] bg-[var(--acade-primary)] p-7 text-[var(--acade-on-primary)] sm:p-10 lg:flex-row lg:items-end lg:p-14">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.17em] opacity-75">Questions or partnerships</p>
-                <h2 className="mt-3 max-w-xl font-[family-name:var(--font-bricolage)] text-3xl font-bold leading-tight sm:text-4xl">
+                <h2 className="max-w-[22ch] text-balance font-[family-name:var(--font-bricolage)] text-[clamp(1.875rem,3.4vw,2.75rem)] font-bold leading-[1.08] tracking-[-0.035em]">
                   Let&apos;s make academic progress easier to understand.
                 </h2>
+                <p className="mt-3 text-[1.0625rem] opacity-90">Questions or partnership ideas are welcome.</p>
               </div>
               <a
-                href={`mailto:${data.contactEmail}`}
-                className="inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--acade-surface)] px-6 font-semibold text-[var(--acade-text)] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-on-primary)] motion-reduce:transform-none"
+                href={contactHref(data.contactEmail || null)}
+                className="marketing-press inline-flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-[var(--radius-control)] bg-[var(--acade-surface)] px-6 font-semibold text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-on-primary)] motion-reduce:transform-none"
               >
                 <Mail size={18} aria-hidden="true" /> Contact AcadeGrade
               </a>
@@ -183,26 +169,20 @@ export default function AboutPage() {
 
 function DegreeSignal() {
   return (
-    <figure className="relative overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-card)] sm:p-7">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.15em] text-[var(--acade-text-faint)]">Degree signal</p>
-          <p className="mt-1 text-lg font-bold">Progress, in context</p>
-        </div>
-        <span className="rounded-full bg-[var(--acade-primary-dim)] px-3 py-1.5 text-xs font-bold text-[var(--acade-primary)]">Private</span>
+    <figure data-ui="" className="relative overflow-hidden rounded-[var(--radius-dialog)] bg-[var(--acade-surface)] p-6 ring-1 ring-[var(--acade-border)] sm:p-8">
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <p className="text-lg font-semibold">Progress, in context</p>
+        <span className="rounded-full bg-[var(--acade-success-dim)] px-3 py-1.5 text-[0.8125rem] font-semibold text-[var(--acade-success)]">Private</span>
       </div>
       <svg viewBox="0 0 440 220" role="img" aria-labelledby="about-chart-title about-chart-desc" className="h-auto w-full">
         <title id="about-chart-title">Illustrative degree progress</title>
         <desc id="about-chart-desc">A steady academic progress line across four semesters.</desc>
-        {[48, 92, 136, 180].map((y) => (
-          <line key={y} x1="18" x2="422" y1={y} y2={y} stroke="var(--acade-border-subtle)" />
-        ))}
         <path d="M24 178 C95 170 100 145 160 148 S244 112 292 109 S365 70 416 58" fill="none" stroke="var(--acade-primary)" strokeWidth="4" strokeLinecap="round" />
-        {[{ x: 24, y: 178 }, { x: 160, y: 148 }, { x: 292, y: 109 }, { x: 416, y: 58 }].map((point) => (
-          <circle key={point.x} cx={point.x} cy={point.y} r="6" fill="var(--acade-surface)" stroke="var(--acade-primary)" strokeWidth="4" />
+        {[{ x: 24, y: 178 }, { x: 160, y: 148 }, { x: 292, y: 109 }, { x: 416, y: 58 }].map((point, index, points) => (
+          <circle key={point.x} cx={point.x} cy={point.y} r={index === points.length - 1 ? 8 : 6} fill="var(--acade-surface)" stroke={index === points.length - 1 ? 'var(--acade-gold)' : 'var(--acade-primary)'} strokeWidth="4" />
         ))}
       </svg>
-      <figcaption className="mt-5 border-t border-[var(--acade-border-subtle)] pt-5 text-sm leading-6 text-[var(--acade-text-muted)]">
+      <figcaption className="mt-6 text-[0.9375rem] leading-6 text-[var(--acade-text-muted)]">
         AcadeGrade turns semester records into a readable journey without replacing your institution&apos;s official transcript.
       </figcaption>
     </figure>

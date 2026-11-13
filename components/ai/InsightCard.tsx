@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { motion, animate, useMotionValue, useTransform } from 'motion/react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
@@ -12,11 +12,11 @@ interface InsightCardProps {
   animated?: boolean;
 }
 
-const colorMap = {
-  success: 'border-l-[var(--acade-success)]',
-  warning: 'border-l-[var(--acade-warning)]',
-  danger: 'border-l-[var(--acade-danger)]',
-  info: 'border-l-[var(--acade-primary)]',
+const dotMap = {
+  success: 'bg-[var(--acade-success)]',
+  warning: 'bg-[var(--acade-warning)]',
+  danger: 'bg-[var(--acade-danger)]',
+  info: 'bg-[var(--acade-primary)]',
 };
 
 function TypewriterText({ text, animated = true }: { text: string; animated?: boolean }) {
@@ -45,22 +45,21 @@ export function InsightCard({ title, content, type, animated = true }: InsightCa
   
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 10 }}
+      initial={animated ? { opacity: 0, y: 10 } : false}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        'bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-5 md:p-6 relative overflow-hidden',
-        'border-l-4',
-        colorMap[type]
-      )}
+      className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl p-5 md:p-6 relative overflow-hidden"
     >
-      <div className="absolute top-4 right-4 flex items-center gap-2 bg-[var(--acade-deep)] border border-[var(--acade-border-subtle)] px-2 py-1 rounded-full">
-        <Image src="/acadegradeailogo.png" alt="AcadeMind" width={14} height={14} className="rounded-full" />
-        <span className="text-[10px] font-bold text-[var(--acade-text-muted)] tracking-wider uppercase">AcadeMind Analysis</span>
+      {/* Title and AI badge share a wrapping row so a long title never sits under the badge on phones. */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <h3 className="flex min-w-0 items-center gap-2 text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] text-balance">
+          <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', dotMap[type])} />
+          {title}
+        </h3>
+        <span className="flex shrink-0 items-center gap-1.5 bg-[var(--acade-deep)] border border-[var(--acade-border-subtle)] px-2 py-1 rounded-full">
+          <Image src="/acadegradeailogo.png" alt="" width={14} height={14} className="rounded-full" />
+          <span className="text-xs font-semibold text-[var(--acade-text-muted)]">AI analysis</span>
+        </span>
       </div>
-
-      <h3 className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">
-        {title}
-      </h3>
 
       <div className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] leading-relaxed space-y-2">
         {isList ? (

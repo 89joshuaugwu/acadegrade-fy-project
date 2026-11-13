@@ -1,7 +1,6 @@
 import { BookOpenCheck, ChartNoAxesCombined, ShieldCheck } from 'lucide-react';
 import { Card, Logo, ThemeControl } from '@/components/ui';
 import { cn } from '@/lib/utils/cn';
-import { TypedText } from '@/components/marketing/PublicTextMotion';
 
 const defaultProofItems = [
   'Keep every semester in one clear record',
@@ -26,18 +25,12 @@ function DegreeMeridian() {
   return (
     <div
       aria-hidden="true"
-      className="relative overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-5 shadow-[var(--shadow-card)]"
+      className="relative overflow-hidden rounded-[var(--radius-surface)] bg-[var(--acade-deep)] p-5"
     >
-      <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(var(--acade-border-subtle)_1px,transparent_1px),linear-gradient(90deg,var(--acade-border-subtle)_1px,transparent_1px)] [background-size:28px_28px]" />
       <div className="relative">
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.15em] text-[var(--acade-text-muted)]">
-            Degree meridian
-          </span>
-          <span className="rounded-full bg-[var(--acade-primary-dim)] px-2.5 py-1 text-[length:var(--text-xs)] font-semibold text-[var(--acade-primary)]">
-            Clear outlook
-          </span>
-        </div>
+        <p className="text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">
+          From results to outlook
+        </p>
 
         <svg viewBox="0 0 420 152" className="mt-5 h-auto w-full" focusable="false">
           <path
@@ -64,7 +57,7 @@ function DegreeMeridian() {
                 cy={y}
                 r="7"
                 fill="var(--acade-deep)"
-                stroke="var(--acade-primary)"
+                stroke={index === 3 ? 'var(--acade-gold)' : 'var(--acade-primary)'}
                 strokeWidth="4"
               />
             );
@@ -105,26 +98,12 @@ export function AuthShell({
     >
       <aside
         aria-labelledby={`${titleId}-proof`}
-        className="relative hidden min-h-dvh overflow-hidden border-r border-[var(--acade-border-subtle)] bg-[var(--acade-primary-dim)] p-8 lg:flex lg:flex-col lg:justify-between xl:p-10"
+        className="relative hidden min-h-dvh overflow-hidden bg-[var(--acade-primary-dim)] p-8 lg:flex lg:flex-col lg:justify-between xl:p-10"
       >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-24 top-1/3 size-72 rounded-full border border-[var(--acade-primary)] opacity-10"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-12 top-1/3 size-72 rounded-full border border-[var(--acade-primary)] opacity-10"
-        />
-
         <div className="relative max-w-xl pt-10 xl:pt-14">
-          <TypedText
-            as="p"
-            text="Academic clarity, semester by semester"
-            className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-primary)]"
-          />
           <h2
             id={`${titleId}-proof`}
-            className="mt-4 max-w-lg font-[family-name:var(--font-bricolage)] text-[length:clamp(2rem,3.2vw,3rem)] font-bold leading-[1.04] tracking-[-0.035em]"
+            className="max-w-lg text-balance font-[family-name:var(--font-bricolage)] text-[length:clamp(2rem,3.2vw,3rem)] font-bold leading-[1.04] tracking-[-0.035em]"
           >
             {proofTitle}
           </h2>
@@ -142,12 +121,10 @@ export function AuthShell({
               return (
                 <li
                   key={item}
-                  className="auth-proof-item flex items-start gap-3 text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]"
+                  className="auth-proof-item flex items-start gap-3 text-[length:var(--text-base)] leading-6 text-[var(--acade-text)]"
                   style={{ '--auth-item-index': index } as React.CSSProperties}
                 >
-                  <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-primary)]">
-                    <Icon className="size-4" aria-hidden="true" />
-                  </span>
+                  <Icon className="mt-0.5 size-5 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
                   <span>{item}</span>
                 </li>
               );
@@ -162,7 +139,14 @@ export function AuthShell({
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8 xl:px-10">
-          <Logo href="/" size="sm" />
+          <div className="flex min-w-0 items-center gap-3">
+            <Logo href="/" size="sm" />
+            {eyebrow ? (
+              <p className="hidden truncate border-l border-[var(--acade-border)] pl-3 text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] sm:block">
+                {eyebrow}
+              </p>
+            ) : null}
+          </div>
           <ThemeControl compact />
         </header>
 
@@ -173,18 +157,11 @@ export function AuthShell({
           <div className={cn('w-full max-w-[33rem]', contentClassName)}>
             <Card
               padding="none"
-              className="overflow-hidden rounded-[var(--radius-dialog)] border-[var(--acade-border)] p-5 shadow-[var(--shadow-popover)] sm:p-7"
+              className="overflow-hidden rounded-[var(--radius-dialog)] border-[var(--acade-border)] p-5 shadow-[var(--shadow-popover)] sm:p-8"
             >
-              {eyebrow && (
-                <TypedText
-                  as="p"
-                  text={eyebrow}
-                  className="mb-3 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]"
-                />
-              )}
               <h1
                 id={titleId}
-                className="font-[family-name:var(--font-bricolage)] text-[length:clamp(1.65rem,3.5vw,2.1rem)] font-bold leading-tight tracking-[-0.03em]"
+                className="font-[family-name:var(--font-bricolage)] text-[length:clamp(1.75rem,3.5vw,2.25rem)] font-bold leading-tight tracking-[-0.035em]"
               >
                 {title}
               </h1>

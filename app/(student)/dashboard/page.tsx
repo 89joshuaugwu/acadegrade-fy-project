@@ -22,10 +22,14 @@ import { AdPlacement } from '@/components/ads/AdPlacement';
 import { ProviderPlacement } from '@/components/ads/ProviderPlacement';
 import { NextActionCard } from '@/components/dashboard/NextActionCard';
 import { RecentResults } from '@/components/dashboard/RecentResults';
+import { CalculatorHandoffBanner } from '@/components/dashboard/CalculatorHandoffBanner';
 import { StandingOverview } from '@/components/dashboard/StandingOverview';
 import { TrendChart } from '@/components/charts/TrendChart';
 import { Card } from '@/components/ui/Card';
 import { LandingMotion, ReplayTypingText } from '@/components/marketing/LandingMotion';
+import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
+import { HelpButton } from '@/components/help/HelpDrawer';
+import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -168,42 +172,21 @@ export default function DashboardPage() {
   return (
     <LandingMotion>
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
-      <header data-landing-motion="section" id="tour-welcome" className="max-w-2xl py-1">
-
-        {/* Status beacon row */}
-        <div className="flex items-center gap-2">
-          <span className="relative flex size-2" aria-hidden="true">
-            <span
-              className="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60"
-              style={{ animation: 'dashboard-ping 2.4s cubic-bezier(0,0,0.2,1) infinite' }}
-            />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-          </span>
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.17em] text-[var(--acade-primary)]">
-            Academic overview
-          </p>
-        </div>
-        {/* Greeting with waving hand */}
-        <h1 className="mt-2 flex items-center gap-3 font-[family-name:var(--font-bricolage)] text-[clamp(1.85rem,4vw,3rem)] font-semibold leading-tight tracking-[-0.035em] text-[var(--acade-text)]">
+      <header data-landing-motion="section" id="tour-welcome" className="flex flex-col gap-4 py-1 sm:flex-row sm:items-start sm:justify-between">
+        <div className="max-w-2xl">
+        <h1 className="font-[family-name:var(--font-bricolage)] text-[clamp(1.6rem,3.4vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em] text-[var(--acade-text)]">
           {greeting}, {firstName}.
-          <span
-            aria-hidden="true"
-            className="inline-block select-none"
-            style={{
-              transformOrigin: '70% 70%',
-              animation: 'hand-wave 1.8s ease-in-out 0.6s 1 both',
-            }}
-          >
-            👋
-          </span>
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base">
           {hasAcademicData
             ? 'See your current standing, the records that changed most recently, and the clearest next step.'
             : 'Start with one semester. AcadeGrade will build the picture as your record grows.'}
         </p>
-        {/* Shimmer line — bottom separator under the header */}
+        </div>
+        <HelpButton entryId={STUDENT_HELP.dashboard} source={studentHelpSource} className="self-start" />
       </header>
+
+      <CalculatorHandoffBanner />
 
 
       <section data-landing-motion="card" aria-label="Academic standing and next action" className="grid min-w-0 items-stretch gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.75fr)]">
@@ -243,20 +226,27 @@ export default function DashboardPage() {
       )}
 
       <section data-landing-motion="card" aria-label="Academic trend and AI insight" className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,0.8fr)]">
+        <DiscreetScope>
         <Card>
-          <div className="mb-5">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">Trajectory</p>
-            <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)]">Semester GPA and PI</h2>
-            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Compare your official semester GPA with score-sensitive performance.</p>
+          <div className="mb-5 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">Trajectory</p>
+              <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)]">Semester GPA and PI</h2>
+              <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Compare your official semester GPA with score-sensitive performance.</p>
+            </div>
+            {hasAcademicData && <DiscreetRevealButton label="GPA trend" />}
           </div>
           {hasAcademicData ? (
-            <TrendChart semesters={semesterHistory} metric="both" showForecast={false} />
+            <DiscreetValue label="GPA trend chart" block>
+              <TrendChart semesters={semesterHistory} metric="both" showForecast={false} />
+            </DiscreetValue>
           ) : (
             <div className="flex min-h-64 items-center justify-center rounded-[var(--radius-surface)] border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] px-5 text-center text-sm text-[var(--acade-text-muted)]">
               Your trend will appear after the first semester is recorded.
             </div>
           )}
         </Card>
+        </DiscreetScope>
 
         <Card className="relative overflow-hidden">
           <div className="absolute inset-x-0 top-0 h-px dashboard-ai-sweep" aria-hidden="true" />

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/admin-auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { HouseConfigError, parseHouseConfig, safeHouseConfig } from '@/lib/ads/house';
 
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -18,11 +19,13 @@ export async function GET(request: Request) {
 }
 export async function PUT(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     const body = await request.json();
     if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || !('config' in body)) throw new HouseConfigError('Expected only config.');
     const config = parseHouseConfig(body.config);
+    const before = (await adminDb.collection('config').doc('mobileHouseAds').get()).data() ?? null;
     await adminDb.collection('config').doc('mobileHouseAds').set(config);
+    await writeAdminAudit({ actorUid: actor.uid, actorEmail: actor.email, action: 'ads.android-house.update', target: 'config/mobileHouseAds', before, after: config });
     return NextResponse.json({ config }, { headers });
   } catch (error) { return failure(error); }
 }

@@ -17,9 +17,20 @@ service cloud.firestore {
              (request.auth.token.email.lower() in get(/databases/$(database)/documents/config/admins).data.emails);
     }
 
+    // Age and consent answers are written only by server routes
+    // (/api/user/age, /api/user/requirements, registration finalize).
+    function serverOwnedUserFields() {
+      return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents'];
+    }
+
     // 1. Users Collection
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read, delete: if isOwner(userId) || isAdmin();
+      allow create: if (isOwner(userId) || isAdmin())
+        && !request.resource.data.keys().hasAny(serverOwnedUserFields());
+      // Other profile edits (tour flags, preferences, tokens, avatar) are unchanged.
+      allow update: if (isOwner(userId) || isAdmin())
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOwnedUserFields());
       
       // Subcollection: Semesters
       match /semesters/{semesterId} {
@@ -48,6 +59,12 @@ service cloud.firestore {
       allow write: if isAdmin(); 
     }
     
+    // Terms/Privacy versions. Admins change them through /api/admin/legal.
+    match /config/legal {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /config/admins {
       allow read: if isAdmin(); // Only admins can read the admin list
       allow write: if false; // Only manageable directly via Firebase Console
@@ -90,6 +107,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Coin wallets, the append-only ledger and spend idempotency records are
+    // server-owned. Clients never read or write balances directly.
+    match /_coin_wallets/{document=**} {
+      allow read, write: if false;
+    }
+    match /_coin_ledger/{document=**} {
+      allow read, write: if false;
+    }
+    match /_coin_requests/{document=**} {
+      allow read, write: if false;
+    }
+
     // Registration tickets and normalized matric reservations are created and
     // consumed only by Firebase Admin inside server routes.
     match /_registration_tickets/{docId} {
@@ -111,6 +140,16 @@ service cloud.firestore {
     }
 
     match /_ai_audit/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admin audit trail (lib/api/admin-audit.ts) and AI answer feedback/reports
+    // (/api/ai/report). Read only through admin server routes.
+    match /_admin_audit/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /_ai_feedback/{document=**} {
       allow read, write: if false;
     }
 

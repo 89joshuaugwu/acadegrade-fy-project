@@ -14,8 +14,9 @@ export class AdsConfigValidationError extends Error {
   }
 }
 
-const PLACEMENT_NAMES: Record<AdPlacementId, string> = {
+export const PLACEMENT_NAMES: Record<AdPlacementId, string> = {
   'dashboard.overview': 'Dashboard overview',
+  'results.overview': 'Results overview',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -55,13 +56,49 @@ function requireInteger(value: unknown, label: string, min: number, max: number)
 function requireHttpsUrl(value: unknown, label: string, allowEmpty = false) {
   const normalized = requireString(value, label, 2_048, allowEmpty);
   if (!normalized && allowEmpty) return '';
+  let url: URL;
   try {
-    const url = new URL(normalized);
-    if (url.protocol !== 'https:') throw new Error('Unsupported protocol');
-    return url.toString();
+    url = new URL(normalized);
   } catch {
     throw new AdsConfigValidationError(`${label} must be an HTTPS URL`);
   }
+  if (url.protocol !== 'https:') throw new AdsConfigValidationError(`${label} must be an HTTPS URL`);
+  // Android rejects credentialed URLs; keep both validators in agreement.
+  if (url.username || url.password) {
+    throw new AdsConfigValidationError(`${label} must not include a username or password`);
+  }
+  return url.toString();
+}
+
+/** Plain-language problem with an optional campaign URL, for inline form errors. */
+export function describeCampaignUrlProblem(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return 'Enter a full URL that starts with https://.';
+  }
+  if (url.protocol !== 'https:') return 'The URL must start with https://.';
+  if (url.username || url.password) return 'Remove the username and password from this URL.';
+  return null;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  imageUrl: 'image URL',
+  linkUrl: 'destination URL',
+  startsAt: 'start time',
+  endsAt: 'end time',
+  maxImpressions: 'max views',
+  windowHours: 'cap window (hours)',
+  altText: 'image alternative text',
+  ctaLabel: 'call-to-action label',
+};
+
+/** Rewrites validation messages to use the editor's field names. */
+export function describeAdsConfigError(message: string): string {
+  return message.replace(/\b(imageUrl|linkUrl|startsAt|endsAt|maxImpressions|windowHours|altText|ctaLabel)\b/g, (field) => FIELD_LABELS[field]);
 }
 
 function parseNullableDate(value: unknown, label: string) {
@@ -191,7 +228,21 @@ export function createDefaultAdsConfig(): AdsConfig {
   };
 }
 
-export function parseAdsConfig(value: unknown): AdsConfig {
+/**
+ * Lists every mounted placement for editing. Placements absent from an older
+ * saved configuration are added switched off, matching how delivery treats a
+ * missing placement, so the saved meaning never changes.
+ */
+export function withKnownPlacements(config: AdsConfig): AdsConfig {
+  const saved = new Map(config.placements.map((placement) => [placement.id, placement]));
+  if (AD_PLACEMENT_IDS.every((id) => saved.has(id))) return config;
+  return {
+    ...config,
+    placements: AD_PLACEMENT_IDS.map((id) => saved.get(id) ?? { id, name: PLACEMENT_NAMES[id], enabled: false }),
+  };
+}
+
+function parseConfig(value: unknown, mode: 'strict' | 'stored') {
   const config = requireRecord(value, 'Ads configuration');
   assertExactKeys(
     config,
@@ -220,23 +271,56 @@ export function parseAdsConfig(value: unknown): AdsConfig {
     throw new AdsConfigValidationError('campaigns must be an array with at most 24 entries');
   }
   const placementIds = new Set(placements.map((placement) => placement.id));
-  const campaigns = config.campaigns.map((campaign, index) => parseCampaign(campaign, index, placementIds));
-  if (new Set(campaigns.map((campaign) => campaign.id)).size !== campaigns.length) {
-    throw new AdsConfigValidationError('Campaign IDs must be unique');
+  const campaigns: AdCampaign[] = [];
+  const skipped: string[] = [];
+  for (const [index, candidate] of config.campaigns.entries()) {
+    let campaign: AdCampaign;
+    try {
+      campaign = parseCampaign(candidate, index, placementIds);
+    } catch (error) {
+      // Stored data is read campaign by campaign so one bad record cannot blank a slot.
+      if (mode === 'strict' || !(error instanceof AdsConfigValidationError)) throw error;
+      const name = isRecord(candidate) && typeof candidate.name === 'string' && candidate.name.trim() ? ` (${candidate.name.trim().slice(0, 100)})` : '';
+      skipped.push(`Campaign ${index + 1}${name} is not served: ${error.message}.`);
+      continue;
+    }
+    if (campaigns.some((existing) => existing.id === campaign.id)) {
+      if (mode === 'strict') throw new AdsConfigValidationError('Campaign IDs must be unique');
+      skipped.push(`Campaign ${index + 1} (${campaign.name}) is not served: duplicate campaign ID ${campaign.id}.`);
+      continue;
+    }
+    campaigns.push(campaign);
   }
 
   return {
-    version: 1,
-    enabled: requireBoolean(config.enabled, 'Ads enabled'),
-    deliveryModes: { house, rewarded: false, thirdParty: false },
-    placements,
-    campaigns,
+    config: {
+      version: 1 as const,
+      enabled: requireBoolean(config.enabled, 'Ads enabled'),
+      deliveryModes: { house, rewarded: false as const, thirdParty: false as const },
+      placements,
+      campaigns,
+    },
+    skipped,
   };
+}
+
+/** Validates an administrator's write. Any invalid campaign rejects the save. */
+export function parseAdsConfig(value: unknown): AdsConfig {
+  return parseConfig(value, 'strict').config;
+}
+
+/**
+ * Reads stored configuration for delivery and admin display. A campaign that
+ * no longer passes validation (for example one saved before a rule tightened)
+ * is skipped individually and reported, rather than hiding every campaign.
+ */
+export function parseStoredAdsConfig(value: unknown): { config: AdsConfig; skipped: string[] } {
+  return parseConfig(value, 'stored');
 }
 
 export function safeParseAdsConfig(value: unknown): AdsConfig | null {
   try {
-    return parseAdsConfig(value);
+    return parseStoredAdsConfig(value).config;
   } catch {
     return null;
   }

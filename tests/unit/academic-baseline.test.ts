@@ -13,7 +13,7 @@ describe('academic calculation baseline', () => {
     expect(computeCumulativeCGPA([...weightedSemesterFixture]).cgpa).toBeCloseTo(3.4, 8);
   });
 
-  it.fails('does not send rounded boundary values through the Fail fallback', () => {
-    expect(resolveDegreeClass(4.495).label).toBe('Second Class Upper (2:1)');
+  it('does not send rounded boundary values through the Fail fallback: 4.495 displays 4.50 and is First Class', () => {
+    expect(resolveDegreeClass(4.495).label).toBe('First Class');
   });
 });

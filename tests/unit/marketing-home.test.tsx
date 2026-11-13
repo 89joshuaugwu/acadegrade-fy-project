@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -39,11 +39,9 @@ describe('AcadeGrade landing presentation', () => {
     const { container } = render(<HomeHero />);
 
     expect(
-      screen.getByRole('heading', {
-        level: 1,
-        name: /see the path behind every result.*understand your cgpa/i,
-      })
+      screen.getByRole('heading', { level: 1, name: 'See the path behind every result.' })
     ).toBeInTheDocument();
+    expect(screen.getByText('Understand your CGPA, spot courses at risk and plan the next semester.')).toHaveClass('sr-only');
     expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveAttribute(
       'href',
       '/register'
@@ -53,11 +51,11 @@ describe('AcadeGrade landing presentation', () => {
       '/calculator'
     );
     expect(screen.getByText(/private by default/i)).toBeInTheDocument();
-    expect(screen.getByText(/record\. understand\. plan\./i)).toBeInTheDocument();
     expect(container.querySelector('[data-hero-type-loop]')).toHaveClass('marketing-hero-type-loop');
+    expect(container.querySelector('[data-hero-type-loop]')).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveClass('marketing-edge-cta');
     const heroArt = screen.getByRole('img', { name: /students using acadegrade on mobile to review a dashboard and scan academic records/i });
-    expect(heroArt).toHaveClass('lg:-translate-y-8', 'aspect-[6/7]');
+    expect(heroArt).toHaveClass('aspect-[6/7]');
     const heroImages = Array.from(heroArt.querySelectorAll('img'));
     expect(heroImages).toHaveLength(3);
     const heroSources = heroImages.map((image) => {
@@ -86,13 +84,12 @@ describe('AcadeGrade landing presentation', () => {
   it('explains the calculation boundary without implying institutional certification', () => {
     render(<AcademicProof />);
 
-    expect(
-      screen.getByRole('heading', { level: 2, name: /a result becomes useful when its basis stays visible/i })
-    ).toBeInTheDocument();
-    expect(screen.getByText(/01 · result input/i)).toBeInTheDocument();
-    expect(screen.getByText(/02 · credit weighting/i)).toBeInTheDocument();
-    expect(screen.getByText(/03 · gpa \+ pi/i)).toBeInTheDocument();
-    expect(screen.getByText(/04 · degree outlook/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: /calculation you can follow/i })).toBeInTheDocument();
+    expect(screen.getByText(/a result becomes useful when its basis stays visible/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /record the semester evidence/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /weight the result by its academic load/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /gpa and pi, side by side/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /a trajectory, not just a total/i })).toBeInTheDocument();
     expect(screen.getByText(/semester gpa = total quality points ÷ total credits/i)).toBeInTheDocument();
     const sequence = screen.getByRole('list', { name: /illustrative calculation sequence/i });
     const stages = Array.from(sequence.children);
@@ -125,9 +122,9 @@ describe('AcadeGrade landing presentation', () => {
 
     expect(screen.getByRole('heading', { level: 2, name: /turn a result slip into fields you can review/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /acadegrade ai result import screen/i })).toBeInTheDocument();
-    expect(screen.getByText(/01 · capture/i)).toBeInTheDocument();
-    expect(screen.getByText(/02 · review/i)).toBeInTheDocument();
-    expect(screen.getByText(/03 · save/i)).toBeInTheDocument();
+    const capture = screen.getByRole('list', { name: /ocr result capture workflow/i });
+    expect(capture.children).toHaveLength(3);
+    expect(capture).toHaveTextContent(/capture\..*review\..*save\./i);
     expect(screen.getByRole('link', { name: /explore result scanner/i })).toHaveAttribute('href', '/features/result-scanner');
     expect(screen.getByRole('heading', { level: 2, name: /ask better questions about what comes next/i })).toBeInTheDocument();
     expect(screen.getByText(/ai-generated guidance/i)).toBeInTheDocument();
@@ -145,6 +142,27 @@ describe('AcadeGrade landing presentation', () => {
     );
 
     expect(container).not.toHaveTextContent(/final[- ]year|school project|course project|defen[cs]e|github|repository/i);
+  });
+});
+
+describe('live GPA and PI example', () => {
+  it('recalculates with the real engine: GPA holds inside a letter band while PI follows the score', () => {
+    render(<AcademicProof />);
+
+    const slider = screen.getByRole('slider', { name: /mth 321 total score/i });
+    const [gpa, pi] = screen.getAllByRole('status');
+    expect(slider).toHaveValue('71');
+    expect(gpa).toHaveTextContent('4.14');
+    expect(pi).toHaveTextContent('3.18');
+
+    fireEvent.change(slider, { target: { value: '95' } });
+    expect(gpa).toHaveTextContent('4.14');
+    expect(pi).toHaveTextContent('3.69');
+    expect(slider).toHaveAttribute('aria-valuetext', '95 out of 100, grade A');
+
+    fireEvent.change(slider, { target: { value: '65' } });
+    expect(gpa).toHaveTextContent('3.71');
+    expect(slider).toHaveAttribute('aria-valuetext', '65 out of 100, grade B');
   });
 });
 

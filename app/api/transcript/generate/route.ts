@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
+import { checkPlatformAccess } from '@/lib/platform/settings-server';
 // import { buildTranscript } from '@/lib/pdf/transcript';
 import type { User } from '@/types/user';
 import type { SemesterWithCourses } from '@/types/semester';
@@ -17,6 +18,8 @@ export async function POST(req: Request) {
     const token = authHeader.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(token);
     const uid = decodedToken.uid;
+    const blocked = await checkPlatformAccess({ feature: 'transcript_pdf', email: decodedToken.email });
+    if (blocked) return blocked;
 
     // Parse request body for showPhoto preference
     let showPhoto = true;

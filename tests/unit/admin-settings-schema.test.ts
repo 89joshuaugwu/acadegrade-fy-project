@@ -63,4 +63,37 @@ describe('parseAdminSettingsMutation', () => {
       data: { ...about, admin: true },
     })).toThrow('Unsupported about field');
   });
+
+  it('allows an empty about contact email (public pages then link to /support) but rejects a malformed one', () => {
+    const about = {
+      headline: 'Academic progress, made clear.',
+      platformDescription: 'Track academic performance with clarity.',
+      mission: 'Give every student a dependable view of their degree progress.',
+      trustStatement: 'Your academic records remain under your control.',
+      contactEmail: '',
+    };
+    expect(parseAdminSettingsMutation({ target: 'about', data: about })).toEqual({ target: 'about', data: about });
+    expect(() => parseAdminSettingsMutation({ target: 'about', data: { ...about, contactEmail: 'not-an-email' } }))
+      .toThrow('contactEmail must be a valid email address');
+  });
+
+  it('accepts the server-enforced feature ids added for kill switches', () => {
+    expect(parseAdminSettingsMutation({ field: 'disabledFeatures', value: ['ai_forecast', 'ai_whatif', 'transcript_pdf', 'transcript_share'] }))
+      .toEqual({ target: 'settings', data: { disabledFeatures: ['ai_forecast', 'ai_whatif', 'transcript_pdf', 'transcript_share'] } });
+  });
+
+  it('accepts the age/consent gate switch and rejects anything else in it', () => {
+    expect(parseAdminSettingsMutation({ field: 'ageGate', value: { enforceUnknown: false } }))
+      .toEqual({ target: 'settings', data: { ageGate: { enforceUnknown: false } } });
+    expect(() => parseAdminSettingsMutation({ field: 'ageGate', value: { enforceUnknown: 'no' } })).toThrow('ageGate.enforceUnknown must be a boolean');
+    expect(() => parseAdminSettingsMutation({ field: 'ageGate', value: { enforceUnknown: true, extra: 1 } })).toThrow('Unsupported ageGate field');
+  });
+
+  it('accepts an AdMob Android App ID for app-ads.txt and rejects ad unit IDs', () => {
+    expect(parseAdminSettingsMutation({ field: 'admobAndroidAppId', value: ' ca-app-pub-2745430575041686~2976964736 ' }))
+      .toEqual({ target: 'settings', data: { admobAndroidAppId: 'ca-app-pub-2745430575041686~2976964736' } });
+    expect(parseAdminSettingsMutation({ field: 'admobAndroidAppId', value: '' })).toEqual({ target: 'settings', data: { admobAndroidAppId: '' } });
+    expect(() => parseAdminSettingsMutation({ field: 'admobAndroidAppId', value: 'ca-app-pub-2745430575041686/2976964736' }))
+      .toThrow('admobAndroidAppId must look like ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY');
+  });
 });

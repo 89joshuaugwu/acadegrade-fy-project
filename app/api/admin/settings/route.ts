@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { parseAdminSettingsMutation, SettingsValidationError } from '@/lib/admin/settings-schema';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
+import { invalidatePlatformSettingsCache } from '@/lib/platform/settings-server';
 
 /**
  * GET  /api/admin/settings — Read platform settings
@@ -32,13 +34,25 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await verifyAdmin(request);
+    const actor = await verifyAdmin(request);
     const mutation = parseAdminSettingsMutation(await request.json());
     const documentName = mutation.target === 'about' ? 'about' : 'settings';
-    await adminDb.collection('config').doc(documentName).set(
-      { ...mutation.data, updatedAt: new Date() },
-      { merge: true }
-    );
+    const ref = adminDb.collection('config').doc(documentName);
+    const stored: Record<string, unknown> = (await ref.get()).data() ?? {};
+    const data = mutation.data as Record<string, unknown>;
+    const fields = Object.keys(data);
+    await ref.set({ ...data, updatedAt: new Date() }, { merge: true });
+    // This instance serves the new value at once; others pick it up within the cache window.
+    invalidatePlatformSettingsCache();
+    await writeAdminAudit(mutation.target === 'about'
+      ? {
+          actorUid: actor.uid, actorEmail: actor.email ?? '', action: 'settings.about.update', target: 'config/about',
+          before: Object.fromEntries(fields.map((key) => [key, stored[key] ?? null])), after: data,
+        }
+      : {
+          actorUid: actor.uid, actorEmail: actor.email ?? '', action: 'settings.update', target: `config/settings.${fields[0]}`,
+          before: stored[fields[0]] ?? null, after: data[fields[0]],
+        });
     return NextResponse.json({ message: 'Settings updated.' });
   } catch (error: any) {
     if (error instanceof SettingsValidationError) {

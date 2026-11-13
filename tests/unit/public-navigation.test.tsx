@@ -114,4 +114,41 @@ describe('public footer', () => {
     expect(screen.getByText(/© \d{4} AcadeGrade\. All rights reserved\./)).toBeInTheDocument();
     expect(screen.getByText('Personal academic planning, not an official university record.')).toBeInTheDocument();
   });
+
+  it('links the product, support and legal pages from every public page', () => {
+    render(<PublicFooter />);
+
+    expect(screen.getByRole('link', { name: 'Features' })).toHaveAttribute('href', '/features');
+    expect(screen.getByRole('link', { name: 'Support' })).toHaveAttribute('href', '/support');
+    expect(screen.getByRole('link', { name: 'Privacy notice' })).toHaveAttribute('href', '/privacy');
+    expect(screen.getByRole('link', { name: 'Terms of use' })).toHaveAttribute('href', '/terms');
+    expect(screen.getByRole('link', { name: 'Delete your account' })).toHaveAttribute('href', '/account-deletion');
+    expect(screen.getByRole('link', { name: 'Cookie choices' })).toHaveAttribute('href', '#cookie-choices');
+  });
+
+  it('shows the configured contact address passed by a server page', () => {
+    render(<PublicFooter contactEmail="help@example.org" />);
+
+    expect(screen.getByRole('link', { name: 'help@example.org' })).toHaveAttribute('href', 'mailto:help@example.org');
+    expect(document.body).not.toHaveTextContent('support@acadegrade.com');
+  });
+
+  it('links to the support page when no address is configured', () => {
+    render(<PublicFooter contactEmail={null} />);
+
+    expect(screen.getByRole('link', { name: 'Contact support' })).toHaveAttribute('href', '/support');
+    expect(screen.queryByRole('link', { name: /@/ })).not.toBeInTheDocument();
+  });
+
+  it('reads the cached public endpoint on client-only pages', async () => {
+    const { resetPublicContactEmailCache } = await import('@/lib/site/use-contact-email');
+    resetPublicContactEmailCache();
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ email: 'team@example.org' }) }) as Response);
+    vi.stubGlobal('fetch', fetchMock);
+    render(<PublicFooter />);
+
+    expect(await screen.findByRole('link', { name: 'team@example.org' })).toHaveAttribute('href', 'mailto:team@example.org');
+    expect(fetchMock).toHaveBeenCalledWith('/api/site/contact');
+    resetPublicContactEmailCache();
+  });
 });

@@ -4,9 +4,11 @@ import { ArrowRight, BookOpen } from 'lucide-react';
 import type { DashboardCourseRecord } from '@/lib/dashboard/summary';
 import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 
 export function RecentResults({ courses }: { courses: DashboardCourseRecord[] }) {
   return (
+    <DiscreetScope>
     <Card padding="none" className="overflow-hidden">
       <div className="flex items-end justify-between gap-4 border-b border-[var(--acade-border-subtle)] px-4 py-4 sm:px-5">
         <div>
@@ -17,6 +19,8 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
             Recent results
           </h2>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+        {courses.length > 0 && <DiscreetRevealButton label="Grades" />}
         <Link
           href="/results"
           className="flex min-h-12 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
@@ -24,6 +28,7 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
           View all
           <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
+        </div>
       </div>
 
       {courses.length === 0 ? (
@@ -61,9 +66,11 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
                 >
                   <span className="flex size-11 items-center justify-center">
                     {course.grade ? (
-                      <Badge variant={getGradeBadgeVariant(course.grade)} className="min-w-10 justify-center px-2 py-1.5">
-                        {course.grade}
-                      </Badge>
+                      <DiscreetValue label="Grade">
+                        <Badge variant={getGradeBadgeVariant(course.grade)} className="min-w-10 justify-center px-2 py-1.5">
+                          {course.grade}
+                        </Badge>
+                      </DiscreetValue>
                     ) : (
                       <span className="flex size-10 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]">
                         <BookOpen className="size-4" aria-hidden="true" />
@@ -82,7 +89,7 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
 
                   <span className="min-w-[4.75rem] text-right">
                     <span className="block font-[family-name:var(--font-geist-mono)] text-sm font-semibold text-[var(--acade-text)]">
-                      {scoreLabel}
+                      {typeof course.totalScore === 'number' ? <DiscreetValue label="Score">{scoreLabel}</DiscreetValue> : scoreLabel}
                     </span>
                     <span className="mt-1 block text-[0.68rem] text-[var(--acade-text-faint)] transition-colors group-hover:text-[var(--acade-primary)]">
                       Open result
@@ -95,5 +102,6 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
         </ul>
       )}
     </Card>
+    </DiscreetScope>
   );
 }

@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({ authorize: vi.fn(), doc: vi.fn(), get: vi.fn(), set: vi.fn() }));
 vi.mock('@/lib/api/admin-auth', () => ({ requireAdmin: state.authorize }));
 vi.mock('@/lib/firebase/admin', () => ({ adminDb: { collection: () => ({ doc: state.doc }) } }));
+// The audit trail is a separate collection, covered by admin-ads-audit.test.ts.
+vi.mock('@/lib/api/admin-audit', () => ({ writeAdminAudit: vi.fn() }));
 import { GET as publicGet } from '@/app/api/ads/ios/route';
 import { GET as adminGet, PUT as adminPut } from '@/app/api/admin/ads/ios/route';
 import { createDefaultMobileAdsConfig } from '@/lib/ads/mobile';

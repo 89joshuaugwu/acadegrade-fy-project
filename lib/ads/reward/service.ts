@@ -1,7 +1,9 @@
 import 'server-only';
 import { createHash, randomBytes } from 'node:crypto';
 import { Timestamp, type Firestore, type Transaction } from 'firebase-admin/firestore';
-import { safeMobileAdsConfig } from '@/lib/ads/mobile';
+import { readUsagePolicy } from '@/lib/usage/policy';
+import { TEST_REWARDED_UNIT, rewardedDelivery } from './delivery';
+import { WalletState, walletRef } from './coins';
 import { RewardError } from './errors';
 import type { VerifiedRewardCallback } from './ssv';
 
@@ -9,11 +11,13 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 const PENDING_TTL = 30 * 60 * 1000;
 const LEASE_TTL = 5 * 60 * 1000;
-const TEST_UNIT = 'ca-app-pub-3940256099942544/5224354917';
+const TEST_UNIT = TEST_REWARDED_UNIT;
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const id = () => randomBytes(32).toString('hex');
-export type RewardStatus = 'pending' | 'earned' | 'processing' | 'consumed' | 'expired';
+export type RewardStatus = 'pending' | 'earned' | 'processing' | 'consumed' | 'expired' | 'credited';
 interface Session {
+  /** Absent on legacy Written Analysis refresh sessions. */
+  reward?: 'coins'; coins?: number; coinsGranted?: number;
   uid: string; unitId: string; testMode: boolean; status: RewardStatus;
   createdAt: number; expiresAt: number; transactionId?: string;
   leaseId?: string | null; leaseUntil?: number; leaseDay?: string;
@@ -55,26 +59,32 @@ export class RewardService {
       resetAtUTC: Date.parse(`${day}T00:00:00.000Z`) + DAY,
     };
   }
-  private async config(tx: Transaction) {
-    const config = safeMobileAdsConfig((await tx.get(this.db.collection('config').doc('mobileAds'))).data());
+  private async config(tx: Transaction, disabled = 'Rewarded Insights refresh is disabled') {
+    const delivery = rewardedDelivery((await tx.get(this.db.collection('config').doc('mobileAds'))).data());
     // Absent optional switch is disabled; never bootstrap delivery from env.
-    if (!config.enabled || config.rewardedEnabled !== true) throw new RewardError('Rewarded Insights refresh is disabled', 403);
-    const unitId = config.testMode ? TEST_UNIT : config.rewardedUnitId;
-    if (!/^ca-app-pub-\d{16}\/\d{10}$/.test(unitId)) throw new RewardError('Rewarded ad unit is not configured', 403);
-    return { ...config, unitId };
+    if (!delivery.enabled) throw new RewardError(delivery.reason === 'unit' ? 'Rewarded ad unit is not configured' : disabled, 403);
+    return delivery;
+  }
+  private async coinPolicy(tx: Transaction) {
+    const policy = readUsagePolicy((await tx.get(this.db.collection('config').doc('usage'))).data()).coins;
+    if (!policy.enabled) throw new RewardError('Coins are disabled', 403);
+    return policy;
   }
   private owned(data: Session | undefined, uid: string): Session {
     if (!data || data.uid !== uid) throw new RewardError('Reward session not found', 404);
     return data;
   }
   private effectiveStatus(s: Session, now: number): RewardStatus {
-    if (s.status === 'consumed') return 'consumed';
+    if (s.status === 'consumed' || s.status === 'credited') return s.status;
     if (s.expiresAt <= now) return 'expired';
     if (s.status === 'processing' && (s.leaseUntil ?? 0) <= now) return 'earned';
     return s.status;
   }
-  async createSession(uid: string, platform: unknown) {
+  /** `reward` omitted (or null) creates the legacy Written Analysis refresh session. */
+  async createSession(uid: string, platform: unknown, reward?: unknown) {
     if (platform !== 'android') throw new RewardError('Rewarded refresh is Android only');
+    if (reward === 'coins') return this.createCoinSession(uid);
+    if (reward !== undefined && reward !== null) throw new RewardError('Unknown reward type');
     const sessionId = id();
     return this.db.runTransaction(async tx => {
       const now = this.clock();
@@ -92,9 +102,30 @@ export class RewardService {
       return { sessionId, unitId: config.unitId, userId: uid, expiresAt };
     });
   }
+  private async createCoinSession(uid: string) {
+    const sessionId = id();
+    return this.db.runTransaction(async tx => {
+      const now = this.clock();
+      const delivery = await this.config(tx, 'Rewarded coins are disabled');
+      const policy = await this.coinPolicy(tx);
+      const wallet = new WalletState((await tx.get(walletRef(this.db, uid))).data(), now);
+      wallet.assertCanEarn(policy);
+      wallet.countSessionCreation(policy);
+      wallet.write(tx, this.db, uid);
+      const expiresAt = now + PENDING_TTL;
+      tx.create(this.sessionRef(sessionId), { uid, reward: 'coins', coins: policy.coinsPerAd, unitId: delivery.unitId, testMode: delivery.testMode,
+        status: 'pending', createdAt: now, expiresAt, ttlAt: Timestamp.fromMillis(expiresAt + DAY) });
+      return { sessionId, unitId: delivery.unitId, userId: uid, expiresAt, reward: 'coins' as const, coins: policy.coinsPerAd };
+    });
+  }
   async status(uid: string, sessionId: string) {
     const s = this.owned((await this.sessionRef(sessionId).get()).data() as Session | undefined, uid);
-    return { status: this.effectiveStatus(s, this.clock()), expiresAt: s.expiresAt };
+    const now = this.clock();
+    const status = this.effectiveStatus(s, now);
+    if (s.reward !== 'coins') return { status, expiresAt: s.expiresAt };
+    // Read-only: an expired hold is reported as refunded but is not swept here.
+    const balance = new WalletState((await walletRef(this.db, uid).get()).data(), now).balance;
+    return { status, expiresAt: s.expiresAt, reward: 'coins' as const, ...(status === 'credited' ? { coinsGranted: s.coinsGranted ?? 0 } : {}), balance };
   }
   async cancel(uid: string, sessionId: string) {
     const ref = this.sessionRef(sessionId);
@@ -110,6 +141,15 @@ export class RewardService {
       return { status: this.effectiveStatus(s, now), expiresAt: s.expiresAt };
     });
   }
+  private assertCallbackMatches(s: Session, callback: VerifiedRewardCallback) {
+    const unitMatches = callback.adUnit === s.unitId || callback.adUnit === s.unitId.split('/')[1];
+    const rewardMatches = callback.rewardAmount === 1 && callback.rewardItem === 'Insights refresh';
+    const testRewardMatches = s.testMode && s.unitId === TEST_UNIT && callback.rewardAmount === 10 && callback.rewardItem === 'coins';
+    if (!unitMatches || (!rewardMatches && !testRewardMatches)) throw new RewardError('Reward does not match session');
+  }
+  private assertCallbackFresh(s: Session, callback: VerifiedRewardCallback, now: number) {
+    if (s.expiresAt <= now || callback.timestamp < s.createdAt - 60000 || callback.timestamp > now + 60000 || callback.timestamp > s.expiresAt) throw new RewardError('Reward session expired or timestamp invalid', 410);
+  }
   /** Input MUST come from verifyRewardCallback, never client SDK callbacks. */
   async grant(callback: VerifiedRewardCallback) {
     if (callback.userId === undefined && callback.customData === undefined) return { granted: false, validationOnly: true };
@@ -120,19 +160,17 @@ export class RewardService {
       const now = this.clock();
       await this.config(tx);
       const s = this.owned((await tx.get(ref)).data() as Session | undefined, callback.userId!);
+      if (s.reward === 'coins') return this.grantCoins(tx, s, callback, now);
       const replay = (await tx.get(transactionRef)).data();
       const dailyRef = this.dailyRef(s.uid, this.day(now));
       const daily: Daily = (await tx.get(dailyRef)).data() ?? {};
-      const unitMatches = callback.adUnit === s.unitId || callback.adUnit === s.unitId.split('/')[1];
-      const rewardMatches = callback.rewardAmount === 1 && callback.rewardItem === 'Insights refresh';
-      const testRewardMatches = s.testMode && s.unitId === TEST_UNIT && callback.rewardAmount === 10 && callback.rewardItem === 'coins';
-      if (!unitMatches || (!rewardMatches && !testRewardMatches)) throw new RewardError('Reward does not match session');
+      this.assertCallbackMatches(s, callback);
       if (replay) {
         if (replay.sessionId === callback.customData && s.transactionId === callback.transactionId) return { granted: false, duplicate: true };
         throw new RewardError('Reward transaction already used', 409);
       }
       if (s.status !== 'pending') throw new RewardError('Reward session already rewarded', 409);
-      if (s.expiresAt <= now || callback.timestamp < s.createdAt - 60000 || callback.timestamp > now + 60000 || callback.timestamp > s.expiresAt) throw new RewardError('Reward session expired or timestamp invalid', 410);
+      this.assertCallbackFresh(s, callback, now);
       if ((daily.earned ?? 0) >= 2) throw new RewardError('Daily rewarded refresh limit reached', 429);
       // No TTL on transaction tombstones: deleting one would reopen replay.
       tx.create(transactionRef, { sessionId: callback.customData, uid: s.uid, receivedAt: now });
@@ -141,13 +179,35 @@ export class RewardService {
       return { granted: true, duplicate: false };
     });
   }
+  /** Same signature/binding/replay/timestamp rules as legacy grants, but the
+   * credit lands in the server-owned wallet with an append-only ledger entry. */
+  private async grantCoins(tx: Transaction, s: Session, callback: VerifiedRewardCallback, now: number) {
+    const ref = this.sessionRef(callback.customData!);
+    const transactionRef = this.db.collection('_reward_transactions').doc(hash(callback.transactionId));
+    const policy = await this.coinPolicy(tx);
+    const replay = (await tx.get(transactionRef)).data();
+    const wallet = new WalletState((await tx.get(walletRef(this.db, s.uid))).data(), now);
+    this.assertCallbackMatches(s, callback);
+    if (replay) {
+      if (replay.sessionId === callback.customData && s.transactionId === callback.transactionId) return { granted: false, duplicate: true };
+      throw new RewardError('Reward transaction already used', 409);
+    }
+    if (s.status !== 'pending') throw new RewardError('Reward session already rewarded', 409);
+    this.assertCallbackFresh(s, callback, now);
+    const coins = wallet.credit(Math.min(s.coins ?? policy.coinsPerAd, policy.coinsPerAd), policy, callback.customData!);
+    tx.create(transactionRef, { sessionId: callback.customData, uid: s.uid, receivedAt: now });
+    tx.set(ref, { ...s, status: 'credited', coinsGranted: coins, transactionId: callback.transactionId, creditedAt: now, ttlAt: Timestamp.fromMillis(now + 2 * DAY) });
+    wallet.write(tx, this.db, s.uid);
+    return { granted: true, duplicate: false, coins };
+  }
   async acquire(uid: string, sessionId: string): Promise<RewardLease> {
     const ref = this.sessionRef(sessionId); const leaseId = id();
     return this.db.runTransaction(async tx => {
       const now = this.clock(); const day = this.day(now);
       await this.config(tx);
       const s = this.owned((await tx.get(ref)).data() as Session | undefined, uid);
-      if (this.effectiveStatus(s, now) !== 'earned' || !s.transactionId) throw new RewardError('Reward session is not available', 409);
+      // Coin sessions credit the wallet; they are never a legacy refresh credit.
+      if (s.reward === 'coins' || this.effectiveStatus(s, now) !== 'earned' || !s.transactionId) throw new RewardError('Reward session is not available', 409);
       const dailyRef = this.dailyRef(uid, day); const daily: Daily = (await tx.get(dailyRef)).data() ?? {};
       const leases = Object.fromEntries(Object.entries(daily.leases ?? {}).filter(([, lease]) => lease.until > now));
       if ((daily.used ?? 0) + Object.keys(leases).length >= 2) throw new RewardError('Daily rewarded refresh use limit reached', 429);

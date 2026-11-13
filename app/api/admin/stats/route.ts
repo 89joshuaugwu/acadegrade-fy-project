@@ -1,5 +1,16 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { resolveDegreeClass, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+
+/** Response keys for degreeClassCounts (kept stable for the admin analytics page). */
+const DEGREE_CLASS_COUNT_KEYS: Record<DegreeClassShortLabel, string> = {
+  '1st': 'First Class',
+  '2:1': 'Second Class Upper',
+  '2:2': 'Second Class Lower',
+  '3rd': 'Third Class',
+  Pass: 'Pass',
+  Fail: 'Fail',
+};
 
 /**
  * GET /api/admin/stats
@@ -102,13 +113,8 @@ export async function GET(request: Request) {
         const high = ((bucketIndex + 1) * 0.5).toFixed(1);
         cgpaBuckets[`${low}-${high}`] = (cgpaBuckets[`${low}-${high}`] || 0) + 1;
 
-        // Degree class
-        if (userCGPA >= 4.5) degreeClassCounts['First Class']++;
-        else if (userCGPA >= 3.5) degreeClassCounts['Second Class Upper']++;
-        else if (userCGPA >= 2.4) degreeClassCounts['Second Class Lower']++;
-        else if (userCGPA >= 1.5) degreeClassCounts['Third Class']++;
-        else if (userCGPA >= 1.0) degreeClassCounts['Pass']++;
-        else degreeClassCounts['Fail']++;
+        // Degree class (shared rules: rounded CGPA, lower-bound thresholds)
+        degreeClassCounts[DEGREE_CLASS_COUNT_KEYS[resolveDegreeClass(userCGPA).shortLabel]]++;
       }
 
       // Signup date tracking

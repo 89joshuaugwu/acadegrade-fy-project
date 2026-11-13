@@ -121,16 +121,16 @@ export function HeroTypedPhrases({
     };
   }, [holdDelayMs, phrases, switchDelayMs, typeIntervalMs]);
 
+  // Decorative loop: the parent supplies the readable text, so the typing never reaches a screen reader.
   return (
     <span
-      aria-label={phrases[0]}
+      aria-hidden="true"
       className="marketing-hero-type-loop"
       data-hero-type-loop=""
       data-typing-active={active || undefined}
     >
-      <span aria-hidden="true" className="marketing-hero-type-sizer">{phrases[phrases.length - 1]}</span>
+      <span className="marketing-hero-type-sizer">{phrases.reduce((longest, phrase) => (phrase.length > longest.length ? phrase : longest), phrases[0])}</span>
       <span
-        aria-hidden="true"
         className="marketing-hero-type-output"
         data-phrase-index={phraseIndex}
         data-typing-output=""

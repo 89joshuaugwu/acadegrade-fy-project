@@ -2,7 +2,9 @@
 
 import { Copy, Trash2 } from 'lucide-react';
 import { Button, Card, Input, Switch, Textarea } from '@/components/ui';
+import { describeCampaignUrlProblem } from '@/lib/ads/config';
 import type { AdCampaign, AdPlacementConfig } from '@/lib/ads/types';
+import { PreviewDisclosure } from './PlacementPreview';
 
 interface CampaignEditorProps {
   campaign: AdCampaign;
@@ -12,6 +14,13 @@ interface CampaignEditorProps {
   onDuplicate: () => void;
   status: { label: string; tone: 'success' | 'muted' };
   unsaved?: boolean;
+}
+
+/** Short slot names, the same words the "Where promotions show" switches use. */
+export function placementLabel(placement: Pick<AdPlacementConfig, 'id' | 'name'>) {
+  if (placement.id === 'dashboard.overview') return 'Dashboard';
+  if (placement.id === 'results.overview') return 'Results';
+  return placement.name;
 }
 
 function toLocalDateTime(value: string | null) {
@@ -81,50 +90,39 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
           maxLength={100}
           onChange={(event) => update('name', event.target.value)}
         />
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor={`${campaign.id}-mode`} className="text-sm font-medium text-[var(--acade-text-muted)]">
-            Delivery mode
-          </label>
-          <select
-            id={`${campaign.id}-mode`}
-            value={campaign.deliveryMode}
-            onChange={(event) => update('deliveryMode', event.target.value as AdCampaign['deliveryMode'])}
-            className="h-12 w-full rounded-xl border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-4 text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20"
-          >
-            <option value="house">House / internal</option>
-            <option value="rewarded" disabled>Rewarded (not for house campaigns)</option>
-            <option value="third-party" disabled>Third-party (use Ad networks)</option>
-          </select>
-        </div>
+        <fieldset className="min-w-0">
+          <legend className="text-sm font-medium text-[var(--acade-text-muted)]">Show on</legend>
+          <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+            {placements.map((placement) => {
+              const checked = campaign.placementIds.includes(placement.id);
+              const hintId = placement.id === 'dashboard.overview' ? `${campaign.id}-android-hint` : undefined;
+              return (
+                <label
+                  key={placement.id}
+                  className="flex min-h-12 items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 text-sm text-[var(--acade-text)]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    aria-describedby={hintId}
+                    onChange={(event) => update(
+                      'placementIds',
+                      event.target.checked
+                        ? [...campaign.placementIds, placement.id]
+                        : campaign.placementIds.filter((id) => id !== placement.id)
+                    )}
+                    className="size-4 accent-[var(--acade-primary)]"
+                  />
+                  <span>{placementLabel(placement)}</span>
+                </label>
+              );
+            })}
+          </div>
+          <p id={`${campaign.id}-android-hint`} className="mt-2 text-xs leading-5 text-[var(--acade-text-muted)]">
+            Android uses only campaigns ticked for Dashboard, in both Android slots.
+          </p>
+        </fieldset>
       </div>
-
-      <fieldset>
-        <legend className="text-sm font-medium text-[var(--acade-text-muted)]">Placements</legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          {placements.map((placement) => {
-            const checked = campaign.placementIds.includes(placement.id);
-            return (
-              <label
-                key={placement.id}
-                className="flex min-h-12 items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 text-sm text-[var(--acade-text)]"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) => update(
-                    'placementIds',
-                    event.target.checked
-                      ? [...campaign.placementIds, placement.id]
-                      : campaign.placementIds.filter((id) => id !== placement.id)
-                  )}
-                  className="size-4 accent-[var(--acade-primary)]"
-                />
-                <span>{placement.name}</span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Input
@@ -154,6 +152,7 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
           type="url"
           value={campaign.creative.imageUrl}
           placeholder="https://…"
+          error={describeCampaignUrlProblem(campaign.creative.imageUrl) ?? undefined}
           onChange={(event) => update('creative', { ...campaign.creative, imageUrl: event.target.value })}
         />
         <Input
@@ -168,9 +167,17 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
           type="url"
           value={campaign.linkUrl}
           placeholder="https://…"
+          error={describeCampaignUrlProblem(campaign.linkUrl) ?? undefined}
           onChange={(event) => update('linkUrl', event.target.value)}
         />
       </div>
+
+      <PreviewDisclosure
+        label={`Preview ${campaign.name}`}
+        campaign={campaign}
+        placements={placements.filter((placement) => campaign.placementIds.includes(placement.id)).map((placement) => placement.name)}
+        className="rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3"
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Input

@@ -8,8 +8,12 @@ import { PublicFooter } from '@/components/layout/PublicShell';
 import { AcademicProof, HomeFAQ, HomeHero, ProductStory, SmartAutomation } from '@/components/marketing';
 import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 import { LandingMotion } from '@/components/marketing/LandingMotion';
+import { getContactEmail } from '@/lib/site/contact';
 
-export default function LandingPage() {
+const showcaseAlt = 'AcadeGrade mobile showcase featuring result scanning, dashboard, transcript and profile screens';
+
+export default async function LandingPage() {
+  const contactEmail = await getContactEmail();
   return (
     <div className="public-atmosphere min-h-screen text-[var(--acade-text)]">
       <Navbar />
@@ -22,35 +26,36 @@ export default function LandingPage() {
         <SmartAutomation />
         <ProductStory />
 
-        <section aria-labelledby="mobile-product-title" className="public-atmosphere-section border-y border-[var(--acade-border-subtle)] text-[var(--acade-text)]">
-          <div className="mx-auto max-w-[1200px] px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24">
-            <figure className="mobile-showcase relative isolate min-h-[38rem] overflow-hidden rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[var(--shadow-popover)] md:min-h-[32rem]">
-              <Image src={mobileShowcaseLight} alt="AcadeGrade mobile showcase featuring result scanning, dashboard, transcript and profile screens" fill priority={false} sizes="(max-width: 1200px) 100vw, 1200px" className="mobile-showcase-art mobile-showcase-art-desktop mobile-showcase-light z-0" />
-              <Image src={mobileShowcaseDark} alt="AcadeGrade mobile showcase featuring result scanning, dashboard, transcript and profile screens" fill priority={false} sizes="(max-width: 1200px) 100vw, 1200px" className="mobile-showcase-art mobile-showcase-art-desktop mobile-showcase-dark z-0" />
-              <Image src={mobileShowcaseLightMobile} alt="AcadeGrade mobile showcase featuring result scanning, dashboard, transcript and profile screens" fill priority={false} sizes="(max-width: 767px) 100vw, 1px" className="mobile-showcase-art mobile-showcase-art-mobile mobile-showcase-light z-0" />
-              <Image src={mobileShowcaseDarkMobile} alt="AcadeGrade mobile showcase featuring result scanning, dashboard, transcript and profile screens" fill priority={false} sizes="(max-width: 767px) 100vw, 1px" className="mobile-showcase-art mobile-showcase-art-mobile mobile-showcase-dark z-0" />
-              <div className="mobile-showcase-scrim absolute inset-0 z-10" aria-hidden="true" />
+        <section aria-labelledby="mobile-product-title" className="public-atmosphere-section text-[var(--acade-text)]">
+          <div className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+            <figure className="mobile-showcase relative isolate overflow-hidden rounded-[var(--radius-dialog)] bg-[var(--acade-surface)] lg:min-h-[32rem]">
+              <div className="mobile-showcase-stage relative aspect-[4/3] md:aspect-[16/9] lg:absolute lg:inset-0 lg:aspect-auto">
+                <Image src={mobileShowcaseLight} alt={showcaseAlt} fill sizes="(max-width: 1023px) 1px, (max-width: 1200px) 100vw, 1200px" className="mobile-showcase-art mobile-showcase-art-desktop mobile-showcase-light z-0" />
+                <Image src={mobileShowcaseDark} alt={showcaseAlt} fill sizes="(max-width: 1023px) 1px, (max-width: 1200px) 100vw, 1200px" className="mobile-showcase-art mobile-showcase-art-desktop mobile-showcase-dark z-0" />
+                <Image src={mobileShowcaseLightMobile} alt={showcaseAlt} fill sizes="(max-width: 1023px) 100vw, 1px" className="mobile-showcase-art mobile-showcase-art-mobile mobile-showcase-light z-0" />
+                <Image src={mobileShowcaseDarkMobile} alt={showcaseAlt} fill sizes="(max-width: 1023px) 100vw, 1px" className="mobile-showcase-art mobile-showcase-art-mobile mobile-showcase-dark z-0" />
+                <div className="mobile-showcase-scrim absolute inset-0 z-10 hidden lg:block" aria-hidden="true" />
+              </div>
 
-              <div className="mobile-showcase-copy relative z-20 px-5 pb-24 pt-8 sm:px-8 md:w-[45%] md:py-10" data-landing-motion="section">
-                <p data-landing-motion="type" className="marketing-type-line text-sm font-semibold text-[var(--acade-primary)]">AcadeGrade for mobile</p>
+              <div className="mobile-showcase-copy relative z-20 px-5 pb-8 pt-7 sm:px-8 lg:w-[46%] lg:pb-20 lg:pl-12 lg:pt-12" data-landing-motion="section">
                 <h2
                   data-landing-motion="words"
                   id="mobile-product-title"
-                  className="mt-2 max-w-[17ch] font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3vw,2.75rem)] font-semibold leading-[1.06] tracking-[-0.04em]"
+                  className="max-w-[19ch] text-balance font-[family-name:var(--font-bricolage)] text-[clamp(1.75rem,3vw,2.75rem)] font-semibold leading-[1.06] tracking-[-0.04em]"
                 >
                   <span>Your academic record,</span>{' '}<span>ready when you are.</span>
                 </h2>
                 <p
                   data-landing-motion=""
                   style={{ '--landing-delay': '160ms' } as React.CSSProperties}
-                  className="mt-4 max-w-[58ch] text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base sm:leading-7"
+                  className="mt-4 max-w-[46ch] text-base leading-7 text-[var(--acade-text-muted)]"
                 >
-                  Review results, scan a result slip, check your trajectory and keep your unofficial transcript within reach.
+                  The AcadeGrade mobile app lets you review results, scan a result slip, check your trajectory and keep your unofficial transcript within reach.
                 </p>
-                <MobileAppDownload className="mt-5 flex-wrap justify-start [&>*]:shrink-0 [&>*]:whitespace-nowrap" />
+                <MobileAppDownload className="mt-6 flex-wrap justify-start [&>*]:shrink-0 [&>*]:whitespace-nowrap" />
               </div>
 
-              <figcaption className="absolute inset-x-0 bottom-0 z-20 border-t border-[var(--acade-border)] bg-[var(--acade-deep)]/94 px-4 py-3 text-xs text-[var(--acade-text-faint)] backdrop-blur-md sm:px-7">Mobile interface showcase. Personal academic planning, not an official university record.</figcaption>
+              <figcaption className="relative z-20 bg-[var(--acade-deep)] px-5 py-3 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)] sm:px-8 lg:absolute lg:inset-x-0 lg:bottom-0">Mobile interface showcase. Personal academic planning, not an official university record.</figcaption>
             </figure>
           </div>
         </section>
@@ -59,7 +64,7 @@ export default function LandingPage() {
       </main>
       </LandingMotion>
 
-      <PublicFooter />
+      <PublicFooter contactEmail={contactEmail} />
     </div>
   );
 }

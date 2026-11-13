@@ -29,4 +29,11 @@ describe('Android house bridge', () => {
     settings.adsConfig.campaigns[0] = { ...campaign, linkUrl: 'javascript:alert(1)' };
     expect(buildHouseDelivery({ ...defaultHouseConfig(), enabled: true }, settings).campaigns).toEqual([]);
   });
+  it('filters a stored credentialed campaign individually instead of blanking the others', () => {
+    const settings = { adsConfig: { ...createDefaultAdsConfig(), campaigns: [
+      { ...campaign, id: 'credentialed', linkUrl: 'https://user:pw@example.com/' },
+      campaign,
+    ] } };
+    expect(buildHouseDelivery({ ...defaultHouseConfig(), enabled: true }, settings).campaigns.map(c => c.id)).toEqual(['campaign:offer']);
+  });
 });

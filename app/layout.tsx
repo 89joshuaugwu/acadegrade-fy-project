@@ -6,6 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/layout/AuthProvider';
 import { ServiceWorkerKill } from '@/components/shared/ServiceWorkerKill';
 import { PWABanner } from '@/components/ui/PWABanner';
+import { CookieConsentBanner } from '@/components/privacy/CookieConsentBanner';
 import {
   getSiteJsonLd,
   resolveSiteUrl,
@@ -13,6 +14,7 @@ import {
   SITE_DESCRIPTION,
   SITE_NAME,
 } from '@/lib/seo/site';
+import { getContactEmail } from '@/lib/site/contact';
 import './globals.css';
 
 const bricolage = Bricolage_Grotesque({
@@ -108,11 +110,13 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Same source as the public pages: admin About email, then env, else none.
+  const contactEmail = await getContactEmail();
   return (
     <html
       lang="en"
@@ -122,7 +126,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(getSiteJsonLd()) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(getSiteJsonLd(contactEmail)) }}
         />
         <ServiceWorkerKill />
         <ThemeProvider
@@ -162,6 +166,7 @@ export default function RootLayout({
               }}
             />
             <PWABanner />
+            <CookieConsentBanner />
           </AuthProvider>
         </ThemeProvider>
       </body>

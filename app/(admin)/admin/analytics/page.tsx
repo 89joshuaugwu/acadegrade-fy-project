@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Download, Info } from 'lucide-react';
 import {
@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { ErrorState } from '@/components/shared';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import toast from 'react-hot-toast';
 
@@ -44,20 +46,25 @@ export default function AdminAnalyticsPage() {
   const shouldReduceMotion = useReducedMotion();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { if (user) loadData(); }, [user]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
     try {
-      const token = await user!.getIdToken();
+      const token = await user.getIdToken();
       const res = await fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const stats = await res.json();
-        setData(stats);
-      }
-    } catch (err) { console.error(err); toast.error('Failed to load analytics.'); }
-    finally { setLoading(false); }
-  };
+      if (!res.ok) throw new Error('Analytics request failed.');
+      setData(await res.json());
+    } catch (err) {
+      console.error(err);
+      // Empty charts would read as "no students"; say the data is missing instead.
+      setError('The stats service did not respond, so these charts would be incomplete.');
+    } finally { setLoading(false); }
+  }, [user]);
+
+  useEffect(() => { void loadData(); }, [loadData]);
 
   const handleExportCSV = () => {
     if (!data?.departmentBreakdown) return;
@@ -73,6 +80,15 @@ export default function AdminAnalyticsPage() {
     URL.revokeObjectURL(url);
     toast.success('CSV exported!');
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="Academic analytics" description="How students are doing overall: CGPA spread, degree classes and department averages." helpId="admin.analytics" />
+        <ErrorState title="Analytics are unavailable" description={error} onRetry={() => { void loadData(); }} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -100,13 +116,12 @@ export default function AdminAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Platform Analytics</h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">Aggregated academic data across all users.</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleExportCSV}><Download size={16} />Export CSV</Button>
-      </div>
+      <AdminPageHeader
+        title="Academic analytics"
+        description="How students are doing overall: CGPA spread, degree classes and department averages. Completed semesters only."
+        helpId="admin.analytics"
+        actions={<Button variant="outline" size="sm" onClick={handleExportCSV}><Download size={16} aria-hidden="true" />Export CSV</Button>}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* CGPA Distribution Curve with Reference Lines */}

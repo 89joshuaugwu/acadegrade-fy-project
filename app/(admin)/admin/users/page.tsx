@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, ChevronDown, ChevronUp, UserX, UserCheck, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Modal } from '@/components/ui/Modal';
+import { ErrorState } from '@/components/shared';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AgeCorrectionDialog, type AgeStatus } from '@/components/admin/users/AgeCorrectionDialog';
 import { cn } from '@/lib/utils/cn';
 import toast from 'react-hot-toast';
 
@@ -33,28 +36,55 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedUid, setExpandedUid] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmDisable, setConfirmDisable] = useState<UserRecord | null>(null);
+  const [correctAge, setCorrectAge] = useState<UserRecord | null>(null);
 
-  useEffect(() => {
-    if (user) loadUsers();
-  }, [user]);
+  const submitAgeCorrection = async ({ uid, ageStatus, reason }: { uid: string; ageStatus: AgeStatus; reason: string }) => {
+    if (!user) throw new Error('Your admin session is unavailable.');
+    const token = await user.getIdToken();
+    const res = await fetch('/api/admin/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      // `reason` is sent for the record; the current API accepts and ignores it.
+      body: JSON.stringify({ action: 'set-age', uid, ageStatus, reason }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => null) as { error?: string } | null;
+      throw new Error(data?.error || 'The age was not changed.');
+    }
+    toast.success(ageStatus === 'minor' ? 'Age corrected to under 18.' : 'Age corrected to adult.');
+    setCorrectAge(null);
+  };
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setError(null);
     try {
-      const token = await user!.getIdToken();
+      const token = await user.getIdToken();
       const res = await fetch('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users);
-      } else {
-        toast.error('Failed to load users.');
-      }
+      if (!res.ok) throw new Error('User list request failed.');
+      const data = await res.json();
+      setUsers(Array.isArray(data.users) ? data.users : []);
     } catch (err) {
       console.error(err);
-      toast.error('Error fetching users.');
+      setError('The user service did not respond. No accounts were changed.');
     } finally {
       setLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => { void loadUsers(); }, [loadUsers]);
+
+  const copyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      toast.success('Email copied.');
+    } catch {
+      toast.error('Copy failed. Select the email and copy it manually.');
     }
   };
 
@@ -77,7 +107,7 @@ export default function AdminUsersPage() {
       });
       if (res.ok) {
         setUsers(prev => prev.map(u => u.uid === targetUid ? { ...u, disabled: !currentlyDisabled } : u));
-        toast.success(currentlyDisabled ? 'User account enabled.' : 'User account disabled.');
+        toast.success(currentlyDisabled ? 'Sign-in enabled.' : 'Sign-in disabled.');
       } else {
         toast.error('Failed to update user status.');
       }
@@ -87,6 +117,15 @@ export default function AdminUsersPage() {
       setActionLoading(null);
     }
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="Users" description="Find a student account and turn its sign-in off or on." helpId="admin.users" />
+        <ErrorState title="Users could not be loaded" description={error} onRetry={() => { void loadUsers(); }} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -100,22 +139,18 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-            User Management
-          </h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-            {users.length} registered user{users.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Users"
+        description={`Find a student account and turn its sign-in off or on. ${users.length} registered user${users.length !== 1 ? 's' : ''}.`}
+        helpId="admin.users"
+      />
 
       {/* Search */}
       <div className="relative">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
+        <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
         <input
-          type="text"
+          type="search"
+          aria-label="Search users"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           placeholder="Search by name, matric, or email..."
@@ -137,7 +172,7 @@ export default function AdminUsersPage() {
         </div>
 
         {filteredUsers.length === 0 ? (
-          <div className="p-12 text-center text-[var(--acade-text-muted)]">
+          <div role="status" className="p-12 text-center text-[var(--acade-text-muted)]">
             {searchQuery ? 'No users match your search.' : 'No users found.'}
           </div>
         ) : (
@@ -145,15 +180,24 @@ export default function AdminUsersPage() {
             <div key={u.uid}>
               {/* Row */}
               <button
+                type="button"
+                aria-expanded={expandedUid === u.uid}
                 onClick={() => setExpandedUid(expandedUid === u.uid ? null : u.uid)}
                 className={cn(
-                  "w-full grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1.2fr_0.6fr_0.8fr_0.8fr_0.8fr] gap-2 px-5 py-4 text-left border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)]/20 transition-colors",
+                  "w-full grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1.2fr_0.6fr_0.8fr_0.8fr_0.8fr] gap-2 px-5 py-4 text-left border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)]/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--acade-primary)]",
                   expandedUid === u.uid && "bg-[var(--acade-overlay)]/10"
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate">{u.fullName}</span>
-                  {expandedUid === u.uid ? <ChevronUp size={14} className="text-[var(--acade-text-muted)] shrink-0" /> : <ChevronDown size={14} className="text-[var(--acade-text-muted)] shrink-0" />}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate">{u.fullName}</span>
+                    {expandedUid === u.uid ? <ChevronUp size={14} aria-hidden="true" className="text-[var(--acade-text-muted)] shrink-0" /> : <ChevronDown size={14} aria-hidden="true" className="text-[var(--acade-text-muted)] shrink-0" />}
+                    {u.disabled && <span className="shrink-0 rounded-full border border-[var(--acade-danger)]/30 bg-[var(--acade-danger)]/10 px-2 py-0.5 text-xs font-medium text-[var(--acade-danger)] md:hidden">Disabled</span>}
+                  </div>
+                  {/* Small screens hide the columns; keep their facts on a second line. */}
+                  <p className="mt-1 truncate text-xs text-[var(--acade-text-muted)] md:hidden">
+                    {u.department || 'No department'} · {u.currentLevel}L · CGPA {u.cgpa.toFixed(2)}
+                  </p>
                 </div>
                 <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.matric}</span>
                 <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hidden md:block truncate">{u.department}</span>
@@ -201,19 +245,22 @@ export default function AdminUsersPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-3 pt-2">
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
                         <Button
                           variant={u.disabled ? 'primary' : 'danger'}
                           size="sm"
                           loading={actionLoading === u.uid}
-                          onClick={() => handleToggleDisable(u.uid, u.disabled)}
+                          onClick={() => u.disabled ? handleToggleDisable(u.uid, true) : setConfirmDisable(u)}
                         >
-                          {u.disabled ? <UserCheck size={14} /> : <UserX size={14} />}
-                          {u.disabled ? 'Enable Account' : 'Disable Account'}
+                          {u.disabled ? <UserCheck size={14} aria-hidden="true" /> : <UserX size={14} aria-hidden="true" />}
+                          {u.disabled ? 'Enable sign-in' : 'Disable sign-in…'}
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => { navigator.clipboard.writeText(u.email); toast.success('Email copied!'); }}>
-                          <Mail size={14} />
-                          Copy Email
+                        <Button variant="outline" size="sm" onClick={() => { void copyEmail(u.email); }}>
+                          <Mail size={14} aria-hidden="true" />
+                          Copy email
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setCorrectAge(u)}>
+                          Correct age…
                         </Button>
                       </div>
                     </div>
@@ -224,6 +271,27 @@ export default function AdminUsersPage() {
           ))
         )}
       </Card>
+
+      <AgeCorrectionDialog student={correctAge} onClose={() => setCorrectAge(null)} onSubmit={submitAgeCorrection} />
+
+      <Modal
+        open={confirmDisable !== null}
+        onClose={() => setConfirmDisable(null)}
+        title={`Turn off sign-in for ${confirmDisable?.fullName || confirmDisable?.email || 'this student'}?`}
+        description="They will be signed out of web and Android and cannot sign back in until you enable them. Their data is kept."
+        confirm={{
+          label: 'Disable sign-in',
+          loading: confirmDisable !== null && actionLoading === confirmDisable.uid,
+          onConfirm: () => {
+            if (!confirmDisable) return;
+            const target = confirmDisable;
+            setConfirmDisable(null);
+            void handleToggleDisable(target.uid, false);
+          },
+        }}
+      >
+        <p className="text-sm text-[var(--acade-text-muted)]">{confirmDisable?.email}</p>
+      </Modal>
     </div>
   );
 }

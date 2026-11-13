@@ -1,0 +1,392 @@
+{
+  "version": "2026-11-13.2",
+  "entries": {
+    "student.dashboard": {
+      "id": "student.dashboard",
+      "audience": "student",
+      "title": "Dashboard",
+      "summary": "Your academic home. It shows your current standing, how your GPA is moving, and the most useful next step.",
+      "terms": [
+        { "term": "CGPA, PI, Degree class, At risk", "meaning": "See the glossary." },
+        { "term": "Current semester", "meaning": "The GPA (or PI) of your latest semester." }
+      ],
+      "tasks": [
+        { "title": "Switch the headline between CGPA and PI", "steps": ["Open Settings.", "Change Primary metric."] },
+        { "title": "See every course", "steps": ["Open Results (Android: View All)."] },
+        { "title": "Act on the suggestion", "steps": ["Follow the next-step card, for example \"Complete pending scores\"."] }
+      ],
+      "cautions": [
+        "The degree class is a projection from your graded courses, not your university's official result."
+      ],
+      "platformNotes": {
+        "web": ["The \"AI insight\" card shows your last saved Written Analysis summary."],
+        "android": [
+          "When offline, the app shows your saved data and syncs your changes later.",
+          "Carry-overs appear here when you have any, with their units.",
+          "Set a degree goal here or in What-If to see the GPA your remaining semesters need, the highest CGPA you can still reach, and what keeps your current class."
+        ]
+      },
+      "related": [
+        { "label": "Results", "to": "student.results" },
+        { "label": "Insights", "to": "student.insights" },
+        { "label": "Glossary", "to": "student.glossary" }
+      ],
+      "tour": { "web": "dashboard", "android": "dashboard" }
+    },
+    "student.results": {
+      "id": "student.results",
+      "audience": "student",
+      "title": "Results",
+      "summary": "Lists every semester in your programme timeline, with its GPA, credits and courses.",
+      "terms": [
+        { "term": "Ongoing / In progress", "meaning": "A semester that is not complete yet. Its graded courses already count toward CGPA; it joins Insights and the transcript when you complete it." },
+        { "term": "Completed", "meaning": "Included in Insights and the transcript." }
+      ],
+      "tasks": [
+        { "title": "Add the next semester", "steps": ["Choose Add semester (Android: Create next semester)."] },
+        { "title": "Edit a semester", "steps": ["Open it."] },
+        { "title": "Delete a semester", "steps": ["Choose Delete.", "Confirm. Its courses go with it and your CGPA is recalculated."] }
+      ],
+      "cautions": [
+        "Deleting cannot be undone.",
+        "If all programme semesters already exist, increase your programme duration in Settings to add another year."
+      ],
+      "related": [
+        { "label": "Semester", "to": "student.semester" },
+        { "label": "New semester", "to": "student.new-semester" }
+      ],
+      "tour": { "web": "results", "android": "results" }
+    },
+    "student.new-semester": {
+      "id": "student.new-semester",
+      "audience": "student",
+      "title": "New semester",
+      "summary": "Creates the next missing semester from your entry session and programme duration, so levels and sessions are never duplicated or skipped.",
+      "tasks": [
+        { "title": "Create the next semester", "steps": ["Check the level, semester and session shown.", "Choose Create.", "You land in the new semester."] }
+      ],
+      "cautions": [
+        "Only the next valid semester can be created.",
+        "If you see \"Academic timeline needed\", set your entry session (YYYY/YYYY) and programme duration in Settings first."
+      ],
+      "related": [
+        { "label": "Settings", "to": "student.settings" }
+      ],
+      "tour": { "web": "results", "android": "new-semester" }
+    },
+    "student.semester": {
+      "id": "student.semester",
+      "audience": "student",
+      "title": "Semester",
+      "summary": "Holds one semester's courses. Here you enter scores, scan a result slip, swap course lists with classmates, and complete the semester.",
+      "terms": [
+        { "term": "CA and Exam", "meaning": "CA 0–30 and exam 0–70; the total and grade are calculated for you." },
+        { "term": "Units", "meaning": "1–6 per course." },
+        { "term": "AR", "meaning": "Awaiting result (left out of GPA)." },
+        { "term": "Add score", "meaning": "The course still needs a score or grade." }
+      ],
+      "tasks": [
+        { "title": "Add a course", "steps": ["Enter the code, title and units.", "Enter CA and exam, or a letter grade.", "Save."] },
+        { "title": "Scan a result slip", "steps": ["Choose Scan (web: Import Result Slip).", "Review what was found.", "Confirm."] },
+        { "title": "Share your course list", "steps": ["Choose Share.", "Send the 6-character code."] },
+        { "title": "Use a classmate's code", "steps": ["Choose Import.", "Enter the code.", "Fill in your own scores."] },
+        { "title": "Finish the semester", "steps": ["Complete it (web: Save Semester; Android: Complete semester)."] }
+      ],
+      "cautions": [
+        "A course code shares course names and units only, never scores.",
+        "You need at least 3 courses to create a code.",
+        "Completing needs at least one graded course; on Android every imported course needs a score or grade first."
+      ],
+      "platformNotes": {
+        "web": ["Importing a code replaces the course list you are editing. (Planned: merge, as on Android.)"],
+        "android": ["Importing skips courses already in the semester."]
+      },
+      "related": [
+        { "label": "Scanner", "to": "student.scanner" },
+        { "label": "Course codes", "to": "student.course-codes" },
+        { "label": "Glossary", "to": "student.glossary" }
+      ],
+      "tour": { "web": "results", "android": "semester" }
+    },
+    "student.course-entry": {
+      "id": "student.course-entry",
+      "audience": "student",
+      "title": "Add or edit a course",
+      "summary": "Records one course and shows the grade and points it will give before you save.",
+      "tasks": [
+        { "title": "Enter by score", "steps": ["Type CA (0–30) and exam (0–70)."] },
+        { "title": "Enter by grade", "steps": ["Switch to Letter Grade.", "Pick A–F."] },
+        { "title": "Result not out yet", "steps": ["Switch to Awaiting result.", "Type your CA (optional) to see the exam score out of 70 that each grade needs."] }
+      ],
+      "cautions": [
+        "With a letter grade only, PI uses that grade's points, so it is an estimate.",
+        "An awaiting-result course stays out of GPA until you enter the exam score. The exam guidance is an estimate; your institution decides your final grade.",
+        "Nothing is added until you save."
+      ],
+      "platformNotes": {
+        "android": ["Typing a course code suggests courses from the course catalogue. Choosing one fills the code, title and units, never scores."]
+      },
+      "related": [
+        { "label": "Glossary", "to": "student.glossary" }
+      ],
+      "tour": { "android": "course-entry" }
+    },
+    "student.course-codes": {
+      "id": "student.course-codes",
+      "audience": "student",
+      "title": "Course codes",
+      "summary": "Copies a semester's course list (codes, titles, units) between classmates with a 6-character code.",
+      "tasks": [
+        { "title": "Share", "steps": ["Choose Share.", "Copy the code."] },
+        { "title": "Import", "steps": ["Enter a classmate's code.", "Import.", "Add your own scores."] }
+      ],
+      "cautions": [
+        "Codes contain no scores, grades or personal details.",
+        "Anyone with the code can import the list.",
+        "Codes do not expire."
+      ],
+      "related": [
+        { "label": "Semester", "to": "student.semester" }
+      ],
+      "tour": { "android": "course-code" }
+    },
+    "student.scanner": {
+      "id": "student.scanner",
+      "audience": "student",
+      "title": "Result scanner",
+      "summary": "Reads course codes, units and scores from a photo, image or PDF of your result, then lets you check everything before it is saved.",
+      "terms": [
+        { "term": "Free uses", "meaning": "Scanning has its own daily free uses, and is also limited to 5 scans per 15 minutes." }
+      ],
+      "tasks": [
+        { "title": "Scan", "steps": ["Lay the slip flat in even light.", "Keep all columns in the frame.", "Capture (or choose an image or PDF).", "Review.", "Confirm."] },
+        { "title": "If something is wrong", "steps": ["Edit it in review, or choose Enter details manually."] }
+      ],
+      "cautions": [
+        "Nothing is saved until you confirm.",
+        "Unreadable scores are left as \"Add score\" rather than guessed.",
+        "Courses marked AR on the slip are saved as awaiting result."
+      ],
+      "platformNotes": {
+        "android": ["When free scans run out and coins are on, you can pay with coins; failed scans refund them."]
+      },
+      "related": [
+        { "label": "Semester", "to": "student.semester" },
+        { "label": "Glossary (Free uses, Coins)", "to": "student.glossary" }
+      ],
+      "tour": { "android": "scanner" }
+    },
+    "student.insights": {
+      "id": "student.insights",
+      "audience": "student",
+      "title": "Insights",
+      "summary": "Four tools for planning. Forecast projects your trend. What-If works out the GPA you need. Risk Analysis lists carry-overs and low grades. Written Analysis gives AI advice.",
+      "tasks": [
+        { "title": "Get help for a tool", "steps": ["Pick a tab.", "Open Help again for that tab."] }
+      ],
+      "cautions": [
+        "Insights use every graded course. Courses awaiting a result are left out.",
+        "When your programme timeline is complete, projections stop at graduation."
+      ],
+      "related": [
+        { "label": "Forecast", "to": "student.insights.forecast" },
+        { "label": "What-If", "to": "student.insights.whatif" },
+        { "label": "Risk Analysis", "to": "student.insights.risk" },
+        { "label": "Written Analysis", "to": "student.insights.analysis" },
+        { "label": "Glossary", "to": "student.glossary" }
+      ],
+      "tour": { "android": "insights" }
+    },
+    "student.insights.forecast": {
+      "id": "student.insights.forecast",
+      "audience": "student",
+      "title": "Forecast",
+      "summary": "Projects your CGPA or PI for your next semesters from your completed results.",
+      "tasks": [
+        { "title": "Switch views", "steps": ["Switch between the CGPA and PI views."] },
+        { "title": "Update after new results", "steps": ["Choose Refresh forecast after adding results."] }
+      ],
+      "cautions": [
+        "A forecast is reused for up to 1 hour if your results have not changed. That reuse does not use a free use.",
+        "New forecasts are limited to 2 per hour and to your daily free uses."
+      ],
+      "platformNotes": {
+        "android": ["Shows up to the next 2 semesters in your timeline."]
+      },
+      "related": [
+        { "label": "Insights", "to": "student.insights" },
+        { "label": "Glossary (Free uses, Cached result)", "to": "student.glossary" }
+      ]
+    },
+    "student.insights.whatif": {
+      "id": "student.insights.whatif",
+      "audience": "student",
+      "title": "What-If",
+      "summary": "Works out the GPA you would need in your remaining semesters to reach a target CGPA. You can ask AI whether that is realistic.",
+      "terms": [
+        { "term": "Required GPA", "meaning": "(target × (credits so far + future credits) − current CGPA × credits so far) ÷ future credits. Above 5.00 means the target cannot be reached in that time." },
+        { "term": "Target average score", "meaning": "The average percentage that would give that number as a PI, i.e. required GPA ÷ 5 × 100. Grades use bands, so a lower score can still earn the grade points (any score from 70 earns an A)." }
+      ],
+      "tasks": [
+        { "title": "Test a target", "steps": ["Move the target.", "Set the remaining semesters and units per semester.", "Read the result.", "Optionally choose Get AI guidance."] }
+      ],
+      "cautions": [
+        "The maths is instant and free.",
+        "AI guidance is limited to 3 requests per 5 minutes and to your daily free uses."
+      ],
+      "platformNotes": {
+        "android": [
+          "Remaining semesters are capped by your timeline, and units default to 18. Guidance has a 30-second wait between requests.",
+          "Your saved degree goal sits above the calculator. If a goal can no longer be reached, it says so and suggests the best class still possible."
+        ]
+      },
+      "related": [
+        { "label": "Insights", "to": "student.insights" },
+        { "label": "Glossary", "to": "student.glossary" }
+      ]
+    },
+    "student.insights.risk": {
+      "id": "student.insights.risk",
+      "audience": "student",
+      "title": "Risk Analysis",
+      "summary": "Lists carry-overs (failed courses you have not yet passed in a later semester) separately from low grades (D, E or F), with an overall risk level from your saved results and forecast. Courses awaiting a result are left out.",
+      "cautions": [
+        "Opening this tab never makes an AI request.",
+        "Your department's rules decide which failed courses you must retake, for example when an elective is replaced."
+      ],
+      "related": [
+        { "label": "Insights", "to": "student.insights" },
+        { "label": "Dashboard", "to": "student.dashboard" }
+      ]
+    },
+    "student.insights.analysis": {
+      "id": "student.insights.analysis",
+      "audience": "student",
+      "title": "Written Analysis",
+      "summary": "AI-written strengths, concerns, recommendations and degree outlook based on your completed results.",
+      "terms": [
+        { "term": "Cached", "meaning": "Your last analysis stays readable at any time." },
+        { "term": "Regenerate", "meaning": "Makes a new analysis; free regeneration is allowed once every 12 hours, within your daily free uses." }
+      ],
+      "tasks": [
+        { "title": "Update after new results", "steps": ["Add your results.", "Choose Regenerate when the \"Your results changed\" note appears."] }
+      ],
+      "cautions": [
+        "If the AI is unavailable you will see your last saved analysis.",
+        "Advice is guidance, not an official academic decision."
+      ],
+      "platformNotes": {
+        "android": [
+          "Coins on: when free uses run out you can pay coins.",
+          "Coins off: you may watch a rewarded ad for one extra refresh (max 2 a day). The extra refresh is only granted after the ad network confirms the reward to our server, which can take a moment."
+        ]
+      },
+      "related": [
+        { "label": "Insights", "to": "student.insights" },
+        { "label": "Glossary (Coins, Extra refresh)", "to": "student.glossary" }
+      ]
+    },
+    "student.transcript": {
+      "id": "student.transcript",
+      "audience": "student",
+      "title": "Transcript",
+      "summary": "Builds an unofficial transcript from your completed semesters. You can download it as a PDF or share it by link.",
+      "terms": [
+        { "term": "Unofficial", "meaning": "Generated by AcadeGrade, not by your university." },
+        { "term": "Share link", "meaning": "A public link to a snapshot of your record." }
+      ],
+      "tasks": [
+        { "title": "Download", "steps": ["Choose Download PDF (web; Print HTML is also available) or Generate & Share PDF (Android)."] },
+        { "title": "Share", "steps": ["Choose whether to include your photo (web: Photo On/Off).", "Choose Share Link.", "Copy it."] },
+        { "title": "Stop sharing", "steps": ["In Active shared transcripts, choose Delete.", "Confirm."] }
+      ],
+      "cautions": [
+        "Anyone with the link can view it until it expires after 30 days or you delete it.",
+        "The link shows your record at the moment you created it; create a new one after adding results.",
+        "Transcript CGPA covers completed semesters only."
+      ],
+      "related": [
+        { "label": "Results", "to": "student.results" },
+        { "label": "Glossary", "to": "student.glossary" }
+      ],
+      "tour": { "android": "transcript" }
+    },
+    "student.notifications": {
+      "id": "student.notifications",
+      "audience": "student",
+      "title": "Notifications",
+      "summary": "Your inbox for semester saves, degree-class changes, new AI insights and announcements from AcadeGrade.",
+      "tasks": [
+        { "title": "Read", "steps": ["Tap an item."] },
+        { "title": "Mark all read", "steps": ["Choose Mark all read."] },
+        { "title": "Choose which alerts you get", "steps": ["Open Settings.", "Go to Notifications."] }
+      ],
+      "platformNotes": {
+        "web": ["Clear all deletes every notification in your inbox."]
+      },
+      "related": [
+        { "label": "Settings", "to": "student.settings" }
+      ],
+      "tour": { "android": "notifications" }
+    },
+    "student.settings": {
+      "id": "student.settings",
+      "audience": "student",
+      "title": "Settings",
+      "summary": "Your profile, academic timeline, display preferences, notifications and account security.",
+      "terms": [
+        { "term": "Entry session", "meaning": "The year you started (YYYY/YYYY, consecutive years)." },
+        { "term": "Programme duration", "meaning": "Years in your programme (1–10). Together these define which semesters you can create." },
+        { "term": "Primary metric", "meaning": "Whether your dashboard leads with CGPA or PI." }
+      ],
+      "tasks": [
+        { "title": "Fix your timeline", "steps": ["Change the entry session or duration.", "Save."] },
+        { "title": "Turn alerts on or off", "steps": ["Switch Semester saved, Degree class change, AI insights ready, or Admin broadcasts."] },
+        { "title": "Delete your account", "steps": ["Choose Delete account.", "Confirm with your password (web: also type DELETE)."] }
+      ],
+      "cautions": [
+        "Deleting your account erases all semesters, courses, transcript links and your profile, and cannot be undone.",
+        "Matric number changes need the AcadeGrade team."
+      ],
+      "platformNotes": {
+        "web": ["Also has Profile picture, Change password, Push notifications for this browser, and Record mode. Record mode is saved but does not change calculations."],
+        "android": [
+          "Also has Appearance, App Lock, App updates, Share AcadeGrade, Export transcript, and Replay usage guide.",
+          "Download my data shares a JSON file of your profile, results, saved insights and notifications, or a CSV of your courses. The files contain your grades, so on a shared phone delete any copy left behind.",
+          "Screen privacy: Discreet mode hides your CGPA, GPA and grades until you tap them. Block screenshots and hide app preview also blocks your own screenshots. Both apply to this phone only and start off."
+        ]
+      },
+      "related": [
+        { "label": "Glossary", "to": "student.glossary" }
+      ],
+      "tour": { "android": "settings" }
+    },
+    "student.glossary": {
+      "id": "student.glossary",
+      "audience": "student",
+      "title": "Terms used in AcadeGrade",
+      "summary": "What each number and label in AcadeGrade means, exactly as the apps calculate it.",
+      "terms": [
+        { "term": "Total score", "meaning": "CA (0–30) + exam (0–70) = 0–100." },
+        { "term": "Grade and grade point", "meaning": "A 70–100 = 5 · B 60–69 = 4 · C 50–59 = 3 · D 45–49 = 2 · E 40–44 = 1 · F 0–39 = 0. This scale is built into both apps." },
+        { "term": "GPA", "meaning": "Your semester's grade points weighted by credit units: Σ(grade point × units) ÷ Σ(units). Only courses with a score or grade count." },
+        { "term": "CGPA", "meaning": "Your cumulative GPA: every graded course, weighted by its credit units, whether or not its semester is marked complete. Courses awaiting a result (AR) or still needing a score are left out." },
+        { "term": "PI (Performance Index)", "meaning": "Like GPA, but it uses your exact score instead of the grade band: each course gives (total ÷ 100) × 5 points, weighted by units. For example, 69% gives PI points of 3.45 but grade points of 4 (a B). If you entered a letter grade only, PI uses that grade's points (an estimate)." },
+        { "term": "Degree class", "meaning": "Based on CGPA. First Class 4.50–5.00 · Second Class Upper (2:1) 3.50–4.49 · Second Class Lower (2:2) 2.40–3.49 · Third Class 1.50–2.39 · Pass 1.00–1.49 · Fail below 1.00. It is a projection, not your university's official award." },
+        { "term": "Credit units", "meaning": "1–6 per course. More units mean the course moves your GPA more." },
+        { "term": "Awaiting result (AR)", "meaning": "A course whose result is not out yet (your slip may mark it \"AR\"). It shows \"AR\" and is left out of GPA, PI and credits until the exam score is entered. You can still save its CA to see the exam score each grade needs." },
+        { "term": "Pending / \"Add score\"", "meaning": "A course saved without scores (for example, imported from a course code, or a scan with an unreadable score). Android will not complete the semester until each one has a score or grade." },
+        { "term": "Completed semester", "meaning": "A semester you marked complete (web: saved with at least one graded course; Android: \"Complete semester\"). Completed semesters count toward Insights and the transcript; CGPA also includes graded courses in semesters still in progress." },
+        { "term": "At risk / Needs attention", "meaning": "A graded course with a D, E or F. A carry-over is an F you have not yet passed in a later semester." },
+        { "term": "Carry-over", "meaning": "A failed (F) course you have not passed in a later semester. Its units are shown as outstanding. Courses awaiting a result never count. Your department's rules decide what you must retake." },
+        { "term": "Free uses", "meaning": "Each AI feature has its own free allowance per 24-hour window. The window starts at your first request for that feature and is not a midnight reset. There is also a short-term limit (Written Analysis and Forecast 2 per hour; What-If 3 per 5 minutes; scanning 5 per 15 minutes)." },
+        { "term": "Cached result", "meaning": "A saved answer shown again without a new AI request, so it does not use a free use. Forecasts are reused for up to 1 hour when your results have not changed. Written Analysis stays readable until you regenerate it, and free regeneration is allowed once every 12 hours." },
+        { "term": "Coins (Android)", "meaning": "Points you earn by watching a short rewarded ad on Android, and spend when a feature's free uses run out. They are not money and cannot be bought or transferred. There are daily earning limits, a maximum balance, and a daily limit of coin uses per feature. If a coin-paid request fails, the coins are refunded. Earning and spending days reset at midnight UTC." },
+        { "term": "Extra refresh (legacy)", "meaning": "When coins are off, a verified rewarded ad on Android gives one extra Written Analysis refresh, up to 2 per day (UTC)." },
+        { "term": "Course code (share code)", "meaning": "A 6-character code that copies a semester's course list (code, title, units) to a classmate. It never includes scores or grades. You need at least 3 courses to create one. Codes do not expire." },
+        { "term": "Transcript link", "meaning": "A public web link to a snapshot of your completed semesters. It expires after 30 days, and you can delete it sooner. It shows the record as it was when you created it; make a new link after adding results." },
+        { "term": "Primary metric", "meaning": "Whether your dashboard leads with CGPA or PI. It changes the display only, not the calculations." }
+      ]
+    }
+  }
+}

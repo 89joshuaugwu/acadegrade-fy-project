@@ -8,10 +8,9 @@
 }
 
 .marketing-hero-type-loop {
-  display: grid;
+  display: inline-grid;
   position: relative;
-  margin-top: 0.12em;
-  width: min(100%, 13ch);
+  max-width: 100%;
 }
 
 .marketing-hero-type-sizer,
@@ -29,16 +28,9 @@
   color: var(--acade-primary);
 }
 
+/* CGPA is drawn in primary and PI in gold across the product, so the loop borrows that pair. */
 .marketing-hero-type-output[data-phrase-index='1'] {
   color: var(--acade-gold);
-}
-
-.marketing-hero-type-output[data-phrase-index='2'] {
-  background: linear-gradient(90deg, var(--acade-primary), var(--acade-gold));
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
 }
 
 .marketing-type-caret {
@@ -80,6 +72,10 @@
 
 [data-text-effect='color-flow'] {
   color: var(--acade-primary);
+}
+
+.marketing-hero-type-line {
+  min-height: 1.25em;
 }
 
 @keyframes landing-text-enter {
@@ -159,17 +155,6 @@
 
   .hero-art-image-secondary { animation-delay: 5s; }
   .hero-art-image-tertiary { animation-delay: 10s; }
-
-  [data-text-effect='color-flow'] {
-    background-image: linear-gradient(90deg, var(--acade-primary), var(--acade-gold), var(--acade-primary));
-    background-position: 0% 50%;
-    background-size: 200% 100%;
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-    animation: landing-color-flow 7s linear infinite;
-  }
 
   @media (min-width: 640px) {
     [data-landing-motion='capture'][data-landing-order='1'] { --landing-delay: 90ms; }

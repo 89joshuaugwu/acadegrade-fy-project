@@ -4,12 +4,17 @@ import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { getVerifiedApiUser } from '@/lib/api/auth';
 import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { resolveFeatureWindows } from '@/lib/usage/server';
+import { coins, RewardError, type CoinHold } from '@/lib/ads/reward';
+import { checkPlatformAccess } from '@/lib/platform/settings-server';
+import { aiAgeGate } from '@/lib/user/age';
+import { redactIdentityLines } from '@/lib/ai/prompt-privacy';
+import { chargedFailureResponse, chargedHeaders, freeCoinHeaders, readCoinSpendHeader, refundQuietly, rewardErrorResponse, withCoinHint } from '@/lib/ads/reward/http';
 // pdf-parse is required dynamically inside the handler
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
 const PROMPT = `Extract course results from the provided academic result slip.
-Return ONLY a JSON array of objects representing each course. 
+Return ONLY a JSON array of objects representing each course.
 Do not include markdown blocks or any other text.
 Each object should have:
 - code: string (e.g. "CSC 401")
@@ -24,12 +29,18 @@ If the document contains no courses, return an empty array [].`;
 export async function POST(req: NextRequest) {
   const timer = apiTimer();
   let uid: string | null = null;
+  let hold: CoinHold | undefined;
+  let charged = false;
   try {
     const verifiedUser = await getVerifiedApiUser(req);
     if (!verifiedUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     uid = verifiedUser.uid;
+    const blocked = await checkPlatformAccess({ feature: 'extract_slip', email: verifiedUser.email }) ?? await aiAgeGate(uid);
+    if (blocked) return blocked;
+    // The body carries the file, so a coin spend is requested by header.
+    const coinRequestId = readCoinSpendHeader(req);
 
     const { base64Data, mimeType } = await req.json();
 
@@ -49,10 +60,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid or oversized result file.' }, { status: 413 });
     }
 
+    // Free first. A refused limiter check consumes nothing, so falling back to coins never spends a free unit.
     const rateLimit = await checkRateLimit(uid, 'results_extract', await resolveFeatureWindows('ocr'));
     if (!rateLimit.allowed) {
-      logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 429, durationMs: timer(), provider: 'gemini', error: 'Per-user rate limit exceeded' });
-      return rateLimitResponse(rateLimit, `Result scanning limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`);
+      if (!coinRequestId) {
+        logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 429, durationMs: timer(), provider: 'gemini', error: 'Per-user rate limit exceeded' });
+        return withCoinHint(rateLimitResponse(rateLimit, `Result scanning limit reached. Try again in ${rateLimit.retryAfterSeconds} seconds.`), uid, 'ocr');
+      }
+      hold = await coins.reserve(uid, 'ocr', coinRequestId);
+      charged = true;
     }
 
     let generated;
@@ -62,13 +78,15 @@ export async function POST(req: NextRequest) {
         const pdfParse = require('pdf-parse');
         const data = await pdfParse(buffer);
         const text = data.text.trim();
-        
+
         // Very basic check if text is "clean" (contains standard alphanumeric characters)
         const isClean = text.length > 50 && /[a-zA-Z0-9]/.test(text);
 
         if (isClean) {
-          // Use cheaper text-only extraction
-          generated = await generateMultimodalGeminiContentWithMetadata([`${PROMPT}\n\nDocument Text:\n${text}`], 'application/json');
+          // Use cheaper text-only extraction. Labelled name/matric/email lines are
+          // removed first; image and scanned-PDF paths send the file itself and
+          // cannot be redacted here.
+          generated = await generateMultimodalGeminiContentWithMetadata([`${PROMPT}\n\nDocument Text:\n${redactIdentityLines(text)}`], 'application/json');
         } else {
           // Fallback to sending the PDF document directly to Gemini
           generated = await generateMultimodalGeminiContentWithMetadata([
@@ -97,12 +115,20 @@ export async function POST(req: NextRequest) {
     const parsed = JSON.parse(generated.text);
     if (!Array.isArray(parsed)) throw new Error('AI returned an invalid course list.');
     const courses = parsed.slice(0, 100);
+    // Charge only once a usable course list exists; nothing is persisted here.
+    const charge = hold ? await coins.commit(hold) : undefined;
+    hold = undefined;
     logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 200, durationMs: timer(), provider: generated.providerId });
-    return NextResponse.json({ courses }, { headers: { 'X-RateLimit-Remaining': String(rateLimit.remaining) } });
+    return NextResponse.json({ courses }, {
+      headers: charge ? chargedHeaders(charge) : { 'X-RateLimit-Remaining': String(rateLimit.remaining), ...freeCoinHeaders(coinRequestId) },
+    });
 
   } catch (error: any) {
+    if (hold) await refundQuietly(hold);
+    if (error instanceof RewardError) return rewardErrorResponse(error);
     console.error('Extract error:', error);
-    logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: 500, durationMs: timer(), provider: 'gemini', error: error?.message });
+    logApiCall({ endpoint: '/api/results/extract', category: 'extract', uid, status: charged ? 503 : 500, durationMs: timer(), provider: 'gemini', error: error?.message });
+    if (charged) return chargedFailureResponse('Result scanning');
     return NextResponse.json({ error: 'Extraction failed' }, { status: 500 });
   }
 }

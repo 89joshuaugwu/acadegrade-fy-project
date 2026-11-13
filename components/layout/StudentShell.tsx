@@ -22,6 +22,7 @@ import { Logo, ThemeControl } from '@/components/ui';
 import { RouteAnnouncer } from '@/components/shared';
 import { getRouteMeta, isRouteActive, studentNavigation, type NavigationIcon } from '@/lib/ui/route-meta';
 import { cn } from '@/lib/utils/cn';
+import { DiscreetToggle } from '@/components/privacy/DiscreetToggle';
 
 const STUDENT_ICONS: Record<NavigationIcon, React.ElementType> = {
   dashboard: LayoutDashboard,
@@ -121,6 +122,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           </span>
         </div>
         <div className="flex items-center gap-1">
+          <DiscreetToggle />
           <NotificationDropdown />
           <button
             id="tour-mobile-hamburger-btn"
@@ -281,6 +283,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <DiscreetToggle />
             <ThemeControl compact />
             <NotificationDropdown />
           </div>

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 import { adminDb } from '@/lib/firebase/admin';
 import { AdminAuthorizationError, requireAdmin } from '@/lib/api/admin-auth';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { encryptSecret } from '@/lib/ai/secrets';
 import { getEmailDeliveryCredential, type EmailCredentialKind } from '@/lib/email/managed-credentials';
 
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     const body = await request.json() as Record<string, unknown>;
     if (!isKind(body.kind)) return NextResponse.json({ error: 'Choose General or OTP email.' }, { status: 400, headers: noStore });
     if (body.operation === 'save') {
@@ -38,8 +39,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Enter a valid sender email and Gmail App Password.' }, { status: 400, headers: noStore });
       }
       const secretId = `email-${body.kind}`;
-      await adminDb.collection('_email_secrets').doc(secretId).set({
+      const ref = adminDb.collection('_email_secrets').doc(secretId);
+      const existing = await ref.get();
+      const previous = existing.exists ? existing.data()?.email : undefined;
+      await ref.set({
         email, ...encryptSecret(appPassword, { secretId, providerId: 'smtp' }), updatedAt: new Date(),
+      });
+      // Sender address only; the app password never enters the audit log.
+      await writeAdminAudit({
+        actorUid: actor?.uid, actorEmail: actor?.email ?? '', action: 'email.save', target: `_email_secrets/${secretId}`,
+        before: typeof previous === 'string' ? { email: previous } : null, after: { email },
       });
       return NextResponse.json({ account: { kind: body.kind, email, configured: true } }, { headers: noStore });
     }

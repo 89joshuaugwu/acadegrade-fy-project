@@ -22,7 +22,17 @@ export type AiRouteTarget = {
   secretId?: string;
 };
 
-export type AiRoute = { mode: AiMode; chain: AiRouteTarget[] };
+/**
+ * `dataCollection` controls OpenRouter's `provider.data_collection` for the
+ * route's OpenRouter targets. Absent means 'deny' (read-time default), so
+ * stored configs need no rewrite. 'allow' may unlock more free models.
+ */
+export type OpenRouterDataCollection = 'deny' | 'allow';
+export type AiRoute = { mode: AiMode; chain: AiRouteTarget[]; dataCollection?: OpenRouterDataCollection };
+
+export function openRouterDataCollection(route: AiRoute): OpenRouterDataCollection {
+  return route.dataCollection === 'allow' ? 'allow' : 'deny';
+}
 export type AiRuntimeConfig = {
   source: 'bootstrap' | 'managed';
   revision: number;
@@ -68,8 +78,11 @@ export function parseProviderModels(value: unknown): Record<SupportedProviderId,
 
 function parseRoute(feature: AiFeature, value: unknown, managed: boolean, providerModels: Record<SupportedProviderId, string[]>): AiRoute {
   if (!value || typeof value !== 'object') throw new Error(`Missing AI route for ${feature}`);
-  const route = value as { mode?: unknown; chain?: unknown };
+  const route = value as { mode?: unknown; chain?: unknown; dataCollection?: unknown };
   if (!MODES.includes(route.mode as AiMode)) throw new Error('Unsupported AI mode');
+  if (route.dataCollection !== undefined && route.dataCollection !== 'deny' && route.dataCollection !== 'allow') {
+    throw new Error('Invalid OpenRouter data collection setting');
+  }
   if (!Array.isArray(route.chain)) throw new Error('AI route chain must be an array');
   const mode = route.mode as AiMode;
   if ((mode === 'disabled' || mode === 'local-only') && route.chain.length !== 0) throw new Error('Local AI route must not have providers');
@@ -93,7 +106,7 @@ function parseRoute(feature: AiFeature, value: unknown, managed: boolean, provid
     }
     return { providerId: target.providerId, modelId: target.modelId, ...(typeof target.secretId === 'string' ? { secretId: target.secretId } : {}) };
   });
-  return { mode, chain };
+  return { mode, chain, ...(route.dataCollection ? { dataCollection: route.dataCollection as OpenRouterDataCollection } : {}) };
 }
 
 export function parseAiRuntimeConfig(value: unknown): AiRuntimeConfig {

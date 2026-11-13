@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
-  Activity, Zap, AlertTriangle, Clock, TrendingUp, Users, Server,
+  Activity, Zap, AlertTriangle, Clock, TrendingUp, Users,
   RefreshCw, ChevronDown, Shield, ExternalLink
 } from 'lucide-react';
 import {
@@ -16,6 +16,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { ErrorState } from '@/components/shared';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -97,6 +99,7 @@ export default function ApiAnalyticsPage() {
   const [range, setRange] = useState('week');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchData = useCallback(async (showToast = false) => {
@@ -113,9 +116,13 @@ export default function ApiAnalyticsPage() {
       const json = await res.json();
       setData(json);
       setLastUpdated(new Date());
+      setLoadError(null);
       if (showToast) toast.success('Refreshed');
     } catch {
-      if (!data) toast.error('Failed to load API analytics');
+      // Keep any figures already shown, but say they are stale.
+      setLoadError(data
+        ? 'The latest refresh failed. Figures below are from the last successful update.'
+        : 'The analytics service did not respond, so no figures can be shown.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -168,6 +175,16 @@ export default function ApiAnalyticsPage() {
 
   const PROVIDER_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#EF4444', '#14B8A6', '#6366F1'];
 
+  /* ─── Error State (nothing loaded yet) ─── */
+  if (!data && loadError && !loading) {
+    return (
+      <div className="space-y-6">
+        <AdminPageHeader title="API health" description="API traffic, errors and response times from server logs." helpId="admin.api-health" />
+        <ErrorState title="API health is unavailable" description={loadError} onRetry={() => { void fetchData(); }} />
+      </div>
+    );
+  }
+
   /* ─── Loading State ─── */
   if (loading) {
     return (
@@ -185,38 +202,17 @@ export default function ApiAnalyticsPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] flex items-center gap-3">
-            <Server size={28} className="text-[var(--acade-danger)]" />
-            API Analytics
-          </h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-              Monitor API usage, quotas, and detect abuse across all endpoints.
-            </p>
-            {/* Live indicator */}
-            {autoRefresh && (
-              <span className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--acade-success)] font-medium shrink-0">
-                <span className="relative flex size-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-success)] opacity-75" />
-                  <span className="relative inline-flex rounded-full size-2 bg-[var(--acade-success)]" />
-                </span>
-                LIVE
-              </span>
-            )}
-          </div>
-          {lastUpdated && (
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] mt-0.5">
-              Last updated: {lastUpdated.toLocaleTimeString()}
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
+      <AdminPageHeader
+        title="API health"
+        description="API traffic, errors and response times from server logs."
+        helpId="admin.api-health"
+        actions={(
+          <div className="flex flex-wrap items-center gap-3">
           {/* Auto-refresh toggle */}
           <button
             type="button"
+            aria-pressed={autoRefresh}
+            aria-label="Auto-refresh every 30 seconds"
             onClick={() => setAutoRefresh(prev => !prev)}
             className={cn(
               "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[length:var(--text-xs)] font-medium transition-all",
@@ -226,12 +222,14 @@ export default function ApiAnalyticsPage() {
             )}
             title={autoRefresh ? "Auto-refresh is ON (every 30s)" : "Auto-refresh is OFF"}
           >
-            <RefreshCw size={12} className={autoRefresh ? 'animate-spin' : ''} style={autoRefresh ? { animationDuration: '3s' } : {}} />
+            <RefreshCw size={12} aria-hidden="true" className={autoRefresh ? 'motion-safe:animate-spin' : ''} style={autoRefresh ? { animationDuration: '3s' } : {}} />
             {autoRefresh ? 'Auto' : 'Paused'}
           </button>
           {/* Range Selector */}
           <div className="relative">
+            <label htmlFor="api-analytics-range" className="sr-only">Time range</label>
             <select
+              id="api-analytics-range"
               value={range}
               onChange={(e) => setRange(e.target.value)}
               className="appearance-none bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-2 pr-8 text-[length:var(--text-sm)] text-[var(--acade-text)] focus:outline-none focus:border-[var(--acade-primary)] cursor-pointer"
@@ -247,7 +245,25 @@ export default function ApiAnalyticsPage() {
             Refresh
           </Button>
         </div>
-      </div>
+        )}
+      >
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--text-xs)]">
+          {autoRefresh && (
+            <span className="flex items-center gap-1.5 font-medium text-[var(--acade-success)]">
+              <span className="relative flex size-2" aria-hidden="true">
+                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-success)] opacity-75" />
+                <span className="relative inline-flex size-2 rounded-full bg-[var(--acade-success)]" />
+              </span>
+              Live
+            </span>
+          )}
+          {lastUpdated && <span className="text-[var(--acade-text-muted)]">Last updated {lastUpdated.toLocaleTimeString()}</span>}
+        </div>
+      </AdminPageHeader>
+
+      {loadError && (
+        <p role="status" className="rounded-xl border border-[var(--acade-warning)]/35 bg-[var(--acade-warning)]/10 px-4 py-3 text-sm text-[var(--acade-text)]">{loadError}</p>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -449,9 +465,9 @@ export default function ApiAnalyticsPage() {
           <Card variant="glass" padding="lg">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">
               <Users size={18} className="inline mr-2 text-[var(--acade-gold)]" />
-              Top API Consumers
+              Top API consumers
             </h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">Users making the most API calls — check for abuse</p>
+            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">The accounts making the most calls. This shows names and emails; keep it out of public channels.</p>
             <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
               {(data?.topUsers?.length || 0) > 0 ? data!.topUsers.map((u, idx) => {
                 const isAbusive = u.count > 50;

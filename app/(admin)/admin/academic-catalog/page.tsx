@@ -1,5 +1,7 @@
 'use client';
 
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Search, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -145,13 +147,12 @@ export default function AcademicCatalogPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)]">Academic catalog</h1>
-          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Manage the shared universities, departments, and programmes.</p>
-        </div>
-        <Button size="sm" onClick={() => { setName(''); setForm({ mode: 'add' }); setError(''); }} disabled={loading || !snapshot || saving}><Plus size={16} aria-hidden="true" />Add {selectedKind.singular}</Button>
-      </div>
+      <AdminPageHeader
+        title="Academic catalogue"
+        description="The universities, departments and programmes students pick from when they sign up on the website or the Android app."
+        helpId="admin.academic-catalogue"
+        actions={<Button size="sm" onClick={() => { setName(''); setForm({ mode: 'add' }); setError(''); }} disabled={loading || !snapshot || saving}><Plus size={16} aria-hidden="true" />Add {selectedKind.singular}</Button>}
+      />
 
       <Card padding="none" className="overflow-hidden">
         <div className="border-b border-[var(--acade-border)] px-5 py-4">
@@ -192,6 +193,14 @@ export default function AcademicCatalogPage() {
         <div className="border-b border-[var(--acade-border)] px-5 py-3 text-sm text-[var(--acade-text-muted)]" role="status">{loading ? 'Loading catalog…' : `${filtered.length} ${status} ${selectedKind.label.toLowerCase()}`}</div>
         {!loading && snapshot && (filtered.length ? <ul className="divide-y divide-[var(--acade-border-subtle)]">{filtered.map(entry => <li key={entry.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="break-words font-semibold text-[var(--acade-text)]">{entry.name}</p><p className="text-xs capitalize text-[var(--acade-text-muted)]">{entry.source} · {entry.status}</p></div><div className="flex gap-2"><Button variant="outline" size="sm" disabled={saving} onClick={() => { setName(entry.name); setForm({ mode: 'edit', entry }); setError(''); }}>Edit {entry.name}</Button>{entry.status === 'active' ? <Button variant="ghost" size="sm" disabled={saving} onClick={() => setConfirmEntry(entry)}>Archive {entry.name}</Button> : <Button variant="ghost" size="sm" disabled={saving} onClick={() => void mutate({ action: 'restore', id: entry.id })}>Restore {entry.name}</Button>}</div></li>)}</ul> : <p className="p-10 text-center text-sm text-[var(--acade-text-muted)]">{query ? 'No matching entries.' : `No ${status} ${selectedKind.label.toLowerCase()} yet.`}</p>)}
       </Card>
+
+      <details className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-5 py-4">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--acade-text)]">Advanced</summary>
+        <p className="mt-3 text-sm text-[var(--acade-text-muted)]">
+          <Link href="/admin/courses" className="font-medium text-[var(--acade-primary)] underline underline-offset-2">Legacy course list (not used by the apps)</Link>
+          {' '}is an older list of course codes. It does not affect sign-up or students&apos; courses.
+        </p>
+      </details>
     </div>
   );
 }

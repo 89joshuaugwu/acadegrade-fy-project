@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { envContactEmail, normalizeContactEmail } from '@/lib/site/contact-email';
 
 export const SITE_NAME = 'AcadeGrade';
 export const DEFAULT_SITE_URL = 'https://acadegrade.vercel.app';
@@ -95,10 +96,17 @@ export const PUBLIC_SITEMAP_ROUTES = [
   '/support',
   '/privacy',
   '/terms',
+  '/account-deletion',
 ] as const;
 
-export function getSiteJsonLd() {
+/**
+ * Site JSON-LD. Pass `await getContactEmail()` from a server component to use
+ * the admin-managed address; without it the env fallback is used, and the
+ * `email` property is omitted when no address is configured.
+ */
+export function getSiteJsonLd(contactEmail: string | null = envContactEmail()) {
   const url = resolveSiteUrl();
+  const email = normalizeContactEmail(contactEmail);
 
   return [
     {
@@ -108,7 +116,7 @@ export function getSiteJsonLd() {
       name: SITE_NAME,
       url,
       logo: absoluteUrl('/android-chrome-512x512.png'),
-      email: 'support@acadegrade.com',
+      ...(email ? { email } : {}),
     },
     {
       '@context': 'https://schema.org',

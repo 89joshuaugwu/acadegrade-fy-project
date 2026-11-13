@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/admin-auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { createDefaultMobileAdsConfig, parseMobileAdsConfig, safeMobileAdsConfig } from '@/lib/ads/mobile';
 
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -21,13 +22,15 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     const body = await request.json();
     if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || !('config' in body)) {
       return NextResponse.json({ error: 'Expected only config.' }, { status: 400, headers });
     }
     const config = parseMobileAdsConfig(body.config);
+    const before = (await adminDb.collection('config').doc('mobileAds').get()).data() ?? null;
     await adminDb.collection('config').doc('mobileAds').set(config);
+    await writeAdminAudit({ actorUid: actor.uid, actorEmail: actor.email, action: 'ads.android-admob.update', target: 'config/mobileAds', before, after: config });
     return NextResponse.json({ config }, { headers });
   } catch (error) { return failure(error); }
 }

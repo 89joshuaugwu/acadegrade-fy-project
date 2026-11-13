@@ -1,5 +1,6 @@
 import type { Grade, GradeScaleEntry } from '@/types/course';
 import type { DegreeClass } from '@/types/analytics';
+import { DEGREE_CLASS_BANDS, GRADE_BANDS, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
 
 /** Application name constant */
 export const APP_NAME = 'AcadeGrade';
@@ -10,67 +11,33 @@ export const APP_TAGLINE = 'Know where you stand. Know where you\'re going.';
 /** Default university */
 export const DEFAULT_UNIVERSITY = 'ESUT Agbani';
 
-/** Nigerian 5-point grade scale — default, can be overridden by admin */
-export const GRADE_SCALE: GradeScaleEntry[] = [
-  { minScore: 70, maxScore: 100, grade: 'A' as Grade, gradePoint: 5 },
-  { minScore: 60, maxScore: 69, grade: 'B' as Grade, gradePoint: 4 },
-  { minScore: 50, maxScore: 59, grade: 'C' as Grade, gradePoint: 3 },
-  { minScore: 45, maxScore: 49, grade: 'D' as Grade, gradePoint: 2 },
-  { minScore: 40, maxScore: 44, grade: 'E' as Grade, gradePoint: 1 },
-  { minScore: 0, maxScore: 39, grade: 'F' as Grade, gradePoint: 0 },
-];
+/** Nigerian 5-point grade scale — from the shared academic rules (lower-bound bands) */
+export const GRADE_SCALE: GradeScaleEntry[] = GRADE_BANDS.map((band) => ({ ...band }));
 
-/** Degree class thresholds */
-export const DEGREE_CLASSES: DegreeClass[] = [
-  {
-    label: 'First Class',
-    shortLabel: '1st',
-    colorToken: '--class-first',
-    icon: '🏆',
-    minCGPA: 4.5,
-    maxCGPA: 5.0,
-  },
-  {
-    label: 'Second Class Upper (2:1)',
-    shortLabel: '2:1',
-    colorToken: '--class-2upper',
-    icon: '🎖',
-    minCGPA: 3.5,
-    maxCGPA: 4.49,
-  },
-  {
-    label: 'Second Class Lower (2:2)',
-    shortLabel: '2:2',
-    colorToken: '--class-2lower',
-    icon: '✅',
-    minCGPA: 2.4,
-    maxCGPA: 3.49,
-  },
-  {
-    label: 'Third Class',
-    shortLabel: '3rd',
-    colorToken: '--class-third',
-    icon: '⚠️',
-    minCGPA: 1.5,
-    maxCGPA: 2.39,
-  },
-  {
-    label: 'Pass',
-    shortLabel: 'Pass',
-    colorToken: '--class-pass',
-    icon: '🔴',
-    minCGPA: 1.0,
-    maxCGPA: 1.49,
-  },
-  {
-    label: 'Fail',
-    shortLabel: 'Fail',
-    colorToken: '--class-fail',
-    icon: '❌',
-    minCGPA: 0,
-    maxCGPA: 0.99,
-  },
-];
+/** Theme color token per degree class */
+const DEGREE_CLASS_COLOR_TOKENS: Record<DegreeClassShortLabel, string> = {
+  '1st': '--class-first',
+  '2:1': '--class-2upper',
+  '2:2': '--class-2lower',
+  '3rd': '--class-third',
+  Pass: '--class-pass',
+  Fail: '--class-fail',
+};
+
+/**
+ * Degree classes, highest first. Labels, icons and thresholds come from the
+ * shared academic rules. minCGPA/maxCGPA describe the rounded 2-decimal range;
+ * classify with resolveDegreeClass (lib/cgpa/degreeClass), never by comparing
+ * a raw CGPA against these ranges.
+ */
+export const DEGREE_CLASSES: DegreeClass[] = DEGREE_CLASS_BANDS.map(({ label, shortLabel, icon, minCGPA, maxCGPA }) => ({
+  label,
+  shortLabel,
+  colorToken: DEGREE_CLASS_COLOR_TOKENS[shortLabel],
+  icon,
+  minCGPA,
+  maxCGPA,
+}));
 
 /** Student levels in Nigerian universities */
 export const STUDENT_LEVELS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] as const;

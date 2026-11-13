@@ -8,10 +8,23 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { Modal } from '@/components/ui/Modal';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { DownloadLinks } from '@/components/admin/release/DownloadLinks';
 
 function httpsUrl(value: string) {
   try { return new URL(value).protocol === 'https:'; } catch { return false; }
 }
+
+/** One plain sentence for what Android users see right now. */
+function releaseStatus(config: MobileReleaseConfig) {
+  if (!config.enabled) return 'Off. No update notice is shown.';
+  const release = `${config.latestVersion || '—'} (build ${config.latestBuild})`;
+  if (!config.allowIgnore) return `Live: update to ${release}, mandatory for every older build.`;
+  if (config.minSupportedBuild > 0) return `Live: update to ${release}, mandatory below build ${config.minSupportedBuild}.`;
+  return `Live: optional update to ${release}.`;
+}
+
+const HEADER = { title: 'Android release', description: 'The update notice Android users see, and whether older builds may skip it. Changes go live when saved.' } as const;
 
 function validate(draft: MobileReleaseConfig) {
   if (draft.headline.length > 100 || draft.message.length > 400 || draft.latestVersion.length > 40) return 'Release text is too long.';
@@ -37,6 +50,10 @@ export default function MobileReleasePage() {
   const [notice, setNotice] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [installedBuild, setInstalledBuild] = useState('14');
+  const getToken = useCallback(async () => {
+    if (!user) throw new Error('Your admin session is unavailable.');
+    return user.getIdToken();
+  }, [user]);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -113,8 +130,9 @@ export default function MobileReleasePage() {
     void save();
   }
 
-  if (loading) return <div role="status" className="text-[var(--acade-text-muted)]">Loading Android release settings…</div>;
-  if (!saved) return <div role="alert" className="space-y-3"><p>{error || 'Could not load Android release settings.'}</p><Button onClick={() => void load()}>Retry</Button></div>;
+  const header = <AdminPageHeader title={HEADER.title} description={HEADER.description} helpId="admin.release" />;
+  if (loading) return <div className="max-w-6xl space-y-6">{header}<div role="status" className="text-[var(--acade-text-muted)]">Loading Android release settings…</div></div>;
+  if (!saved) return <div className="max-w-6xl space-y-6">{header}<div role="alert" className="space-y-3"><p>{error || 'Could not load Android release settings.'}</p><Button onClick={() => void load()}>Retry</Button></div></div>;
 
   const mandatory = draft.enabled && (!draft.allowIgnore || draft.minSupportedBuild > 0);
   const enforcement = !draft.allowIgnore ? 'Mandatory update for all older builds' : `Mandatory below build ${draft.minSupportedBuild}; optional for other older builds`;
@@ -129,9 +147,10 @@ export default function MobileReleasePage() {
     : installed < draft.minSupportedBuild || !draft.allowIgnore ? 'Mandatory update. This installed build cannot ignore the notice.'
     : 'Optional update. This installed build can ignore the notice.';
   return <div className="max-w-6xl space-y-6">
-    <header><h1 className="font-[family-name:var(--font-bricolage)] text-3xl font-bold text-[var(--acade-text)]">Android release notice</h1><p className="mt-1 text-sm text-[var(--acade-text-muted)]">Manage the APK update notice shown to Android users. Changes go live when saved.</p></header>
-    <p aria-label="Saved release status" className="text-sm text-[var(--acade-text-muted)]">Saved: {saved.enabled ? `notice enabled for version ${saved.latestVersion}, build ${saved.latestBuild}.` : 'Notice is off.'} {dirty ? 'Draft has unsaved changes.' : 'No unsaved changes.'}</p>
+    {header}
+    <p aria-label="Saved release status" className="text-sm text-[var(--acade-text)]"><span className="font-semibold">{releaseStatus(saved)}</span> <span className="text-[var(--acade-text-muted)]">{dirty ? 'Draft has unsaved changes.' : 'No unsaved changes.'}</span></p>
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.8fr)]">
+      <div className="min-w-0 space-y-6">
       <Card padding="lg"><form noValidate onSubmit={submit} className="space-y-5">
         <div className="flex items-center justify-between gap-4"><div><label id="enabled-label" className="font-semibold text-[var(--acade-text)]">Enable notice</label><p className="text-sm text-[var(--acade-text-muted)]">Off means no release notice is shown.</p></div><Switch aria-labelledby="enabled-label" aria-label="Enable notice" checked={draft.enabled} onCheckedChange={value => update('enabled', value)} /></div>
         <div className="grid gap-4 sm:grid-cols-2"><Input label="Version (x.y.z)" value={draft.latestVersion} maxLength={40} onChange={event => update('latestVersion', event.target.value)} /><Input label="Build number" type="number" min={0} step={1} value={draft.latestBuild || ''} onChange={event => update('latestBuild', Number(event.target.value))} /></div>
@@ -149,6 +168,8 @@ export default function MobileReleasePage() {
         {notice && <p role="status" className="text-sm text-[var(--acade-text)]">{notice}</p>}
         <Button type="submit" loading={saving} disabled={!dirty || uploading}>Save release notice</Button>
       </form></Card>
+      <DownloadLinks updateUrl={draft.downloadUrl} getToken={getToken} />
+      </div>
       <aside aria-label="Release preview" className="min-w-0 self-start lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto">
         <Card padding="sm"><h2 className="text-lg font-bold text-[var(--acade-text)]">Preview</h2><p className="mt-1 text-sm text-[var(--acade-text-muted)]">{dirty ? 'Unsaved draft' : 'Saved configuration'} · Android</p>
           <div className="mt-4 space-y-3 break-words">

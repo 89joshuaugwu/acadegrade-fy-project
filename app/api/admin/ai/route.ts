@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { AdminAuthorizationError, requireAdmin } from '@/lib/api/admin-auth';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { encryptSecret, type SupportedProviderId } from '@/lib/ai/secrets';
 import { createManagedRuntimeConfig, SUPPORTED_PROVIDERS, toMaskedAdminProjection, type StoredAiSecret } from '@/lib/ai/runtime-config';
 
@@ -31,10 +32,21 @@ function isStoredSecret(value: unknown): value is StoredAiSecret {
     && typeof secret.tag === 'string';
 }
 
-async function writeAudit(actor: { uid: string; email: string }, operation: string, resourceId: string) {
-  await adminDb.collection('_ai_audit').doc(`${Date.now()}-${Math.random().toString(36).slice(2)}`).set({
-    actorUid: actor.uid, actorEmail: actor.email, operation, resourceId, createdAt: new Date(),
-  });
+/** Shared admin audit (`_admin_audit`); replaces the old AI-only `_ai_audit` writes. */
+async function writeAudit(actor: { uid: string; email: string }, operation: string, target: string, before?: unknown, after?: unknown) {
+  await writeAdminAudit({ actorUid: actor.uid, actorEmail: actor.email, action: `ai.${operation}`, target, before, after });
+}
+
+/**
+ * Owner acknowledgement that Gemini runs on a billed Google Cloud project
+ * (free-tier inputs may be used for training and human review). Shown as a
+ * warning in the admin UI while 'unconfirmed'. It never blocks anything.
+ */
+type GeminiBilling = 'unconfirmed' | 'confirmed';
+const complianceRef = () => adminDb.collection('_ai_runtime').doc('compliance');
+async function readGeminiBilling(): Promise<GeminiBilling> {
+  const snapshot = await complianceRef().get();
+  return snapshot.exists && snapshot.data()?.geminiBilling === 'confirmed' ? 'confirmed' : 'unconfirmed';
 }
 
 async function assertActiveRoutingSecrets(routing: unknown, providerModels: unknown, revision: number) {
@@ -90,7 +102,7 @@ export async function POST(request: Request) {
         ...connectionDetails,
       };
       await adminDb.collection('_ai_secrets').doc(secretId).set(secret, { merge: true });
-      await writeAudit(actor, body.operation, secretId);
+      await writeAudit(actor, body.operation, `_ai_secrets/${secretId}`, existing.exists ? { exists: true } : null, toMaskedAdminProjection(secret));
       return NextResponse.json({ secret: toMaskedAdminProjection(secret) }, { headers: noStore });
     }
     if (body.operation === 'set-secret-state' && typeof body.secretId === 'string' && ['active', 'inactive', 'retired'].includes(String(body.state))) {
@@ -98,7 +110,7 @@ export async function POST(request: Request) {
       if (!existing.exists || !isStoredSecret(existing.data())) throw new InvalidAiConfigurationError('Credential was not found.');
       if (existing.data()?.state === 'retired') throw new InvalidAiConfigurationError('Retired credentials cannot be reactivated.');
       await adminDb.collection('_ai_secrets').doc(body.secretId).set({ state: body.state, updatedAt: new Date() }, { merge: true });
-      await writeAudit(actor, 'set-secret-state', body.secretId);
+      await writeAudit(actor, 'set-secret-state', `_ai_secrets/${body.secretId}`, { state: existing.data()?.state ?? null }, { state: body.state });
       return NextResponse.json({ secretId: body.secretId, state: body.state }, { headers: noStore });
     }
     if ((body.operation === 'save-routing' || body.operation === 'activate-managed') && Number.isSafeInteger(body.expectedRevision)) {
@@ -116,8 +128,17 @@ export async function POST(request: Request) {
         transaction.set(configRef, { ...candidate, updatedAt: new Date() });
         return candidate;
       });
-      await writeAudit(actor, body.operation, 'config');
+      await writeAudit(actor, body.operation, '_ai_runtime/config', { revision: body.expectedRevision }, { revision: result.revision, routes: result.routes });
       return NextResponse.json({ config: result }, { headers: noStore });
+    }
+    if (body.operation === 'set-gemini-billing') {
+      if (body.geminiBilling !== 'confirmed' && body.geminiBilling !== 'unconfirmed') {
+        throw new InvalidAiConfigurationError("geminiBilling must be 'confirmed' or 'unconfirmed'.");
+      }
+      const before = await readGeminiBilling();
+      await complianceRef().set({ geminiBilling: body.geminiBilling, updatedAt: new Date(), updatedBy: actor.email }, { merge: true });
+      await writeAudit(actor, 'set-gemini-billing', '_ai_runtime/compliance', { geminiBilling: before }, { geminiBilling: body.geminiBilling });
+      return NextResponse.json({ geminiBilling: body.geminiBilling }, { headers: noStore });
     }
     return NextResponse.json({ error: 'Invalid AI configuration request.' }, { status: 400, headers: noStore });
   } catch (error) {
@@ -128,9 +149,10 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     await requireAdmin(request);
-    const [config, secrets] = await Promise.all([
+    const [config, secrets, geminiBilling] = await Promise.all([
       adminDb.collection('_ai_runtime').doc('config').get(),
       adminDb.collection('_ai_secrets').get(),
+      readGeminiBilling(),
     ]);
     const maskedSecrets = secrets.docs
       .map((item) => item.data())
@@ -140,7 +162,8 @@ export async function GET(request: Request) {
     const providers = Object.fromEntries(Object.entries(SUPPORTED_PROVIDERS).map(([id, provider]) => [id, {
       ...provider, models: storedConfig?.providerModels?.[id] ?? provider.models,
     }]));
-    return NextResponse.json({ providers, config: storedConfig, secrets: maskedSecrets }, { headers: noStore });
+    // `geminiBilling` is additive; `config.routes.*.dataCollection` absent means OpenRouter 'deny'.
+    return NextResponse.json({ providers, config: storedConfig, secrets: maskedSecrets, geminiBilling }, { headers: noStore });
   } catch (error) {
     return errorResponse(error);
   }

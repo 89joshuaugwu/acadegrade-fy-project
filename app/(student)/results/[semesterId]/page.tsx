@@ -19,6 +19,12 @@ import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { GradeTable } from '@/components/cgpa/GradeTable';
+import { useCourseCatalog } from '@/components/cgpa/courseCatalog';
+import { clearDraft } from '@/lib/drafts';
+import { fetchAiEligibility, type AiEligibilityView } from '@/lib/consent/requirements';
+import { AiAccessNotice } from '@/components/privacy/AiAccessNotice';
+import { HelpButton } from '@/components/help/HelpDrawer';
+import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { ResultsTour } from '@/components/onboarding/ResultsTour';
@@ -51,6 +57,32 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const [shareCodeInput, setShareCodeInput] = useState('');
   const [generatedCode, setGeneratedCode] = useState('');
   const [importingCode, setImportingCode] = useState(false);
+
+  // Arriving from the calculator handoff: its rows wait as a draft to review. Read once on the client.
+  const [fromCalculator] = useState(() => (
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('from') === 'calculator'
+  ));
+
+  // Scanner eligibility (age / AI consent). Unknown when the check fails: the scanner stays available.
+  const [aiEligibility, setAiEligibility] = useState<AiEligibilityView | null>(null);
+  useEffect(() => {
+    if (!isImportSlipOpen || !user) return;
+    const controller = new AbortController();
+    void Promise.resolve()
+      .then(() => user.getIdToken())
+      .then((token) => fetchAiEligibility(token, fetch, controller.signal))
+      .then((result) => { if (!controller.signal.aborted) setAiEligibility(result); })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [isImportSlipOpen, user]);
+  const scannerBlocked = aiEligibility?.aiAllowed === false;
+
+  // A10: catalogue suggestions for this department, level and semester (cached per session).
+  const catalog = useCourseCatalog(semester ? {
+    department: profile?.department ?? null,
+    level: Number(semester.level),
+    semester: Number(semester.semester),
+  } : null);
 
   useEffect(() => {
     if (!user?.uid || semesterId === 'new') {
@@ -106,6 +138,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         removedCourseIds: coursesToDelete.map((course) => course.id).filter((id): id is string => Boolean(id)),
         summary: prepared.summary,
       });
+      // D3: the record is saved, so the local draft is no longer needed.
+      clearDraft(user.uid, semesterId);
 
       const { gpa } = prepared.summary;
 
@@ -357,6 +391,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           aria-label="Semester actions"
           className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center"
         >
+          <HelpButton entryId={STUDENT_HELP.semester} source={studentHelpSource} className="col-span-2 justify-center md:col-span-1" />
           <Button id="tour-import-code" variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
             <Download size={16} className="mr-2" /> Import Code
           </Button>
@@ -369,23 +404,35 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         </div>
       </div>
 
+      {fromCalculator && (
+        <p role="status" className="mb-4 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/30 bg-[var(--acade-primary-dim)] px-4 py-3 text-sm leading-6 text-[var(--acade-text)]">
+          These courses came from the calculator and are not saved yet. Add each course title, enter CA and exam scores where a grade is marked with a question mark, then save the semester.
+        </p>
+      )}
+
       <motion.div
         id="tour-grade-table"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden p-4 md:p-6"
       >
-        <GradeTable 
-          initialCourses={initialCourses} 
-          editable={true} 
-          onSave={handleSave} 
+        <GradeTable
+          initialCourses={initialCourses}
+          editable={true}
+          onSave={handleSave}
           isSaving={saving}
+          catalog={catalog}
+          draft={user ? { uid: user.uid, semesterId } : undefined}
+          restoreDraftOnMount={fromCalculator}
         />
       </motion.div>
 
       {/* Modals */}
       <Modal open={isImportSlipOpen} onClose={() => setIsImportSlipOpen(false)} title="Import Result Slip">
-        {isImportSlipOpen && <FeatureCredits feature="ocr" refreshKey={String(uploadingSlip)} />}
+        {isImportSlipOpen && !scannerBlocked && <FeatureCredits feature="ocr" refreshKey={String(uploadingSlip)} />}
+        {scannerBlocked && aiEligibility ? (
+          <AiAccessNotice eligibility={aiEligibility} />
+        ) : (
         <div className="flex flex-col gap-4 mt-2">
           <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
             Scan your result slip with your phone camera, or choose an existing image or PDF. AcadeGrade will extract the courses and scores for you to review.
@@ -436,6 +483,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
             </div>
           )}
         </div>
+        )}
       </Modal>
 
       <Modal open={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title="Share Course Code">

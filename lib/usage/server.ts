@@ -1,11 +1,28 @@
 import 'server-only';
 import { adminDb } from '@/lib/firebase/admin';
 import { shouldEnforceInsightCooldown } from '@/lib/ai/insight-cooldown';
-import { FEATURE_IDS, USAGE_FEATURES, featureWindows, readUsagePolicy, type UsageFeatureId, type UsageSummary } from './policy';
+import { FEATURE_IDS, USAGE_FEATURES, featureWindows, inspectUsagePolicy, type UsageFeatureId, type UsageSummary } from './policy';
+
+const warnedPolicies = new Set<string>();
+
+/** Effective policy plus where it came from. Storage errors propagate; only
+ * missing/invalid stored fields fall back (per field) to defaults. */
+export async function inspectStoredUsagePolicy() {
+  const snapshot = await adminDb.collection('config').doc('usage').get();
+  const inspection = inspectUsagePolicy(snapshot.data());
+  // A never-saved coins map is the expected state of older documents, not a rejection.
+  const rejected = inspection.fallbacks.filter(field => field !== 'coins');
+  const signature = rejected.join(',');
+  if (inspection.source !== 'default' && rejected.length && !warnedPolicies.has(signature)) {
+    warnedPolicies.add(signature);
+    // Field paths only: never log stored values.
+    console.warn('[usage-policy] config/usage has missing or invalid fields; defaults apply to them', { fields: rejected });
+  }
+  return inspection;
+}
 
 export async function getUsagePolicy() {
-  const snapshot = await adminDb.collection('config').doc('usage').get();
-  return readUsagePolicy(snapshot.data());
+  return (await inspectStoredUsagePolicy()).policy;
 }
 
 export async function resolveFeatureWindows(id: UsageFeatureId) {
@@ -35,6 +52,8 @@ export async function getUsageSummary(uid: string): Promise<UsageSummary> {
   const lastInsight = analytics.data()?.lastInsight;
   const lastCall = insightTimestamp(lastInsight?.timestamp);
   const ageMs = lastCall ? checkedAt - lastCall : Number.POSITIVE_INFINITY;
+  // The route enforces this only for forced regeneration; a non-forced
+  // cache-miss request is still served. Report it alongside, never as zero availability.
   const cooldownUntil = shouldEnforceInsightCooldown(true, Boolean(lastInsight?.data), ageMs)
     ? lastCall + 12 * 60 * 60 * 1000 : null;
 
@@ -54,13 +73,12 @@ export async function getUsageSummary(uid: string): Promise<UsageSummary> {
       return { remaining, resetAt, retry };
     }));
     const daily = states[1];
-    const cooldown = id === 'insights' ? cooldownUntil : null;
     return {
       id, label: feature.label, freeDailyLimit: policy.dailyLimits[id],
       freeRemaining: daily.remaining, freeResetAt: daily.resetAt,
-      availableNow: cooldown ? 0 : Math.min(...states.map(state => state.remaining)),
-      retryAfterSeconds: Math.max(...states.map(state => state.retry), cooldown ? Math.max(1, Math.ceil((cooldown - checkedAt) / 1000)) : 0),
-      cooldownUntil: cooldown,
+      availableNow: Math.min(...states.map(state => state.remaining)),
+      retryAfterSeconds: Math.max(...states.map(state => state.retry)),
+      cooldownUntil: id === 'insights' ? cooldownUntil : null,
     };
   }));
   return { features, checkedAt };

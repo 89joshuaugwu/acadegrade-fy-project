@@ -12,6 +12,14 @@ import {
 } from '@/lib/academic/timeline';
 import { sendEmail, welcomeEmail } from '@/lib/email/mailer';
 import { apiTimer, logApiCall } from '@/lib/api/logger';
+import { checkPlatformAccess } from '@/lib/platform/settings-server';
+import {
+  computeAnswerUpdate,
+  parseOptionalAnswers,
+  readLegalVersions,
+  RequirementError,
+  type RequirementAnswers,
+} from '@/lib/user/requirements';
 
 const sessionSchema = z.string().trim().refine(
   (value) => parseAcademicSession(value) !== null,
@@ -53,6 +61,9 @@ const finalizeSchema = z.object({
   password: z.string().min(8).max(128).optional(),
   profile: profileSchema,
   pastSemesters: z.array(pastSemesterSchema).max(20).default([]),
+  // Optional, additive: old clients omit both and the account stays "unknown".
+  ageStatus: z.enum(['adult', 'minor']).optional(),
+  answers: z.unknown().optional(),
 }).superRefine((data, context) => {
   if (data.authMethod === 'email') {
     if (!data.verificationToken) {
@@ -140,6 +151,9 @@ export async function POST(request: NextRequest) {
   let createdAuthUid: string | null = null;
 
   try {
+    const blocked = await checkPlatformAccess({});
+    if (blocked) return blocked;
+
     const parsed = finalizeSchema.safeParse(await request.json());
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
@@ -158,6 +172,20 @@ export async function POST(request: NextRequest) {
     const settings = await adminDb.collection('config').doc('settings').get();
     if (settings.data()?.disableSignups === true) {
       throw new RegistrationError('New registrations are currently paused.', 403, 'signups-disabled');
+    }
+
+    // Requirements answers (age, terms, privacy, AI and marketing consent).
+    const parsedAnswers = parseOptionalAnswers(parsed.data.answers);
+    if (parsed.data.ageStatus && parsedAnswers?.age && parsedAnswers.age !== parsed.data.ageStatus) {
+      throw new RequirementError('Age answers do not match.', 400, 'INVALID_ANSWERS');
+    }
+    const answers: RequirementAnswers | undefined = parsed.data.ageStatus || parsedAnswers
+      ? { ...parsedAnswers, ...(parsed.data.ageStatus ? { age: parsed.data.ageStatus } : {}) }
+      : undefined;
+    const legalRef = adminDb.collection('config').doc('legal');
+    if (answers) {
+      // Validate before touching Firebase Auth (stale versions, AI consent from a minor).
+      computeAnswerUpdate({}, answers, readLegalVersions((await legalRef.get()).data()), new Date());
     }
 
     const normalizedEmail = profile.email.trim().toLowerCase();
@@ -283,9 +311,9 @@ export async function POST(request: NextRequest) {
     const now = new Date();
 
     await adminDb.runTransaction(async (transaction) => {
-      const refs = [userRef, analyticsRef, matricRef, ...(ticketRef ? [ticketRef] : [])];
+      const refs = [userRef, analyticsRef, matricRef, legalRef, ...(ticketRef ? [ticketRef] : [])];
       const snapshots = await transaction.getAll(...refs);
-      const [userSnapshot, analyticsSnapshot, matricSnapshot, ticketSnapshot] = snapshots;
+      const [userSnapshot, analyticsSnapshot, matricSnapshot, legalSnapshot, ticketSnapshot] = snapshots;
 
       if (isStudentProfileComplete(userSnapshot.data())) {
         throw new RegistrationError('This account setup is already complete.', 409, 'setup-complete');
@@ -319,9 +347,17 @@ export async function POST(request: NextRequest) {
         'mobileUsageTourCompletedChapters',
         'mobileUsageTourSkipped',
         'mobileUsageTourCompleted',
+        // Server-owned requirement answers recorded before setup finished.
+        'ageStatus',
+        'ageDeclaredAt',
+        'ageUpgradedAt',
+        'consents',
       ]) {
         if (existingUser[key] !== undefined) preservedProfileFields[key] = existingUser[key];
       }
+      const answerFields = answers
+        ? computeAnswerUpdate(existingUser, answers, readLegalVersions(legalSnapshot.data()), now)
+        : {};
 
       transaction.set(userRef, {
         ...preservedProfileFields,
@@ -349,6 +385,7 @@ export async function POST(request: NextRequest) {
         setupCompletedAt: now,
         createdAt: existingUser.createdAt || now,
         updatedAt: now,
+        ...answerFields,
       }, { merge: false });
 
       transaction.set(matricRef, {
@@ -414,6 +451,10 @@ export async function POST(request: NextRequest) {
       ? String((error as { code?: unknown }).code)
       : '';
     const isAuthenticationError = firebaseCode.startsWith('auth/');
+    if (error instanceof RequirementError) {
+      logApiCall({ endpoint: '/api/auth/register/finalize', category: 'auth', uid: null, status: error.status, durationMs: timer(), error: error.code });
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
     const status = error instanceof RegistrationError
       ? error.status
       : isAuthenticationError

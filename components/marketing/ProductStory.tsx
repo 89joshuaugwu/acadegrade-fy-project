@@ -1,52 +1,47 @@
-import { BookOpenCheck, ChartNoAxesCombined, Compass } from 'lucide-react';
-
 const workflow = [
   {
-    marker: '01',
     title: 'Record what happened',
     description: 'Add scores, grades, credits, semester and session context.',
-    icon: BookOpenCheck,
+    tone: 'story-segment--record',
   },
   {
-    marker: '02',
     title: 'See where you stand',
     description: 'Read CGPA, PI, degree class and completion context together.',
-    icon: ChartNoAxesCombined,
+    tone: 'story-segment--understand',
   },
   {
-    marker: '03',
     title: 'Plan what comes next',
     description: 'Test scenarios and focus attention where the credit impact matters.',
-    icon: Compass,
+    tone: 'story-segment--plan',
   },
 ] as const;
 
 export function ProductStory() {
   return (
-    <section id="how-it-works" aria-labelledby="product-story-title" className="public-atmosphere-section scroll-mt-20 border-b border-[var(--acade-border-subtle)]">
-      <div className="mx-auto max-w-[1200px] px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-        <div className="grid gap-5 border-b border-[var(--acade-border)] pb-9 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-7">
-            <p data-landing-motion="type" className="text-sm font-semibold text-[var(--acade-primary)]">A practical academic rhythm</p>
-            <h2 data-landing-motion="words" id="product-story-title" className="mt-3 font-[family-name:var(--font-bricolage)] text-[clamp(2rem,3.5vw,2.75rem)] font-semibold tracking-[-0.035em]">
-              <span>Record.</span>{' '}<span data-text-effect="color-flow">Understand.</span>{' '}<span>Plan.</span>
-            </h2>
-          </div>
-          <p className="max-w-[48ch] leading-7 text-[var(--acade-text-muted)] lg:col-span-5">One connected record supports the three decisions students return to throughout a degree.</p>
+    <section id="how-it-works" aria-labelledby="product-story-title" className="public-atmosphere-section scroll-mt-20">
+      <div className="mx-auto max-w-[1200px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
+        <div className="grid gap-5 lg:grid-cols-12 lg:items-end">
+          <h2
+            data-landing-motion="words"
+            id="product-story-title"
+            className="font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,5vw,4rem)] font-semibold leading-[1.02] tracking-[-0.04em] lg:col-span-7"
+          >
+            <span>Record.</span>{' '}<span>Understand.</span>{' '}<span>Plan.</span>
+          </h2>
+          <p className="max-w-[44ch] text-[1.0625rem] leading-8 text-[var(--acade-text-muted)] lg:col-span-5 lg:justify-self-end">
+            One connected record supports the three decisions students return to throughout a degree.
+          </p>
         </div>
 
-        <ol aria-label="Academic workflow" className="mt-7 grid gap-0 sm:mt-10 md:grid-cols-3">
-          {workflow.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <li key={step.marker} className={`py-6 md:px-7 md:py-7 ${index < workflow.length - 1 ? 'border-b border-[var(--acade-border-subtle)] md:border-b-0 md:border-r' : ''} ${index === 0 ? 'md:pl-0' : ''} ${index === workflow.length - 1 ? 'md:pr-0' : ''}`}>
-                <span className="font-[family-name:var(--font-geist-mono)] text-sm font-semibold text-[var(--acade-primary)]">{step.marker}</span>
-                <Icon className="mt-6 size-7 text-[var(--acade-primary)]" aria-hidden="true" />
-                <h3 className="mt-5 font-[family-name:var(--font-bricolage)] text-xl font-semibold">{step.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-[var(--acade-text-muted)]">{step.description}</p>
-              </li>
-            );
-          })}
+        <ol aria-label="Academic workflow" className="story-rail mt-10 grid gap-8 sm:mt-14 md:grid-cols-3 md:gap-1.5">
+          {workflow.map((step, index) => (
+            <li key={step.title} data-landing-motion="capture" data-landing-order={index} className="min-w-0">
+              <div className={`story-segment ${step.tone}`}>
+                <h3 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold tracking-[-0.02em] sm:text-2xl">{step.title}</h3>
+              </div>
+              <p className="mt-4 max-w-[34ch] leading-7 text-[var(--acade-text-muted)] md:pr-6">{step.description}</p>
+            </li>
+          ))}
         </ol>
       </div>
     </section>

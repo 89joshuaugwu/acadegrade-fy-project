@@ -49,6 +49,10 @@ describe('AdPlacement', () => {
     localStorage.clear();
     mocks.getDocument.mockReset();
     observers = [];
+    vi.stubGlobal('Image', class {
+      onload: (() => void) | null = null;
+      set src(_value: string) { queueMicrotask(() => this.onload?.()); }
+    });
     vi.stubGlobal('IntersectionObserver', class {
       disconnect = vi.fn();
       constructor(callback: IntersectionObserverCallback) {
@@ -115,6 +119,52 @@ describe('AdPlacement', () => {
     localStorage.setItem(historyKey, JSON.stringify({ 'insights-launch': [now - 1], other: [now - 2] }));
     observers.at(-1)!.notify(1);
     expect(JSON.parse(localStorage.getItem(historyKey)!)).toEqual({ 'insights-launch': [now - 1, now], other: [now - 2] });
+  });
+
+  it('renders an image creative and arms view counting only after its image loads', async () => {
+    const pending: { load: () => void }[] = [];
+    vi.stubGlobal('Image', class {
+      onload: (() => void) | null = null;
+      set src(_value: string) { pending.push({ load: () => this.onload?.() }); }
+    });
+    const withImage = config();
+    withImage.campaigns[0].creative.imageUrl = 'https://cdn.example.com/slow.png';
+    withImage.campaigns[0].creative.altText = 'Insights preview';
+    const { container } = render(<AdPlacement placement="dashboard.overview" config={withImage} seed="student-1" now={now} />);
+    // Nothing is reserved or counted while the image is pending, so a failure cannot shift the page.
+    expect(container).toBeEmptyDOMElement();
+    expect(observers).toHaveLength(0);
+    act(() => pending.at(-1)!.load());
+    expect(screen.getByRole('img', { name: 'Insights preview' })).toBeInTheDocument();
+    expect(localStorage.getItem(historyKey)).toBeNull();
+    observers.at(-1)!.notify(1);
+    expect(JSON.parse(localStorage.getItem(historyKey)!)).toEqual({ 'insights-launch': [now] });
+  });
+
+  it('hides a creative whose image fails to load, even with a headline, and records no view', async () => {
+    vi.stubGlobal('Image', class {
+      onerror: (() => void) | null = null;
+      set src(_value: string) { queueMicrotask(() => this.onerror?.()); }
+    });
+    const withImage = config();
+    withImage.campaigns[0].creative.imageUrl = 'https://cdn.example.com/missing.png';
+    const { container } = render(<AdPlacement placement="dashboard.overview" config={withImage} seed="student-1" now={now} />);
+    await act(async () => {});
+    expect(container).toBeEmptyDOMElement();
+    expect(observers).toHaveLength(0);
+    expect(localStorage.getItem(historyKey)).toBeNull();
+  });
+
+  it('renders the Results placement only when it is saved and switched on', () => {
+    const older = config();
+    older.campaigns[0].placementIds = ['dashboard.overview', 'results.overview'];
+    const view = render(<AdPlacement placement="results.overview" config={older} seed="student-1" now={now} />);
+    expect(view.container).toBeEmptyDOMElement();
+    const enabled = config();
+    enabled.placements.push({ id: 'results.overview', name: 'Results overview', enabled: true });
+    enabled.campaigns[0].placementIds = ['results.overview'];
+    view.rerender(<AdPlacement placement="results.overview" config={enabled} seed="student-1" now={now} />);
+    expect(screen.getByRole('complementary', { name: 'Featured from AcadeGrade' })).toBeInTheDocument();
   });
 
   it('preserves stored caps during selection', () => {

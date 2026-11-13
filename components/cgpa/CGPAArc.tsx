@@ -5,7 +5,7 @@ import { motion, useSpring, useTransform, AnimatePresence } from 'motion/react';
 import CountUp from 'react-countup';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { resolveDegreeClass } from '@/lib/cgpa/degreeClass';
+import { formatCgpa, resolveDegreeClass as resolveDegreeClassBand, roundCgpa, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
 import { DegreeClassBadge } from './DegreeClassBadge';
 
 type ArcSize = 'sm' | 'md' | 'lg';
@@ -50,13 +50,15 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
-/** Map a 0-5 metric value to a gradient color */
+/** Map a 0-5 metric value to a gradient color, using the shared (rounded) degree-class bands */
+const METRIC_COLORS: Partial<Record<DegreeClassShortLabel, string>> = {
+  '1st': 'var(--grade-a)', // First class — green
+  '2:1': 'var(--grade-b)', // 2:1 — indigo
+  '2:2': 'var(--grade-c)', // 2:2 — amber
+  '3rd': 'var(--grade-d)', // Third — orange
+};
 function getMetricColor(value: number): string {
-  if (value >= 4.5) return 'var(--grade-a)';     // First class — green
-  if (value >= 3.5) return 'var(--grade-b)';     // 2:1 — indigo
-  if (value >= 2.4) return 'var(--grade-c)';     // 2:2 — amber
-  if (value >= 1.5) return 'var(--grade-d)';     // Third — orange
-  return 'var(--grade-e)';                       // Below — red
+  return METRIC_COLORS[resolveDegreeClassBand(value).shortLabel] ?? 'var(--grade-e)'; // Below — red
 }
 
 /** PI Info Tooltip Component */
@@ -308,7 +310,7 @@ function CGPAArc({
         <svg
           viewBox={`0 0 ${config.viewBox} ${config.viewBox}`}
           className="w-full h-full"
-          aria-label={`CGPA: ${clampedCGPA.toFixed(2)}, PI: ${clampedPI.toFixed(2)}`}
+          aria-label={`CGPA: ${formatCgpa(clampedCGPA)}, PI: ${clampedPI.toFixed(2)}`}
           role="img"
         >
           <defs>
@@ -397,13 +399,13 @@ function CGPAArc({
             >
               {animateOnMount && !shouldReduceMotion ? (
                 <CountUp
-                  end={primaryMetric === 'cgpa' ? clampedCGPA : clampedPI}
+                  end={primaryMetric === 'cgpa' ? roundCgpa(clampedCGPA) : clampedPI}
                   decimals={2}
                   duration={1.8}
                   delay={0.3}
                 />
               ) : (
-                (primaryMetric === 'cgpa' ? clampedCGPA : clampedPI).toFixed(2)
+                primaryMetric === 'cgpa' ? formatCgpa(clampedCGPA) : clampedPI.toFixed(2)
               )}
             </span>
             <span
@@ -416,7 +418,7 @@ function CGPAArc({
             >
               {primaryMetric === 'cgpa'
                 ? <><span>PI: {clampedPI.toFixed(2)}</span><PITooltip size={size} /></>
-                : `CGPA: ${clampedCGPA.toFixed(2)}`
+                : `CGPA: ${formatCgpa(clampedCGPA)}`
               }
             </span>
           </div>

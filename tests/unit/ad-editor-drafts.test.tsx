@@ -11,7 +11,7 @@ describe.each(['providers', 'Android', 'iOS'] as const)('%s draft safety', kind 
     else render(<MobileAdsEditor platform={kind} initialConfig={createDefaultMobileAdsConfig()} onSave={onSave} />);
     return {
       field: screen.getByRole('textbox', { name: kind === 'providers' ? 'Publisher ID' : 'Results banner ad unit ID' }),
-      save: screen.getByRole('button', { name: kind === 'providers' ? 'Save provider settings' : `Save ${kind} ad settings` }),
+      save: screen.getByRole('button', { name: kind === 'providers' ? 'Save web ad networks' : `Save ${kind} ad settings` }),
       first: kind === 'providers' ? 'ca-pub-1111111111111111' : 'ca-app-pub-1111111111111111/1111111111',
       later: kind === 'providers' ? 'ca-pub-2222222222222222' : 'ca-app-pub-2222222222222222/2222222222',
     };

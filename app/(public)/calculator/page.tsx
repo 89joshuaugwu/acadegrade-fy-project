@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowRight,
   BookOpenCheck,
-  Calculator,
   LockKeyhole,
   Plus,
   Save,
@@ -29,6 +28,8 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 import { computeCourseMetrics, computeSemesterGPA } from '@/lib/cgpa/calculator';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { readCalculatorHandoff, saveCalculatorHandoff } from '@/lib/handoff/calculator';
 import type { CourseInput, Grade } from '@/types/course';
 
 interface QuickCourse {
@@ -64,6 +65,7 @@ function QuickCalculatorInner() {
   const [isCopied, setIsCopied] = useState(false);
   const [initialised, setInitialised] = useState(false);
   const [showAuthAlert, setShowAuthAlert] = useState(false);
+  const [keptCourseCount, setKeptCourseCount] = useState(0);
 
   useEffect(() => {
     const encoded = searchParams.get('c');
@@ -160,8 +162,23 @@ function QuickCalculatorInner() {
     updateUrl(newCourses, newMode);
   };
 
+  /** Keep the entered rows through sign-up or sign-in, then continue to Results. */
+  const handleSaveToProfile = () => {
+    const kept = saveCalculatorHandoff({
+      mode: inputMode,
+      courses: courses.map((course) => ({ code: course.code, units: course.units, grade: course.grade, score: course.score })),
+    });
+    if (!user) {
+      setKeptCourseCount(kept ? readCalculatorHandoff()?.courses.length ?? 0 : 0);
+      setShowAuthAlert(true);
+      return;
+    }
+    router.push(kept ? '/results' : '/dashboard');
+  };
+
   const handleShare = async () => {
     if (!user) {
+      setKeptCourseCount(0);
       setShowAuthAlert(true);
       return;
     }
@@ -369,14 +386,14 @@ function QuickCalculatorInner() {
               <div className="p-5 sm:p-6">
                 <p className="text-xs font-semibold text-[var(--acade-text-faint)]">Semester GPA</p>
                 <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[clamp(2rem,7vw,3rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--acade-text)]">
-                  {metrics.gpa.toFixed(2)}
+                  {formatCgpa(metrics.gpa)}
                 </p>
                 <p className="mt-2 text-xs text-[var(--acade-text-muted)]">Letter-grade result</p>
               </div>
               <div className="p-5 sm:p-6">
                 <p className="text-xs font-semibold text-[var(--acade-text-faint)]">PI</p>
                 <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-[clamp(2rem,7vw,3rem)] font-semibold leading-none tracking-[-0.04em] text-[var(--acade-gold)]">
-                  {metrics.pi.toFixed(2)}
+                  {formatCgpa(metrics.pi)}
                 </p>
                 <p className="mt-2 text-xs text-[var(--acade-text-muted)]">Performance signal</p>
               </div>
@@ -406,10 +423,7 @@ function QuickCalculatorInner() {
             <Button
               variant="primary"
               fullWidth
-              onClick={() => {
-                if (!user) setShowAuthAlert(true);
-                else router.push('/dashboard');
-              }}
+              onClick={handleSaveToProfile}
             >
               <Save className="size-4" aria-hidden="true" />
               Save to profile
@@ -428,6 +442,11 @@ function QuickCalculatorInner() {
         presentation="sheet"
       >
         <div className="space-y-3">
+          {keptCourseCount > 0 ? (
+            <p className="rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] px-4 py-3 text-sm leading-6 text-[var(--acade-text)]">
+              Your {keptCourseCount} {keptCourseCount === 1 ? 'course is' : 'courses are'} kept on this device for 24 hours. After you sign in, you can add {keptCourseCount === 1 ? 'it' : 'them'} as your first semester from Results.
+            </p>
+          ) : null}
           <LinkButton href="/register" fullWidth onClick={() => setShowAuthAlert(false)}>
             Create account
           </LinkButton>
@@ -452,30 +471,24 @@ export default function QuickCalculatorPage() {
         className="public-atmosphere-section min-h-screen px-4 pb-20 pt-10 sm:px-6 sm:pt-14 lg:px-8"
       >
         <div className="mx-auto max-w-[1200px]">
-          <header className="grid grid-cols-1 gap-7 border-b border-[var(--acade-border)] pb-10 md:grid-cols-12 md:items-end">
+          <header className="grid grid-cols-1 gap-7 pb-4 md:grid-cols-12 md:items-end">
             <div className="md:col-span-8">
-              <div className="mb-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--acade-primary)]">
-                <span className="flex size-9 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
-                  <Calculator className="size-4" aria-hidden="true" />
-                </span>
-                Academic calculation desk
-              </div>
               <h1
                 id="calculator-title"
-                className="max-w-[14ch] font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,6vw,4rem)] font-bold leading-[1.05] tracking-[-0.04em] text-[var(--acade-text)]"
+                className="max-w-[16ch] text-balance font-[family-name:var(--font-bricolage)] text-[clamp(2.25rem,6vw,4rem)] font-bold leading-[1.03] tracking-[-0.04em] text-[var(--acade-text)]"
               >
                 Quick CGPA calculator
               </h1>
-              <p className="mt-5 max-w-[62ch] text-base leading-7 text-[var(--acade-text-muted)] sm:text-lg">
+              <p className="mt-5 max-w-[60ch] text-[1.0625rem] leading-8 text-[var(--acade-text-muted)] sm:text-lg">
                 Build a semester result from letter grades or raw scores and inspect the GPA, PI, and credit basis as you work. No account is required to calculate.
               </p>
             </div>
 
-            <div className="flex gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 md:col-span-4 md:p-5">
+            <div className="flex gap-3 rounded-[var(--radius-surface)] bg-[var(--acade-surface)] p-5 md:col-span-4">
               <LockKeyhole className="mt-0.5 size-5 shrink-0 text-[var(--acade-success)]" aria-hidden="true" />
               <div>
-                <p className="text-sm font-semibold text-[var(--acade-text)]">Calculate privately</p>
-                <p className="mt-1 text-xs leading-5 text-[var(--acade-text-muted)]">
+                <p className="font-semibold text-[var(--acade-text)]">Calculate privately</p>
+                <p className="mt-1 text-[0.9375rem] leading-6 text-[var(--acade-text-muted)]">
                   Your current entries stay in this browser link until you choose to save or share.
                 </p>
               </div>

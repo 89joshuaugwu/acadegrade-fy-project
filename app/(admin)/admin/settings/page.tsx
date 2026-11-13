@@ -1,485 +1,142 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { motion } from 'motion/react';
-import { Settings2, Save, MessageSquare, AlertTriangle, Power, BookOpen, Info, Smartphone } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Switch } from '@/components/ui/Switch';
 import { Skeleton } from '@/components/ui/Skeleton';
-import toast from 'react-hot-toast';
+import { ErrorState } from '@/components/shared';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdvertisingSections } from '@/components/admin/ads/AdvertisingSections';
+import { useUrlTab } from '@/components/admin/useUrlTab';
+import { AccessSettings, type AccessValues } from '@/components/admin/settings/AccessSettings';
+import { AnnouncementSettings } from '@/components/admin/settings/AnnouncementSettings';
+import { PublicSiteSettings, type AppLinks } from '@/components/admin/settings/PublicSiteSettings';
+import { AdvancedSettings } from '@/components/admin/settings/AdvancedSettings';
 import { EmailSettings } from '@/components/admin/email/EmailSettings';
+import { ADMIN_HELP_TABS, type SettingsTab } from '@/lib/help/admin-help';
 
-interface AppSettings {
-  aiSystemPrompt?: string;
+interface StoredSettings {
   announcementBanner?: string | null;
   maintenanceMode?: boolean;
   disableSignups?: boolean;
   disabledFeatures?: string[];
-  gradeScale?: Array<{ grade: string; min: number; max: number; points: number }>;
-  advertBanners?: Array<{ id: string; imageUrl: string; linkUrl: string; isActive: boolean }>;
+  ageGate?: { enforceUnknown?: boolean };
   mobileAppLinks?: { androidUrl?: string; iosUrl?: string };
+  admobAndroidAppId?: string;
 }
 
-const DEFAULT_GRADE_SCALE = [
-  { grade: 'A', min: 70, max: 100, points: 5.0 },
-  { grade: 'B', min: 60, max: 69, points: 4.0 },
-  { grade: 'C', min: 50, max: 59, points: 3.0 },
-  { grade: 'D', min: 45, max: 49, points: 2.0 },
-  { grade: 'E', min: 40, max: 44, points: 1.0 },
-  { grade: 'F', min: 0, max: 39, points: 0.0 },
-];
-
+/** Pre-filled as before so saving the public links never blanks the Android download. */
 const DEFAULT_ANDROID_DOWNLOAD_URL = 'https://github.com/89joshuaugwu/AcadeGrade-APK/releases/download/v1.0.0/acadegrade.apk';
 
-interface AboutPageData {
-  headline: string;
-  platformDescription: string;
-  mission: string;
-  trustStatement: string;
-  contactEmail: string;
-}
-
-const DEFAULT_ABOUT: AboutPageData = {
-  headline: 'Academic progress, made clear.',
-  platformDescription: 'AcadeGrade helps university students understand results, monitor degree progress, and make better academic decisions.',
-  mission: 'Our mission is to give every student a dependable, understandable view of their academic journey.',
-  trustStatement: 'Your academic records remain under your control. Sharing is explicit, revocable, and designed around privacy.',
-  contactEmail: 'support@acadegrade.com',
+const TABS = ADMIN_HELP_TABS['/admin/settings'];
+const TAB_LABELS: Record<SettingsTab, string> = {
+  access: 'Access',
+  announcements: 'Announcements',
+  'public-site': 'Public site',
+  email: 'Email',
+  advanced: 'Advanced',
 };
 
-export default function AdminSettingsPage() {
+function SettingsScreen() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<AppSettings>({});
+  const [tab, setTab] = useUrlTab<SettingsTab>(TABS, 'access');
+  const [settings, setSettings] = useState<StoredSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [savingPrompt, setSavingPrompt] = useState(false);
-  const [savingBanner, setSavingBanner] = useState(false);
-  const [savingMaintenance, setSavingMaintenance] = useState(false);
-  const [savingGradeScale, setSavingGradeScale] = useState(false);
-  const [savingMobileApps, setSavingMobileApps] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  // About page state
-  const [aboutData, setAboutData] = useState<AboutPageData>(DEFAULT_ABOUT);
-  const [savingAbout, setSavingAbout] = useState(false);
+  const getToken = useCallback(async () => {
+    if (!user) throw new Error('Your admin session is unavailable.');
+    return user.getIdToken();
+  }, [user]);
 
-  useEffect(() => {
-    if (user) {
-      loadSettings();
-      loadAboutData();
+  const loadSettings = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const token = await user.getIdToken();
+      const response = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error('Settings request failed.');
+      const data = await response.json() as { settings?: StoredSettings };
+      setSettings(data.settings ?? {});
+    } catch (error) {
+      console.error(error);
+      // Defaults must never be offered for saving over settings that failed to load.
+      setLoadError('The settings service did not respond. Nothing has been changed.');
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
-  const loadSettings = async () => {
-    try {
-      const token = await user!.getIdToken();
-      const res = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setSettings({
-          ...data.settings,
-          mobileAppLinks: {
-            androidUrl: data.settings?.mobileAppLinks?.androidUrl || DEFAULT_ANDROID_DOWNLOAD_URL,
-            iosUrl: data.settings?.mobileAppLinks?.iosUrl || '',
-          },
-        });
-      }
-    } catch (err) { console.error(err); toast.error('Failed to load settings.'); }
-    finally { setLoading(false); }
-  };
+  useEffect(() => { void loadSettings(); }, [loadSettings]);
 
-  const loadAboutData = async () => {
-    try {
-      const res = await fetch('/api/about');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.about) setAboutData({ ...DEFAULT_ABOUT, ...json.about });
-      }
-    } catch (err) { console.error('Failed to load about data', err); }
-  };
+  const header = (
+    <AdminPageHeader
+      title="Settings"
+      description="Who can use AcadeGrade, announcements, the public site, email and reference settings. Each tab saves on its own."
+      helpId={`admin.settings.${tab}`}
+    />
+  );
 
-  const saveAboutData = async () => {
-    setSavingAbout(true);
-    try {
-      const token = await user!.getIdToken();
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ target: 'about', data: aboutData }),
-      });
-      if (res.ok) {
-        toast.success('About page content updated!');
-      } else {
-        toast.error('Failed to save about page data.');
-      }
-    } catch (err) { toast.error('Error saving about page data.'); }
-    finally { setSavingAbout(false); }
-  };
-
-  const saveSetting = async (field: keyof AppSettings, value: any, setSavingState: (s: boolean) => void) => {
-    setSavingState(true);
-    try {
-      const token = await user!.getIdToken();
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ field, value }),
-      });
-      if (res.ok) {
-        toast.success('Settings updated successfully.');
-        setSettings(prev => ({ ...prev, [field]: value }));
-      } else {
-        toast.error('Failed to update setting.');
-      }
-    } catch (err) { toast.error('Error updating setting.'); }
-    finally { setSavingState(false); }
-  };
-
-
-  const handlePublishBanner = async () => {
-    setSavingBanner(true);
-    // saveSetting already sets state and shows a toast
-    try {
-      const token = await user!.getIdToken();
-      const res = await fetch('/api/admin/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ field: 'announcementBanner', value: settings.announcementBanner || null }),
-      });
-      
-      if (res.ok) {
-        toast.success('Announcement banner updated.');
-        // Trigger notification if there is a banner
-        if (settings.announcementBanner) {
-          await fetch('/api/notifications/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({
-              uid: 'all',
-              title: 'New Announcement',
-              message: settings.announcementBanner,
-              type: 'broadcast',
-              event: 'adminAnnouncement'
-            }),
-          });
-        }
-      } else {
-        toast.error('Failed to update banner.');
-      }
-    } catch (err) {
-      toast.error('Error updating banner.');
-    } finally {
-      setSavingBanner(false);
-    }
-  };
-
-  if (loading) {
+  if (loadError) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-64" />
-        <Skeleton className="h-48" />
-        <Skeleton className="h-32" />
+      <div className="max-w-4xl space-y-8">
+        {header}
+        <ErrorState title="Settings could not be loaded" description={loadError} onRetry={() => { void loadSettings(); }} />
       </div>
     );
   }
 
-  return (
-    <div className="space-y-8 max-w-4xl">
-      <div>
-        <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Platform Settings</h1>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">Configure global application behavior.</p>
-        <p className="mt-2 text-sm text-[var(--acade-text-muted)]">House campaigns and dashboard banners are managed in <Link href="/admin/ads" className="text-[var(--acade-primary)] underline">Advertising</Link>.</p>
+  if (loading || !settings) {
+    return (
+      <div className="max-w-4xl space-y-6">
+        {header}
+        <div role="status" aria-label="Loading settings" aria-busy="true" className="space-y-4">
+          <Skeleton className="h-12 w-full max-w-xl" />
+          <Skeleton className="h-64" />
+          <Skeleton className="h-40" />
+        </div>
       </div>
+    );
+  }
 
-      <EmailSettings />
+  const access: AccessValues = {
+    maintenanceMode: settings.maintenanceMode === true,
+    disableSignups: settings.disableSignups === true,
+    disabledFeatures: Array.isArray(settings.disabledFeatures) ? settings.disabledFeatures : [],
+    ageGateEnforce: typeof settings.ageGate?.enforceUnknown === 'boolean' ? settings.ageGate.enforceUnknown : true,
+  };
+  const links: AppLinks = {
+    androidUrl: settings.mobileAppLinks?.androidUrl || DEFAULT_ANDROID_DOWNLOAD_URL,
+    iosUrl: settings.mobileAppLinks?.iosUrl || '',
+  };
 
-      {/* AI System Prompt */}
-      <Card variant="default" padding="lg">
-        <div className="flex items-center gap-3 mb-4">
-          <MessageSquare className="text-[var(--acade-primary)]" size={20} />
-          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">AI System Prompt</h2>
-        </div>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
-          This prompt guides academic insights, whichever provider and model is selected in AI Operations. It does not change OCR, forecasts, or the what-if planner.
-        </p>
-        <label htmlFor="academic-insights-prompt" className="sr-only">Academic insights system prompt</label>
-        <textarea
-          id="academic-insights-prompt"
-          value={settings.aiSystemPrompt || ''}
-          onChange={(e) => setSettings({ ...settings, aiSystemPrompt: e.target.value })}
-          rows={10}
-          placeholder="You are an academic advisor AI..."
-          className="w-full p-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] focus:outline-none focus:border-[var(--acade-primary)] resize-y mb-4"
-        />
-        <div className="flex justify-end">
-          <Button size="sm" loading={savingPrompt} onClick={() => saveSetting('aiSystemPrompt', settings.aiSystemPrompt, setSavingPrompt)}>
-            <Save size={16} /> Save Prompt
-          </Button>
-        </div>
-      </Card>
+  const content: Record<SettingsTab, React.ReactNode> = {
+    access: <AccessSettings initial={access} getToken={getToken} />,
+    announcements: <AnnouncementSettings initial={settings.announcementBanner ?? ''} getToken={getToken} />,
+    'public-site': <PublicSiteSettings initialLinks={links} initialAdmobAppId={typeof settings.admobAndroidAppId === 'string' ? settings.admobAndroidAppId : ''} getToken={getToken} />,
+    email: <EmailSettings />,
+    advanced: <AdvancedSettings />,
+  };
 
-      {/* Grade Scale Table */}
-      <Card variant="default" padding="lg">
-        <div className="flex items-center gap-3 mb-4">
-          <BookOpen className="text-[var(--acade-primary)]" size={20} />
-          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Grade Scale</h2>
-        </div>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
-          Customize the grade boundaries and points. Must cover 0 to 100 continuously.
-        </p>
-        <div className="space-y-3 mb-6">
-          <div className="grid grid-cols-4 gap-2 text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-wider mb-2">
-            <span>Grade</span><span>Min Score</span><span>Max Score</span><span>Points</span>
-          </div>
-          {(settings.gradeScale || DEFAULT_GRADE_SCALE).map((row, idx) => (
-            <div key={idx} className="grid grid-cols-4 gap-2">
-              <Input
-                label=""
-                value={row.grade}
-                onChange={(e) => {
-                  const newScale = [...(settings.gradeScale || DEFAULT_GRADE_SCALE)];
-                  newScale[idx].grade = e.target.value;
-                  setSettings({ ...settings, gradeScale: newScale });
-                }}
-              />
-              <Input
-                label=""
-                type="number"
-                value={String(row.min)}
-                onChange={(e) => {
-                  const newScale = [...(settings.gradeScale || DEFAULT_GRADE_SCALE)];
-                  newScale[idx].min = Number(e.target.value);
-                  setSettings({ ...settings, gradeScale: newScale });
-                }}
-              />
-              <Input
-                label=""
-                type="number"
-                value={String(row.max)}
-                onChange={(e) => {
-                  const newScale = [...(settings.gradeScale || DEFAULT_GRADE_SCALE)];
-                  newScale[idx].max = Number(e.target.value);
-                  setSettings({ ...settings, gradeScale: newScale });
-                }}
-              />
-              <Input
-                label=""
-                type="number"
-                step="0.1"
-                value={String(row.points)}
-                onChange={(e) => {
-                  const newScale = [...(settings.gradeScale || DEFAULT_GRADE_SCALE)];
-                  newScale[idx].points = Number(e.target.value);
-                  setSettings({ ...settings, gradeScale: newScale });
-                }}
-              />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" size="sm" onClick={() => setSettings({ ...settings, gradeScale: DEFAULT_GRADE_SCALE })}>
-            Reset to Default
-          </Button>
-          <Button size="sm" loading={savingGradeScale} onClick={() => saveSetting('gradeScale', settings.gradeScale || DEFAULT_GRADE_SCALE, setSavingGradeScale)}>
-            <Save size={16} /> Save Scale
-          </Button>
-        </div>
-      </Card>
-
-      {/* Announcement Banner */}
-      <Card variant="default" padding="lg">
-        <div className="flex items-center gap-3 mb-4">
-          <AlertTriangle className="text-[var(--acade-gold)]" size={20} />
-          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Announcement Banner</h2>
-        </div>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
-          Display a global banner at the top of every student's dashboard. Clear the text to remove the banner.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 items-end">
-          <div className="flex-1 w-full">
-            <Input
-              id="announcement-banner"
-              label=""
-              value={settings.announcementBanner || ''}
-              onChange={(e) => setSettings({ ...settings, announcementBanner: e.target.value })}
-              placeholder="e.g., Scheduled maintenance this Friday at 11 PM..."
-            />
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button variant="outline" size="md" onClick={() => { setSettings({ ...settings, announcementBanner: '' }); saveSetting('announcementBanner', null, setSavingBanner); }}>
-              Clear
-            </Button>
-            <Button size="md" loading={savingBanner} onClick={handlePublishBanner}>
-              Publish
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Maintenance Mode */}
-      <Card variant="default" padding="lg">
-        <div className="flex items-center gap-3 mb-4">
-          <Power className="text-[var(--acade-danger)]" size={20} />
-          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Maintenance Mode</h2>
-        </div>
-        <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--acade-danger)]/5 border border-[var(--acade-danger)]/20">
-          <div>
-            <h3 className="font-bold text-[var(--acade-text)]">Disable Platform Access</h3>
-            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-              When active, only admins can log in. Students will see a maintenance screen.
-            </p>
-          </div>
-          <Switch
-            checked={settings.maintenanceMode || false}
-            onCheckedChange={(checked) => saveSetting('maintenanceMode', checked, setSavingMaintenance)}
-            disabled={savingMaintenance}
-          />
-        </div>
-
-        <div className="flex items-center justify-between p-4 rounded-xl bg-[var(--acade-gold)]/5 border border-[var(--acade-gold)]/20 mt-4">
-          <div>
-            <h3 className="font-bold text-[var(--acade-text)]">Disable Sign Ups</h3>
-            <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-              When active, new users cannot register. Existing users can still log in.
-            </p>
-          </div>
-          <Switch
-            checked={settings.disableSignups || false}
-            onCheckedChange={(checked) => saveSetting('disableSignups', checked, setSavingMaintenance)}
-            disabled={savingMaintenance}
-          />
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-[var(--acade-border)]">
-          <h3 className="font-bold text-[var(--acade-text)] mb-2">Feature Maintenance</h3>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-4">
-            Disable specific features in the student dashboard during updates or testing.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { id: 'add_semester', label: 'Add Semester' },
-              { id: 'extract_slip', label: 'Extract Result Slip' },
-              { id: 'share_code', label: 'Share / Import Course Code' },
-              { id: 'edit_profile', label: 'Edit Profile Settings' },
-              { id: 'ai_insights', label: 'Generate AI Insights' }
-            ].map(feature => (
-              <div key={feature.id} className="flex items-center justify-between p-3 rounded-xl bg-[var(--acade-surface)] border border-[var(--acade-border)]">
-                <span className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text)]">{feature.label}</span>
-                <Switch
-                  checked={settings.disabledFeatures?.includes(feature.id) || false}
-                  onCheckedChange={(checked) => {
-                    const current = settings.disabledFeatures || [];
-                    const next = checked 
-                      ? [...current, feature.id]
-                      : current.filter(id => id !== feature.id);
-                    saveSetting('disabledFeatures', next, setSavingMaintenance);
-                  }}
-                  disabled={savingMaintenance}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Mobile App Downloads */}
-      <Card variant="default" padding="lg">
-        <div className="flex items-center gap-3 mb-2">
-          <Smartphone className="text-[var(--acade-primary)]" size={20} />
-          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Mobile App Downloads</h2>
-        </div>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-6">
-          These links appear on the public home page and sign-in/sign-up pages. Leave iOS blank to show “iOS coming soon”.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Android APK download URL"
-            type="url"
-            placeholder="https://github.com/.../acadegrade.apk"
-            value={settings.mobileAppLinks?.androidUrl || ''}
-            onChange={(event) => setSettings({ ...settings, mobileAppLinks: { ...settings.mobileAppLinks, androidUrl: event.target.value } })}
-          />
-          <Input
-            label="iOS App Store / TestFlight URL"
-            type="url"
-            placeholder="Leave blank until iOS is available"
-            value={settings.mobileAppLinks?.iosUrl || ''}
-            onChange={(event) => setSettings({ ...settings, mobileAppLinks: { ...settings.mobileAppLinks, iosUrl: event.target.value } })}
-          />
-        </div>
-        <div className="flex justify-end mt-5">
-          <Button size="sm" loading={savingMobileApps} onClick={() => saveSetting('mobileAppLinks', settings.mobileAppLinks || {}, setSavingMobileApps)}>
-            <Save size={16} className="mr-2" /> Save download links
-          </Button>
-        </div>
-      </Card>
-
-
-      {/* ─── About Page Content ─── */}
-      <Card variant="default" padding="lg">
-        <div className="flex items-center gap-3 mb-4">
-          <Info className="text-[var(--acade-primary)]" size={20} />
-          <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">About Page Content</h2>
-        </div>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mb-6">
-          Manage the public production story. Personal profiles, repository links and school-project copy are intentionally excluded.
-        </p>
-
-        <div className="space-y-6">
-          <Input
-            label="Headline"
-            value={aboutData.headline}
-            onChange={e => setAboutData({ ...aboutData, headline: e.target.value })}
-          />
-          {/* Platform Description */}
-          <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Platform Description</label>
-            <textarea
-              value={aboutData.platformDescription}
-              onChange={e => setAboutData({ ...aboutData, platformDescription: e.target.value })}
-              rows={3}
-              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
-            />
-          </div>
-
-          <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Mission</label>
-            <textarea
-              value={aboutData.mission}
-              onChange={e => setAboutData({ ...aboutData, mission: e.target.value })}
-              rows={3}
-              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
-            />
-          </div>
-          <div>
-            <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] mb-1.5 block">Trust and privacy statement</label>
-            <textarea
-              value={aboutData.trustStatement}
-              onChange={e => setAboutData({ ...aboutData, trustStatement: e.target.value })}
-              rows={3}
-              className="w-full p-3 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)] resize-y"
-            />
-          </div>
-
-          <Input
-            label="Public contact email"
-            type="email"
-            value={aboutData.contactEmail}
-            onChange={e => setAboutData({ ...aboutData, contactEmail: e.target.value })}
-            hint="Used for product and support enquiries."
-          />
-
-        </div>
-
-        <div className="flex justify-end mt-6 pt-4 border-t border-[var(--acade-border-subtle)]">
-          <Button loading={savingAbout} onClick={saveAboutData} className="gap-2">
-            <Save size={16} /> Save About Page
-          </Button>
-        </div>
-      </Card>
+  return (
+    <div className="max-w-4xl space-y-6">
+      {header}
+      {/* Panels stay mounted while hidden, so unsaved drafts survive tab switches. */}
+      <AdvertisingSections
+        id="settings"
+        label="Settings sections"
+        selectedId={tab}
+        onSelect={(id) => setTab(id as SettingsTab)}
+        sections={TABS.map((id) => ({ id, label: TAB_LABELS[id], content: content[id] }))}
+      />
     </div>
+  );
+}
+
+export default function AdminSettingsPage() {
+  return (
+    <Suspense fallback={<div role="status" aria-label="Loading settings" aria-busy="true"><Skeleton className="h-64" /></div>}>
+      <SettingsScreen />
+    </Suspense>
   );
 }

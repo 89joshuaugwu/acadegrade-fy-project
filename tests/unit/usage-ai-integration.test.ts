@@ -14,7 +14,7 @@ vi.mock('@/lib/ai/manager', () => ({
   generateFastResponseWithMetadata: async () => { throw new Error('Provider must not run'); },
   generateMultimodalGeminiContentWithMetadata: async () => { throw new Error('Provider must not run'); },
 }));
-vi.mock('@/lib/ads/reward', () => ({ rewards: {}, RewardError: class extends Error {} }));
+vi.mock('@/lib/ads/reward', () => ({ rewards: {}, coins: { quote: async () => null }, RewardError: class extends Error {} }));
 import { POST as insights } from '@/app/api/ai/insights/route';
 import { POST as forecast } from '@/app/api/ai/forecast/route';
 import { POST as whatif } from '@/app/api/ai/whatif/route';
@@ -23,6 +23,8 @@ import { POST as ocr } from '@/app/api/results/extract/route';
 let storage: ReturnType<typeof rewardTestDb>;
 beforeEach(() => {
   storage = rewardTestDb(); state.db = storage.db;
+  // AI routes require a consenting adult (lib/user/age.ts).
+  storage.docs.set('users/u', { ageStatus: 'adult', consents: { ai: { granted: true } } });
   storage.docs.set('config/usage', { dailyLimits: { insights: 1, forecast: 1, whatif: 1, ocr: 1 } });
 });
 

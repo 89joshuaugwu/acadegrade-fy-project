@@ -1,17 +1,16 @@
 import type { DegreeClass } from '@/types/analytics';
 import { DEGREE_CLASSES } from '@/lib/utils/constants';
+import { resolveDegreeClass as resolveDegreeClassBand } from './academicRules';
 
 /**
  * Resolve degree class from CGPA value.
- * Returns the matching degree class with label, color token, icon, and range.
+ * Classifies the rounded 2-decimal CGPA the UI displays with lower-bound
+ * thresholds (see ./academicRules), then returns the themed entry with label,
+ * color token, icon and range.
  */
 export function resolveDegreeClass(cgpa: number): DegreeClass {
-  const degreeClass = DEGREE_CLASSES.find(
-    (dc) => cgpa >= dc.minCGPA && cgpa <= dc.maxCGPA
-  );
-
-  // Default to Fail if no match (shouldn't happen with proper thresholds)
-  return degreeClass ?? DEGREE_CLASSES[DEGREE_CLASSES.length - 1];
+  const { shortLabel } = resolveDegreeClassBand(cgpa);
+  return DEGREE_CLASSES.find((dc) => dc.shortLabel === shortLabel) ?? DEGREE_CLASSES[DEGREE_CLASSES.length - 1];
 }
 
 /**

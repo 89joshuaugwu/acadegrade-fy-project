@@ -138,3 +138,56 @@ Do not enable TTL for transaction tombstones.
 These focused backend tests use real ECDSA signatures, the real config parser and
 real reward/route logic with transactional in-memory Firestore storage. They are
 not a deployed AdMob integration test or Firestore emulator test.
+
+## Coin wallet (2026-11-13; default off)
+
+One server-owned balance per user, earned from the same signed rewarded-ad
+callback and spent per feature. Coins are not money: no purchase, transfer or
+cash value; clients never write balances. The legacy Written Analysis refresh
+above is unchanged and independent of coins.
+
+Earning: `POST /api/ads/rewards/session` with `{ platform: 'android', reward: 'coins' }`
+returns `{ sessionId, unitId, userId, expiresAt, reward: 'coins', coins }`.
+403 when coins (`config/usage.coins.enabled`) or the Android rewarded switch is
+off; 429 when today's earn cap is reached, the balance is full ("Your coin
+balance is full"), or the session-creation ceiling (6/hour, max(12, ceil(cap/perAd)+10)/day)
+is hit; 400 for an unknown `reward`. The SSV grant keeps the same signature,
+UID/session binding, unit, reward item/amount, timestamp and replay checks, then
+credits `min(session coins, coinsPerAd, dailyEarnCap - earnedToday, balanceCap - balance)`
+(never below 0), writes an `earn` ledger entry and marks the session `credited`
+with `coinsGranted`. One AdMob unit serves both flows: binding is the session
+(`custom_data`), so the unit's reward item stays **Insights refresh** / amount 1.
+`GET ?sessionId=` returns `{ status: 'pending'|'credited'|'expired', expiresAt, reward: 'coins', coinsGranted?, balance }`.
+
+Spending (`lib/ads/reward/coins.ts`, `CoinWallet`): routes accept
+`coinSpend: { requestId }` (JSON) or `X-Coin-Spend-Id` (scanner), 32–64
+lowercase hex, generated per user action. Validation and cache come first and
+the free path is tried first; a refused limiter check consumes nothing. Only a
+refusal (burst/daily window or the Written Analysis forced-regeneration
+cooldown) leads to `reserve` → provider → `commit` (persisting `analytics.lastInsight`
+/ `analytics.forecast` in the same transaction) → or `refund` on any failure.
+Holds expire after five minutes and are refunded by the next wallet
+transaction. Errors: 400 malformed id, 402 `{ error: 'Not enough coins', balance, price }`,
+403 coins/feature off, 409 request id used or in progress (a refunded id may be
+retried), 429 feature `dailyUseCap`. Success adds `X-Coins-Spent` and
+`X-Coin-Balance`; a free-path success with a coin id sends `X-Coins-Spent: 0`.
+A charged provider failure returns 503 "...your coins were not spent", never
+stale data. A free-path 429 adds `coinPrice` and `coinBalance` when coins can pay.
+
+Storage (server-only; rules deny all client access):
+`_coin_wallets/{sha256(uid)}` (balance, UTC-day counters, active holds),
+`_coin_ledger/{id}` append-only `{ uidHash, type: 'earn'|'spend'|'refund', amount, feature?, sessionId?, requestId?, at, balanceAfter }`
+(a hold writes `spend`; a failure writes `refund`), and
+`_coin_requests/{sha256(uid + ':' + requestId)}` idempotency records with no TTL.
+
+Tests: `tests/unit/coin-wallet.test.ts`, `tests/unit/coin-routes.test.ts`.
+
+## Age, consent and maintenance gates (2026-11-13)
+
+`POST /api/ads/rewards/session` returns 503 `{ code: 'MAINTENANCE' }` to
+non-admins during maintenance. Coin sessions and legacy refresh sessions return
+403 `{ code: 'AGE_RESTRICTED' | 'AGE_CONFIRMATION_REQUIRED' | 'AI_CONSENT_REQUIRED' }`
+unless the user may use AI (`lib/user/age.ts`). Status and cancel (GET and
+DELETE) and the SSV callback are not gated. Account deletion removes the
+user's `_reward_sessions`, `_reward_transactions`, `_reward_daily` and coin
+documents. See `docs/server-compliance-contracts.md`.

@@ -1,0 +1,257 @@
+/* Public marketing surface. Loaded with the public navigation, so student and admin screens never see it. */
+
+/* ── Press feedback for public actions ── */
+.marketing-press {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.marketing-press:active {
+  transform: scale(0.98);
+}
+
+/* ── Hero ── */
+.hero-trajectory-card {
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-art-frame:hover .hero-trajectory-card {
+    transform: translateY(-4px);
+  }
+}
+
+/* ── Calculation proof: the closing outlook card is the one inverse tile in both themes ── */
+.academic-proof-card--outlook {
+  background: #17172e;
+  color: #ffffff;
+  border: 1px solid #5f58e6;
+}
+
+/* Live score explorer range input, themed from the palette rather than browser defaults. */
+.score-explorer-range {
+  --score-track: color-mix(in srgb, var(--acade-text) 14%, transparent);
+  appearance: none;
+  -webkit-appearance: none;
+  height: 2.75rem;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.score-explorer-range::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--acade-primary) var(--score-fill, 50%), var(--score-track) var(--score-fill, 50%));
+}
+
+.score-explorer-range::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--score-track);
+}
+
+.score-explorer-range::-moz-range-progress {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--acade-primary);
+}
+
+.score-explorer-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: -0.625rem;
+  border-radius: 999px;
+  border: 3px solid var(--acade-primary);
+  background: var(--acade-surface);
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.score-explorer-range::-moz-range-thumb {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  border: 3px solid var(--acade-primary);
+  background: var(--acade-surface);
+}
+
+.score-explorer-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.score-explorer-range:focus-visible {
+  outline: 2px solid var(--acade-primary);
+  outline-offset: 4px;
+  border-radius: 999px;
+}
+
+/* ── Result capture stage: the real screen, cropped like a fragment ── */
+.ocr-stage {
+  max-height: 27rem;
+}
+
+@media (min-width: 640px) {
+  .ocr-stage {
+    max-height: 34rem;
+  }
+}
+
+.ocr-stage-shot {
+  transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ocr-stage:hover .ocr-stage-shot {
+    transform: translateY(-10px);
+  }
+}
+
+.capture-step-marker {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--acade-primary);
+  translate: 0 -0.05em;
+}
+
+.capture-step:last-child .capture-step-marker {
+  background: var(--acade-gold);
+}
+
+/* ── How it works: the registration progress rail, enlarged into the diagram ── */
+.story-segment {
+  display: flex;
+  min-height: 5.5rem;
+  align-items: flex-end;
+  border-radius: var(--radius-surface);
+  padding: 1.25rem 1.25rem 1.125rem;
+}
+
+.story-segment--record {
+  background: var(--acade-primary);
+  color: var(--acade-on-primary);
+}
+
+.story-segment--understand {
+  background: color-mix(in srgb, var(--acade-primary) 34%, var(--acade-surface));
+  color: var(--acade-text);
+}
+
+.story-segment--plan {
+  background: var(--acade-gold);
+  color: var(--acade-on-primary);
+}
+
+@media (min-width: 768px) {
+  .story-segment {
+    min-height: 10rem;
+    border-radius: 0;
+  }
+
+  .story-rail > li:first-child .story-segment {
+    border-radius: var(--radius-surface) 0 0 var(--radius-surface);
+  }
+
+  .story-rail > li:last-child .story-segment {
+    border-radius: 0 var(--radius-surface) var(--radius-surface) 0;
+  }
+}
+
+/* ── FAQ: filled tiles; the open question takes the brand tint ── */
+.faq-tile {
+  border-bottom-width: 0;
+  border-radius: var(--radius-surface);
+  background: var(--acade-surface);
+  padding: 0.5rem 1.25rem;
+  transition: background-color 200ms ease;
+}
+
+.faq-tile > button {
+  min-height: 3.5rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.faq-tile:has(> button[aria-expanded='true']) {
+  background: var(--acade-primary-dim);
+}
+
+.faq-tile > div > div {
+  color: var(--acade-text-muted);
+}
+
+@media (min-width: 640px) {
+  .faq-tile {
+    padding: 0.5rem 1.5rem;
+  }
+}
+
+/* ── Mobile showcase: tablets use the phone composition, stacked under the copy ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .mobile-showcase .mobile-showcase-stage .mobile-showcase-art.mobile-showcase-art-desktop {
+    display: none;
+  }
+
+  .mobile-showcase .mobile-showcase-stage .mobile-showcase-art.mobile-showcase-art-mobile {
+    object-fit: cover;
+    object-position: center;
+  }
+
+  .mobile-showcase .mobile-showcase-stage .mobile-showcase-art-mobile.mobile-showcase-light {
+    display: block;
+  }
+
+  .dark .mobile-showcase .mobile-showcase-stage .mobile-showcase-art-mobile.mobile-showcase-light {
+    display: none;
+  }
+
+  .dark .mobile-showcase .mobile-showcase-stage .mobile-showcase-art-mobile.mobile-showcase-dark {
+    display: block;
+  }
+}
+
+/* ── Footer close: the name returns at full width ── */
+.public-footer-wordmark {
+  font-size: clamp(3.25rem, 15vw, 12.75rem);
+  white-space: nowrap;
+}
+
+.public-footer-link {
+  text-underline-offset: 4px;
+}
+
+.public-footer-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Feature index rows ── */
+.feature-row-media {
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .feature-row:hover .feature-row-media {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-press,
+  .hero-trajectory-card,
+  .ocr-stage-shot,
+  .feature-row-media,
+  .faq-tile {
+    transition: none;
+  }
+
+  .marketing-press:active,
+  .hero-art-frame:hover .hero-trajectory-card,
+  .ocr-stage:hover .ocr-stage-shot,
+  .feature-row:hover .feature-row-media {
+    transform: none;
+  }
+}

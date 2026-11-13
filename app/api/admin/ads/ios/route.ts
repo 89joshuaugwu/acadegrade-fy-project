@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/admin-auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { createDefaultMobileAdsConfig, parseMobileAdsConfig, safeMobileAdsConfig } from '@/lib/ads/mobile';
 
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     let config;
     try {
       const body = await request.json();
@@ -29,7 +30,9 @@ export async function PUT(request: Request) {
     } catch (error) {
       return NextResponse.json({ error: error instanceof Error ? error.message.replace(/Android/g, 'iOS') : 'Invalid iOS configuration.' }, { status: 400, headers });
     }
+    const before = (await adminDb.collection('config').doc('iosAds').get()).data() ?? null;
     await adminDb.collection('config').doc('iosAds').set(config);
+    await writeAdminAudit({ actorUid: actor.uid, actorEmail: actor.email, action: 'ads.ios.update', target: 'config/iosAds', before, after: config });
     return NextResponse.json({ config }, { headers });
   } catch (error) { return failure(error); }
 }

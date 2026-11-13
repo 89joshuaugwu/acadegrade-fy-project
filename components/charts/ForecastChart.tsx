@@ -4,6 +4,7 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
 
 interface ForecastChartProps {
   history: number[];
@@ -49,7 +50,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
   // Constants for pure SVG rendering
   const width = 800;
   const height = 320;
-  const padding = { top: 40, right: 30, bottom: 40, left: 30 };
+  const padding = { top: 24, right: 24, bottom: 16, left: 24 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
@@ -139,7 +140,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
           <div className="flex items-baseline gap-6">
             <div className="flex flex-col">
               <span className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums transition-all">
-                {activeData?.val.toFixed(2)}
+                {formatCgpa(activeData?.val)}
               </span>
               <div className="flex items-center gap-2 mt-1">
                 <div className={cn(
@@ -154,9 +155,32 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
       </div>
 
       {/* Pure SVG + Framer Motion Render Engine */}
-      <div className="w-full h-64 md:h-80 relative select-none touch-none">
+      <div className="w-full h-60 md:h-[280px] relative select-none pl-8">
+        {/* Axis text is HTML, not SVG text: the SVG stretches non-uniformly and would squash it on phones. */}
+        <div aria-hidden="true" data-axis="y" className="pointer-events-none absolute inset-y-0 left-0 w-8">
+          {[0, 1, 2, 3, 4, 5].map((val) => (
+            <span
+              key={`y-${val}`}
+              className="absolute right-1 -translate-y-1/2 text-xs tabular-nums text-[var(--acade-text-muted)]"
+              style={{ top: `${(getY(val) / height) * 100}%` }}
+            >
+              {val.toFixed(1)}
+            </span>
+          ))}
+        </div>
+        {lastHistoryIndex >= 0 && (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 -translate-x-1/2 text-xs font-semibold text-[var(--acade-primary-glow)]"
+            style={{ left: `calc(2rem + (100% - 2rem) * ${getX(lastHistoryIndex) / width})` }}
+          >
+            Today
+          </span>
+        )}
         <svg
           ref={svgRef}
+          role="img"
+          aria-label={`${metricName} history and projection`}
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-full overflow-visible"
           preserveAspectRatio="none"
@@ -186,10 +210,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
               const y = getY(val);
               return (
                 <g key={`grid-f-${val}`}>
-                  <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--acade-border-subtle)" strokeDasharray="4 4" />
-                  <text x={padding.left - 10} y={y} fill="var(--acade-text-faint)" fontSize="12" fontWeight="500" textAnchor="end" dominantBaseline="middle" fontFamily="var(--font-geist-mono)">
-                    {val.toFixed(1)}
-                  </text>
+                  <line x1={padding.left} y1={y} x2={width - padding.right} y2={y} stroke="var(--acade-border-subtle)" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
                 </g>
               );
             })}
@@ -219,9 +240,6 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
                 strokeDasharray="4 4"
                 strokeWidth="1.5"
               />
-              <text x={getX(lastHistoryIndex)} y={padding.top - 20} fill="var(--acade-primary-glow)" fontSize="11" fontWeight="bold" textAnchor="middle">
-                Today
-              </text>
             </g>
           )}
 
@@ -354,6 +372,42 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
           />
         </svg>
       </div>
+      <div aria-hidden="true" data-axis="x" className="relative -mt-4 ml-8 h-5">
+        {data.map((d) => {
+          const ratio = getX(d.idx) / width;
+          const edge = d.idx === 0 ? 'translate-x-0' : d.idx === data.length - 1 ? '-translate-x-full' : '-translate-x-1/2';
+          return (
+            <span
+              key={`x-${d.idx}`}
+              className={cn('absolute top-0 max-w-[6rem] truncate text-xs text-[var(--acade-text-muted)]', edge, d.isProjected && 'text-[var(--acade-gold)]')}
+              style={{ left: `${ratio * 100}%` }}
+            >
+              <span>{d.name}</span>
+            </span>
+          );
+        })}
+      </div>
+      <table className="sr-only" aria-label={`${metricName} history and projection values`}>
+        <thead>
+          <tr>
+            <th scope="col">Point</th>
+            <th scope="col">{metricName}</th>
+            <th scope="col">Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((d) => {
+            const value = d.isProjected ? d.projected : d.actual;
+            return (
+              <tr key={`row-${d.idx}`}>
+                <th scope="row">{d.name}</th>
+                <td>{value === null || value === undefined ? '—' : formatCgpa(value)}</td>
+                <td>{d.isProjected ? 'Projected' : 'Recorded'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }

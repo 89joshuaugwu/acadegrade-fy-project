@@ -1,19 +1,30 @@
 'use client';
 
-import { useState } from 'react';
-import { Megaphone, Plus, ShieldCheck } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { Megaphone, Plus } from 'lucide-react';
 import { Button, Card, Modal, Switch } from '@/components/ui';
 import { EmptyState } from '@/components/shared';
-import { parseAdsConfig } from '@/lib/ads/config';
+import { describeAdsConfigError, parseAdsConfig, withKnownPlacements } from '@/lib/ads/config';
+import { parseHouseConfig, type HouseConfig } from '@/lib/ads/house';
 import type { AdCampaign, AdsConfig } from '@/lib/ads/types';
 import { getCampaignStatus } from '@/lib/ads/delivery';
-import { CampaignEditor } from './CampaignEditor';
+import { CampaignEditor, placementLabel } from './CampaignEditor';
 
 interface AdsEditorProps {
-  initialConfig: AdsConfig;
-  legacyBannerCount: number;
+  /** Saved website house campaigns (`config/settings.adsConfig`), or null when they could not load. */
+  initialConfig: AdsConfig | null;
   onSave: (config: AdsConfig) => Promise<void>;
-  onNavigate?: (destination: 'networks' | 'android') => void;
+  /** Shown in place of the website column and campaigns when `initialConfig` is null. */
+  webUnavailable?: ReactNode;
+  /** Android house promotions (`config/mobileHouseAds`). Omit to edit the website only. */
+  android?: {
+    initialConfig: HouseConfig | null;
+    onSave: (config: HouseConfig) => Promise<void>;
+    /** Shown in place of the Android column when `initialConfig` is null. */
+    unavailable?: ReactNode;
+  };
+  /** Extra content for the collapsed Advanced section, e.g. the legacy banner editor. */
+  advanced?: ReactNode;
 }
 
 function createCampaignDraft(config: AdsConfig): AdCampaign {
@@ -39,19 +50,34 @@ function createCampaignDraft(config: AdsConfig): AdCampaign {
   };
 }
 
-export function AdsEditor({ initialConfig, legacyBannerCount, onSave, onNavigate }: AdsEditorProps) {
-  const [config, setConfig] = useState(initialConfig);
-  const [savedConfig, setSavedConfig] = useState(initialConfig);
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * House promotions: where they show on the website and in the Android app,
+ * the campaigns themselves, and one save bar for both stores.
+ */
+export function AdsEditor({ initialConfig, onSave, webUnavailable, android, advanced }: AdsEditorProps) {
+  // Older saved configurations omit newer placements; list them as off.
+  const [config, setConfig] = useState(() => initialConfig ? withKnownPlacements(initialConfig) : null);
+  const [savedConfig, setSavedConfig] = useState(() => initialConfig ? withKnownPlacements(initialConfig) : null);
+  const [house, setHouse] = useState(() => android?.initialConfig ? parseHouseConfig(android.initialConfig) : null);
+  const [savedHouse, setSavedHouse] = useState(house);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
+  const [savedNote, setSavedNote] = useState('');
   const [campaignToDelete, setCampaignToDelete] = useState<AdCampaign | null>(null);
 
-  const activeCampaigns = config.campaigns.filter((campaign) => campaign.active).length;
-  const dirty = JSON.stringify(config) !== JSON.stringify(savedConfig);
+  const webDirty = config !== null && !same(config, savedConfig);
+  const houseDirty = house !== null && !same(house, savedHouse);
+  const dirtyParts = [webDirty && 'website', houseDirty && 'Android app'].filter(Boolean) as string[];
+
+  const changeWeb = (next: AdsConfig) => { setConfig(next); setSavedNote(''); };
+  const changeHouse = (next: HouseConfig) => { setHouse(next); setSavedNote(''); };
 
   const duplicateCampaign = (campaign: AdCampaign) => {
+    if (!config) return;
     const suffix = config.campaigns.filter((item) => item.id.startsWith(`${campaign.id}-copy`)).length + 1;
-    setConfig({
+    changeWeb({
       ...config,
       campaigns: [...config.campaigns, {
         ...campaign,
@@ -63,165 +89,203 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave, onNavigate
   };
 
   const save = async () => {
-    setError(null);
-    setSaving(true);
+    setErrors([]);
+    setSavedNote('');
+    // Validate everything first, so an invalid campaign never leaves Android half-saved.
+    let validWeb: AdsConfig | null = null;
+    let validHouse: HouseConfig | null = null;
     try {
-      const validated = parseAdsConfig(config);
-      await onSave(validated);
-      setConfig(current => JSON.stringify(current) === JSON.stringify(config) ? validated : current);
-      setSavedConfig(validated);
-    } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save ads configuration.');
-    } finally {
-      setSaving(false);
+      if (webDirty && config) validWeb = parseAdsConfig(config);
+    } catch (cause) {
+      setErrors([cause instanceof Error ? describeAdsConfigError(cause.message) : 'Website promotions are not valid.']);
+      return;
     }
+    try {
+      if (houseDirty && house) validHouse = parseHouseConfig(house);
+    } catch (cause) {
+      setErrors([`Android app: ${cause instanceof Error ? cause.message : 'settings are not valid.'}`]);
+      return;
+    }
+
+    setSaving(true);
+    const failures: string[] = [];
+    const saved: string[] = [];
+    if (validWeb && config) {
+      const submitted = config;
+      try {
+        await onSave(validWeb);
+        const persisted = validWeb;
+        setConfig((current) => current && same(current, submitted) ? persisted : current);
+        setSavedConfig(persisted);
+        saved.push('Website saved.');
+      } catch (cause) {
+        failures.push(`Website: ${cause instanceof Error ? describeAdsConfigError(cause.message) : 'could not be saved.'}`);
+      }
+    }
+    if (validHouse && house && android) {
+      const submitted = house;
+      try {
+        await android.onSave(validHouse);
+        const persisted = validHouse;
+        setHouse((current) => current && same(current, submitted) ? persisted : current);
+        setSavedHouse(persisted);
+        saved.push('Android app saved.');
+      } catch (cause) {
+        failures.push(`Android app: ${cause instanceof Error ? cause.message : 'could not be saved.'}`);
+      }
+    }
+    setErrors(failures);
+    setSavedNote(saved.join(' '));
+    setSaving(false);
+  };
+
+  const discard = () => {
+    setConfig(savedConfig);
+    setHouse(savedHouse);
+    setErrors([]);
+    setSavedNote('');
   };
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.6fr)]">
-        <Card padding="lg">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-            <div className="max-w-xl">
-              <div className="mb-3 flex size-11 items-center justify-center rounded-xl bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
-                <Megaphone className="size-5" aria-hidden="true" />
-              </div>
-              <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-                House campaign delivery
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-                Dashboard-only web promotions. Enable delivery, select a placement, and activate a campaign; save to apply.
-              </p>
-            </div>
-            <Switch
-              checked={config.enabled}
-              onCheckedChange={(enabled) => setConfig({ ...config, enabled })}
-              aria-label="Enable house campaign delivery"
-            />
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-3 border-t border-[var(--acade-border-subtle)] pt-5 sm:grid-cols-3">
-            <Metric label="Campaigns" value={config.campaigns.length} />
-            <Metric label="Marked active" value={activeCampaigns} />
-            <Metric label="Selected placements" value={config.placements.filter((item) => item.enabled).length} />
-          </div>
-        </Card>
-
-        <Card padding="lg" className="border-[var(--acade-primary)]/20">
-          <ShieldCheck className="size-6 text-[var(--acade-success)]" aria-hidden="true" />
-          <h2 className="mt-4 font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">
-            Safe by default
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-            Your own product or partner messages. Provider and mobile settings save independently.
-          </p>
-          {onNavigate && <div className="mt-3 flex flex-col items-start gap-2">
-            <Button variant="ghost" onClick={() => onNavigate('networks')}>Manage web ad networks</Button>
-            <Button variant="ghost" onClick={() => onNavigate('android')}>Manage Android rewarded ads</Button>
-          </div>}
-          {legacyBannerCount > 0 && (
-            <p className="mt-4 rounded-xl bg-[var(--acade-overlay)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)]">
-              {legacyBannerCount} legacy banner records are stored separately. Review their active switches in the legacy section below.
-            </p>
-          )}
-        </Card>
-      </div>
-
-      <Card padding="lg">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-              House campaign format
-            </h2>
-            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">First-party messages only. Rewarded ads and external networks are configured separately.</p>
-          </div>
-        </div>
-        <div className="mt-5">
-          <ModeControl label="House / internal" description="First-party product and partner messages." checked={config.deliveryModes.house} onChange={(house) => setConfig({ ...config, deliveryModes: { ...config.deliveryModes, house } })} />
-        </div>
-      </Card>
-
-      <Card padding="lg">
-        <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">Placements</h2>
-        <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Only Dashboard overview is connected on web; these settings do not add ads to other pages.</p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          {config.placements.map((placement) => (
-            <div key={placement.id} className="flex min-h-20 items-center justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4">
-              <div className="min-w-0">
-                <p className="font-medium text-[var(--acade-text)]">{placement.name}</p>
-                <p className="mt-1 truncate font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">{placement.id}</p>
-              </div>
-              <Switch
-                checked={placement.enabled}
-                onCheckedChange={(enabled) => setConfig({
-                  ...config,
-                  placements: config.placements.map((item) => item.id === placement.id ? { ...item, enabled } : item),
-                })}
-                aria-label={`Enable ${placement.name.toLowerCase()} placement`}
+      <section aria-labelledby="where-promotions-show" className="space-y-3">
+        <h2 id="where-promotions-show" className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
+          Where promotions show
+        </h2>
+        <Card padding="none" className="grid divide-y divide-[var(--acade-border-subtle)] md:grid-cols-2 md:divide-x md:divide-y-0">
+          {config ? (
+            <fieldset className="min-w-0 space-y-1 p-5">
+              <legend className="sr-only">Website</legend>
+              <p aria-hidden="true" className="pb-2 text-sm font-semibold text-[var(--acade-text)]">Website</p>
+              <SwitchRow
+                label="Show house promotions on the website"
+                checked={config.enabled}
+                onChange={(enabled) => changeWeb({ ...config, enabled })}
               />
-            </div>
-          ))}
-        </div>
-      </Card>
+              {config.placements.map((placement) => (
+                <SwitchRow
+                  key={placement.id}
+                  label={placementLabel(placement)}
+                  ariaLabel={`Website ${placementLabel(placement)} slot`}
+                  indent
+                  checked={placement.enabled}
+                  onChange={(enabled) => changeWeb({
+                    ...config,
+                    placements: config.placements.map((item) => item.id === placement.id ? { ...item, enabled } : item),
+                  })}
+                />
+              ))}
+            </fieldset>
+          ) : <div className="p-5">{webUnavailable}</div>}
 
-      <section aria-labelledby="campaigns-heading" className="space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h2 id="campaigns-heading" className="font-[family-name:var(--font-bricolage)] text-2xl font-semibold text-[var(--acade-text)]">Campaigns</h2>
-            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Schedule, weight, and cap each first-party promotion.</p>
-          </div>
-          <Button onClick={() => setConfig({ ...config, campaigns: [...config.campaigns, createCampaignDraft(config)] })}>
-            <Plus className="size-4" aria-hidden="true" /> Add campaign
-          </Button>
-        </div>
-
-        {config.campaigns.length === 0 ? (
-          <Card padding="none">
-            <EmptyState
-              icon={<Megaphone className="size-9" aria-hidden="true" />}
-              title="No house campaigns yet"
-              description="Create a house campaign when you have a message that adds value without blocking a task."
-            />
-          </Card>
-        ) : config.campaigns.map((campaign, index) => (
-          <CampaignEditor
-            key={campaign.id}
-            campaign={campaign}
-            placements={config.placements}
-            onChange={(updated) => setConfig({
-              ...config,
-              campaigns: config.campaigns.map((item, itemIndex) => itemIndex === index ? updated : item),
-            })}
-            onRemove={() => setCampaignToDelete(campaign)}
-            onDuplicate={() => duplicateCampaign(campaign)}
-            status={getCampaignStatus(config, campaign)}
-            unsaved={dirty}
-          />
-        ))}
+          {android && (house ? (
+            <fieldset className="min-w-0 space-y-1 p-5">
+              <legend className="sr-only">Android app</legend>
+              <p aria-hidden="true" className="pb-2 text-sm font-semibold text-[var(--acade-text)]">Android app</p>
+              <SwitchRow
+                label="Show house promotions in the Android app"
+                checked={house.enabled}
+                onChange={(enabled) => changeHouse({ ...house, enabled })}
+              />
+              {(['dashboard', 'results'] as const).map((slot) => (
+                <SwitchRow
+                  key={slot}
+                  label={slot === 'dashboard' ? 'Dashboard' : 'Results'}
+                  ariaLabel={`Android ${slot === 'dashboard' ? 'Dashboard' : 'Results'} slot`}
+                  indent
+                  checked={house.placements[slot]}
+                  onChange={(value) => changeHouse({ ...house, placements: { ...house.placements, [slot]: value } })}
+                />
+              ))}
+              <SwitchRow
+                label="Use legacy banners when no campaign fits"
+                checked={house.includeLegacy}
+                onChange={(includeLegacy) => changeHouse({ ...house, includeLegacy })}
+              />
+            </fieldset>
+          ) : <div className="p-5">{android.unavailable}</div>)}
+        </Card>
       </section>
 
-      {error && (
-        <div role="alert" className="rounded-xl border border-[var(--acade-danger)]/30 bg-[var(--acade-danger-dim)] px-4 py-3 text-sm text-[var(--acade-danger)]">
-          {error}
+      {config && (
+        <section aria-labelledby="campaigns-heading" className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <h2 id="campaigns-heading" className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">Campaigns</h2>
+            <Button variant="outline" onClick={() => changeWeb({ ...config, campaigns: [...config.campaigns, createCampaignDraft(config)] })}>
+              <Plus className="size-4" aria-hidden="true" /> Add campaign
+            </Button>
+          </div>
+
+          {config.campaigns.length === 0 ? (
+            <Card padding="none">
+              <EmptyState
+                icon={<Megaphone className="size-9" aria-hidden="true" />}
+                title="No house campaigns yet"
+                description="Add a campaign when you have a message that helps students without blocking a task."
+              />
+            </Card>
+          ) : config.campaigns.map((campaign, index) => (
+            <CampaignEditor
+              key={campaign.id}
+              campaign={campaign}
+              placements={config.placements}
+              onChange={(updated) => changeWeb({
+                ...config,
+                campaigns: config.campaigns.map((item, itemIndex) => itemIndex === index ? updated : item),
+              })}
+              onRemove={() => setCampaignToDelete(campaign)}
+              onDuplicate={() => duplicateCampaign(campaign)}
+              status={getCampaignStatus(config, campaign)}
+              unsaved={webDirty}
+            />
+          ))}
+        </section>
+      )}
+
+      {(config || advanced) && (
+        <details className="group rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 sm:p-5">
+          <summary className="cursor-pointer text-base font-semibold text-[var(--acade-text)]">Advanced</summary>
+          <div className="mt-4 space-y-4">
+            {config && (
+              <SwitchRow
+                label="Allow house delivery mode"
+                hint="Keep on."
+                checked={config.deliveryModes.house}
+                onChange={(houseMode) => changeWeb({ ...config, deliveryModes: { ...config.deliveryModes, house: houseMode } })}
+              />
+            )}
+            {advanced}
+          </div>
+        </details>
+      )}
+
+      {errors.length > 0 && (
+        <div role="alert" className="space-y-1 rounded-xl border border-[var(--acade-danger)]/30 bg-[var(--acade-danger-dim)] px-4 py-3 text-sm text-[var(--acade-danger)]">
+          {errors.map((message) => <p key={message}>{message}</p>)}
         </div>
       )}
 
-      <div className="sticky bottom-4 flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)]/95 p-3 shadow-[var(--shadow-float)] backdrop-blur">
-        <p role="status" className="mr-auto text-sm text-[var(--acade-text-muted)]">{dirty ? 'Unsaved changes — house campaigns only' : 'Saved configuration — serving not verified'}</p>
-        <Button variant="ghost" disabled={!dirty || saving} onClick={() => { setConfig(savedConfig); setError(null); }}>Discard changes</Button>
-        <Button loading={saving} loadingLabel="Saving ads configuration…" onClick={save}>
-          Save house campaigns
+      <div className="sticky bottom-4 flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3 shadow-[var(--shadow-popover)]">
+        <p role="status" className="mr-auto text-sm text-[var(--acade-text-muted)]">
+          {savedNote && <span className="mr-1 text-[var(--acade-text)]">{savedNote}</span>}
+          {dirtyParts.length ? `Unsaved changes: ${dirtyParts.join(' and ')}` : 'All changes saved'}
+        </p>
+        <Button variant="ghost" disabled={!dirtyParts.length || saving} onClick={discard}>Discard changes</Button>
+        <Button loading={saving} loadingLabel="Saving house promotions…" disabled={!dirtyParts.length} onClick={() => void save()}>
+          Save house promotions
         </Button>
       </div>
+
       <Modal
         open={campaignToDelete !== null}
         onClose={() => setCampaignToDelete(null)}
         title={`Delete ${campaignToDelete?.name ?? 'campaign'}?`}
-        description="This removes the campaign from this unsaved configuration."
+        description="This removes the campaign from your unsaved changes."
         confirm={{
           label: 'Delete campaign',
           onConfirm: () => {
             if (campaignToDelete) {
-              setConfig((current) => ({
+              setConfig((current) => current && ({
                 ...current,
                 campaigns: current.campaigns.filter((campaign) => campaign.id !== campaignToDelete.id),
               }));
@@ -236,33 +300,21 @@ export function AdsEditor({ initialConfig, legacyBannerCount, onSave, onNavigate
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <p className="font-[family-name:var(--font-geist-mono)] text-xl font-semibold text-[var(--acade-text)]">{value}</p>
-      <p className="mt-1 text-xs text-[var(--acade-text-muted)]">{label}</p>
-    </div>
-  );
-}
-
-function ModeControl({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
+function SwitchRow({ label, ariaLabel, hint, checked, onChange, indent = false }: {
   label: string;
-  description: string;
+  ariaLabel?: string;
+  hint?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  indent?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4">
-      <div>
-        <p className="font-medium text-[var(--acade-text)]">{label}</p>
-        <p className="mt-1 text-xs leading-5 text-[var(--acade-text-muted)]">{description}</p>
+    <div className={`flex min-h-12 items-center justify-between gap-4 ${indent ? 'pl-4' : ''}`}>
+      <div className="min-w-0">
+        <p className={`text-sm ${indent ? 'text-[var(--acade-text-muted)]' : 'font-medium text-[var(--acade-text)]'}`}>{label}</p>
+        {hint && <p className="text-xs text-[var(--acade-text-muted)]">{hint}</p>}
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={`Enable ${label.toLowerCase()} delivery`} />
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={ariaLabel ?? label} />
     </div>
   );
 }

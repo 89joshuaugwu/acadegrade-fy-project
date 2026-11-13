@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import { adminDb } from '@/lib/firebase/admin';
 import { decryptSecret, type SupportedProviderId } from '@/lib/ai/secrets';
-import { getAiRuntimeConfig, type AiFeature, type AiRouteTarget, type StoredAiSecret } from '@/lib/ai/runtime-config';
+import { getAiRuntimeConfig, openRouterDataCollection, type AiFeature, type AiRouteTarget, type OpenRouterDataCollection, type StoredAiSecret } from '@/lib/ai/runtime-config';
 import { safeParseJSON, extractJsonObjectAndParse } from '@/lib/utils/safeParseJSON';
 
 export type AiGenerationResult = { text: string; providerId: SupportedProviderId; modelId: string; configRevision: number };
@@ -41,13 +41,20 @@ async function managedKey(target: AiRouteTarget) {
     throw new AiTargetFailure('credential_decrypt');
   }
 }
-async function invoke(target: AiRouteTarget, apiKey: string, prompt: string | any[], responseMimeType?: string): Promise<string> {
+async function invoke(target: AiRouteTarget, apiKey: string, prompt: string | any[], responseMimeType: string | undefined, dataCollection: OpenRouterDataCollection): Promise<string> {
   if (target.providerId === 'groq') {
     const result = await new Groq({ apiKey }).chat.completions.create({ messages: [{ role: 'user', content: typeof prompt === 'string' ? prompt : JSON.stringify(prompt) }], model: target.modelId, temperature: 0.7, max_tokens: 1024 });
     return result.choices[0]?.message?.content || '';
   }
   if (target.providerId === 'openrouter') {
-    const result = await new OpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey }).chat.completions.create({ messages: [{ role: 'user', content: typeof prompt === 'string' ? prompt : JSON.stringify(prompt) }], model: target.modelId, temperature: 0.65, max_tokens: 1024 });
+    // OpenRouter provider routing: 'deny' skips providers that may store or train on inputs.
+    // A model with no compliant provider fails here and the route falls through to its next target.
+    const body = {
+      messages: [{ role: 'user' as const, content: typeof prompt === 'string' ? prompt : JSON.stringify(prompt) }],
+      model: target.modelId, temperature: 0.65, max_tokens: 1024,
+      provider: { data_collection: dataCollection },
+    };
+    const result = await new OpenAI({ baseURL: 'https://openrouter.ai/api/v1', apiKey }).chat.completions.create(body);
     return result.choices[0]?.message?.content || '';
   }
   const response = await new GoogleGenAI({ apiKey }).models.generateContent({ model: target.modelId, contents: prompt, config: { maxOutputTokens: responseMimeType ? 2048 : 1024, temperature: responseMimeType ? 0.2 : 0.65, ...(responseMimeType ? { responseMimeType } : {}) } });
@@ -65,7 +72,7 @@ async function generate(feature: AiFeature, prompt: string | any[], responseMime
       const apiKey = await managedKey(target);
       if (!apiKey) throw new AiTargetFailure('credential_missing');
       stage = 'provider';
-      const text = await invoke(target, apiKey, prompt, responseMimeType);
+      const text = await invoke(target, apiKey, prompt, responseMimeType, openRouterDataCollection(route));
       if (!text) throw new AiTargetFailure('empty_response');
       stage = 'validation';
       validateResponse?.(text);

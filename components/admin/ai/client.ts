@@ -27,9 +27,12 @@ export interface AdminAiRouteTarget {
   modelId: string;
   secretId?: string;
 }
+export type AdminAiDataCollection = 'deny' | 'allow';
 export interface AdminAiRoute {
   mode: AdminAiMode;
   chain: AdminAiRouteTarget[];
+  /** OpenRouter `provider.data_collection`. Absent means 'deny' on the server. */
+  dataCollection?: AdminAiDataCollection;
 }
 export interface AdminAiConfig {
   source: 'bootstrap' | 'managed';
@@ -41,13 +44,20 @@ export interface AdminAiSnapshot {
   providers: AdminAiProviders;
   config: AdminAiConfig | null;
   secrets: AdminAiSecretProjection[];
+  /**
+   * Gemini billing state, when the server reports it ('confirmed' or not).
+   * Absent on servers that do not track it yet.
+   */
+  geminiBilling?: string;
 }
+
+export type AdminAiGeminiBilling = 'confirmed' | 'unconfirmed';
 
 export class AdminAiClientError extends Error {}
 
 async function getErrorMessage(response: Response) {
   const body = await response.json().catch(() => null) as { error?: unknown } | null;
-  return typeof body?.error === 'string' ? body.error : 'AI Operations is temporarily unavailable.';
+  return typeof body?.error === 'string' ? body.error : 'AI providers are temporarily unavailable.';
 }
 
 export async function getAdminAiSnapshot(token: string): Promise<AdminAiSnapshot> {
@@ -58,7 +68,12 @@ export async function getAdminAiSnapshot(token: string): Promise<AdminAiSnapshot
 
   const body = await response.json() as Partial<AdminAiSnapshot>;
   if (!body.providers) throw new AdminAiClientError('AI provider metadata is unavailable.');
-  return { providers: body.providers, config: body.config ?? null, secrets: body.secrets ?? [] };
+  return {
+    providers: body.providers,
+    config: body.config ?? null,
+    secrets: body.secrets ?? [],
+    ...(typeof body.geminiBilling === 'string' ? { geminiBilling: body.geminiBilling } : {}),
+  };
 }
 
 export async function upsertAdminAiSecret(
@@ -108,6 +123,17 @@ export async function saveAdminAiRouting(
     throw new AdminAiClientError('AI routing save did not return a managed configuration.');
   }
   return body.config;
+}
+
+export async function setAdminAiGeminiBilling(token: string, geminiBilling: AdminAiGeminiBilling): Promise<AdminAiGeminiBilling> {
+  const response = await fetch('/api/admin/ai', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ operation: 'set-gemini-billing', geminiBilling }),
+  });
+  if (!response.ok) throw new AdminAiClientError(await getErrorMessage(response));
+  const body = await response.json().catch(() => null) as { geminiBilling?: unknown } | null;
+  return body?.geminiBilling === 'confirmed' || body?.geminiBilling === 'unconfirmed' ? body.geminiBilling : geminiBilling;
 }
 
 export async function setAdminAiSecretState(

@@ -1,0 +1,361 @@
+{
+  "schemaVersion": 1,
+  "about": "Shared AcadeGrade academic-rules cases. Byte-identical copies live at acadegrade-web/tests/fixtures/academic-rules.json and acadegrade-mobile/tests/fixtures/academic-rules.json. Both test suites pin its sha256 (LF line endings), so edit both copies and both hashes together. Special inputs: the strings \"NaN\" and \"undefined\" stand for those JavaScript values.",
+  "gradeFromScore": [
+    { "score": 100, "grade": "A", "gradePoint": 5 },
+    { "score": 70, "grade": "A", "gradePoint": 5 },
+    { "score": 69.99999999999999, "grade": "A", "gradePoint": 5, "note": "float noise from summing CA and exam is not a lower grade" },
+    { "score": 69.5, "grade": "B", "gradePoint": 4, "note": "fractional totals between bands take the lower band, never F" },
+    { "score": 69, "grade": "B", "gradePoint": 4 },
+    { "score": 60, "grade": "B", "gradePoint": 4 },
+    { "score": 59.5, "grade": "C", "gradePoint": 3 },
+    { "score": 59, "grade": "C", "gradePoint": 3 },
+    { "score": 50, "grade": "C", "gradePoint": 3 },
+    { "score": 49, "grade": "D", "gradePoint": 2 },
+    { "score": 45, "grade": "D", "gradePoint": 2 },
+    { "score": 44.5, "grade": "E", "gradePoint": 1 },
+    { "score": 44, "grade": "E", "gradePoint": 1 },
+    { "score": 40, "grade": "E", "gradePoint": 1 },
+    { "score": 39.9, "grade": "F", "gradePoint": 0 },
+    { "score": 39, "grade": "F", "gradePoint": 0 },
+    { "score": 0, "grade": "F", "gradePoint": 0 },
+    { "score": -5, "grade": "F", "gradePoint": 0 },
+    { "score": "NaN", "grade": "F", "gradePoint": 0 }
+  ],
+  "courseMetrics": [
+    {
+      "name": "CA plus exam gives the grade and a continuous PI point",
+      "input": { "code": "CSC 425", "title": "Allocation Management", "units": 2, "caScore": 26, "examScore": 28 },
+      "expected": { "totalScore": 54, "grade": "C", "gradePoint": 3, "piPoint": 2.7, "estimated": false },
+      "absentKeys": ["isAR", "pending"]
+    },
+    {
+      "name": "full marks",
+      "input": { "code": "CSC 401", "title": "Compilers", "units": 3, "caScore": 30, "examScore": 70 },
+      "expected": { "totalScore": 100, "grade": "A", "gradePoint": 5, "piPoint": 5, "estimated": false }
+    },
+    {
+      "name": "zero scores are a real F",
+      "input": { "code": "CSC 455", "title": "Networks", "units": 3, "caScore": 0, "examScore": 0 },
+      "expected": { "totalScore": 0, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false }
+    },
+    {
+      "name": "fractional total between bands",
+      "input": { "code": "CSC 411", "title": "Graphics", "units": 2, "caScore": 19.5, "examScore": 50 },
+      "expected": { "totalScore": 69.5, "grade": "B", "gradePoint": 4, "piPoint": 3.475, "estimated": false }
+    },
+    {
+      "name": "letter grade only is estimated with PI equal to the grade point",
+      "input": { "code": "CSC 463", "title": "Software Engineering", "units": 2, "caScore": null, "examScore": null, "grade": "B" },
+      "expected": { "totalScore": null, "grade": "B", "gradePoint": 4, "piPoint": 4, "estimated": true }
+    },
+    {
+      "name": "no score and no grade",
+      "input": { "code": "CSC 470", "title": "Unknown", "units": 2, "caScore": null, "examScore": null },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false }
+    },
+    {
+      "name": "one score missing does not invent a total",
+      "input": { "code": "CSC 471", "title": "Partial", "units": 2, "caScore": 20, "examScore": null },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false }
+    },
+    {
+      "name": "awaiting result keeps its flag so GPA can skip it",
+      "input": { "code": "CSC 499", "title": "Project", "units": 6, "caScore": null, "examScore": null, "isAR": true },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false, "isAR": true }
+    },
+    {
+      "name": "pending share-code import keeps its flag so GPA can skip it",
+      "input": { "code": "CSC 498", "title": "Seminar", "units": 2, "caScore": null, "examScore": null, "pending": true },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false, "pending": true }
+    }
+  ],
+  "semesterGpa": [
+    {
+      "name": "awaiting-result and pending rows do not count",
+      "courses": [
+        { "code": "CSC 401", "title": "Compilers", "units": 3, "caScore": 26, "examScore": 50 },
+        { "code": "CSC 402", "title": "Databases", "units": 2, "caScore": 20, "examScore": 35 },
+        { "code": "CSC 499", "title": "Project", "units": 6, "caScore": null, "examScore": null, "isAR": true },
+        { "code": "CSC 410", "title": "Imported", "units": 3, "caScore": null, "examScore": null, "pending": true }
+      ],
+      "expected": {
+        "gpa": 4.2, "pi": 3.38, "creditLoaded": 5, "courseCount": 4,
+        "gradeDistribution": { "A": 1, "B": 0, "C": 1, "D": 0, "E": 0, "F": 0 }
+      }
+    },
+    {
+      "name": "a semester of only awaiting results has no GPA yet",
+      "courses": [
+        { "code": "CSC 499", "title": "Project", "units": 6, "caScore": null, "examScore": null, "isAR": true }
+      ],
+      "expected": {
+        "gpa": 0, "pi": 0, "creditLoaded": 0, "courseCount": 1,
+        "gradeDistribution": { "A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "F": 0 }
+      }
+    },
+    {
+      "name": "no courses",
+      "courses": [],
+      "expected": {
+        "gpa": 0, "pi": 0, "creditLoaded": 0, "courseCount": 0,
+        "gradeDistribution": { "A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "F": 0 }
+      }
+    },
+    {
+      "name": "letter-grade rows count with their grade point",
+      "courses": [
+        { "code": "CSC 463", "title": "Software Engineering", "units": 3, "caScore": null, "examScore": null, "grade": "B" },
+        { "code": "CSC 464", "title": "Testing", "units": 2, "caScore": 30, "examScore": 45 }
+      ],
+      "expected": {
+        "gpa": 4.4, "pi": 3.9, "creditLoaded": 5, "courseCount": 2,
+        "gradeDistribution": { "A": 1, "B": 1, "C": 0, "D": 0, "E": 0, "F": 0 }
+      }
+    }
+  ],
+  "cumulativeCgpa": [
+    {
+      "name": "weights each semester by its credit load",
+      "semesters": [
+        { "gpa": 4, "pi": 4.2, "creditLoaded": 12 },
+        { "gpa": 3, "pi": 3.1, "creditLoaded": 18 }
+      ],
+      "expected": { "cgpa": 3.4, "pi": 3.54, "totalCredits": 30 }
+    },
+    {
+      "name": "graded credits count whether or not the semester is marked complete",
+      "semesters": [
+        { "gpa": 4, "pi": 4.2, "creditLoaded": 12, "isComplete": true },
+        { "gpa": 3, "pi": 3.1, "creditLoaded": 18, "isComplete": false }
+      ],
+      "expected": { "cgpa": 3.4, "pi": 3.54, "totalCredits": 30 }
+    },
+    {
+      "name": "a semester with no graded credits is ignored",
+      "semesters": [
+        { "gpa": 5, "pi": 5, "creditLoaded": 0 },
+        { "gpa": 2, "pi": 2.5, "creditLoaded": 10 }
+      ],
+      "expected": { "cgpa": 2, "pi": 2.5, "totalCredits": 10 }
+    },
+    {
+      "name": "no semesters",
+      "semesters": [],
+      "expected": { "cgpa": 0, "pi": 0, "totalCredits": 0 }
+    }
+  ],
+  "roundCgpa": [
+    { "input": 4.4917, "expected": 4.49 },
+    { "input": 4.495, "expected": 4.5 },
+    { "input": 4.4949, "expected": 4.49 },
+    { "input": 3.4999, "expected": 3.5 },
+    { "input": 1, "expected": 1 },
+    { "input": 0.995, "expected": 1 },
+    { "input": 0.994, "expected": 0.99 },
+    { "input": 0, "expected": 0 },
+    { "input": 5, "expected": 5 },
+    { "input": 4.491666666666667, "expected": 4.49, "note": "539 grade points over 120 units" },
+    { "input": 2.385, "expected": 2.39, "note": "float-safe: (x + Number.EPSILON) * 100 gives 2.38" },
+    { "input": 4.395, "expected": 4.4, "note": "float-safe: (x + Number.EPSILON) * 100 gives 4.39" },
+    { "input": 1.005, "expected": 1.01 },
+    { "input": 2.675, "expected": 2.68 },
+    { "input": "NaN", "expected": 0 },
+    { "input": null, "expected": 0 },
+    { "input": "undefined", "expected": 0 }
+  ],
+  "formatCgpa": [
+    { "input": 4.4917, "expected": "4.49" },
+    { "input": 4.495, "expected": "4.50" },
+    { "input": 3.4999, "expected": "3.50" },
+    { "input": 0.995, "expected": "1.00", "note": "toFixed(2) shows 0.99 here while the class is Pass" },
+    { "input": 2.675, "expected": "2.68", "note": "toFixed(2) shows 2.67" },
+    { "input": 5, "expected": "5.00" },
+    { "input": 0, "expected": "0.00" },
+    { "input": "NaN", "expected": "0.00" },
+    { "input": null, "expected": "0.00" }
+  ],
+  "resolveDegreeClass": [
+    { "cgpa": 5, "shortLabel": "1st", "label": "First Class", "transcriptLabel": "First Class Honours" },
+    { "cgpa": 4.5, "shortLabel": "1st" },
+    { "cgpa": 4.495, "shortLabel": "1st" },
+    { "cgpa": 4.4949, "shortLabel": "2:1" },
+    { "cgpa": 4.4917, "shortLabel": "2:1", "label": "Second Class Upper (2:1)", "transcriptLabel": "Second Class Honours (Upper Division)" },
+    { "cgpa": 4.491666666666667, "shortLabel": "2:1" },
+    { "cgpa": 3.5, "shortLabel": "2:1" },
+    { "cgpa": 3.4999, "shortLabel": "2:1" },
+    { "cgpa": 3.495, "shortLabel": "2:1" },
+    { "cgpa": 3.4949, "shortLabel": "2:2", "label": "Second Class Lower (2:2)", "transcriptLabel": "Second Class Honours (Lower Division)" },
+    { "cgpa": 2.4, "shortLabel": "2:2" },
+    { "cgpa": 2.395, "shortLabel": "2:2" },
+    { "cgpa": 2.39, "shortLabel": "3rd", "label": "Third Class", "transcriptLabel": "Third Class Honours" },
+    { "cgpa": 1.5, "shortLabel": "3rd" },
+    { "cgpa": 1.495, "shortLabel": "3rd" },
+    { "cgpa": 1.4949, "shortLabel": "Pass", "label": "Pass", "transcriptLabel": "Pass" },
+    { "cgpa": 1.2, "shortLabel": "Pass" },
+    { "cgpa": 1, "shortLabel": "Pass" },
+    { "cgpa": 0.995, "shortLabel": "Pass" },
+    { "cgpa": 0.994, "shortLabel": "Fail", "label": "Fail", "transcriptLabel": "Fail" },
+    { "cgpa": 0.5, "shortLabel": "Fail" },
+    { "cgpa": 0, "shortLabel": "Fail" },
+    { "cgpa": -1, "shortLabel": "Fail" },
+    { "cgpa": "NaN", "shortLabel": "Fail" },
+    { "cgpa": null, "shortLabel": "Fail" },
+    { "cgpa": "undefined", "shortLabel": "Fail" }
+  ],
+  "requiredAverageForTarget": [
+    { "input": { "currentCgpa": 3.4, "completedUnits": 30, "targetCgpa": 3.5, "remainingUnits": 18 }, "expected": 3.6666666666666665 },
+    { "input": { "currentCgpa": 4, "completedUnits": 60, "targetCgpa": 4.5, "remainingUnits": 36 }, "expected": 5.333333333333333, "note": "above 5.00 means the target is out of reach; callers decide how to show it" },
+    { "input": { "currentCgpa": 0, "completedUnits": 0, "targetCgpa": 3, "remainingUnits": 18 }, "expected": 3 },
+    { "input": { "currentCgpa": 4, "completedUnits": 90, "targetCgpa": 3.5, "remainingUnits": 30 }, "expected": 2 },
+    { "input": { "currentCgpa": 4.5, "completedUnits": 100, "targetCgpa": 3, "remainingUnits": 20 }, "expected": -4.5, "note": "negative is returned unchanged; callers clamp for display" },
+    { "input": { "currentCgpa": 3.4, "completedUnits": 30, "targetCgpa": 3.5, "remainingUnits": 0 }, "expected": null },
+    { "input": { "currentCgpa": 3.4, "completedUnits": 30, "targetCgpa": 3.5, "remainingUnits": -6 }, "expected": null }
+  ],
+  "maxReachableCgpa": [
+    { "input": { "currentCgpa": 3.4, "completedUnits": 30, "remainingUnits": 18 }, "expected": 4 },
+    { "input": { "currentCgpa": 4, "completedUnits": 60, "remainingUnits": 36 }, "expected": 4.375 },
+    { "input": { "currentCgpa": 3.2, "completedUnits": 100, "remainingUnits": 0 }, "expected": 3.2 },
+    { "input": { "currentCgpa": 3.2, "completedUnits": 100, "remainingUnits": -10 }, "expected": 3.2 },
+    { "input": { "currentCgpa": 0, "completedUnits": 0, "remainingUnits": 18 }, "expected": 5 },
+    { "input": { "currentCgpa": 0, "completedUnits": 0, "remainingUnits": 0 }, "expected": 0 }
+  ],
+  "isCarryOver": [
+    { "name": "failed by scores", "course": { "code": "CSC 201", "caScore": 10, "examScore": 25 }, "expected": true },
+    { "name": "fractional fail below 40", "course": { "code": "CSC 202", "caScore": 19.5, "examScore": 20 }, "expected": true },
+    { "name": "D is a pass", "course": { "code": "CSC 203", "caScore": 20, "examScore": 25 }, "expected": false },
+    { "name": "E is a pass", "course": { "code": "CSC 204", "caScore": 15, "examScore": 25 }, "expected": false },
+    { "name": "stored total only, failing", "course": { "code": "CSC 205", "caScore": null, "examScore": null, "totalScore": 35, "grade": null }, "expected": true },
+    { "name": "stored total only, passing", "course": { "code": "CSC 206", "caScore": null, "examScore": null, "totalScore": 74, "grade": null }, "expected": false },
+    { "name": "letter grade F only", "course": { "code": "CSC 207", "caScore": null, "examScore": null, "grade": "F" }, "expected": true },
+    { "name": "letter grade E only", "course": { "code": "CSC 208", "caScore": null, "examScore": null, "grade": "E" }, "expected": false },
+    { "name": "awaiting result is not a carry-over", "course": { "code": "CSC 209", "caScore": null, "examScore": null, "grade": "F", "isAR": true }, "expected": false },
+    { "name": "pending import is not a carry-over", "course": { "code": "CSC 210", "caScore": null, "examScore": null, "grade": null, "pending": true }, "expected": false },
+    { "name": "pending import with a placeholder F is not a carry-over", "course": { "code": "CSC 211", "caScore": null, "examScore": null, "totalScore": null, "grade": "F", "gradePoint": 0, "pending": true }, "expected": false },
+    { "name": "no score and no grade is unknown, not a carry-over", "course": { "code": "CSC 212", "caScore": null, "examScore": null, "totalScore": null, "grade": null }, "expected": false },
+    { "name": "one score missing and no grade is unknown", "course": { "code": "CSC 213", "caScore": 10, "examScore": null }, "expected": false }
+  ],
+  "outstandingCarryOvers": [
+    {
+      "name": "a failed course passed later is cleared, matching normalised codes",
+      "semesters": [
+        { "courses": [{ "code": "MTH 101", "caScore": 10, "examScore": 20 }] },
+        { "courses": [{ "code": "mth101", "caScore": 20, "examScore": 45 }] }
+      ],
+      "expected": []
+    },
+    {
+      "name": "a failed course never retaken stays outstanding",
+      "semesters": [
+        { "courses": [
+          { "code": "CSC 201", "caScore": 10, "examScore": 25 },
+          { "code": "CSC 202", "caScore": 25, "examScore": 50 }
+        ] }
+      ],
+      "expected": ["CSC201"]
+    },
+    {
+      "name": "retaken and failed again is listed once",
+      "semesters": [
+        { "courses": [{ "code": "PHY 101", "caScore": 5, "examScore": 20 }] },
+        { "courses": [{ "code": "PHY101", "caScore": 10, "examScore": 20 }] }
+      ],
+      "expected": ["PHY101"]
+    },
+    {
+      "name": "a later awaiting result does not clear it",
+      "semesters": [
+        { "courses": [{ "code": "GST 111", "caScore": 10, "examScore": 20 }] },
+        { "courses": [{ "code": "GST 111", "caScore": null, "examScore": null, "isAR": true }] }
+      ],
+      "expected": ["GST111"]
+    },
+    {
+      "name": "a later pending import does not clear it",
+      "semesters": [
+        { "courses": [{ "code": "CHM 101", "caScore": 10, "examScore": 20 }] },
+        { "courses": [{ "code": "CHM 101", "caScore": null, "examScore": null, "grade": null, "pending": true }] }
+      ],
+      "expected": ["CHM101"]
+    },
+    {
+      "name": "a later row with no score or grade does not clear it",
+      "semesters": [
+        { "courses": [{ "code": "BIO 101", "caScore": 10, "examScore": 20 }] },
+        { "courses": [{ "code": "BIO 101", "caScore": null, "examScore": null, "grade": null }] }
+      ],
+      "expected": ["BIO101"]
+    },
+    {
+      "name": "a letter-grade pass clears a letter-grade fail",
+      "semesters": [
+        { "courses": [{ "code": "ENG 101", "caScore": null, "examScore": null, "grade": "F" }] },
+        { "courses": [{ "code": "ENG 101", "caScore": null, "examScore": null, "grade": "C" }] }
+      ],
+      "expected": []
+    },
+    {
+      "name": "a fail after an earlier pass is outstanding",
+      "semesters": [
+        { "courses": [{ "code": "STA 201", "caScore": 20, "examScore": 45 }] },
+        { "courses": [{ "code": "STA 201", "caScore": 10, "examScore": 20 }] }
+      ],
+      "expected": ["STA201"]
+    },
+    {
+      "name": "order follows the first failure of each outstanding course",
+      "semesters": [
+        { "courses": [
+          { "code": "CSC 301", "caScore": 10, "examScore": 20 },
+          { "code": "CSC 302", "caScore": 10, "examScore": 20 }
+        ] },
+        { "courses": [{ "code": "CSC 301", "caScore": 25, "examScore": 40 }] },
+        { "courses": [{ "code": "CSC 301", "caScore": 10, "examScore": 20 }] }
+      ],
+      "expected": ["CSC302", "CSC301"]
+    },
+    {
+      "name": "whitespace and case variants are the same course",
+      "semesters": [
+        { "courses": [{ "code": " csc  205 ", "caScore": 10, "examScore": 20 }] },
+        { "courses": [{ "code": "Csc205", "caScore": 25, "examScore": 40 }] }
+      ],
+      "expected": []
+    },
+    {
+      "name": "blank codes are ignored",
+      "semesters": [
+        { "courses": [{ "code": "   ", "caScore": 10, "examScore": 20 }] }
+      ],
+      "expected": []
+    },
+    {
+      "name": "no semesters",
+      "semesters": [],
+      "expected": []
+    }
+  ],
+  "endToEnd": [
+    {
+      "name": "539 grade points over 120 units shows 4.49 and is 2:1, not Fail",
+      "summaries": [
+        { "gpa": 4.5, "pi": 4.1, "creditLoaded": 40 },
+        { "gpa": 4.4875, "pi": 4, "creditLoaded": 80 }
+      ],
+      "expected": { "cgpa": 4.491666666666667, "display": "4.49", "shortLabel": "2:1" }
+    },
+    {
+      "name": "awaiting results never drag the CGPA down",
+      "courseSemesters": [
+        { "courses": [
+          { "code": "CSC 301", "title": "Algorithms", "units": 3, "caScore": 25, "examScore": 50 },
+          { "code": "CSC 399", "title": "Industrial Training", "units": 6, "caScore": null, "examScore": null, "isAR": true }
+        ] },
+        { "courses": [
+          { "code": "CSC 302", "title": "Automata", "units": 3, "caScore": 20, "examScore": 30 }
+        ] }
+      ],
+      "expected": { "cgpa": 4, "display": "4.00", "shortLabel": "2:1" }
+    }
+  ]
+}

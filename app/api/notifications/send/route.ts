@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, adminRtdb, adminMessaging } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
+import { maintenanceResponse, getPlatformSettings } from '@/lib/platform/settings-server';
 
 /**
  * POST /api/notifications/send
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest) {
       if (!isAdmin && decoded.uid !== uid) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
+      // Students cannot trigger sends during maintenance; admins and internal calls can.
+      if (!isAdmin && (await getPlatformSettings()).maintenanceMode) return maintenanceResponse();
     }
 
     let fcmTokens: string[] = providedToken ? [providedToken] : [];

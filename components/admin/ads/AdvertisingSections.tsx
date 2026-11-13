@@ -5,7 +5,7 @@ import { useRef, useState, type ReactNode } from 'react';
 interface Section {
   id: string;
   label: string;
-  description: string;
+  description?: string;
   content: ReactNode;
 }
 
@@ -56,7 +56,7 @@ export function AdvertisingSections({ id, label, sections, selectedId, onSelect 
           tabIndex={0}
           className="space-y-5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--acade-primary)]"
         >
-          <p className="text-sm leading-6 text-[var(--acade-text-muted)]">{section.description}</p>
+          {section.description && <p className="text-sm leading-6 text-[var(--acade-text-muted)]">{section.description}</p>}
           {section.content}
         </div>
       ))}

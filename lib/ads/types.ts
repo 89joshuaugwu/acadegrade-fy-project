@@ -1,5 +1,7 @@
 export const AD_PLACEMENT_IDS = [
   'dashboard.overview',
+  // Additive: older saved configurations omit this entry, which means off.
+  'results.overview',
 ] as const;
 
 export type AdPlacementId = typeof AD_PLACEMENT_IDS[number];

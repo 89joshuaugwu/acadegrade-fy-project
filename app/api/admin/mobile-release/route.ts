@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/admin-auth';
 import { adminDb } from '@/lib/firebase/admin';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { defaultMobileRelease, parseMobileRelease } from '@/lib/mobile-release/config';
 
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -24,9 +25,13 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    await requireAdmin(request);
+    const actor = await requireAdmin(request);
     const config = parseMobileRelease(await request.json());
-    await adminDb.collection('config').doc('mobileRelease').set(config);
+    const ref = adminDb.collection('config').doc('mobileRelease');
+    const existing = await ref.get();
+    const before = existing.exists ? existing.data() ?? null : null;
+    await ref.set(config);
+    await writeAdminAudit({ actorUid: actor?.uid, actorEmail: actor?.email ?? '', action: 'mobile-release.update', target: 'config/mobileRelease', before, after: config });
     return NextResponse.json(config, { headers });
   } catch (error) {
     return errorResponse(error);

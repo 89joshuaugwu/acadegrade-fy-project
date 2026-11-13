@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { AdsConfigValidationError } from '@/lib/ads/config';
 import { parseProviderConfig, safeParseProviderConfig } from '@/lib/ads/providers';
 
@@ -8,7 +9,9 @@ async function verifyAdmin(request: Request) {
   if (!authorization?.startsWith('Bearer ')) throw new Error('Unauthorized');
   const decoded = await adminAuth.verifyIdToken(authorization.slice(7));
   const admins = await adminDb.collection('config').doc('admins').get();
-  if (!Array.isArray(admins.data()?.emails) || !admins.data()?.emails.includes(decoded.email?.toLowerCase())) throw new Error('Forbidden');
+  const email = decoded.email?.toLowerCase() ?? '';
+  if (!Array.isArray(admins.data()?.emails) || !admins.data()?.emails.includes(email)) throw new Error('Forbidden');
+  return { uid: decoded.uid, email };
 }
 
 function failure(error: unknown) {
@@ -27,11 +30,13 @@ export async function GET(request: Request) {
 
 export async function PUT(request: Request) {
   try {
-    await verifyAdmin(request);
+    const actor = await verifyAdmin(request);
     const body = await request.json();
     if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || !('config' in body)) throw new AdsConfigValidationError('Expected only config');
     const config = parseProviderConfig(body.config);
+    const before = (await adminDb.collection('config').doc('settings').get()).data()?.adsProviderConfig ?? null;
     await adminDb.collection('config').doc('settings').set({ adsProviderConfig: config, updatedAt: new Date() }, { merge: true });
+    await writeAdminAudit({ actorUid: actor.uid, actorEmail: actor.email, action: 'ads.web-providers.update', target: 'config/settings.adsProviderConfig', before, after: config });
     return NextResponse.json({ config });
   } catch (error) { return failure(error); }
 }

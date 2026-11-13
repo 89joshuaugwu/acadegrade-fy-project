@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Pencil, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Modal } from '@/components/ui/Modal';
+import { ErrorState } from '@/components/shared';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import toast from 'react-hot-toast';
 
 interface CatalogCourse {
@@ -29,26 +30,32 @@ export default function AdminCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<CatalogCourse | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [editingCourse, setEditingCourse] = useState<CatalogCourse | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { if (user) loadCourses(); }, [user]);
-
   const getToken = () => user!.getIdToken();
 
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
+    if (!user) return;
+    setError(null);
     try {
-      const token = await getToken();
+      const token = await user.getIdToken();
       const res = await fetch('/api/admin/courses', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) {
-        const data = await res.json();
-        setCourses(data.courses);
-      }
-    } catch (err) { console.error(err); toast.error('Failed to load courses.'); }
-    finally { setLoading(false); }
-  };
+      if (!res.ok) throw new Error('Course catalog request failed.');
+      const data = await res.json();
+      setCourses(Array.isArray(data.courses) ? data.courses : []);
+    } catch (err) {
+      console.error(err);
+      // An unloaded catalog must not look like an empty one.
+      setError('The course service did not respond. The catalog has not changed.');
+    } finally { setLoading(false); }
+  }, [user]);
+
+  useEffect(() => { void loadCourses(); }, [loadCourses]);
 
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return courses;
@@ -85,15 +92,39 @@ export default function AdminCoursesPage() {
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (course: CatalogCourse) => {
+    setDeleting(true);
     try {
       const token = await getToken();
-      const res = await fetch(`/api/admin/courses?id=${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) { setCourses(prev => prev.filter(c => c.id !== id)); toast.success('Course deleted.'); }
-      else toast.error('Failed to delete.');
-    } catch (err) { toast.error('Error deleting course.'); }
-    finally { setDeleteConfirm(null); }
+      const res = await fetch(`/api/admin/courses?id=${encodeURIComponent(course.id)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { setCourses(prev => prev.filter(c => c.id !== course.id)); toast.success(`${course.code} deleted.`); }
+      else toast.error(`Could not delete ${course.code}. Try again.`);
+    } catch { toast.error(`Could not delete ${course.code}. Check your connection.`); }
+    finally { setDeleting(false); setDeleteConfirm(null); }
   };
+
+  const selectClass = 'h-12 w-full rounded-xl border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-4 text-[length:var(--text-sm)] text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20';
+  const header = (
+    <AdminPageHeader
+      title="Legacy course list"
+      description={error ? 'An old list of course codes and titles.' : `An old list of course codes and titles. ${courses.length} course${courses.length !== 1 ? 's' : ''} stored.`}
+      helpId="admin.course-list"
+      actions={<Button size="sm" variant="primary" onClick={openAdd} disabled={!!error}><Plus size={16} aria-hidden="true" />Add course</Button>}
+    >
+      <p className="mt-3 max-w-2xl rounded-xl bg-[var(--acade-warning)]/10 px-3 py-2 text-sm text-[var(--acade-text)]">
+        No app reads this list. Course codes students share are created from their own semesters.
+      </p>
+    </AdminPageHeader>
+  );
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <ErrorState title="Courses could not be loaded" description={error} onRetry={() => { setLoading(true); void loadCourses(); }} />
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -107,19 +138,13 @@ export default function AdminCoursesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">Course Catalog</h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">{courses.length} course{courses.length !== 1 ? 's' : ''} in catalog</p>
-        </div>
-        <Button variant="danger" size="sm" onClick={openAdd}><Plus size={16} />Add Course</Button>
-      </div>
+      {header}
 
       {/* Search */}
       <div className="relative">
-        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
-        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by code, title, or department..."
-          className="w-full h-12 pl-12 pr-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] placeholder:text-[var(--acade-text-faint)] focus:outline-none focus:border-[var(--acade-primary)] transition-colors" />
+        <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
+        <input type="search" aria-label="Search courses" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by code, title, or department..."
+          className="w-full h-12 pl-12 pr-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] placeholder:text-[var(--acade-text-faint)] focus:outline-none focus:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30 transition-colors" />
       </div>
 
       {/* Table */}
@@ -128,84 +153,73 @@ export default function AdminCoursesPage() {
           <span>Code</span><span>Title</span><span>Units</span><span>Department</span><span>Level</span><span>Sem</span><span>Actions</span>
         </div>
         {filtered.length === 0 ? (
-          <div className="p-12 text-center text-[var(--acade-text-muted)]">{searchQuery ? 'No courses match.' : 'No courses in catalog yet.'}</div>
+          <div role="status" className="p-12 text-center text-[var(--acade-text-muted)]">{searchQuery ? 'No courses match your search.' : 'No courses in catalog yet.'}</div>
         ) : (
           filtered.map(c => (
             <div key={c.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_0.5fr_1.2fr_0.5fr_0.5fr_0.8fr] gap-2 px-5 py-3.5 border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)]/10 transition-colors items-center">
               <span className="font-bold text-[length:var(--text-sm)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">{c.code}</span>
-              <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] truncate">{c.title}</span>
+              <div className="min-w-0">
+                <span className="block truncate text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">{c.title}</span>
+                {/* Small screens hide the columns; keep their facts on a second line. */}
+                <span className="mt-0.5 block truncate text-xs text-[var(--acade-text-muted)] md:hidden">{c.department || 'No department'} · {c.level}L · {c.units} units · S{c.semester}</span>
+              </div>
               <span className="text-[length:var(--text-sm)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] hidden md:block">{c.units}</span>
               <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] truncate hidden md:block">{c.department}</span>
               <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{c.level}L</span>
               <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hidden md:block">S{c.semester}</span>
               <div className="flex items-center gap-1">
-                <button onClick={() => openEdit(c)} className="p-2 rounded-lg text-[var(--acade-text-muted)] hover:text-[var(--acade-primary)] hover:bg-[var(--acade-primary)]/10 transition-colors" aria-label="Edit"><Pencil size={15} /></button>
-                {deleteConfirm === c.id ? (
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => handleDelete(c.id)} className="p-1.5 rounded-lg text-white bg-[var(--acade-danger)] text-[length:var(--text-xs)] font-bold px-2">Yes</button>
-                    <button onClick={() => setDeleteConfirm(null)} className="p-1.5 rounded-lg text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] text-[length:var(--text-xs)]">No</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setDeleteConfirm(c.id)} className="p-2 rounded-lg text-[var(--acade-text-muted)] hover:text-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/10 transition-colors" aria-label="Delete"><Trash2 size={15} /></button>
-                )}
+                <button type="button" onClick={() => openEdit(c)} className="flex size-11 items-center justify-center rounded-lg text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-primary)]/10 hover:text-[var(--acade-primary)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" aria-label={`Edit ${c.code}`}><Pencil size={16} aria-hidden="true" /></button>
+                <button type="button" onClick={() => setDeleteConfirm(c)} className="flex size-11 items-center justify-center rounded-lg text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-danger)]/10 hover:text-[var(--acade-danger)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" aria-label={`Delete ${c.code}`}><Trash2 size={16} aria-hidden="true" /></button>
               </div>
             </div>
           ))
         )}
       </Card>
 
-      {/* Add/Edit Modal */}
-      <AnimatePresence>
-        {modalOpen && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={() => setModalOpen(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            >
-              <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-                    {editingCourse ? 'Edit Course' : 'Add New Course'}
-                  </h2>
-                  <button onClick={() => setModalOpen(false)} className="p-2 rounded-full text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)]"><X size={20} /></button>
-                </div>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingCourse ? `Edit ${editingCourse.code}` : 'Add new course'}
+        description="Students see these details when they pick a course."
+      >
+        <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void handleSave(); }}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input id="course-code" label="Course code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="CSC301" />
+            <Input id="course-units" label="Credit units" type="number" min={0} value={String(form.units)} onChange={e => setForm({ ...form, units: Number(e.target.value) })} placeholder="3" />
+          </div>
+          <Input id="course-title" label="Course title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Data Structures and Algorithms" />
+          <Input id="course-dept" label="Department" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder="Computer Science" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="course-level" className="mb-1.5 block text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">Level</label>
+              <select id="course-level" value={form.level} onChange={e => setForm({ ...form, level: Number(e.target.value) })} className={selectClass}>
+                {[100, 200, 300, 400, 500].map(l => <option key={l} value={l}>{l}L</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="course-semester" className="mb-1.5 block text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">Semester</label>
+              <select id="course-semester" value={form.semester} onChange={e => setForm({ ...form, semester: Number(e.target.value) })} className={selectClass}>
+                <option value={1}>First Semester</option>
+                <option value={2}>Second Semester</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 border-t border-[var(--acade-border-subtle)] pt-4">
+            <Button type="button" variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button type="submit" size="sm" loading={saving}>{editingCourse ? 'Save changes' : 'Add course'}</Button>
+          </div>
+        </form>
+      </Modal>
 
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input id="course-code" label="Course Code" value={form.code} onChange={e => setForm({...form, code: e.target.value})} placeholder="CSC301" />
-                    <Input id="course-units" label="Credit Units" type="number" value={String(form.units)} onChange={e => setForm({...form, units: Number(e.target.value)})} placeholder="3" />
-                  </div>
-                  <Input id="course-title" label="Course Title" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="Data Structures and Algorithms" />
-                  <Input id="course-dept" label="Department" value={form.department} onChange={e => setForm({...form, department: e.target.value})} placeholder="Computer Science" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)] mb-1.5">Level</label>
-                      <select value={form.level} onChange={e => setForm({...form, level: Number(e.target.value)})}
-                        className="w-full h-12 px-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)]">
-                        {[100,200,300,400,500].map(l => <option key={l} value={l}>{l}L</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)] mb-1.5">Semester</label>
-                      <select value={form.semester} onChange={e => setForm({...form, semester: Number(e.target.value)})}
-                        className="w-full h-12 px-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] focus:outline-none focus:border-[var(--acade-primary)]">
-                        <option value={1}>First Semester</option>
-                        <option value={2}>Second Semester</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-[var(--acade-border-subtle)]">
-                  <Button variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Cancel</Button>
-                  <Button variant="danger" size="sm" loading={saving} onClick={handleSave}>{editingCourse ? 'Save Changes' : 'Add Course'}</Button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <Modal
+        open={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        title={`Delete ${deleteConfirm?.code ?? 'course'}?`}
+        description={`${deleteConfirm?.title ?? 'This course'} will be removed from the catalog. Results students already saved are not changed.`}
+        confirm={{ label: 'Delete course', loading: deleting, onConfirm: () => { if (deleteConfirm) void handleDelete(deleteConfirm); } }}
+      >
+        <p className="text-sm text-[var(--acade-text-muted)]">This cannot be undone from here.</p>
+      </Modal>
     </div>
   );
 }

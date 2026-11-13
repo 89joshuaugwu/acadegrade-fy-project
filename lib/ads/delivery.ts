@@ -73,8 +73,11 @@ function stableSeedValue(seed: string) {
 }
 
 export function selectWeightedCampaign(campaigns: AdCampaign[], seed: string): AdCampaign | null {
-  if (campaigns.length === 0) return null;
-  const sorted = [...campaigns].sort((left, right) => left.id.localeCompare(right.id));
+  // A campaign without a positive weight has no share of delivery.
+  const sorted = campaigns
+    .filter((campaign) => Number.isFinite(campaign.weight) && campaign.weight > 0)
+    .sort((left, right) => left.id.localeCompare(right.id));
+  if (sorted.length === 0) return null;
   const totalWeight = sorted.reduce((total, campaign) => total + campaign.weight, 0);
   let selectedPoint = stableSeedValue(seed) % totalWeight;
 

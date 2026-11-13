@@ -1,8 +1,11 @@
+import { envContactEmail, resolveContactEmail } from '@/lib/site/contact-email';
+
 export interface AboutContent {
   headline: string;
   platformDescription: string;
   mission: string;
   trustStatement: string;
+  /** Empty when no address is configured; pages then link to /support instead. */
   contactEmail: string;
 }
 
@@ -11,7 +14,7 @@ export const DEFAULT_ABOUT_CONTENT: AboutContent = {
   platformDescription: 'AcadeGrade helps university students understand results, monitor degree progress, and make better academic decisions.',
   mission: 'Our mission is to give every student a dependable, understandable view of their academic journey.',
   trustStatement: 'Your academic records remain under your control. Sharing is explicit, revocable, and designed around privacy.',
-  contactEmail: 'support@acadegrade.com',
+  contactEmail: envContactEmail() ?? '',
 };
 
 function normalizedText(value: unknown, fallback: string) {
@@ -28,6 +31,7 @@ export function normalizeAboutContent(value: unknown): AboutContent {
     platformDescription: normalizedText(data.platformDescription, DEFAULT_ABOUT_CONTENT.platformDescription),
     mission: normalizedText(data.mission, DEFAULT_ABOUT_CONTENT.mission),
     trustStatement: normalizedText(data.trustStatement, DEFAULT_ABOUT_CONTENT.trustStatement),
-    contactEmail: normalizedText(data.contactEmail, DEFAULT_ABOUT_CONTENT.contactEmail).toLowerCase(),
+    // Same order as getContactEmail(): admin value, then NEXT_PUBLIC_SUPPORT_EMAIL, then none.
+    contactEmail: resolveContactEmail({ configEmail: data.contactEmail, envEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL }) ?? '',
   };
 }

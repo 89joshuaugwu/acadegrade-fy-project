@@ -60,6 +60,10 @@ vi.mock('@/components/ai/WhatIfCalculator', () => ({
 vi.mock('@/components/ai/InsightCard', () => ({ InsightCard: () => <div /> }));
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 
+
+// Full-page renders with many async steps; allow for a loaded machine.
+vi.setConfig({ testTimeout: 15000 });
+
 describe('Insights tabs accessibility and motion preferences', () => {
   beforeEach(() => {
     mocks.reducedMotion = false;

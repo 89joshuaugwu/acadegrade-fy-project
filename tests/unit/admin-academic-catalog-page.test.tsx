@@ -18,6 +18,15 @@ const initial = { revision: 1, entries: [
 beforeEach(() => { vi.restoreAllMocks(); });
 
 describe('AcademicCatalogPage', () => {
+  it('opens with its renamed title, Help and a link to the legacy course list', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async url => ({ ok: true, json: async () => String(url).endsWith('/suggestions') ? { suggestions: [] } : initial } as Response));
+    render(<AcademicCatalogPage />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Academic catalogue' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Help: Academic catalogue' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Legacy course list (not used by the apps)' })).toHaveAttribute('href', '/admin/courses');
+    expect(await screen.findByText('No pending suggestions.')).toBeInTheDocument();
+  });
+
   it('loads pending suggestions with bearer auth and shows an empty queue', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async url => ({
       ok: true,

@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
+import { checkPlatformAccess } from '@/lib/platform/settings-server';
+import { computeCumulativeCGPA, roundCgpa } from '@/lib/cgpa/academicRules';
+
 import crypto from 'crypto';
+
+/** Profile text as plain text: no markup or control characters, single-spaced, bounded. */
+function plainText(value: unknown, max = 180): string {
+  if (typeof value !== 'string') return '';
+  return value.replace(/<[^>]*>/g, ' ').replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+}
 
 /**
  * POST /api/transcript/share — Create a shareable transcript snapshot.
@@ -22,6 +31,9 @@ export async function POST(request: NextRequest) {
     const token = authHeader.split('Bearer ')[1];
     const decoded = await adminAuth.verifyIdToken(token);
     const uid = decoded.uid;
+    // Creating links is gated; reading an existing share (GET) stays public.
+    const blocked = await checkPlatformAccess({ feature: 'transcript_share', email: decoded.email });
+    if (blocked) return blocked;
 
     // Parse optional body for showPhoto preference
     let showPhoto = true;
@@ -63,6 +75,10 @@ export async function POST(request: NextRequest) {
       return a.semester - b.semester;
     });
 
+    // Transcript rule (same as the PDF): CGPA over completed semesters only,
+    // and `semesters` above already holds only completed ones.
+    const cumulative = computeCumulativeCGPA(semesters);
+
     // Generate a short share ID
     const shareId = crypto.randomBytes(6).toString('hex'); // 12 char hex
 
@@ -73,6 +89,11 @@ export async function POST(request: NextRequest) {
       matric: profile.matric || '',
       department: profile.department || '',
       programme: profile.programme || '',
+      // Shown by the public share page as "as entered by the student".
+      university: plainText(profile.university),
+      cgpa: roundCgpa(cumulative.cgpa),
+      pi: roundCgpa(cumulative.pi),
+      totalCredits: cumulative.totalCredits,
       currentLevel: profile.currentLevel || '',
       avatarUrl: showPhoto ? (profile.avatarUrl || null) : null,
       showPhoto,

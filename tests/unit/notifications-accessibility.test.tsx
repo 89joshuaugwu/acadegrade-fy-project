@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -159,6 +159,9 @@ describe('notification accessibility', () => {
 
     render(<NotificationsPage />);
     await user.click(await screen.findByRole('button', { name: /clear all/i }));
+    // Clearing is irreversible, so it is confirmed in a dialog first.
+    const dialog = await screen.findByRole('dialog', { name: /clear all notifications/i });
+    await user.click(within(dialog).getByRole('button', { name: /^clear all$/i }));
 
     await waitFor(() => {
       expect(mocks.toastError).toHaveBeenCalledWith('Could not clear notifications. Try again.');

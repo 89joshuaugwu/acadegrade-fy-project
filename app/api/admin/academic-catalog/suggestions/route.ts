@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/api/admin-auth';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { adminDb } from '@/lib/firebase/admin';
 import { DEFAULT_CATALOG } from '@/lib/academic-catalog/defaults';
 import { createInitialCatalog, mutateCatalog, normalizeCatalogName, type CatalogKind, type CatalogSnapshot } from '@/lib/academic-catalog/model';
@@ -58,6 +59,10 @@ export async function PATCH(request: Request) {
       transaction.set(catalogRef, updated);
       transaction.set(suggestionRef, { ...review, status: 'approved' }, { merge: true });
       return { status: 'approved' };
+    });
+    await writeAdminAudit({
+      actorUid: actor?.uid, actorEmail: actor?.email ?? '', action: `academic-catalog.suggestion.${body.action}`,
+      target: `_academic_catalog_suggestions/${body.id}`, after: result,
     });
     return NextResponse.json(result, { headers });
   } catch (error) {

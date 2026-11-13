@@ -29,6 +29,7 @@ describe('public search discovery', () => {
       'https://product.acadegrade.test/support',
       'https://product.acadegrade.test/privacy',
       'https://product.acadegrade.test/terms',
+      'https://product.acadegrade.test/account-deletion',
     ]);
     expect(urls.join(' ')).not.toMatch(/login|register|forgot-password|dashboard|admin/);
   });
@@ -53,3 +54,25 @@ describe('public search discovery', () => {
   });
 });
 
+
+describe('site JSON-LD contact email', () => {
+  it('publishes the configured address and omits email when none is configured', async () => {
+    const previous = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+    try {
+      delete process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+      const { getSiteJsonLd } = await import('@/lib/seo/site');
+      const organization = (ld: ReturnType<typeof getSiteJsonLd>) => ld.find((entry) => entry['@type'] === 'Organization') as Record<string, unknown>;
+
+      expect(organization(getSiteJsonLd())).not.toHaveProperty('email');
+      expect(organization(getSiteJsonLd(null))).not.toHaveProperty('email');
+      expect(organization(getSiteJsonLd('Admin@Example.org')).email).toBe('admin@example.org');
+
+      process.env.NEXT_PUBLIC_SUPPORT_EMAIL = 'env@example.org';
+      expect(organization(getSiteJsonLd()).email).toBe('env@example.org');
+      expect(JSON.stringify(getSiteJsonLd(null))).not.toContain('support@acadegrade.com');
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+      else process.env.NEXT_PUBLIC_SUPPORT_EMAIL = previous;
+    }
+  });
+});

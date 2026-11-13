@@ -3,41 +3,21 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, Users, BookOpen, BarChart3, Activity, Settings, LogOut, Shield, Megaphone, BrainCircuit } from 'lucide-react';
+import { Menu, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
-import { MobileDrawer } from './MobileDrawer';
 import { cn } from '@/lib/utils/cn';
-import { ThemeControl } from '@/components/ui';
-import { RouteAnnouncer } from '@/components/shared';
-import { adminNavigation, getRouteMeta, isRouteActive, type NavigationIcon } from '@/lib/ui/route-meta';
-
-const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
-  dashboard: LayoutDashboard,
-  users: Users,
-  courses: BookOpen,
-  analytics: BarChart3,
-  activity: Activity,
-  ai: BrainCircuit,
-  ads: Megaphone,
-  settings: Settings,
-  results: BookOpen,
-  insights: BarChart3,
-  transcript: BookOpen,
-};
-
-const NAV_GROUPS = [
-  { label: 'Platform', items: adminNavigation.slice(0, 4) },
-  { label: 'Monitoring', items: adminNavigation.filter(item => ['/admin/analytics', '/admin/api-analytics', '/admin/ai', '/admin/usage'].includes(item.href)) },
-  { label: 'Delivery & settings', items: adminNavigation.filter(item => ['/admin/ads', '/admin/mobile-release', '/admin/settings'].includes(item.href)) },
-];
+import { ThemeControl } from '@/components/ui/ThemeControl';
+import { Sheet } from '@/components/ui/Sheet';
+import { RouteAnnouncer } from '@/components/shared/RouteAnnouncer';
+import { ADMIN_NAV_GROUPS, adminRouteTitle, isAdminRouteActive, type AdminNavGroup } from '@/components/admin/navigation';
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { user } = useAuth();
   const pathname = usePathname();
-  const routeMeta = getRouteMeta(pathname);
+  const title = adminRouteTitle(pathname);
 
   const handleSignOut = async () => {
     try {
@@ -53,18 +33,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[var(--acade-void)] flex flex-col lg:flex-row">
       <a href="#admin-main-content" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-[var(--acade-primary)] px-4 py-3 text-[var(--acade-on-primary)] focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Skip to content</a>
-      <RouteAnnouncer title={routeMeta.title} />
+      <RouteAnnouncer title={title} />
       {/* Mobile and tablet header */}
       <header className="sticky top-0 flex h-[var(--shell-header-height)] shrink-0 items-center justify-between gap-3 border-b border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 lg:hidden" style={{ zIndex: 'var(--z-sticky)' }}>
         <div className="flex min-w-0 items-center gap-2 font-[family-name:var(--font-bricolage)] text-lg font-bold text-[var(--acade-text)]">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--acade-primary-dim)]"><Shield size={20} className="text-[var(--acade-primary)]" /></span>
-          <span className="truncate">{routeMeta.title}</span>
+          <span className="truncate">{title}</span>
         </div>
         <button
           onClick={() => setDrawerOpen(true)}
           type="button"
           className="flex size-12 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
-          aria-label={`Open ${routeMeta.title} navigation`}
+          aria-label={`Open ${title} navigation`}
           aria-expanded={drawerOpen}
         >
           <Menu size={24} />
@@ -90,31 +70,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Navigation */}
-          <nav aria-label="Admin primary navigation" className="flex flex-col gap-6">
-            {NAV_GROUPS.map(group => <div key={group.label} role="group" aria-label={group.label} className="space-y-1">
-              <p className="mb-2 px-4 text-xs font-medium text-[var(--acade-text-muted)]">{group.label}</p>
-            {group.items.map((tab) => {
-              const active = isRouteActive(pathname, tab.href);
-              const Icon = ADMIN_ICONS[tab.icon];
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    "flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] font-[family-name:var(--font-dm-sans)]",
-                    active
-                      ? "border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]"
-                      : "border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
-                  )}
-                >
-                  <Icon size={20} className={active ? "text-[var(--acade-primary)]" : ""} />
-                  {tab.label}
-                </Link>
-              );
-            })}
-            </div>)}
-          </nav>
+          <AdminNavLinks label="Admin primary navigation" groups={ADMIN_NAV_GROUPS} pathname={pathname} />
         </div>
 
         {/* Footer — email + sign out */}
@@ -126,7 +82,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={handleSignOut}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] text-left w-full"
+            className="flex min-h-12 items-center gap-3 px-4 py-3 rounded-xl text-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] transition-colors font-medium text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] text-left w-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
           >
             <LogOut size={20} />
             Sign Out
@@ -141,7 +97,71 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      <MobileDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} isAdmin={true} />
+      <Sheet
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Admin navigation"
+        description="Manage AcadeGrade operations."
+        className="h-auto max-h-[calc(100dvh-0.75rem)] lg:hidden"
+      >
+        <div className="pb-[max(0px,env(safe-area-inset-bottom))]">
+          <AdminNavLinks label="Admin mobile navigation" groups={ADMIN_NAV_GROUPS} pathname={pathname} onNavigate={() => setDrawerOpen(false)} />
+          <div className="mt-4 border-t border-[var(--acade-border-subtle)] pt-4">
+            <ThemeControl className="w-full" />
+            {user?.email && <p className="mt-3 truncate text-center text-xs text-[var(--acade-text-muted)]">{user.email}</p>}
+            <button
+              type="button"
+              onClick={() => { setDrawerOpen(false); void handleSignOut(); }}
+              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
+            >
+              <LogOut className="size-5" aria-hidden="true" />
+              Sign out
+            </button>
+          </div>
+        </div>
+      </Sheet>
     </div>
+  );
+}
+
+function AdminNavLinks({ label, groups, pathname, onNavigate }: {
+  label: string;
+  groups: AdminNavGroup[];
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <nav aria-label={label} className="flex flex-col gap-5">
+      {groups.map((group) => {
+        const links = group.items.map((item) => {
+          const active = isAdminRouteActive(pathname, item.href);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onNavigate}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'flex min-h-11 items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] font-[family-name:var(--font-dm-sans)]',
+                active
+                  ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]'
+                  : 'text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]'
+              )}
+            >
+              <Icon size={18} aria-hidden="true" className="shrink-0" />
+              {item.label}
+            </Link>
+          );
+        });
+        if (!group.label) return <div key="primary" className="space-y-1">{links}</div>;
+        return (
+          <div key={group.label} role="group" aria-label={group.label} className="space-y-1">
+            <p aria-hidden="true" className="mb-1.5 px-4 text-xs font-medium text-[var(--acade-text-muted)]">{group.label}</p>
+            {links}
+          </div>
+        );
+      })}
+    </nav>
   );
 }

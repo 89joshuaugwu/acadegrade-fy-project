@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useForm, Controller, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, ArrowRight, Check, Sparkles, AlertCircle, Database } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparkles, AlertCircle, Database, LoaderCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { cn } from '@/lib/utils/cn';
@@ -36,6 +36,10 @@ import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
 import { AuthProgress, AuthShell } from '@/components/auth';
 import { navigationSpring } from '@/lib/ui/motion';
 import { AUTH_TEXT_MOTION_CLASS, DirectionalText } from '@/components/marketing/PublicTextMotion';
+import type { LegalVersions } from '@/lib/user/requirements';
+import { CalculatorHandoffNotice } from '@/components/marketing/CalculatorHandoffNotice';
+import { RegistrationConsents } from './RegistrationConsents';
+import { FALLBACK_LEGAL_VERSIONS, buildRegistrationAnswers, loadLegalVersions } from './consent';
 
 /* ─── Validation Schemas per Step ─── */
 const step1Base = z.object({
@@ -84,6 +88,9 @@ const step2Schema = step2Base;
 const step3Base = z.object({
   recordMode: z.union([z.literal('fromScratch'), z.literal('complete')]),
   semestersCompleted: z.number().min(1).max(20).optional(),
+  age: z.enum(['adult', 'minor'], { message: 'Choose your age group to continue' }),
+  termsAccepted: z.boolean().refine((value) => value === true, 'Agree to the Terms and Privacy notice to continue'),
+  aiConsent: z.boolean().optional(),
 });
 const step3Schema = step3Base.refine(
   (data) => {
@@ -187,7 +194,15 @@ function withoutRegistrationSecrets(values: unknown): SafeRegistrationDraft['val
   const source = values && typeof values === 'object'
     ? values as Record<string, unknown>
     : {};
-  const { password: _password, confirmPassword: _confirmPassword, verificationToken: _verificationToken, ...safe } = source;
+  // Agreements are never restored from storage: each visit must tick them afresh.
+  const {
+    password: _password,
+    confirmPassword: _confirmPassword,
+    verificationToken: _verificationToken,
+    termsAccepted: _termsAccepted,
+    aiConsent: _aiConsent,
+    ...safe
+  } = source;
   return safe as SafeRegistrationDraft['values'];
 }
 
@@ -577,7 +592,7 @@ function Step3RecordMode({
   }, [maxSemesters, modeVal, semsCompleted, setValue]);
 
   const handleNext = async () => {
-    const valid = await trigger(['recordMode', 'semestersCompleted']);
+    const valid = await trigger(['recordMode', 'semestersCompleted', 'age', 'termsAccepted']);
     if (valid) {
       if (modeVal === 'fromScratch') {
         setValue('pastSemesters', []);
@@ -686,6 +701,10 @@ function Step3RecordMode({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="mt-2 border-t border-[var(--acade-border-subtle)] pt-5">
+        <RegistrationConsents />
+      </div>
 
       <div className="flex items-center gap-3 mt-4">
         <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
@@ -828,8 +847,17 @@ export default function RegisterWizard() {
       university: DEFAULT_UNIVERSITY,
       recordMode: 'fromScratch',
       courseDuration: 4,
+      termsAccepted: false,
+      aiConsent: false,
     }
   });
+
+  const [legalVersions, setLegalVersions] = useState<LegalVersions>(FALLBACK_LEGAL_VERSIONS);
+  useEffect(() => {
+    let active = true;
+    void loadLegalVersions((path) => getDocument(path)).then((versions) => { if (active) setLegalVersions(versions); });
+    return () => { active = false; };
+  }, []);
 
   // Redirect only when the Firestore student profile is actually complete.
   useEffect(() => {
@@ -859,7 +887,7 @@ export default function RegisterWizard() {
         ));
         methods.reset({
           ...methods.getValues(),
-          ...(draft.values || {}),
+          ...withoutRegistrationSecrets(draft.values),
           authMethod: signedInWithGoogle ? 'google' : 'email',
           password: '',
           confirmPassword: '',
@@ -954,6 +982,7 @@ export default function RegisterWizard() {
             semestersCompleted: data.recordMode === 'complete' ? data.semestersCompleted : 0,
           },
           pastSemesters: data.recordMode === 'complete' ? data.pastSemesters || [] : [],
+          answers: buildRegistrationAnswers({ age: data.age, aiConsent: data.aiConsent }, legalVersions),
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -1022,7 +1051,12 @@ export default function RegisterWizard() {
       validationErrors.entrySession
     ) {
       setCurrentStep(2);
-    } else if (validationErrors.recordMode || validationErrors.semestersCompleted) {
+    } else if (
+      validationErrors.recordMode ||
+      validationErrors.semestersCompleted ||
+      validationErrors.age ||
+      validationErrors.termsAccepted
+    ) {
       setCurrentStep(3);
     } else if (validationErrors.pastSemesters) {
       setCurrentStep(4);
@@ -1039,7 +1073,18 @@ export default function RegisterWizard() {
   };
 
   if (authLoading || (user && profileLoading)) {
-    return <div className="min-h-screen bg-[var(--acade-void)]" />;
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--acade-void)] px-4">
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] px-5 py-4 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] shadow-[var(--shadow-card)]"
+        >
+          <LoaderCircle className="size-5 animate-spin text-[var(--acade-primary)]" aria-hidden="true" />
+          Checking your sign-in status…
+        </div>
+      </div>
+    );
   }
 
   // We only hide the wizard if they are logged in AND have a profile completed
@@ -1096,6 +1141,7 @@ export default function RegisterWizard() {
             className="mb-7"
           />
         )}
+        {!isSuccess && currentStep === 1 ? <CalculatorHandoffNotice className="mb-6" /> : null}
           {isSubmitting && (
             <div className="absolute inset-0 z-50 flex min-h-72 flex-col items-center justify-center rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)]/95 p-6 text-center shadow-[var(--shadow-popover)]" role="status" aria-live="polite">
                <div className="mb-4 size-10 animate-spin rounded-full border-4 border-[var(--acade-primary)] border-t-transparent motion-reduce:animate-none" />

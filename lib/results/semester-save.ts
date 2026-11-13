@@ -68,12 +68,16 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
     }
 
     if (isAR) {
+      // A known CA is kept on an awaiting-result row (exam guidance, A2); it never counts in GPA.
+      if (caScore !== null && (caScore < 0 || caScore > 30)) {
+        throw new SemesterSaveValidationError(`${code}: CA score must be between 0 and 30.`);
+      }
       return {
         ...(input.id ? { id: input.id } : {}),
         code,
         title,
         units,
-        caScore: null,
+        caScore,
         examScore: null,
         totalScore: null,
         grade: null,

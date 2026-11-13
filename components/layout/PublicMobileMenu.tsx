@@ -10,7 +10,7 @@ interface PublicMobileMenuProps {
 }
 
 const menuLinks = [
-  { label: 'Features', href: '/#features' },
+  { label: 'Features', href: '/features' },
   { label: 'How it works', href: '/#how-it-works' },
   { label: 'About AcadeGrade', href: '/about' },
   { label: 'Calculator', href: '/calculator' },

@@ -31,6 +31,9 @@ import { Modal } from '@/components/ui/Modal';
 import { Switch } from '@/components/ui/Switch';
 import { Select } from '@/components/ui/Select';
 import type { StudentLevel } from '@/types/user';
+import { PrivacyChoices } from '@/components/privacy/PrivacyChoices';
+import { HelpButton } from '@/components/help/HelpDrawer';
+import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 
 export default function SettingsPage() {
@@ -82,6 +85,13 @@ export default function SettingsPage() {
         });
       }
     }
+  }, [profile]);
+
+  // Deep links such as /settings#privacy arrive before the content renders; scroll once it exists.
+  useEffect(() => {
+    if (!profile || typeof window === 'undefined' || !window.location.hash) return;
+    const target = document.getElementById(window.location.hash.slice(1));
+    target?.scrollIntoView({ block: 'start' });
   }, [profile]);
 
   const [savingProfile, setSavingProfile] = useState(false);
@@ -302,13 +312,16 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-10 space-y-8">
-      <div>
-        <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-          Settings
-        </h1>
-        <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-          Manage your account preferences and security.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+            Settings
+          </h1>
+          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
+            Manage your account, privacy choices and security.
+          </p>
+        </div>
+        <HelpButton entryId={STUDENT_HELP.settings} source={studentHelpSource} className="self-start" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -319,17 +332,19 @@ export default function SettingsPage() {
             { id: 'profile', label: 'Profile', danger: false },
             { id: 'academic', label: 'Academic Setup', danger: false },
             { id: 'notifications', label: 'Notifications', danger: false },
-            { id: 'security', label: 'Security & Danger', danger: true }
+            { id: 'privacy', label: 'Privacy & AI choices', danger: false },
+            { id: 'security', label: 'Security & data', danger: true }
           ].map(tab => (
             <button
               key={tab.id}
+              type="button"
               onClick={() => {
-                document.getElementById(`section-${tab.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById(tab.id === 'privacy' ? 'privacy' : `section-${tab.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
               className={cn(
-                "min-h-12 text-left font-bold text-[length:var(--text-sm)] px-3 py-2 rounded-xl transition-all duration-200 border-l-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]",
-                tab.danger ? "hover:bg-[var(--acade-danger)]/10 text-[var(--acade-danger)] border-transparent hover:border-[var(--acade-danger)]" 
-                           : "hover:bg-[var(--acade-surface)] text-[var(--acade-text-muted)] border-transparent hover:border-[var(--acade-border-subtle)] focus:border-[var(--acade-primary)] focus:text-[var(--acade-text)]"
+                "min-h-12 text-left font-semibold text-[length:var(--text-sm)] px-3 py-2 rounded-xl transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]",
+                tab.danger ? "text-[var(--acade-danger)] hover:bg-[var(--acade-danger)]/10"
+                           : "text-[var(--acade-text-muted)] hover:bg-[var(--acade-surface)] hover:text-[var(--acade-text)]"
               )}
             >
               {tab.label}
@@ -341,7 +356,7 @@ export default function SettingsPage() {
         <div className="md:col-span-2 space-y-8">
           
           {/* PROFILE SECTION */}
-          <section id="section-profile" className="relative focus-within:z-[var(--z-dropdown)] bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-profile" className="relative focus-within:z-[var(--z-dropdown)] bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Public Profile</h2>
             
             <div className="flex items-center gap-4 sm:gap-6 mb-8">
@@ -392,7 +407,7 @@ export default function SettingsPage() {
           </section>
 
           {/* ACADEMIC SETUP SECTION */}
-          <section id="section-academic" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-academic" className="relative bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Academic Setup</h2>
             
             <div className="space-y-6">
@@ -457,7 +472,7 @@ export default function SettingsPage() {
           </section>
 
           {/* NOTIFICATIONS SECTION */}
-          <section id="section-notifications" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-notifications" className="relative bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Bell size={20} /> Notifications
             </h2>
@@ -492,8 +507,13 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          {/* PRIVACY & AI CHOICES (#privacy) */}
+          {user && (
+            <PrivacyChoices uid={user.uid} profile={profile} getToken={() => user.getIdToken()} />
+          )}
+
           {/* SECURITY & DANGER SECTION */}
-          <section id="section-security" className="relative bg-[var(--acade-deep)]/60 backdrop-blur-xl border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24 shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
+          <section id="section-security" className="relative bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
               <Shield size={20} /> Security & Data
             </h2>

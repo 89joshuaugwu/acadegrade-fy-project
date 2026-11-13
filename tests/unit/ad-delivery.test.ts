@@ -54,6 +54,13 @@ describe('ad eligibility', () => {
       .toEqual([]);
   });
 
+  it('treats the Results placement as off when an older configuration has not saved it', () => {
+    const older = config([campaign({ placementIds: ['dashboard.overview', 'results.overview'] })]);
+    expect(getEligibleCampaigns(older, 'results.overview', { now: NOW })).toEqual([]);
+    older.placements.push({ id: 'results.overview', name: 'Results overview', enabled: true });
+    expect(getEligibleCampaigns(older, 'results.overview', { now: NOW }).map((item) => item.id)).toEqual(['campaign-a']);
+  });
+
   it('excludes inactive, out-of-schedule, future-mode, and capped campaigns', () => {
     const eligible = campaign({ id: 'eligible' });
     const inactive = campaign({ id: 'inactive', active: false });
@@ -110,6 +117,11 @@ describe('deterministic weighted delivery', () => {
 
   it('returns null for an empty campaign list', () => {
     expect(selectWeightedCampaign([], 'student-1')).toBeNull();
+  });
+
+  it('never selects a campaign without a positive weight', () => {
+    expect(selectWeightedCampaign([campaign({ id: 'zero', weight: 0 })], 'student-1')).toBeNull();
+    expect(selectWeightedCampaign([campaign({ id: 'zero', weight: 0 }), campaign({ id: 'one', weight: 1 })], 'student-1')?.id).toBe('one');
   });
 });
 

@@ -30,7 +30,7 @@ describe('AboutPage public scale', () => {
       name: 'Clarity before complexity.',
     });
 
-    expect(heroHeading).toHaveClass('text-[clamp(2.5rem,5vw,4rem)]');
+    expect(heroHeading).toHaveClass('text-[clamp(2.125rem,5vw,4rem)]');
     expect(heroHeading).toHaveAttribute('data-public-text-motion', 'directional');
     expect(heroHeading).toHaveAttribute('aria-label', DEFAULT_ABOUT_CONTENT.headline);
     expect(principlesHeading).toHaveClass('text-[clamp(2rem,3vw,2.75rem)]');

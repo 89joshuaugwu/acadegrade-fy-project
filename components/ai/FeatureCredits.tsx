@@ -3,10 +3,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { Coins, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { blockFromUsage } from './aiAccess';
 
 type CreditFeature = 'insights' | 'forecast' | 'whatif' | 'ocr';
-interface FeatureUsage { id: CreditFeature; label: string; freeDailyLimit: number; freeRemaining: number; freeResetAt: number | null; availableNow: number; retryAfterSeconds: number; cooldownUntil: number | null }
-interface Summary { features: FeatureUsage[]; writtenRewards?: { earnedToday: number; usedToday: number; earnRemaining: number; resetAtUTC: number } }
+interface FeatureCoin { enabled: boolean; price: number; usesToday: number; dailyUseCap: number }
+interface FeatureUsage { id: CreditFeature; label: string; freeDailyLimit: number; freeRemaining: number; freeResetAt: number | null; availableNow: number; retryAfterSeconds: number; cooldownUntil: number | null; coin?: FeatureCoin | null }
+interface Summary {
+  features: FeatureUsage[];
+  writtenRewards?: { earnedToday: number; usedToday: number; earnRemaining: number; resetAtUTC: number };
+  coins?: { enabled: boolean; balance: number } | null;
+  age?: { status: string; aiAllowed: boolean; aiConsent: boolean | null };
+}
+const count = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0;
 
 export function FeatureCredits({ feature, refreshKey = '' }: { feature: CreditFeature; refreshKey?: string }) {
   const { user } = useAuth();
@@ -39,13 +47,21 @@ export function FeatureCredits({ feature, refreshKey = '' }: { feature: CreditFe
 
   if (!user) return null;
   const current = result?.uid === user.uid && result.feature === feature ? result : null;
+  // AI not allowed (age or consent): the page shows the notice instead of credits.
+  if (blockFromUsage(current?.summary)) return null;
   const usage = current?.summary?.features.find(item => item.id === feature);
   const rewards = feature === 'insights' ? current?.summary?.writtenRewards : undefined;
+  // Display only: coins are earned and spent in the Android app; the web has no rewarded video.
+  const wallet = current?.summary?.coins;
+  const coin = usage?.coin;
+  const showCoins = Boolean(wallet && coin?.enabled && count(wallet.balance) && count(coin.price) && count(coin.usesToday) && count(coin.dailyUseCap));
   return <section aria-label="Feature credits" className="mb-5 flex flex-wrap items-start gap-3 rounded-xl border border-[var(--acade-border)] px-4 py-3">
     <Coins className="mt-0.5 size-5 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
     <div className="min-w-0 flex-1 text-sm leading-6" role="status">
       <p className="font-semibold text-[var(--acade-text)]">{usage ? `${usage.freeRemaining} of ${usage.freeDailyLimit} free credits remaining` : current?.failed ? 'Credit balance unavailable. Your academic records remain available.' : 'Checking feature credits…'}</p>
-      {usage && <p className="text-[var(--acade-text-muted)]">{usage.label} only. {usage.availableNow === 0 && usage.freeRemaining > 0 ? 'Cooldown or short-window limit is active; remaining credits are not available yet.' : `${usage.availableNow} available now.`} {usage.freeResetAt ? `Daily window resets ${new Date(usage.freeResetAt).toLocaleString()}.` : 'The daily window starts with your first new request.'}</p>}
+      {usage && <p className="text-[var(--acade-text-muted)]">{usage.label} only. {usage.availableNow === 0 && usage.freeRemaining > 0 ? 'Short-window limit is active; remaining credits are not available yet.' : `${usage.availableNow} available now.`} {usage.freeResetAt ? `Daily window resets ${new Date(usage.freeResetAt).toLocaleString()}.` : 'The daily window starts with your first new request.'}</p>}
+      {usage?.cooldownUntil && <p className="text-[var(--acade-text-muted)]">Regeneration available at {new Date(usage.cooldownUntil).toLocaleString()}.</p>}
+      {showCoins && usage && wallet && coin && <p className="text-[var(--acade-text-muted)]">Coin balance: {wallet.balance}. An extra {usage.label} request costs {coin.price} {coin.price === 1 ? 'coin' : 'coins'} in the Android app after free credits run out ({coin.usesToday} of {coin.dailyUseCap} coin-funded uses today).</p>}
       {rewards && <p className="text-[var(--acade-text-muted)]">Ad rewards today: {rewards.earnedToday} verified, {rewards.usedToday} used. {rewards.earnRemaining} more can be earned. Use a confirmed reward in the Android app.</p>}
     </div>
     <button type="button" onClick={() => { setResult(null); setRevision(value => value + 1); }} aria-label="Refresh credit balance" className="flex size-11 shrink-0 items-center justify-center rounded-lg text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"><RefreshCw className="size-4" aria-hidden="true" /></button>

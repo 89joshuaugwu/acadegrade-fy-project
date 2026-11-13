@@ -17,6 +17,21 @@ describe('normalizeAboutContent', () => {
     expect(result).not.toHaveProperty('builderName');
   });
 
+  it('never falls back to an unconfirmed hard-coded address', () => {
+    const previous = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+    try {
+      delete process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+      expect(normalizeAboutContent({}).contactEmail).toBe('');
+      expect(normalizeAboutContent({ contactEmail: 'not-an-email' }).contactEmail).toBe('');
+      process.env.NEXT_PUBLIC_SUPPORT_EMAIL = 'Help@Example.org';
+      expect(normalizeAboutContent({}).contactEmail).toBe('help@example.org');
+      expect(normalizeAboutContent({ contactEmail: 'admin@example.org' }).contactEmail).toBe('admin@example.org');
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
+      else process.env.NEXT_PUBLIC_SUPPORT_EMAIL = previous;
+    }
+  });
+
   it('uses valid production copy saved by an administrator', () => {
     expect(normalizeAboutContent({
       headline: 'Know where your degree stands.',

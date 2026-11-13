@@ -36,6 +36,8 @@ describe('reward backend route integration', () => {
   beforeEach(() => {
     store = rewardTestDb(); state.db = store.db;
     store.docs.set('config/mobileAds', { ...config });
+    // AI routes require a consenting adult (lib/user/age.ts).
+    store.docs.set('users/alice', { ageStatus: 'adult', consents: { ai: { granted: true } } });
     store.docs.set('analytics/alice', { lastInsight: { timestamp: new Date(), data: old } });
     state.auth.mockReset().mockResolvedValue({ uid: 'alice' });
     state.generate.mockReset().mockResolvedValue({ data, provenance: { providerId: 'gemini' } });

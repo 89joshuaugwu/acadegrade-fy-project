@@ -22,11 +22,24 @@ Make free AI allowances and verified rewarded extras understandable, cover provi
 - Transcript generation/sharing remains unchanged in this phase; a new monthly cap is deferred rather than imposed without a defined sharing policy.
 - No paid credits, purchases, cross-feature conversion, or iOS implementation in this phase.
 
+## Decision 2026-11-13: coin wallet for rewarded extras
+
+The owner replaced per-feature rewarded extras with one server-owned **coin wallet**. It supersedes "separate feature credits" for rewarded extras only; free allowances stay per feature, exactly as before. One verified Android rewarded ad (Google SSV) earns coins into a single balance; each AI feature has its own coin price and daily coin-use cap. Coins are charged only when the free path would refuse (burst/daily window, or the Written Analysis forced-regeneration cooldown), never for cache hits or local calculations. Coins are not money: no purchase, no transfer, no cash value, and clients never write balances.
+
+- Defaults: coins off; 2 coins per ad; earn cap 10 per UTC day; balance cap 30. Prices/daily coin uses: scanning 3/5, Written Analysis 2/2, Forecast 1/5, What-if 1/10. All admin-editable in `/admin/usage`, validated strictly on write and merged per field on read.
+- Earning also requires the Android rewarded switch in Ads (enabled, rewarded on, valid unit or test mode). Spending does not.
+- Spend is reserve (hold) → provider → commit (with the persisted result where the route saves one) → or refund. Holds older than five minutes refund on the next wallet transaction. Request ids make retries idempotent.
+- The legacy Written Analysis refresh (installed APKs, `rewardSessionId`, 2 per UTC day) is unchanged and independent of coins.
+- Storage: `_coin_wallets`, append-only `_coin_ledger`, `_coin_requests`; Firestore rules deny all client access.
+- Stage 3 status (web backend): implemented and unit-tested with fake Firestore; default off. Not deployed, not device-tested, and no live AdMob callback has been verified. Coin earning/spending UI needs a new Android build.
+
+Related fixes in the same change: stored policy reads now fall back per field (an admin pause can no longer be silently undone by an invalid sibling field), the admin API reports the policy source and fallbacks, and the usage summary reports the Written Analysis regeneration cooldown separately instead of zeroing `availableNow`.
+
 ## Delivery stages
 
 1. Repair the existing rewarded flow and expose honest server-owned Written Analysis balance/verification status. Add a credit-style indicator without inventing client balances.
 2. Introduce validated admin-managed feature allowance policy and authenticated read-only usage summaries. Preserve current defaults and old clients; no client writes to counters.
-3. Add feature-bound scanner/Forecast/What-if reward redemption one route at a time with failure/replay/concurrency tests and explicit opt-in. Until done, mark these as pending, not active.
+3. ~~Feature-bound scanner/Forecast/What-if reward redemption~~ superseded on 2026-11-13 by the coin wallet above: implemented on the web backend for all four features with failure/replay/concurrency/refund tests and explicit opt-in (default off). Android coin UI remains a separate build.
 4. Apply the same usage-summary contract to web and Android. Use one coin/credit icon family and explicit feature labels; color supplements text, not replaces it.
 
 ## Android sponsor promotions

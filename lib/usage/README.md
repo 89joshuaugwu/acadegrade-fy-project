@@ -1,13 +1,42 @@
-# Feature allowances
+# Feature allowances and coin policy
 
-`config/usage` stores `{ dailyLimits: { insights, forecast, whatif, ocr } }`.
-All four values are required integers from 0 to 1000. Zero pauses free
-provider requests. Admin writes reject unknown keys (including rewards).
-Missing or invalid stored policy uses the entire unchanged default policy;
-storage errors do not silently fall back. No deployment or live write is
-needed for defaults to apply.
+`config/usage` stores:
 
-Default windows (all fixed, not midnight resets):
+```ts
+{
+  dailyLimits: { insights, forecast, whatif, ocr },          // integers 0..1000
+  coins: {
+    enabled: boolean,                                        // master switch, default false
+    coinsPerAd: number,                                      // 1..10, default 2
+    dailyEarnCap: number,                                    // 0..100 per UTC day, default 10
+    balanceCap: number,                                      // 1..500, default 30
+    features: { [id]: { enabled, price, dailyUseCap } },     // price 1..20, dailyUseCap 0..50
+  },
+}
+```
+
+Default coin prices: ocr 3 coins (5 uses/day), insights 2 (2/day), forecast 1
+(5/day), whatif 1 (10/day); every feature is enabled but the master switch is
+off. Zero daily allowance pauses free provider requests.
+
+## Reads are per field; writes are strict
+
+`inspectUsagePolicy` (and `readUsagePolicy`, its `.policy`) never throws away
+a valid stored field: unknown keys are ignored, each valid stored value is
+kept, and only missing or invalid fields use their default. An admin pause
+(`insights: 0`) therefore survives a sibling becoming invalid, and documents
+saved before coins existed keep their daily limits (the whole `coins` map
+then reports as the single fallback `coins`). It returns
+`{ policy, source: 'stored' | 'default' | 'partial' | 'invalid', fallbacks }`.
+`lib/usage/server.ts` logs a sanitised warning (field paths only, once per
+process per field set) when a stored document has missing/invalid fields;
+storage errors still propagate rather than silently defaulting.
+
+Admin writes (`PUT /api/admin/usage`) are strict: unknown keys are rejected and
+`coins`, when present, must be complete. Omitting `coins` keeps the stored
+coin settings. `GET` and `PUT` both return `{ policy, source, fallbacks }`.
+
+Default free windows (all fixed, not midnight resets):
 
 | Feature | Existing endpoint key | Burst | Daily |
 | --- | --- | --- | --- |
@@ -16,52 +45,46 @@ Default windows (all fixed, not midnight resets):
 | whatif | ai_whatif | five_minutes: 3/5min | 20/24h |
 | ocr | results_extract | fifteen_minutes: 5/15min | 20/24h |
 
-`resolveFeatureWindows` changes only the daily ceiling. Existing route cache,
-cooldown and reward branches stay unchanged. Admin changes apply immediately
-to future requests against existing counts; they do not reset windows.
+`resolveFeatureWindows` changes only the daily ceiling. Admin changes apply
+immediately to future requests against existing counts; they do not reset
+windows or balances.
 
-`GET /api/admin/usage` and `PUT /api/admin/usage` require the existing strict
-administrator verification. Both return the policy shape above.
+## `GET /api/ai/usage`
 
-`GET /api/ai/usage` requires a verified user and returns:
+Requires a verified user; private and no-store. Returns:
 
 ```ts
 {
   features: Array<{
     id: 'insights' | 'forecast' | 'whatif' | 'ocr';
     label: string;
-    freeDailyLimit: number;
-    freeRemaining: number;
-    freeResetAt: number | null;
-    availableNow: number;
-    retryAfterSeconds: number;
-    cooldownUntil: number | null;
+    freeDailyLimit: number; freeRemaining: number; freeResetAt: number | null;
+    availableNow: number; retryAfterSeconds: number;
+    cooldownUntil: number | null;            // Written Analysis forced-regeneration cooldown only
+    coin: null | { enabled: boolean; price: number; usesToday: number; dailyUseCap: number };
   }>;
   checkedAt: number;
-  writtenRewards: {
-    earnedToday: number;
-    usedToday: number;
-    earnRemaining: number;
-    resetAtUTC: number;
-  };
+  writtenRewards: { earnedToday; usedToday; earnRemaining; resetAtUTC };   // legacy, unchanged
+  coins: null | { enabled; balance; balanceCap; coinsPerAd; earnedToday; dailyEarnCap; earnRemaining; resetAtUTC };
 }
 ```
 
-Timestamps are epoch milliseconds. Daily remaining excludes burst/cooldown;
-availableNow is their minimum, or zero during Written Analysis cooldown.
-Cooldown uses `analytics/{uid}.lastInsight.timestamp` and the existing 12-hour
-refresh predicate only when saved insight data exists. Cached loads can still
-be served without a provider request. Retry is the longest currently blocking
-window/cooldown. No active daily window means `freeResetAt: null`. A zero
-allowance is an admin pause, not a promise that waiting will enable requests.
+Timestamps are epoch milliseconds. `availableNow` is the minimum of the burst
+and daily windows. The 12-hour Written Analysis cooldown applies only to forced
+regeneration of a saved analysis, so it is reported in `cooldownUntil` and no
+longer zeroes `availableNow` or raises `retryAfterSeconds`.
 
-Reads use the existing `_api_rate_limits` sanitized IDs and window-start
-semantics, never the counter's stored `limit` field. They never increment,
-create or expire documents. Summaries are informational snapshots, not
-reservations; concurrent requests may consume quota after a read.
+`coins`/`coin` are `null` while the coin master switch is off. `coins.enabled`
+means earning is possible now (master switch AND the Android rewarded switch in
+`config/mobileAds`); `coin.enabled` means that feature can be paid with coins.
+`earnRemaining = max(0, min(dailyEarnCap - earnedToday, balanceCap - balance))`.
+Holds older than five minutes are reported as refunded. Reads never create,
+sweep or increment anything; they are snapshots, not reservations.
 
-Written reward counters come directly from `rewards.dailySummary(uid)` and
-are **not a spendable balance**. Never subtract earned/used to invent one.
-Written rewards remain separate (max 2/day); the other reward paths are
-pending and have no enable controls here. No transcript cap or currency is
-introduced. Responses are private and no-store.
+### Age and AI consent (2026-11-13)
+
+`GET /api/ai/usage` also returns
+`age: { status: 'adult' | 'minor' | 'unknown', aiAllowed: boolean, aiConsent: boolean | null }`.
+When `aiAllowed` is false, `coins.enabled` and every `features[].coin.enabled`
+are `false` (balances are still reported). The rules are in `lib/user/age.ts`;
+the full contract is in `docs/server-compliance-contracts.md`.

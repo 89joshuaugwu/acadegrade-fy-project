@@ -24,7 +24,22 @@ This uses `config/mobileHouseAds` through `/api/admin/ads/house` and the display
 
 `/admin/usage` manages the free daily ceilings for Written Analysis, Forecast, What-if guidance and result scanning. The existing default values and burst limits remain until you explicitly save different daily values. Lowering a ceiling applies against existing counters without resetting them; zero pauses new free provider requests but not cached results or local calculations. Per-feature summaries are authenticated snapshots from `/api/ai/usage`, not client-owned coin balances. See `lib/usage/README.md` for reset semantics.
 
-Only the existing Written Analysis reward path is implemented. Its verified counters are shown separately; one successful signed reward grants one one-use refresh, never a client-side increment. Scanner/Forecast/What-if rewarded redemption is still pending and cannot be switched on from these controls. Transcript sharing has no new monthly cap.
+If `/admin/usage` shows a yellow policy warning, some stored fields were missing or invalid and their defaults are in force (every valid stored field, including a 0 pause, is still honoured). Review the named fields and save to replace them. A deployment saved before coins existed shows "Coin settings (not saved yet)" until the first save. Transcript sharing has no new monthly cap.
+
+## Coins (Android rewarded ads)
+
+Decision 2026-11-13: rewarded extras use one server-owned coin balance. One verified rewarded ad earns coins; each feature has a coin price that is charged only when its free allowance (or the Written Analysis regeneration cooldown) would refuse the request. Coins are not money and cannot be bought, transferred or cashed out. Coins are **off by default**.
+
+Operator steps, in order, none of which this repository change performed:
+
+1. Deploy the web API **and** `firestore.rules` (new server-only collections `_coin_wallets`, `_coin_ledger`, `_coin_requests`; clients are denied). Do not configure TTL on `_coin_requests` or `_coin_ledger`: deleting them would reopen double charges or erase the audit trail.
+2. Keep the existing AdMob rewarded unit and its SSV callback (`/api/ads/rewards/ssv`). The unit's reward item stays exactly **Insights refresh** with amount **1**: the server decides how many coins a verified ad is worth, and the session (`custom_data`) binds the callback to a coin session. No second unit is needed.
+3. In `/admin/ads` → Android, enable ads and **Enable rewarded Insights refresh** with a valid rewarded unit (or test mode). Earning coins requires this switch; spending existing coins does not.
+4. Build and install an Android APK with coins support. Installed APKs without it never create coin sessions or spend coins, and keep using the legacy Written Analysis refresh (2 per UTC day), which is independent of coins.
+5. On an AdMob-registered test device with test ads, in `/admin/usage` → **Coins (Android rewarded ads)** set coins per ad (1–10), daily earn cap (0–100), balance cap (1–500) and, per feature, enabled, price (1–20) and daily coin uses (0–50). Defaults: 2 per ad, 10 per day, cap 30; scanning 3 coins/5 per day, Written Analysis 2/2, Forecast 1/5, What-if 1/10. Then switch **Enable coins** on and save.
+6. Verify end to end before telling users: a pending → credited session after a signed callback, the balance in the app, a free request costing nothing (`X-Coins-Spent: 0`), a refused free request charging the price once, a provider failure refunding ("your coins were not spent"), and replays not charging twice. The admin status lines remain "Live delivery not verified" until you have done this.
+
+To stop coins quickly, switch **Enable coins** off: new sessions and spends are refused (403), callbacks for pending coin sessions are rejected, and balances are kept. Switching the Android rewarded switch off stops earning only. A daily earn cap of 0 pauses earning; a feature's daily coin uses of 0 blocks spending on that feature. Lowering prices or caps applies to the next request.
 
 ## APK update notice
 
@@ -53,3 +68,13 @@ The server verifies Google's ECDSA signature over the original query, then binds
 Testing has two distinct stages. **Use test ads** requests Google's demo units for safe rendering/close/no-fill checks; those units belong to Google, not your account, so do not assume your unit's configured callback will receive demo traffic. Verify your callback with AdMob's signed SSV test tool, then exercise the full reward path using your own unit on an AdMob-registered test device and a release/test APK. Confirm the ad is labelled Test Ad before interacting. Register the device before briefly disabling the admin demo-unit mode, and keep ordinary users' ads disabled during this test. Never substitute a client-only grant to make demo ads unlock rewards. See [Google test-ad guidance](https://developers.google.com/admob/android/test-ads) and [SSV validation guidance](https://developers.google.com/admob/android/ssv).
 
 Still required before live delivery: API/rules deployment, signed callback verification, device consent checks, early close/completion/delayed callback/replay tests, AI-failure retry, banner layout checks, and account/store readiness. Native iOS ads are a separate unfinished phase.
+
+## Web delivery status, previews and the Results placement (2026-11-13)
+
+`/admin/ads` → Web → **Delivery status** computes, from saved settings only, what each web placement should serve right now and why: master/format/placement switches, campaigns outside their schedule (with the next schedule change), zero weights, creative gaps, per-browser caps, legacy fallback, and AdSense/Adsterra configuration. The Android tab shows the same for the Android house-promotion slots. This is configuration status, not proof that anything rendered, was approved or filled; unsaved edits are not included. It makes no ad request and records no views.
+
+Campaign and legacy-banner editors have a **Preview** disclosure that renders the creative in the student slot at desktop and 375 px widths. Previews have no link, view counting or ad-network request; only the creative's own image loads.
+
+**Results overview** is an additional web house-campaign placement after the semester list on `/results`. It is off until switched on in Placements and targeted by a campaign; older saved configurations without it are treated as off. Legacy banners and ad networks are never used there, and Android house promotions still use only campaigns that target Dashboard overview.
+
+Delivery behaviour: an image creative renders, and becomes countable, only after its image loads; a failed image hides it. An unfilled or blocked AdSense unit hides its box. Campaign image and destination URLs must be HTTPS without a username or password; a stored campaign that no longer passes validation is skipped on its own (and listed in My promotions) instead of hiding every campaign. Browsers running a cached older build cannot parse a configuration saved with the Results placement and show no house promotion until they load the new build.

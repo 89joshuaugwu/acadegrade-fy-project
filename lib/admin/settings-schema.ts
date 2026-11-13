@@ -10,6 +10,10 @@ export const ADMIN_SETTING_FIELDS = [
   'advertBanners',
   'adsConfig',
   'mobileAppLinks',
+  // Server-side gate for unknown age / missing AI consent (lib/user/age.ts).
+  'ageGate',
+  // Source of the AdMob line in /app-ads.txt.
+  'admobAndroidAppId',
 ] as const;
 
 type AdminSettingField = typeof ADMIN_SETTING_FIELDS[number];
@@ -20,6 +24,11 @@ const ALLOWED_FEATURES = new Set([
   'share_code',
   'edit_profile',
   'ai_insights',
+  // Enforced by the API routes (lib/platform/settings-server.ts).
+  'ai_forecast',
+  'ai_whatif',
+  'transcript_pdf',
+  'transcript_share',
 ]);
 
 const ABOUT_FIELDS = [
@@ -154,14 +163,29 @@ function parseSettingValue(field: AdminSettingField, value: unknown) {
     }
     case 'adsConfig':
       return parseAdsConfig(value);
+    case 'ageGate': {
+      const gate = requireRecord(value, 'ageGate must be an object');
+      const unsupported = Object.keys(gate).find((key) => key !== 'enforceUnknown');
+      if (unsupported) throw new SettingsValidationError(`Unsupported ageGate field: ${unsupported}`);
+      if (typeof gate.enforceUnknown !== 'boolean') throw new SettingsValidationError('ageGate.enforceUnknown must be a boolean');
+      return { enforceUnknown: gate.enforceUnknown };
+    }
+    case 'admobAndroidAppId': {
+      const appId = requireString(value, field, 64);
+      if (appId && !/^ca-app-pub-\d{16}~\d{10}$/.test(appId)) {
+        throw new SettingsValidationError('admobAndroidAppId must look like ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY');
+      }
+      return appId;
+    }
   }
 }
 
 function parseAboutData(value: unknown) {
   const data = requireRecord(value, 'About data must be an object');
   assertExactKeys(data, ABOUT_FIELDS, 'about');
-  const contactEmail = requireString(data.contactEmail, 'contactEmail', 254, false).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
+  // Empty means "no public address": public pages then link to /support instead.
+  const contactEmail = requireString(data.contactEmail, 'contactEmail', 254).toLowerCase();
+  if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)) {
     throw new SettingsValidationError('contactEmail must be a valid email address');
   }
   return {

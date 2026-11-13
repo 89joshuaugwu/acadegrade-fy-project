@@ -6,6 +6,8 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
 import { cn } from '@/lib/utils/cn';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 
 interface StandingOverviewProps {
   hasAcademicData: boolean;
@@ -39,11 +41,12 @@ export function StandingOverview({
   const stats = [
     { label: 'Credits', value: hasAcademicData ? String(totalCredits) : '—', icon: GraduationCap },
     { label: 'Courses', value: hasAcademicData ? String(coursesDone) : '—', icon: BookOpen },
-    { label: 'Current semester', value: hasAcademicData ? currentSemesterMetric.toFixed(2) : '—', icon: CircleGauge },
+    { label: 'Current semester', value: hasAcademicData ? formatCgpa(currentSemesterMetric) : '—', icon: CircleGauge, discreet: true },
     { label: 'Needs attention', value: hasAcademicData ? String(atRiskCount) : '—', icon: AlertTriangle, warning: atRiskCount > 0 },
   ];
 
   return (
+    <DiscreetScope>
     <Card padding="none" className="relative h-full overflow-hidden">
       <div
         className="absolute inset-x-0 top-0 h-px"
@@ -65,6 +68,8 @@ export function StandingOverview({
             {latestSemesterLabel || 'Academic record'}
           </h2>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+        <DiscreetRevealButton label="Standing" />
         <div id="tour-metrics-toggle" className="shrink-0">
           <Toggle
             checked={isPIMode}
@@ -73,6 +78,7 @@ export function StandingOverview({
             rightLabel="PI"
             aria-label="Choose the primary academic metric"
           />
+        </div>
         </div>
       </div>
 
@@ -84,10 +90,10 @@ export function StandingOverview({
                 {isPIMode ? 'Performance Index' : 'Cumulative GPA'}
               </p>
               <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-[clamp(2.5rem,8vw,4.75rem)] font-semibold leading-none tracking-[-0.055em] text-[var(--acade-text)] tabular-nums">
-                {(isPIMode ? pi : cgpa).toFixed(2)}
+                <DiscreetValue label={isPIMode ? 'Performance Index' : 'Cumulative GPA'}>{formatCgpa(isPIMode ? pi : cgpa)}</DiscreetValue>
               </p>
               <p className="mt-3 text-sm text-[var(--acade-text-muted)]">
-                {degreeClassLabel} <span className="px-1.5 text-[var(--acade-text-faint)]">·</span> Degree class follows CGPA
+                <DiscreetValue label="Degree class">{degreeClassLabel}</DiscreetValue> <span className="px-1.5 text-[var(--acade-text-faint)]">·</span> Degree class follows CGPA
               </p>
               {unknownCount > 0 && (
                 <p className="mt-4 inline-flex rounded-full bg-[var(--acade-info)]/10 px-3 py-1 text-xs font-medium text-[var(--acade-info)]">
@@ -109,7 +115,9 @@ export function StandingOverview({
 
         <div id="tour-cgpa-arc" className="order-1 flex justify-center sm:order-2">
           {hasAcademicData ? (
-            <CGPAArc cgpa={cgpa} pi={pi} size="md" animateOnMount showParticles={false} primaryMetric={isPIMode ? 'pi' : 'cgpa'} />
+            <DiscreetValue label="CGPA gauge" block>
+              <CGPAArc cgpa={cgpa} pi={pi} size="md" animateOnMount showParticles={false} primaryMetric={isPIMode ? 'pi' : 'cgpa'} />
+            </DiscreetValue>
           ) : (
             <div className="flex size-[180px] items-center justify-center rounded-full border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] text-center">
               <span className="font-[family-name:var(--font-geist-mono)] text-4xl text-[var(--acade-text-faint)]">—</span>
@@ -136,12 +144,13 @@ export function StandingOverview({
                 {stat.label}
               </dt>
               <dd className={cn('mt-2 font-[family-name:var(--font-geist-mono)] text-xl font-semibold tabular-nums', stat.warning ? 'text-[var(--acade-warning)]' : 'text-[var(--acade-text)]')}>
-                {stat.value}
+                {stat.discreet && hasAcademicData ? <DiscreetValue label={`${stat.label} GPA`}>{stat.value}</DiscreetValue> : stat.value}
               </dd>
             </div>
           );
         })}
       </dl>
     </Card>
+    </DiscreetScope>
   );
 }

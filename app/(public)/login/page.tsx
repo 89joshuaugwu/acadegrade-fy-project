@@ -19,6 +19,7 @@ import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
 import { AUTH_TEXT_MOTION_CLASS } from '@/components/marketing/PublicTextMotion';
+import { CalculatorHandoffNotice } from '@/components/marketing/CalculatorHandoffNotice';
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email'),
@@ -161,6 +162,7 @@ export default function LoginPage() {
         animate={shakeForm && !shouldReduceMotion ? { x: [0, -8, 8, -5, 5, -2, 2, 0] } : { x: 0 }}
         transition={{ duration: 0.5 }}
       >
+        <CalculatorHandoffNotice className="mb-5" />
         <Button
           variant="outline"
           size="md"

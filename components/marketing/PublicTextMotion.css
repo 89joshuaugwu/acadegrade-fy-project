@@ -4,19 +4,9 @@
   display: inline-block;
 }
 
-.public-directional-accent,
-.auth-public-text-motion aside h2,
-.auth-public-text-motion main h1 {
-  background-image: linear-gradient(
-    105deg,
-    var(--acade-primary) 0%,
-    var(--acade-primary) 56%,
-    var(--acade-gold) 100%
-  );
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+/* Emphasis comes from colour and weight, never from gradient-filled text. */
+.public-directional-accent {
+  color: var(--acade-primary);
 }
 
 [data-public-text-motion='typed'] {

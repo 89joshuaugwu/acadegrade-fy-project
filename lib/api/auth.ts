@@ -4,6 +4,8 @@ import { adminAuth } from '@/lib/firebase/admin';
 export interface VerifiedApiUser {
   uid: string;
   token: string;
+  /** Verified token email, when the account has one (used for admin exemptions). */
+  email?: string;
 }
 
 /** Verify a Firebase bearer token for an API route. Returns null for missing/invalid tokens. */
@@ -16,7 +18,7 @@ export async function getVerifiedApiUser(request: NextRequest): Promise<Verified
 
   try {
     const decoded = await adminAuth.verifyIdToken(token);
-    return { uid: decoded.uid, token };
+    return { uid: decoded.uid, token, ...(typeof decoded.email === 'string' ? { email: decoded.email } : {}) };
   } catch {
     return null;
   }

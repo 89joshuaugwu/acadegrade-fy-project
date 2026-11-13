@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // Fallback gracefully
   }
 
-  const title = `${studentName}'s Transcript | AcadeGrade`;
-  const description = `View ${studentName}'s academic transcript, CGPA, and Performance Index securely shared via AcadeGrade.`;
+  const title = `${studentName}'s unofficial academic record | AcadeGrade`;
+  const description = `${studentName}'s self-reported academic record, CGPA, and Performance Index, shared via AcadeGrade. Not issued or verified by any university.`;
 
   return {
     title,

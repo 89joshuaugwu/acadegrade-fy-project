@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Sparkles } from 'lucide-react';
 import { legacyBannersToAdsConfig, safeParseAdsConfig } from '@/lib/ads/config';
 import {
   getEligibleCampaigns,
@@ -14,7 +13,8 @@ import type {
   AdPlacementId,
   AdsConfig,
 } from '@/lib/ads/types';
-import { cn } from '@/lib/utils/cn';
+import { HousePromotionCard } from './HousePromotionCard';
+import { useImageStatus } from './useImageStatus';
 
 const HISTORY_KEY = 'acadegrade:ads:impressions:v1';
 const VIEWER_KEY = 'acadegrade:ads:viewer:v1';
@@ -119,11 +119,17 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
     return () => { cancelled = true; };
   }, [config, now, placement, seed]);
 
+  // Image creatives render, and become countable, only after the image loads;
+  // a failed image hides the creative (as Android does) instead of leaving an
+  // empty block. Nothing is reserved while pending, so failure cannot shift layout.
+  const imageStatus = useImageStatus(campaign?.creative.imageUrl ?? '');
+  const ready = imageStatus === 'none' || imageStatus === 'loaded';
+
   useEffect(() => {
     const element = placementElement.current;
     // Explicit fail-closed fallback: keep optional content, but do not consume a
     // frequency allowance when the browser cannot establish its visibility.
-    if (!campaign || !element || typeof IntersectionObserver !== 'function') return;
+    if (!campaign || !ready || !element || typeof IntersectionObserver !== 'function') return;
     const creativeKey = JSON.stringify([placement, campaign.id, campaign.creative, campaign.linkUrl]);
     if (recordedCreatives.current.has(creativeKey)) return;
     let active = true;
@@ -146,69 +152,11 @@ export function AdPlacement({ placement, config, seed, now, className }: AdPlace
       active = false;
       observer.disconnect();
     };
-  }, [campaign, now, placement]);
+  }, [campaign, now, placement, ready]);
 
-  if (!campaign) return null;
+  if (!campaign || !ready) return null;
 
-  const content = (
-    <>
-      {campaign.creative.imageUrl && (
-        <div
-          role="img"
-          aria-label={campaign.creative.altText || campaign.name}
-          className="min-h-32 bg-cover bg-center sm:min-h-full sm:w-44 sm:shrink-0"
-          style={{ backgroundImage: `url(${campaign.creative.imageUrl})` }}
-        />
-      )}
-      <div className="min-w-0 flex-1 p-5 sm:p-6">
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--acade-primary)]">
-          <Sparkles className="size-4" aria-hidden="true" />
-          <span>House promotion</span>
-        </div>
-        {campaign.creative.headline && (
-          <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
-            {campaign.creative.headline}
-          </h2>
-        )}
-        {campaign.creative.body && (
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--acade-text-muted)]">
-            {campaign.creative.body}
-          </p>
-        )}
-        {campaign.creative.ctaLabel && campaign.linkUrl && (
-          <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--acade-primary)]">
-            {campaign.creative.ctaLabel}
-            <ArrowUpRight className="size-4" aria-hidden="true" />
-          </span>
-        )}
-      </div>
-    </>
-  );
-
-  return (
-    <aside
-      ref={placementElement}
-      aria-label="Featured from AcadeGrade"
-      className={cn(
-        'overflow-hidden rounded-2xl border border-[var(--acade-primary)]/20 bg-[var(--acade-deep)] shadow-[var(--shadow-card)]',
-        className
-      )}
-    >
-      {campaign.linkUrl ? (
-        <a
-          href={campaign.linkUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={campaign.creative.ctaLabel || campaign.creative.headline || campaign.name}
-          className="flex min-h-32 flex-col transition-colors hover:bg-[var(--acade-overlay)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--acade-primary)] sm:flex-row"
-        >
-          {content}
-        </a>
-      ) : (
-        <div className="flex min-h-32 flex-col sm:flex-row">{content}</div>
-      )}
-    </aside>
-  );
+  return <HousePromotionCard ref={placementElement} campaign={campaign} className={className} />;
 }
 
 export type { AdPlacementProps };

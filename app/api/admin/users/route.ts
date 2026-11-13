@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { writeAdminAudit } from '@/lib/api/admin-audit';
+import { readAgeStatusFrom, readAiConsent } from '@/lib/user/requirements';
 
 /**
  * GET /api/admin/users — List all users with profile data
@@ -57,6 +59,9 @@ export async function GET(request: Request) {
         pi,
         semesterCount: semSnap.size,
         disabled: data.disabled || false,
+        // Read from the profile already loaded: no extra reads.
+        ageStatus: readAgeStatusFrom(data) ?? 'unknown',
+        aiConsent: readAiConsent(data),
         createdAt: data.createdAt?.toDate?.()?.toISOString() || null,
       });
     }
@@ -96,16 +101,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
     }
 
-    if (action === 'disable') {
-      await adminAuth.updateUser(uid, { disabled: true });
-      await adminDb.collection('users').doc(uid).update({ disabled: true });
-      return NextResponse.json({ success: true, message: 'User disabled.' });
+    const actor = { actorUid: decodedToken.uid, actorEmail: decodedToken.email ?? '' };
+    const userRef = adminDb.collection('users').doc(String(uid));
+
+    if (action === 'disable' || action === 'enable') {
+      const disabled = action === 'disable';
+      const before = (await userRef.get()).data()?.disabled === true;
+      await adminAuth.updateUser(uid, { disabled });
+      await userRef.update({ disabled });
+      await writeAdminAudit({
+        ...actor, action: `users.${action}`, target: `users/${uid}`, summary: disabled ? 'Disabled account' : 'Enabled account',
+        before: { disabled: before }, after: { disabled },
+      });
+      return NextResponse.json({ success: true, message: disabled ? 'User disabled.' : 'User enabled.' });
     }
 
-    if (action === 'enable') {
-      await adminAuth.updateUser(uid, { disabled: false });
-      await adminDb.collection('users').doc(uid).update({ disabled: false });
-      return NextResponse.json({ success: true, message: 'User enabled.' });
+    // Support-only age correction (for example an "adult" who is under 18).
+    // Students cannot go adult -> minor themselves; see /api/user/age.
+    if (action === 'set-age') {
+      if (body.ageStatus !== 'adult' && body.ageStatus !== 'minor') {
+        return NextResponse.json({ error: "ageStatus must be 'adult' or 'minor'" }, { status: 400 });
+      }
+      const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+      if (!reason || reason.length > 300) {
+        return NextResponse.json({ error: 'Give a reason for the correction (up to 300 characters).' }, { status: 400 });
+      }
+      const current = (await userRef.get()).data();
+      if (!current) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      const now = new Date();
+      await userRef.set({
+        ageStatus: body.ageStatus,
+        ...(current.ageDeclaredAt ? {} : { ageDeclaredAt: now }),
+        ageCorrectedAt: now,
+        ageCorrectedBy: actor.actorEmail.toLowerCase(),
+      }, { merge: true });
+      await writeAdminAudit({
+        ...actor, action: 'users.set-age', target: `users/${uid}`, summary: `Support age correction: ${reason}`,
+        before: { ageStatus: current.ageStatus ?? null }, after: { ageStatus: body.ageStatus },
+      });
+      return NextResponse.json({ success: true, ageStatus: body.ageStatus });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

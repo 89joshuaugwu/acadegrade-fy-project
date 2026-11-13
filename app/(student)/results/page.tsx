@@ -18,7 +18,13 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { GradeTable } from '@/components/cgpa/GradeTable';
 import { ResultsTour } from '@/components/onboarding/ResultsTour';
+import { AdPlacement } from '@/components/ads/AdPlacement';
 import { Modal } from '@/components/ui/Modal';
+import { HelpButton } from '@/components/help/HelpDrawer';
+import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { CalculatorHandoffOffer } from './CalculatorHandoffOffer';
+import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 
 function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -72,7 +78,7 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
                 GPA
               </span>
             <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)]">
-              {semester.gpa.toFixed(2)}
+              <DiscreetValue label="GPA">{formatCgpa(semester.gpa)}</DiscreetValue>
             </span>
             </div>
             <div className="flex items-baseline gap-1.5">
@@ -153,6 +159,7 @@ function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
 }
 
 export default function ResultsListPage() {
+  const { user } = useAuth();
   const { semesters, loading, error, retry } = useSemesters();
   const { isFeatureDisabled } = usePlatformSettings();
   const shouldReduceMotion = useReducedMotion();
@@ -208,12 +215,17 @@ export default function ResultsListPage() {
             Manage your academic records by semester.
           </p>
         </div>
+        <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center md:w-auto">
+        <HelpButton entryId={STUDENT_HELP.results} source={studentHelpSource} className="justify-center" />
         <Link href={disableAddSemester ? '#' : `/results/new`} onClick={(e) => disableAddSemester && e.preventDefault()}>
           <Button id="tour-new-semester" variant="primary" size="lg" className="w-full md:w-auto" disabled={disableAddSemester} title={disableAddSemester ? "This feature is temporarily under maintenance." : ""}>
             <Plus size={18} className="mr-2" /> New Semester
           </Button>
         </Link>
+        </div>
       </div>
+
+      <CalculatorHandoffOffer semesters={semesters} />
 
       {semesters.length === 0 ? (
         <motion.div 
@@ -237,11 +249,19 @@ export default function ResultsListPage() {
           </Link>
         </motion.div>
       ) : (
+        <DiscreetScope>
         <div className="flex flex-col">
+          <div className="mb-2 flex justify-end empty:hidden">
+            <DiscreetRevealButton label="Semester GPAs" />
+          </div>
           {semesters.map((semester) => (
             <SemesterAccordionItem key={semester.id} semester={semester} />
           ))}
+          {/* Optional house promotion after the records, never above them or the actions.
+              Off unless enabled in admin; renders nothing (and reserves no space) otherwise. */}
+          <AdPlacement placement="results.overview" seed={user?.uid} className="mt-4" />
         </div>
+        </DiscreetScope>
       )}
     </div>
   );

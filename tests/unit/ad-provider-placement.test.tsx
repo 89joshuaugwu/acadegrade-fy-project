@@ -1,19 +1,27 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProviderPlacement } from '@/components/ads/ProviderPlacement';
 import { createDefaultProviderConfig } from '@/lib/ads/providers';
+import { writeCookieConsent } from '@/lib/consent/cookies';
 
-vi.mock('next/script', () => ({ default: ({ src }: { src: string }) => <div data-testid="adsense-sdk" data-src={src} /> }));
+vi.mock('next/script', () => ({
+  default: ({ src, onError }: { src: string; onError?: () => void }) => (
+    <button type="button" data-testid="adsense-sdk" data-src={src} onClick={() => onError?.()} />
+  ),
+}));
 
 describe('ProviderPlacement', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('No live requests in tests')));
     window.adsbygoogle = [];
+    // These cases cover delivery after the visitor allowed ads (see cookie-consent.test.tsx for the gate).
+    writeCookieConsent('ads');
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     delete window.adsbygoogle;
+    localStorage.clear();
   });
 
   it('uses current supplied settings when enabling, changing units and links, then disabling', () => {
@@ -79,6 +87,25 @@ describe('ProviderPlacement', () => {
     render(<ProviderPlacement config={config} />);
     expect(push).toHaveBeenCalledTimes(2);
     delete window.adsbygoogle;
+  });
+
+  it('hides an unfilled AdSense unit instead of leaving an empty advertisement box', async () => {
+    const config = createDefaultProviderConfig();
+    config.adsense = { enabled: true, publisherId: 'ca-pub-1234567890123456', slotId: '1234567890' };
+    config.adsterra = { enabled: true, smartLinkUrl: 'https://example.com/offer' };
+    render(<ProviderPlacement config={config} />);
+    expect(screen.getByRole('complementary', { name: 'Advertisement' })).toBeInTheDocument();
+    document.querySelector('ins.adsbygoogle')!.setAttribute('data-ad-status', 'unfilled');
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Advertisement' })).not.toBeInTheDocument());
+    expect(screen.getByRole('link', { name: 'View sponsored offer' })).toBeInTheDocument();
+  });
+
+  it('hides the AdSense box when its script is blocked or fails to load', () => {
+    const config = createDefaultProviderConfig();
+    config.adsense = { enabled: true, publisherId: 'ca-pub-1234567890123456', slotId: '1234567890' };
+    const view = render(<ProviderPlacement config={config} />);
+    fireEvent.click(screen.getByTestId('adsense-sdk'));
+    expect(view.container).toBeEmptyDOMElement();
   });
 
   it('uses a first-party outbound CTA without third-party scripts', () => {

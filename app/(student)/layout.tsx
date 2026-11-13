@@ -8,6 +8,8 @@ import { StudentShell } from '@/components/layout/StudentShell';
 import { getDocument } from '@/lib/firebase/firestore';
 import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { RequirementsGate } from '@/components/requirements';
+import { useClearDraftsOnSignOut } from '@/lib/drafts';
 
 export default function StudentLayout({
   children,
@@ -22,6 +24,8 @@ export default function StudentLayout({
     retry: retryProfile,
   } = useProfile();
   const router = useRouter();
+  // Unsaved semester drafts live on this device only; drop them when the account signs out.
+  useClearDraftsOnSignOut(user?.uid ?? null);
   const [maintenanceCheckLoading, setMaintenanceCheckLoading] = useState(true);
 
   useEffect(() => {
@@ -106,5 +110,11 @@ export default function StudentLayout({
     );
   }
 
-  return <StudentShell>{children}</StudentShell>;
+  return (
+    <>
+      <StudentShell>{children}</StudentShell>
+      {/* "Finish setting up" for existing accounts; fails open when the endpoint is unavailable. */}
+      <RequirementsGate />
+    </>
+  );
 }

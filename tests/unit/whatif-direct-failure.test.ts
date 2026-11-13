@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
-vi.mock('@/lib/firebase/admin', () => ({ adminDb: { collection: () => ({ doc: () => ({ get: async () => ({ data: () => undefined }) }) }) } }));
+// The user is a consenting adult; every other document is absent.
+vi.mock('@/lib/firebase/admin', () => ({ adminDb: { collection: (name: string) => ({ doc: () => ({ get: async () => ({ data: () => (name === 'users' ? { ageStatus: 'adult', consents: { ai: { granted: true } } } : undefined) }) }) }) } }));
 vi.mock('@/lib/api/auth', () => ({ getVerifiedApiUser: vi.fn().mockResolvedValue({ uid: 'student-1' }) }));
 vi.mock('@/lib/api/rate-limit', () => ({ checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, remaining: 2 }), rateLimitResponse: vi.fn() }));
 vi.mock('@/lib/api/logger', () => ({ logApiCall: vi.fn(), apiTimer: () => () => 1 }));
