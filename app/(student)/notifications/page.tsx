@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCheck, Bell, Info, AlertTriangle, Sparkles, CheckCircle2, Trash2, Lightbulb, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -18,6 +18,12 @@ import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 import { cn } from '@/lib/utils/cn';
 import type { NotificationWithId } from '@/types/analytics';
+import {
+  hiddenAnnouncementIds, hideAnnouncements, loadActiveAnnouncements, markAnnouncementsRead, readAnnouncementIds, type StudentAnnouncement,
+} from '@/lib/announcements/client';
+
+/** Announcements appear in the inbox with ids `announcement:<id>`; they are not inbox documents. */
+const ANNOUNCEMENT_PREFIX = 'announcement:';
 
 const ICONS = {
   info: <Info size={20} className="text-[var(--acade-primary)]" />,
@@ -39,9 +45,35 @@ export default function NotificationsPage() {
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const closeConfirmClear = useCallback(() => setConfirmClear(false), []);
+  const [announcements, setAnnouncements] = useState<StudentAnnouncement[]>([]);
+  const [readAnnouncements, setReadAnnouncements] = useState<Set<string>>(() => new Set());
+
+  // Inbox items plus active announcements for this student, newest first.
+  const inbox = useMemo<NotificationWithId[]>(() => {
+    const merged: NotificationWithId[] = [
+      ...notifications,
+      ...announcements.map((entry) => ({
+        id: `${ANNOUNCEMENT_PREFIX}${entry.id}`,
+        type: 'system' as const,
+        title: entry.title,
+        message: entry.body,
+        read: readAnnouncements.has(entry.id),
+        ...(entry.linkUrl ? { actionUrl: entry.linkUrl } : {}),
+        createdAt: { toMillis: () => entry.startsAt } as unknown as NotificationWithId['createdAt'],
+      })),
+    ];
+    const time = (item: NotificationWithId) => (item.createdAt?.toMillis ? item.createdAt.toMillis() : 0);
+    return merged.sort((a, b) => time(b) - time(a));
+  }, [notifications, announcements, readAnnouncements]);
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
+    // Announcements are fail-open and never block the inbox.
+    void loadActiveAnnouncements(user.uid).then((active) => {
+      const hidden = hiddenAnnouncementIds(user.uid);
+      setAnnouncements(active.filter((entry) => !hidden.has(entry.id)));
+      setReadAnnouncements(readAnnouncementIds(user.uid));
+    });
     try {
       const items = await queryCollection<NotificationWithId>(`notifications/${user.uid}/items`);
       
@@ -73,6 +105,13 @@ export default function NotificationsPage() {
 
   const handleMarkAsRead = async (id: string) => {
     if (!user || pendingAction) return;
+    if (id.startsWith(ANNOUNCEMENT_PREFIX)) {
+      // Announcements are shared documents: read state is kept on this device only.
+      const announcementId = id.slice(ANNOUNCEMENT_PREFIX.length);
+      markAnnouncementsRead(user.uid, [announcementId]);
+      setReadAnnouncements((current) => new Set([...current, announcementId]));
+      return;
+    }
     setPendingAction(id);
     try {
       await updateDocument(`notifications/${user.uid}/items/${id}`, { read: true });
@@ -90,6 +129,11 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = async () => {
     if (!user || pendingAction) return;
+    const unreadAnnouncements = announcements.filter((entry) => !readAnnouncements.has(entry.id)).map((entry) => entry.id);
+    if (unreadAnnouncements.length) {
+      markAnnouncementsRead(user.uid, unreadAnnouncements);
+      setReadAnnouncements((current) => new Set([...current, ...unreadAnnouncements]));
+    }
     const unread = notifications.filter(n => !n.read);
     if (unread.length === 0) return;
 
@@ -109,8 +153,13 @@ export default function NotificationsPage() {
   };
 
   const handleClearAll = async () => {
-    if (!user || notifications.length === 0 || pendingAction) return;
+    if (!user || inbox.length === 0 || pendingAction) return;
     setPendingAction('clear-all');
+    if (announcements.length) {
+      // Announcements cannot be deleted by a student; hide them on this device instead.
+      hideAnnouncements(user.uid, announcements.map((entry) => entry.id));
+      setAnnouncements([]);
+    }
     try {
       await Promise.all(
         notifications.map(n => deleteDocument(`notifications/${user.uid}/items/${n.id}`))
@@ -135,7 +184,7 @@ export default function NotificationsPage() {
     );
   }
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = inbox.filter(n => !n.read).length;
 
   return (
     <div className="max-w-3xl mx-auto pb-10">
@@ -156,7 +205,7 @@ export default function NotificationsPage() {
               <CheckCheck size={16} className="mr-2" aria-hidden="true" /> Mark all read
             </Button>
           )}
-          {notifications.length > 0 && (
+          {inbox.length > 0 && (
             <Button variant="danger" size="sm" onClick={() => setConfirmClear(true)} disabled={pendingAction !== null} aria-haspopup="dialog" className="bg-[var(--acade-danger-dim)] text-[var(--acade-danger)] hover:bg-[var(--acade-danger)] hover:text-white border-transparent">
               <Trash2 size={16} className="mr-2" aria-hidden="true" /> Clear all
             </Button>
@@ -168,7 +217,7 @@ export default function NotificationsPage() {
         open={confirmClear}
         onClose={closeConfirmClear}
         title="Clear all notifications?"
-        description={`This deletes all ${notifications.length} ${notifications.length === 1 ? 'notification' : 'notifications'} in your inbox. It cannot be undone.`}
+        description={`This deletes all ${inbox.length} ${inbox.length === 1 ? 'notification' : 'notifications'} in your inbox. It cannot be undone.`}
         confirm={{ label: 'Clear all', onConfirm: () => void handleClearAll(), loading: pendingAction === 'clear-all' }}
       >
         <p className="text-sm leading-6 text-[var(--acade-text-muted)]">Your results, semesters and alert settings are not affected.</p>
@@ -186,7 +235,7 @@ export default function NotificationsPage() {
               <RefreshCw size={16} className="mr-2" aria-hidden="true" /> Try again
             </Button>
           </div>
-        ) : notifications.length === 0 ? (
+        ) : inbox.length === 0 ? (
           <div className="p-12 text-center text-[var(--acade-text-muted)]">
             <div className="mx-auto w-16 h-16 bg-[var(--acade-deep)] rounded-full flex items-center justify-center mb-4">
               <Bell size={24} className="text-[var(--acade-text-muted)]" aria-hidden="true" />
@@ -197,7 +246,7 @@ export default function NotificationsPage() {
         ) : (
           <div className="divide-y divide-[var(--acade-border-subtle)]">
             <AnimatePresence initial={!shouldReduceMotion}>
-              {notifications.map((notif, index) => (
+              {inbox.map((notif, index) => (
                 <motion.article
                   key={notif.id}
                   aria-label={notif.title}

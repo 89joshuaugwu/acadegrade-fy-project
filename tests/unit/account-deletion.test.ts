@@ -93,6 +93,16 @@ describe('deleteUserData', () => {
     expect(report.deleted).toMatchObject({ _coin_ledger: 2, _reward_daily: 2, _api_rate_limits: 2, api_logs: 1, _matric_numbers: 1 });
   });
 
+  it('deletes support tickets', async () => {
+    seedAlice(); seedBob();
+    store.docs.set('support_tickets/a1', { uid: 'alice', message: 'help', status: 'open' });
+    store.docs.set('support_tickets/a2', { uid: 'alice', message: 'again', status: 'closed' });
+    store.docs.set('support_tickets/b1', { uid: 'bob', message: 'mine', status: 'open' });
+    const report = await deleteUserData(store.db, uid, { cloudinary: async () => 'skipped' });
+    expect(store.paths('support_tickets/')).toEqual(['support_tickets/b1']);
+    expect(report.deleted.support_tickets).toBe(2);
+  });
+
   it('uses batched deletes rather than one write per round trip', async () => {
     seedAlice();
     for (let index = 0; index < 30; index += 1) store.docs.set(`api_logs/x${index}`, { uid });

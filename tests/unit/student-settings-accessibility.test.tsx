@@ -7,6 +7,7 @@ import SettingsPage from '@/app/(student)/settings/page';
 const mocks = vi.hoisted(() => ({
   requestNotificationPermission: vi.fn(),
   updateProfile: vi.fn(),
+  updateDocument: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
 }));
@@ -44,7 +45,7 @@ vi.mock('@/lib/firebase/client', () => ({
 }));
 
 vi.mock('@/lib/firebase/firestore', () => ({
-  updateDocument: vi.fn(),
+  updateDocument: mocks.updateDocument,
 }));
 
 vi.mock('@/lib/firebase/fcm', () => ({
@@ -71,6 +72,7 @@ describe('Student settings accessibility', () => {
   beforeEach(() => {
     mocks.requestNotificationPermission.mockReset();
     mocks.updateProfile.mockReset().mockResolvedValue(undefined);
+    mocks.updateDocument.mockReset().mockResolvedValue(undefined);
     mocks.toastError.mockReset();
     mocks.toastSuccess.mockReset();
   });
@@ -137,6 +139,37 @@ describe('Student settings accessibility', () => {
       courseDuration: 5,
       graduationSession: '2025/2026',
     }));
+  });
+
+  it('range inputs validate min ≤ max and save creditLoadRange', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+
+    const min = screen.getByRole('spinbutton', { name: 'Fewest units' });
+    const max = screen.getByRole('spinbutton', { name: 'Most units' });
+    const save = screen.getByRole('button', { name: 'Save Units Range' });
+
+    await user.type(min, '24');
+    await user.type(max, '15');
+    await user.click(save);
+    expect(screen.getByText('The fewest units cannot be more than the most units.')).toBeInTheDocument();
+    expect(mocks.updateDocument).not.toHaveBeenCalled();
+
+    await user.clear(max);
+    await user.type(max, '61');
+    await user.click(save);
+    expect(screen.getByText('Units must be whole numbers from 1 to 60.')).toBeInTheDocument();
+    expect(mocks.updateDocument).not.toHaveBeenCalled();
+
+    await user.clear(min);
+    await user.type(min, '15');
+    await user.clear(max);
+    await user.type(max, '24');
+    await user.click(save);
+    await waitFor(() => {
+      expect(mocks.updateDocument).toHaveBeenCalledWith('users/student-1', { creditLoadRange: { min: 15, max: 24 } });
+    });
+    expect(screen.queryByText(/cannot be more than/)).not.toBeInTheDocument();
   });
 
   it('reports push notifications enabled only after this device is registered', async () => {

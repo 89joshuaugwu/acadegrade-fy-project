@@ -167,6 +167,43 @@ describe('GradeTable discreet mode', () => {
   });
 });
 
+describe('credit-load warnings (A7)', () => {
+  const row = (code: string, units: number, extra: Partial<CourseInput> = {}): CourseInput => ({ code, title: code, units, caScore: 20, examScore: 40, ...extra });
+
+  it('duplicate and range warnings; none without a range; AR rows count', () => {
+    // 6 + 6 + 6 (AR) + 6 = 24 registered units; CSC 201 entered twice in different spellings.
+    const courses = [row('CSC 201', 6), row('csc201', 6), row('CSC 499', 6, { isAR: true, examScore: null }), row('MTH 202', 6)];
+
+    const { unmount } = render(<GradeTable initialCourses={courses} creditLoadRange={{ min: 15, max: 20 }} />);
+    const warnings = screen.getByRole('list', { name: 'Credit-load warnings' });
+    expect(within(warnings).getByText('CSC 201 appears twice.')).toBeInTheDocument();
+    // The AR row's 6 units count toward the registered load (24, not 18).
+    expect(within(warnings).getByText('This semester has 24 units. Your usual range is 15–20.')).toBeInTheDocument();
+    unmount();
+
+    // No range: only duplicates can warn.
+    const second = render(<GradeTable initialCourses={courses} />);
+    const onlyDupes = screen.getByRole('list', { name: 'Credit-load warnings' });
+    expect(within(onlyDupes).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(onlyDupes).getByText('CSC 201 appears twice.')).toBeInTheDocument();
+    second.unmount();
+
+    // In range, no duplicates: nothing shown. AR units push it into the range.
+    render(<GradeTable initialCourses={[row('CSC 201', 6), row('CSC 499', 6, { isAR: true, examScore: null }), row('MTH 202', 6)]} creditLoadRange={{ min: 18, max: 24 }} />);
+    expect(screen.queryByRole('list', { name: 'Credit-load warnings' })).not.toBeInTheDocument();
+  });
+
+  it('warns below the minimum and never blocks saving', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<GradeTable editable onSave={onSave} initialCourses={[row('CSC 201', 3)]} creditLoadRange={{ min: 15, max: 24 }} />);
+    expect(screen.getByText('This semester has 3 units. Your usual range is 15–24.')).toBeInTheDocument();
+    const save = screen.getByRole('button', { name: /Save Semester/ });
+    expect(save).toBeEnabled();
+    await act(async () => { fireEvent.click(save); });
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('import requests (R1.2)', () => {
   const csc201: CourseInput = { code: 'CSC 201', title: 'Programming', units: 3, caScore: 20, examScore: 50 };
   const mth202: CourseInput = { code: 'MTH 202', title: 'Calculus', units: 3, caScore: null, examScore: null };

@@ -174,9 +174,11 @@ describe('support age corrections need a reason', () => {
 
 describe('GET /api/admin/users age fields', () => {
   it("adds each user's ageStatus and aiConsent, with unknown/null for old accounts", async () => {
-    store.docs.set('users/old', { fullName: 'Old' });
-    store.docs.set('users/kid', { fullName: 'Kid', ageStatus: 'minor' });
-    store.docs.set('users/ada', { fullName: 'Ada', ageStatus: 'adult', consents: { ai: { granted: true } } });
+    // The list is ordered by createdAt (accounts without it are backfilled by a daily job).
+    const createdAt = new Date('2026-01-01T00:00:00Z');
+    store.docs.set('users/old', { fullName: 'Old', createdAt });
+    store.docs.set('users/kid', { fullName: 'Kid', ageStatus: 'minor', createdAt });
+    store.docs.set('users/ada', { fullName: 'Ada', ageStatus: 'adult', consents: { ai: { granted: true } }, createdAt });
     const body = await (await usersGet(req('GET'))).json();
     const byId = Object.fromEntries(body.users.map((user: { uid: string; ageStatus: string; aiConsent: boolean | null }) => [user.uid, [user.ageStatus, user.aiConsent]]));
     expect(byId).toEqual({ old: ['unknown', null], kid: ['minor', null], ada: ['adult', true] });

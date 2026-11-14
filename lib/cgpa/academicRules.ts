@@ -355,3 +355,89 @@ export function outstandingCarryOvers(
   }
   return [...outstanding];
 }
+
+export interface WeightedAverageRow extends AcademicRowFlags {
+  units: number;
+  caScore?: number | null;
+  examScore?: number | null;
+  totalScore?: number | null;
+  /** Grade-only row: a letter was entered but no score, so it has no percentage. */
+  estimated?: boolean;
+}
+
+export interface WeightedAverageResult {
+  /** Credit-weighted mean score (0-100), or null when no row has a score. */
+  average: number | null;
+  includedUnits: number;
+  /** Rows left out because only a letter grade is known. */
+  excludedEstimated: number;
+  /** Rows left out because they are awaiting a result, pending, or have no score. */
+  excludedNotGraded: number;
+}
+
+/**
+ * Credit-weighted average score across graded rows: sum(score x units) / sum(units).
+ * Score is CA + exam when both are known, else the total score. It is not a CGPA,
+ * not a 4.0-scale grade and never official. With nothing excluded it equals the
+ * continuous PI average x 20.
+ */
+export function weightedAverageScore(courses: readonly WeightedAverageRow[]): WeightedAverageResult {
+  let weighted = 0;
+  let includedUnits = 0;
+  let excludedEstimated = 0;
+  let excludedNotGraded = 0;
+  for (const course of courses) {
+    if (isNotYetGraded(course) || !isFiniteNumber(course.units) || course.units <= 0) {
+      excludedNotGraded += 1;
+      continue;
+    }
+    const score = isFiniteNumber(course.caScore) && isFiniteNumber(course.examScore)
+      ? course.caScore + course.examScore
+      : isFiniteNumber(course.totalScore) ? course.totalScore : null;
+    if (score === null) {
+      if (course.estimated === true) excludedEstimated += 1;
+      else excludedNotGraded += 1;
+      continue;
+    }
+    weighted += score * course.units;
+    includedUnits += course.units;
+  }
+  return { average: includedUnits > 0 ? weighted / includedUnits : null, includedUnits, excludedEstimated, excludedNotGraded };
+}
+
+export type CreditLoadWarning =
+  | { kind: 'duplicate_codes'; codes: string[] }
+  | { kind: 'below_min'; units: number; min: number }
+  | { kind: 'above_max'; units: number; max: number };
+
+/**
+ * Gentle warnings about a semester's registered load; they never block saving.
+ * Units count every row (awaiting-result rows included). Duplicates are matched
+ * with normaliseCourseCode and listed once, in order of first repeat. There is no
+ * default range: without one only duplicates can warn.
+ */
+export function creditLoadWarnings(
+  courses: readonly { code: string; units: number }[],
+  range?: { min: number; max: number } | null
+): CreditLoadWarning[] {
+  const warnings: CreditLoadWarning[] = [];
+  const seen = new Set<string>();
+  const repeated: string[] = [];
+  let units = 0;
+  for (const course of courses) {
+    if (isFiniteNumber(course.units) && course.units > 0) units += course.units;
+    const code = normaliseCourseCode(course.code);
+    if (!code) continue;
+    if (seen.has(code)) {
+      if (!repeated.includes(code)) repeated.push(code);
+    } else {
+      seen.add(code);
+    }
+  }
+  if (repeated.length) warnings.push({ kind: 'duplicate_codes', codes: repeated });
+  if (range && isFiniteNumber(range.min) && isFiniteNumber(range.max) && courses.length > 0) {
+    if (units < range.min) warnings.push({ kind: 'below_min', units, min: range.min });
+    else if (units > range.max) warnings.push({ kind: 'above_max', units, max: range.max });
+  }
+  return warnings;
+}

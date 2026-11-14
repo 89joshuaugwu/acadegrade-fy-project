@@ -6,6 +6,7 @@ import {
   computeCourseMetrics,
   computeCumulativeCGPA,
   computeSemesterGPA,
+  creditLoadWarnings,
   formatCgpa,
   gradeFromScore,
   isCarryOver,
@@ -14,13 +15,14 @@ import {
   requiredAverageForTarget,
   resolveDegreeClass,
   roundCgpa,
+  weightedAverageScore,
 } from '@/lib/cgpa/academicRules';
 
 /**
  * The same fixture runs in acadegrade-mobile/tests/academic-rules.test.mjs.
  * Both suites pin this hash so the two copies cannot drift apart.
  */
-const FIXTURE_SHA256 = '8807c9d110974d5c88144af201665ada86e437ab9d24b5ce77521780e1d20405';
+const FIXTURE_SHA256 = 'e7de4b126c1bc40136b922f7d9e8bc7eb2eb43da689683d595551ac2b8d18eaa';
 
 const raw = readFileSync(path.join(process.cwd(), 'tests/fixtures/academic-rules.json'), 'utf8');
 type Json = unknown;
@@ -117,6 +119,29 @@ describe('isCarryOver', () => {
 describe('outstandingCarryOvers', () => {
   it.each(fixture.outstandingCarryOvers)('$name', (c) => {
     expect(outstandingCarryOvers(c.semesters as Parameters<typeof outstandingCarryOvers>[0])).toEqual(c.expected);
+  });
+});
+
+describe('weightedAverageScore', () => {
+  it.each(fixture.weightedAverageScore)('$name', (c) => {
+    const result = weightedAverageScore(c.courses as Parameters<typeof weightedAverageScore>[0]);
+    expect(result.average === null ? null : result.average).toEqual(
+      (c.expected as { average: number | null }).average === null ? null : expect.closeTo((c.expected as { average: number }).average, 9),
+    );
+    expect({ ...result, average: undefined }).toEqual({ ...(c.expected as object), average: undefined });
+  });
+
+  it('equals the continuous PI average x 20 when nothing is excluded', () => {
+    const rows = fixture.weightedAverageScore[0].courses as { units: number; caScore: number; examScore: number }[];
+    const metrics = rows.map((row, index) => computeCourseMetrics({ code: `X${index}`, title: 'x', ...row }));
+    const { pi } = computeSemesterGPA(metrics);
+    expect(weightedAverageScore(rows).average).toBeCloseTo(pi * 20, 9);
+  });
+});
+
+describe('creditLoadWarnings', () => {
+  it.each(fixture.creditLoadWarnings)('$name', (c) => {
+    expect(creditLoadWarnings(c.courses as Parameters<typeof creditLoadWarnings>[0], c.range as Parameters<typeof creditLoadWarnings>[1])).toEqual(c.expected);
   });
 });
 

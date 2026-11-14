@@ -14,7 +14,12 @@ const MAX_LENGTH = 500;
  * Settings → Announcements. Saving the banner and notifying students are two
  * separate actions; sending always asks first and warns about repeats.
  */
-export function AnnouncementSettings({ initial, getToken }: { initial: string; getToken: () => Promise<string> }) {
+export function AnnouncementSettings({ initial, getToken, showLegacySend = true }: {
+  initial: string;
+  getToken: () => Promise<string>;
+  /** The legacy broadcast reads every account; hidden once announcement topics cover every device. */
+  showLegacySend?: boolean;
+}) {
   const [saved, setSaved] = useState(initial);
   const [text, setText] = useState(initial);
   const [busy, setBusy] = useState<'save' | 'remove' | 'send' | null>(null);
@@ -66,8 +71,8 @@ export function AnnouncementSettings({ initial, getToken }: { initial: string; g
     <Card padding="lg">
       <section aria-labelledby="announcement-title" className="space-y-5">
         <div>
-          <h2 id="announcement-title" className="text-lg font-semibold text-[var(--acade-text)]">Announcement</h2>
-          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">The banner shows on the student website. A notification reaches every student&apos;s inbox and phone.</p>
+          <h2 id="announcement-title" className="text-lg font-semibold text-[var(--acade-text)]">Website banner</h2>
+          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">A simple banner on the student website, used when no targeted announcement is set as the banner.</p>
         </div>
 
         <Input
@@ -93,7 +98,9 @@ export function AnnouncementSettings({ initial, getToken }: { initial: string; g
 
         <div className="flex flex-wrap items-center gap-3">
           <Button loading={busy === 'save'} loadingLabel="Saving…" disabled={!changed || !trimmed || busy !== null} onClick={() => { void saveBanner(); }}>Save banner</Button>
-          <Button variant="outline" disabled={!trimmed || busy !== null} loading={busy === 'send'} loadingLabel="Sending…" onClick={() => setConfirmSend(true)}>Send as notification…</Button>
+          {showLegacySend ? (
+            <Button variant="outline" disabled={!trimmed || busy !== null} loading={busy === 'send'} loadingLabel="Sending…" onClick={() => setConfirmSend(true)}>Send to every device (legacy; reads every account)…</Button>
+          ) : null}
           <Button variant="ghost" className="sm:ml-auto" disabled={!saved || busy !== null} loading={busy === 'remove'} loadingLabel="Removing…" onClick={() => { void removeBanner(); }}>Remove banner</Button>
         </div>
 

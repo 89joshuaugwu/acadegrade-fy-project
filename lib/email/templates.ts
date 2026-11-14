@@ -380,6 +380,27 @@ export function adminNewUserEmail(name: string, matric: string): string {
   });
 }
 
+/** A support reply (Admin > Support inbox). The message is plain text from an admin; it is escaped. */
+export function supportReplyEmail(name: string, message: string): string {
+  const safeName = escapeEmailHtml(name || 'there');
+  const paragraphs = `${message ?? ''}`.trim().split(/\n{2,}/).map((block) => escapeEmailHtml(block).replace(/\n/g, '<br>'));
+  const body = paragraphs.map((block, index) => paragraph(block, { last: index === paragraphs.length - 1 })).join('');
+
+  const content = heading('Reply from AcadeGrade support')
+    + paragraph(`Hi ${safeName}, thanks for getting in touch. Here is our reply:`, { last: true })
+    + spacer(20)
+    + `<table ${TABLE_ATTRS} width="100%" bgcolor="${COLORS.tint}" class="em-tint" style="background-color:${COLORS.tint};border-radius:16px;"><tr><td style="padding:22px 24px;">${body}</td></tr></table>`
+    + spacer(24)
+    + paragraph('To reply, open AcadeGrade and send a new request from Settings, Help and support. This mailbox does not read replies.', { last: true, muted: true })
+    + spacer(24)
+    + button('Open AcadeGrade', `${getEmailSiteUrl()}/settings`);
+
+  return renderEmail('Reply from AcadeGrade support', content, {
+    preheader: 'AcadeGrade support replied to your request.',
+    reason: 'You received this because you sent a support request in AcadeGrade.',
+  });
+}
+
 export function registrationOtpEmail(otp: string): string {
   return otpEmail(otp, 'registration');
 }

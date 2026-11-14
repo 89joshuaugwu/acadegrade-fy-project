@@ -8,7 +8,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { AdvertisingSections } from '@/components/admin/ads/AdvertisingSections';
 import { useUrlTab } from '@/components/admin/useUrlTab';
 import { AccessSettings, type AccessValues } from '@/components/admin/settings/AccessSettings';
-import { AnnouncementSettings } from '@/components/admin/settings/AnnouncementSettings';
+import { AnnouncementsTab } from '@/components/admin/settings/AnnouncementsTab';
 import { PublicSiteSettings, type AppLinks } from '@/components/admin/settings/PublicSiteSettings';
 import { AdvancedSettings } from '@/components/admin/settings/AdvancedSettings';
 import { EmailSettings } from '@/components/admin/email/EmailSettings';
@@ -112,7 +112,7 @@ function SettingsScreen() {
 
   const content: Record<SettingsTab, React.ReactNode> = {
     access: <AccessSettings initial={access} getToken={getToken} />,
-    announcements: <AnnouncementSettings initial={settings.announcementBanner ?? ''} getToken={getToken} />,
+    announcements: <AnnouncementsTab initialBanner={settings.announcementBanner ?? ''} getToken={getToken} />,
     'public-site': <PublicSiteSettings initialLinks={links} initialAdmobAppId={typeof settings.admobAndroidAppId === 'string' ? settings.admobAndroidAppId : ''} getToken={getToken} />,
     email: <EmailSettings />,
     advanced: <AdvancedSettings />,

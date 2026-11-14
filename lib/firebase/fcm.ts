@@ -29,7 +29,7 @@ import {
   type Messaging,
 } from 'firebase/messaging';
 import { doc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import app, { db } from './client';
+import app, { auth, db } from './client';
 
 let messaging: Messaging | null = null;
 
@@ -145,12 +145,30 @@ export async function requestNotificationPermission(uid: string): Promise<string
     // Cache in sessionStorage for fast logout cleanup
     sessionStorage.setItem('acadegrade_fcm_token', fcmToken);
 
+    // Subscribe this device to announcement topics (server-side; fire-and-forget).
+    void syncNotificationTopics();
+
     return fcmToken;
   } catch (err) {
     console.error('[FCM] requestNotificationPermission error:', err);
     return null;
   } finally {
     isRequestingToken = false;
+  }
+}
+
+/**
+ * Ask the server to re-sync this account's announcement topics
+ * (POST /api/notifications/topics). Call after registering a token and after a
+ * university, level or "admin broadcasts" preference change. Never throws.
+ */
+export async function syncNotificationTopics(): Promise<void> {
+  try {
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) return;
+    await fetch('/api/notifications/topics', { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+  } catch {
+    // Fail open: the daily job subscribes devices too.
   }
 }
 

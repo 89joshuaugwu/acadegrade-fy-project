@@ -1,7 +1,8 @@
 import type { Firestore } from 'firebase-admin/firestore';
 
 // In-memory Firestore double with nested paths, simple queries (==, in, >=, <,
-// document-id ranges), ordering, limits, batches and serial transactions.
+// document-id ranges), ordering, limits, startAfter (values or a document
+// snapshot), count() aggregations, batches and serial transactions.
 // Paths are full document paths such as `users/alice/semesters/s1`.
 type Filter = { field: unknown; op: string; value: unknown };
 type Order = { field: unknown; direction: 'asc' | 'desc' };
@@ -62,9 +63,10 @@ export function queryTestDb() {
           const actual = value(row, filter.field);
           if (filter.op === '==') return actual === filter.value;
           if (filter.op === 'in') return (filter.value as unknown[]).includes(actual);
-          if (filter.op === '>=') return actual !== undefined && (actual as any) >= (filter.value as any);
-          if (filter.op === '<') return actual !== undefined && (actual as any) < (filter.value as any);
-          if (filter.op === '<=') return actual !== undefined && (actual as any) <= (filter.value as any);
+          // Like Firestore, range filters never match a missing or null field.
+          if (filter.op === '>=') return actual !== undefined && actual !== null && (actual as any) >= (filter.value as any);
+          if (filter.op === '<') return actual !== undefined && actual !== null && (actual as any) < (filter.value as any);
+          if (filter.op === '<=') return actual !== undefined && actual !== null && (actual as any) <= (filter.value as any);
           throw new Error(`Unsupported operator ${filter.op}`);
         });
       }
@@ -76,7 +78,19 @@ export function queryTestDb() {
           return order.direction === 'desc' ? -result : result;
         });
       }
-      if (after && orders.length) {
+      const cursorDoc = after?.[0] as { id?: unknown; data?: unknown; ref?: { path?: string } } | undefined;
+      if (after && cursorDoc && typeof cursorDoc.data === 'function' && typeof cursorDoc.ref?.path === 'string') {
+        // startAfter(documentSnapshot): resume right after that document in the current order.
+        const index = rows.findIndex((row) => row.key === cursorDoc.ref!.path);
+        if (index !== -1) rows = rows.slice(index + 1);
+        else {
+          const cursorValue = orders.length ? (isDocId(orders[0].field) ? cursorDoc.id : (cursorDoc.data as () => any)()?.[orders[0].field as string]) : cursorDoc.id;
+          rows = rows.filter((row) => {
+            const left = orders.length ? value(row, orders[0].field) as any : row.id;
+            return orders[0]?.direction === 'desc' ? left < cursorValue : left > cursorValue;
+          });
+        }
+      } else if (after && orders.length) {
         const index = rows.findIndex((row) => {
           const left = value(row, orders[0].field) as any;
           return orders[0].direction === 'desc' ? left < (after[0] as any) : left > (after[0] as any);
@@ -92,6 +106,7 @@ export function queryTestDb() {
       orderBy: (field: unknown, direction: 'asc' | 'desc' = 'asc') => query(collection, filters, [...orders, { field, direction }], max, after),
       limit: (count: number) => query(collection, filters, orders, count, after),
       startAfter: (...values: unknown[]) => query(collection, filters, orders, max, values),
+      count: () => ({ get: async () => { const size = run().size; return { data: () => ({ count: size }) }; } }),
       get: async () => run(),
     };
   }

@@ -76,6 +76,11 @@ export default function InsightsPage() {
   const shouldReduceMotion = useReducedMotion();
 
   const [activeTab, setActiveTab] = useState<TabType>('forecast');
+  // Deep links such as /insights?tab=analysis (from the semester recap) open that tab after hydration.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get('tab');
+    if (TABS.some((tab) => tab.id === requested)) setActiveTab(requested as TabType);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);

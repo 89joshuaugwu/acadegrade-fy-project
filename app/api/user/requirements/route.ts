@@ -4,6 +4,7 @@ import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
 import { adminDb } from '@/lib/firebase/admin';
 import { checkPlatformAccess } from '@/lib/platform/settings-server';
 import { parseAnswers, RequirementError } from '@/lib/user/requirements';
+import { touchLastActive } from '@/lib/user/activity';
 import { applyRequirementAnswers, readLegal, requirementErrorResponse, requirementsBody, userNoStore } from '@/lib/user/requirements-server';
 
 export const runtime = 'nodejs';
@@ -19,6 +20,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getVerifiedApiUser(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: userNoStore });
+    void touchLastActive(user.uid); // throttled, never throws (admin "Active this week")
     const [snapshot, legal] = await Promise.all([adminDb.collection('users').doc(user.uid).get(), readLegal()]);
     return NextResponse.json(requirementsBody(snapshot.data(), legal), { headers: userNoStore });
   } catch {

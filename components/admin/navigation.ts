@@ -1,5 +1,5 @@
 import {
-  Activity, BarChart3, BookOpen, BrainCircuit, Coins, FileText, LayoutDashboard, Megaphone, ScrollText,
+  Activity, BarChart3, BookOpen, BrainCircuit, Coins, FileText, LayoutDashboard, LifeBuoy, Megaphone, ScrollText,
   Settings, Smartphone, Users, type LucideIcon,
 } from 'lucide-react';
 
@@ -19,6 +19,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: '/admin/users', label: 'Users', icon: Users },
       { href: '/admin/academic-catalog', label: 'Academic catalogue', icon: BookOpen },
+      { href: '/admin/support', label: 'Support inbox', icon: LifeBuoy },
     ],
   },
   {

@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useId, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, CheckCircle2, History } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, History, AlertTriangle } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 import { MAX_CA_SCORE, MAX_EXAM_SCORE } from '@/lib/utils/constants';
-import { computeSemesterGPA, formatCgpa, gradeFromScore, normaliseCourseCode } from '@/lib/cgpa/academicRules';
+import { computeSemesterGPA, creditLoadWarnings, formatCgpa, gradeFromScore, normaliseCourseCode } from '@/lib/cgpa/academicRules';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue, useDiscreetMode } from '@/lib/discreet';
 import { DRAFT_DEBOUNCE_MS, clearDraft, draftDiffers, loadDraft, saveDraft, type SemesterDraft } from '@/lib/drafts/semester-drafts';
 import type { CourseInput, Grade } from '@/types/course';
@@ -36,6 +36,31 @@ interface GradeTableProps {
    */
   importRequest?: { id: number; rows: CourseInput[] };
   onImportResult?: (result: { added: number; skipped: number }) => void;
+  /** The student's usual units per semester (A7). Warnings only; saving is never blocked. */
+  creditLoadRange?: { min: number; max: number } | null;
+}
+
+const TIMES = ['', 'once', 'twice'];
+
+/** Plain-language copy for each credit-load warning. Codes keep the student's own spelling. */
+function creditLoadMessages(courses: readonly CourseInput[], range: { min: number; max: number } | null | undefined): string[] {
+  const rows = courses.filter((course) => course.code.trim());
+  const display = new Map<string, string>();
+  const counts = new Map<string, number>();
+  for (const course of rows) {
+    const key = normaliseCourseCode(course.code);
+    if (!display.has(key)) display.set(key, course.code.trim());
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return creditLoadWarnings(rows, range).flatMap((warning) => {
+    if (warning.kind === 'duplicate_codes') {
+      return warning.codes.map((code) => {
+        const count = counts.get(code) ?? 2;
+        return `${display.get(code) ?? code} appears ${TIMES[count] ?? `${count} times`}.`;
+      });
+    }
+    return [`This semester has ${warning.units} units. Your usual range is ${range?.min}–${range?.max}.`];
+  });
 }
 
 const isBlankRow = (course: CourseInput) => (
@@ -71,7 +96,7 @@ function draftTimeLabel(savedAt: number) {
 const inputBase = 'min-h-11 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 const headerCell = 'text-xs font-semibold text-[var(--acade-text-muted)]';
 
-export function GradeTable({ initialCourses = [], editable = false, onSave, isSaving = false, catalog, draft, restoreDraftOnMount = false, importRequest, onImportResult }: GradeTableProps) {
+export function GradeTable({ initialCourses = [], editable = false, onSave, isSaving = false, catalog, draft, restoreDraftOnMount = false, importRequest, onImportResult, creditLoadRange }: GradeTableProps) {
   const shouldReduceMotion = useReducedMotion();
   const lastImportId = useRef(importRequest?.id);
   const { enabled: discreet } = useDiscreetMode();
@@ -237,6 +262,8 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     const result = computeSemesterGPA(graded);
     return { totalUnits: result.creditLoaded, gpa: result.gpa, pi: result.pi, gradeCount: result.gradeDistribution };
   }, [courses]);
+
+  const loadWarnings = useMemo(() => creditLoadMessages(courses, creditLoadRange), [courses, creditLoadRange]);
 
   const handleSaveClick = async () => {
     if (!onSave) return;
@@ -701,6 +728,21 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           </Button>
         )}
       </div>
+
+      {/* A7: gentle credit-load warnings. They never block saving. */}
+      {loadWarnings.length > 0 && (
+        <ul
+          aria-label="Credit-load warnings"
+          className="flex flex-col gap-1.5 rounded-xl border border-[var(--acade-warning)]/30 bg-[var(--acade-warning)]/10 px-4 py-3"
+        >
+          {loadWarnings.map((message) => (
+            <li key={message} className="flex items-start gap-2 text-[length:var(--text-sm)] leading-6 text-[var(--acade-text)]">
+              <AlertTriangle className="mt-1 size-4 shrink-0 text-[var(--acade-warning)]" aria-hidden="true" />
+              <span>{message}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
     </DiscreetScope>
   );

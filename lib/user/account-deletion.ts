@@ -12,7 +12,7 @@ import { destroyCloudinaryAvatar, type CloudinaryDeleteResult } from '@/lib/clou
  *                      analytics/{uid}, shareCodes.authorId, shared_transcripts.uid,
  *                      api_logs.uid, _api_rate_limits.uid, _reward_sessions.uid,
  *                      _reward_transactions.uid, _matric_numbers.uid,
- *                      _academic_catalog_suggestions.uid
+ *                      _academic_catalog_suggestions.uid, support_tickets.uid
  * Found by sha256(uid): _coin_wallets/{hash}, _coin_ledger.uidHash, _coin_requests.uidHash,
  *                      _reward_daily/{hash}_{day}, _ai_feedback.uidHash
  * Found by profile:    _matric_numbers/{sha256(matricNormalized)}, otps/{email}_*,
@@ -101,6 +101,7 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
   await deleteQuery('api_logs', db.collection('api_logs').where('uid', '==', uid));
   await deleteQuery('_api_rate_limits', db.collection('_api_rate_limits').where('uid', '==', uid));
   await deleteQuery('_academic_catalog_suggestions', db.collection('_academic_catalog_suggestions').where('uid', '==', uid));
+  await deleteQuery('support_tickets', db.collection('support_tickets').where('uid', '==', uid));
 
   // Matric reservation: by hashed matric (only if still ours) and by uid.
   const matric = typeof profile.matricNormalized === 'string' ? profile.matricNormalized

@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup as cleanupRender, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TranscriptPage from '@/app/(student)/transcript/page';
+import { DISCREET_STORAGE_KEY } from '@/lib/discreet/store';
 
 const mocks = vi.hoisted(() => ({
   queryCollection: vi.fn(),
@@ -25,9 +26,13 @@ const semester = (gpa: number, creditLoaded: number, id = 'semester-1') => ({
   gpa, pi: 3, creditLoaded, isComplete: true,
 });
 
-async function renderTranscript(semesters: ReturnType<typeof semester>[]) {
+async function renderTranscript(semesters: ReturnType<typeof semester>[], courses: Record<string, unknown>[] = []) {
   // Answer by path so a late call from a previous test's render cannot take these semesters.
-  mocks.queryCollection.mockImplementation(async (path: string) => (path.endsWith('/semesters') ? semesters : []));
+  mocks.queryCollection.mockImplementation(async (path: string) => {
+    if (path.endsWith('/semesters')) return semesters;
+    if (path.endsWith('/courses')) return courses;
+    return [];
+  });
   render(<TranscriptPage />);
   return screen.findByText('CUMULATIVE SUMMARY', {}, { timeout: 5000 });
 }
@@ -70,6 +75,41 @@ describe('Student transcript record', () => {
     expect(screen.getByText('Self-reported by the student. Not issued or verified by any university.')).toBeInTheDocument();
     expect(screen.queryByText(/Enugu State/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Agbani/i)).not.toBeInTheDocument();
+  });
+
+  it('weighted average with method and exclusions; hidden in discreet mode', async () => {
+    const course = (id: string, units: number, extra: Record<string, unknown>) => ({
+      id, code: id.toUpperCase(), title: id, units, caScore: null, examScore: null, totalScore: null,
+      grade: 'B', gradePoint: 4, piPoint: 4, estimated: false, ...extra,
+    });
+    const courses = [
+      course('c1', 3, { caScore: 20, examScore: 50, totalScore: 70 }),
+      course('c2', 2, { caScore: 10, examScore: 45, totalScore: 55 }),
+      course('c3', 2, { estimated: true }),
+      course('c4', 3, { isAR: true }),
+    ];
+    // (70*3 + 55*2) / 5 = 64.0 over 5 units; one grade-only row left out; the AR row is not a result.
+    await renderTranscript([semester(4.2, 18)], courses);
+    const line = screen.getByText(/Weighted average score/).closest('p') as HTMLElement;
+    expect(line).toHaveTextContent('Weighted average score 64.0%: credit-weighted over 5 units; 1 grade-only course left out.');
+    expect(line).not.toHaveTextContent(/official|WES|4\.0 scale|percentage grade/i);
+    cleanupRender();
+
+    window.localStorage.setItem(DISCREET_STORAGE_KEY, '1');
+    try {
+      await renderTranscript([semester(4.2, 18)], courses);
+      const hidden = screen.getByText(/Weighted average score/).closest('p') as HTMLElement;
+      expect(hidden).toHaveTextContent('Average score hidden');
+      const blurred = hidden.querySelector('[aria-hidden="true"]');
+      expect(blurred).toHaveTextContent('64.0%');
+    } finally {
+      window.localStorage.removeItem(DISCREET_STORAGE_KEY);
+    }
+  });
+
+  it('leaves the weighted average out when no course has a score', async () => {
+    await renderTranscript([semester(4.2, 18)], [{ id: 'g1', code: 'G1', title: 'g', units: 3, caScore: null, examScore: null, totalScore: null, grade: 'A', estimated: true }]);
+    expect(screen.queryByText(/Weighted average score/)).not.toBeInTheDocument();
   });
 
   it('says the university is not specified when the profile has none', async () => {

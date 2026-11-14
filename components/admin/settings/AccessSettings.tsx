@@ -34,6 +34,7 @@ const NEW_FEATURES = [
   { id: 'ai_whatif', label: 'What-If guidance', server: true },
   { id: 'transcript_pdf', label: 'Transcript PDF', server: true },
   { id: 'transcript_share', label: 'Transcript links', server: true },
+  { id: 'support', label: 'Report a problem (support requests)', server: true },
 ];
 
 type Confirmation = 'maintenance' | 'signups' | 'ageGate';

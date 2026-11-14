@@ -10,6 +10,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { NeedsAttention } from '@/components/admin/overview/NeedsAttention';
+import { MetricsFreshness } from '@/components/admin/overview/MetricsFreshness';
+import toast from 'react-hot-toast';
 
 interface AdminStats {
   totalUsers: number;
@@ -17,6 +19,8 @@ interface AdminStats {
   avgPI: number;
   activeThisWeek: number;
   signupChartData: { date: string; label: string; count: number }[];
+  generatedAt?: string | null;
+  stale?: boolean;
 }
 
 const SHORTCUTS = [
@@ -29,6 +33,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const getToken = useCallback(async () => {
     if (!user) throw new Error('Your admin session is unavailable.');
@@ -53,6 +58,24 @@ export default function AdminDashboardPage() {
     }
   }, [user]);
 
+  const refreshStats = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/admin/stats?refresh=1', { headers: { Authorization: `Bearer ${token}` } });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof body.error === 'string' ? body.error : 'The numbers could not be refreshed.');
+      setStats(body);
+      toast.success('Numbers refreshed.');
+    } catch (err) {
+      // Keep the numbers already on screen.
+      toast.error(err instanceof Error ? err.message : 'The numbers could not be refreshed.');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user]);
+
   useEffect(() => { void loadStats(); }, [loadStats]);
 
   const header = (
@@ -60,7 +83,9 @@ export default function AdminDashboardPage() {
       title="Overview"
       description="Users, activity and average results at a glance, and anything that needs your attention."
       helpId="admin.overview"
-    />
+    >
+      {stats ? <MetricsFreshness generatedAt={stats.generatedAt} stale={stats.stale} refreshing={refreshing} onRefresh={() => { void refreshStats(); }} /> : null}
+    </AdminPageHeader>
   );
 
   if (error) {

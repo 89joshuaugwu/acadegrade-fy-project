@@ -19,8 +19,10 @@ service cloud.firestore {
 
     // Age and consent answers are written only by server routes
     // (/api/user/age, /api/user/requirements, registration finalize).
+    // lastActiveAt: lib/user/activity.ts (admin "Active this week").
+    // fcmTopics, fcmTopicsTokensHash: lib/notifications/topics.ts (announcement topics).
     function serverOwnedUserFields() {
-      return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents'];
+      return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents', 'lastActiveAt', 'fcmTopics', 'fcmTopicsTokensHash'];
     }
 
     // True unless the admin has switched this feature off in Settings > Access
@@ -61,6 +63,14 @@ service cloud.firestore {
       allow read, write: if isOwner(userId) || isAdmin();
     }
     
+    // Announcements (Admin > Settings > Announcements). Signed-in students read
+    // published ones only (queries must filter status == 'published'); writes go
+    // through /api/admin/announcements.
+    match /announcements/{announcementId} {
+      allow get, list: if isAuthenticated() && resource.data.status == 'published';
+      allow write: if false;
+    }
+
     // 4. Configuration & Admins
     match /config/settings {
       allow read: if true; // All users need to read announcement banners, etc.
@@ -176,6 +186,26 @@ service cloud.firestore {
 
     // Record of each daily clean-up run (/api/cron/daily). Read through the admin API only.
     match /_cron_runs/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Daily admin metrics roll-up (lib/admin/metrics.ts) and cron job cursors.
+    // Aggregates only; read through /api/admin/stats.
+    match /admin_metrics/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /_cron_state/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Each admin's monthly goodwill-coin allowance (Admin > Users > grant coins).
+    match /_admin_grants/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Support requests. Students use /api/support/tickets; admins use /api/admin/support.
+    match /support_tickets/{document=**} {
       allow read, write: if false;
     }
 

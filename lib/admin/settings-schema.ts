@@ -29,6 +29,8 @@ const ALLOWED_FEATURES = new Set([
   'ai_whatif',
   'transcript_pdf',
   'transcript_share',
+  // Support requests (/api/support/tickets); stays open during maintenance.
+  'support',
 ]);
 
 const ABOUT_FIELDS = [

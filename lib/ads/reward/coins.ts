@@ -28,7 +28,17 @@ interface WalletDoc {
   created?: number; hourlyCreated?: number; hourStarted?: number;
 }
 interface CoinRequestDoc { uidHash: string; feature: UsageFeatureId; requestId: string; amount: number; status: 'held' | 'committed' | 'refunded'; holdId: string; heldAt: number; until: number }
-type LedgerEntry = { type: 'earn' | 'spend' | 'refund'; amount: number; balanceAfter: number; feature?: UsageFeatureId; sessionId?: string; requestId?: string };
+type LedgerEntry = {
+  type: 'earn' | 'spend' | 'refund' | 'grant'; amount: number; balanceAfter: number;
+  feature?: UsageFeatureId; sessionId?: string; requestId?: string;
+  /** Admin goodwill grants only: who granted it (the reason is in the admin audit log). */
+  actorEmail?: string;
+};
+
+/** Admin goodwill grants (Admin > Users): per grant and per admin per UTC month. */
+export const GRANT_MAX_AMOUNT = 10;
+export const GRANT_MONTHLY_CAP = 100;
+export const utcMonth = (now: number) => new Date(now).toISOString().slice(0, 7);
 
 /** Proof of a reserved price; only the route that reserved it may commit or refund it. */
 export interface CoinHold { uid: string; requestId: string; feature: UsageFeatureId; holdId: string; amount: number }
@@ -113,6 +123,12 @@ export class WalletState {
     this.requests.set(key, { data: { ...request, status: 'committed', committedAt: this.now }, merge: false });
   }
 
+  /** Admin goodwill coins: raise the balance without counting as earned today. */
+  grant(amount: number, actorEmail: string) {
+    this.balance += amount;
+    this.ledger.push({ type: 'grant', amount, balanceAfter: this.balance, actorEmail });
+  }
+
   get changed() { return this.ledger.length > 0 || this.requests.size > 0; }
 
   write(tx: Transaction, db: Firestore, uid: string) {
@@ -189,6 +205,40 @@ export class CoinWallet {
       const state = new WalletState(walletSnap.data() as WalletDoc | undefined, this.clock());
       if (request?.status === 'held' && request.holdId === hold.holdId && state.holds[key]?.holdId === hold.holdId) state.refund(key);
       if (state.changed) state.write(tx, this.db, hold.uid);
+    });
+  }
+
+  /**
+   * Admin goodwill grant of 1-10 whole coins, in one transaction with the admin's
+   * monthly allowance (`_admin_grants/{sha256(email)}_{YYYY-MM}`, 100 coins). Never
+   * pushes the balance over `balanceCap`. The caller checks AI eligibility (minors
+   * never get coins) and writes the admin audit record with the reason.
+   */
+  async grant(uid: string, amount: number, options: { actorEmail: string; reason: string }) {
+    if (!Number.isInteger(amount) || amount < 1 || amount > GRANT_MAX_AMOUNT) {
+      throw new RewardError(`Grant between 1 and ${GRANT_MAX_AMOUNT} whole coins`, 400);
+    }
+    const actorEmail = options.actorEmail.trim().toLowerCase();
+    return this.db.runTransaction(async tx => {
+      const now = this.clock();
+      const policy = await this.policy(tx);
+      const allowanceRef = this.db.collection('_admin_grants').doc(`${sha256(actorEmail)}_${utcMonth(now)}`);
+      const allowance = (await tx.get(allowanceRef)).data() as { total?: number; count?: number } | undefined;
+      const walletSnap = await tx.get(walletRef(this.db, uid));
+      if (!policy.enabled) throw new RewardError('Coins are switched off', 409, { code: 'COINS_DISABLED' });
+      const used = allowance?.total ?? 0;
+      if (used + amount > GRANT_MONTHLY_CAP) {
+        throw new RewardError(`You can grant ${GRANT_MONTHLY_CAP} coins a month; ${Math.max(0, GRANT_MONTHLY_CAP - used)} left`, 409, { code: 'CAP_REACHED', remaining: Math.max(0, GRANT_MONTHLY_CAP - used) });
+      }
+      const state = new WalletState(walletSnap.data() as WalletDoc | undefined, now);
+      const headroom = Math.max(0, policy.balanceCap - state.balance);
+      if (amount > headroom) {
+        throw new RewardError(`That would exceed the ${policy.balanceCap}-coin balance cap; ${headroom} more fit`, 409, { code: 'BALANCE_CAP', headroom });
+      }
+      state.grant(amount, actorEmail);
+      state.write(tx, this.db, uid);
+      tx.set(allowanceRef, { total: used + amount, count: (allowance?.count ?? 0) + 1, month: utcMonth(now), updatedAt: now });
+      return { granted: amount, balance: state.balance, monthTotal: used + amount };
     });
   }
 

@@ -9,6 +9,7 @@ const ROUTES = {
   'admin.overview': '/admin/dashboard',
   'admin.users': '/admin/users',
   'admin.academic-catalogue': '/admin/academic-catalog',
+  'admin.support': '/admin/support',
   'admin.course-list': '/admin/courses',
   'admin.analytics': '/admin/analytics',
   'admin.api-health': '/admin/api-analytics',
@@ -45,15 +46,18 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     title: 'Overview',
     summary: 'Shows the size and health of AcadeGrade at a glance: users, activity, average results and anything that needs your attention.',
     terms: [
-      { term: 'Active this week', meaning: 'An account created, or signed in, in the last 7 days.' },
-      { term: 'Average CGPA / PI', meaning: 'The average over students who have at least one completed semester.' },
+      { term: 'Active this week', meaning: 'Students who opened the website or the Android app in the last 7 days. Accounts that have not been seen since this started count as not active, not as inactive.' },
+      { term: 'Average CGPA / PI', meaning: 'The average over students with at least one semester of graded courses.' },
+      { term: 'Updated', meaning: 'When the numbers were last calculated. A daily job does it at about 03:00 UTC.' },
       { term: 'Needs attention', meaning: 'Settings that are off, unfinished or waiting for you, each linked to where you fix it.' },
     ],
     tasks: [
       { title: 'Check what needs attention', steps: ['Read the Needs attention list.', 'Open each link to fix it.'] },
+      { title: 'Get up-to-date numbers', steps: ['Choose Refresh now next to Updated.', 'Wait a moment; it reads every account.'] },
     ],
     cautions: [
-      'Numbers are recalculated from every account each time the page loads, so it can be slow with many users.',
+      'Refresh now works 3 times an hour and is recorded in the audit log.',
+      'A warning beside Updated means the daily job has not run for over 36 hours; check Needs attention.',
     ],
     related: [
       { label: 'Academic analytics', to: 'admin.analytics' },
@@ -65,21 +69,31 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
   'admin.users': entry({
     id: 'admin.users',
     title: 'Users',
-    summary: 'Find a student account and turn its sign-in off or on.',
+    summary: 'Find a student account, turn its sign-in off or on, and handle support requests about it.',
     terms: [
       { term: 'Disabled', meaning: 'The account cannot sign in on the website or the Android app. Their data is kept.' },
+      { term: 'Find exact email or matric', meaning: 'Searches every account, not only the ones loaded. It needs the full email or matric number.' },
+      { term: 'Details and support actions', meaning: 'Profile, activity, devices, AI use and coin history. Grades stay hidden until you give a reason.' },
+      { term: 'Grant coins', meaning: 'Goodwill coins: 1 to 10 at a time, 100 a month per admin, never above the balance cap and never to accounts that cannot use AI.' },
     ],
     tasks: [
-      { title: 'Disable sign-in', steps: ['Search by name, matric number or email.', 'Open the row.', 'Choose Disable sign-in.', 'Confirm.'] },
-      { title: 'Restore access', steps: ['Open the row.', 'Choose Enable sign-in.'] },
+      { title: 'Find a student', steps: ['Type in the search box to filter the loaded accounts.', 'Or type their full email or matric and choose Find exact email or matric.', 'Choose Load more for older accounts.'] },
+      { title: 'Disable sign-in', steps: ['Open the row.', 'Choose Disable sign-in.', 'Confirm.'] },
       { title: 'Correct a student\'s age', steps: ['Open the row.', 'Choose Correct age….', 'Pick Adult or Under 18.', 'Write the reason (who asked, and how).', 'Save age correction.'] },
+      { title: 'Answer a grades question', steps: ['Open the row.', 'Choose Details and support actions….', 'Choose Reveal grades… and write why.', 'Choose Reveal grades.'] },
+      { title: 'Delete an account on request', steps: ['Open Details and support actions….', 'Choose Delete account….', 'Type the student\'s email exactly.', 'Choose Delete account permanently.'] },
     ],
     cautions: [
-      'Disabling takes effect straight away on every device.',
+      'Disabling and Sign out everywhere take effect on every device; sign-out can take up to an hour.',
       'Correct an age only when the student or a guardian contacted support; under 18 blocks AI and scanning everywhere.',
-      'This page cannot delete accounts or edit results; students do that themselves.',
+      'Revealing grades, granting coins and deleting are recorded in the audit log with your reason.',
+      'Deleting removes every semester, coin and share link and cannot be undone.',
     ],
-    related: [{ label: 'Settings: Access', to: 'admin.settings.access' }],
+    related: [
+      { label: 'Support inbox', to: 'admin.support' },
+      { label: 'Settings: Access', to: 'admin.settings.access' },
+      { label: 'Audit log', to: 'admin.audit' },
+    ],
   }),
 
   'admin.academic-catalogue': entry({
@@ -102,6 +116,33 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     related: [{ label: 'Users', to: 'admin.users' }],
   }),
 
+  'admin.support': entry({
+    id: 'admin.support',
+    title: 'Support inbox',
+    summary: 'Requests students send from Settings, Help and support on the website or the Android app. Reply, then close them when they are done.',
+    terms: [
+      { term: 'Open', meaning: 'New, or reopened, and waiting for you.' },
+      { term: 'Waiting', meaning: 'You replied; waiting for the student. They can send a new request if they need more help.' },
+      { term: 'Closed', meaning: 'Done. Closed requests are deleted automatically 180 days after closing.' },
+    ],
+    tasks: [
+      { title: 'Reply to a request', steps: ['Open the Open tab.', 'Open the request.', 'Write your reply.', 'Choose Send reply. The student gets an inbox message and an email.'] },
+      { title: 'Close a request', steps: ['Open the request.', 'Choose Close request.'] },
+      { title: 'Look up the account', steps: ['Copy the email from the request.', 'In Users, use Find exact email or matric.'] },
+    ],
+    cautions: [
+      'Replies are plain text and cannot be edited or recalled once sent.',
+      'Never ask for a password or a one-time code in a reply.',
+      'A request can have at most 20 replies.',
+      'Students can be under 18; keep replies factual and do not ask for personal documents.',
+    ],
+    related: [
+      { label: 'Users', to: 'admin.users' },
+      { label: 'Settings: Access', to: 'admin.settings.access' },
+      { label: 'Audit log', to: 'admin.audit' },
+    ],
+  }),
+
   'admin.course-list': entry({
     id: 'admin.course-list',
     title: 'Legacy course list',
@@ -121,15 +162,19 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
   'admin.analytics': entry({
     id: 'admin.analytics',
     title: 'Academic analytics',
-    summary: 'Shows how students are doing overall: CGPA spread, degree classes and department averages.',
+    summary: 'Shows how students are doing overall: CGPA spread, degree classes, department averages and the sign-up funnel.',
     terms: [
       { term: 'Degree class bands', meaning: 'First 4.50+, 2:1 3.50+, 2:2 2.40+, Third 1.50+, Pass 1.00+.' },
+      { term: 'Sign-up funnel', meaning: 'Students grouped by sign-up week: how many added a semester, used AI, and came back 7 or 30 days later.' },
+      { term: 'Came back', meaning: 'Last seen at least 7 (or 30) days after signing up. Recent weeks have not had time yet.' },
     ],
     tasks: [
       { title: 'Export department figures', steps: ['Choose Export CSV (department, users, average CGPA).'] },
+      { title: 'Get up-to-date numbers', steps: ['Choose Refresh now next to Updated (3 times an hour).'] },
     ],
     cautions: [
-      'Figures are self-reported by students and only include completed semesters.',
+      'Figures are self-reported by students. Every semester with graded courses counts, complete or not.',
+      'Numbers are calculated once a day; check Updated before you quote them.',
     ],
     related: [{ label: 'Overview', to: 'admin.overview' }],
   }),
@@ -378,7 +423,7 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     summary: 'Platform-wide settings in five tabs: Access, Announcements, Public site, Email and Advanced. Each tab saves on its own.',
     terms: [
       { term: 'Access', meaning: 'Maintenance mode, sign-ups, feature switches, the AI age and consent check, and legal versions.' },
-      { term: 'Announcements', meaning: 'The website banner and the optional notification to every student.' },
+      { term: 'Announcements', meaning: 'Targeted and scheduled announcements for inboxes, the banner and push, plus the simple website banner.' },
       { term: 'Public site', meaning: 'App download links and the About page.' },
       { term: 'Email', meaning: 'The Gmail accounts that send email.' },
       { term: 'Advanced', meaning: 'The grading scale (read only) and the legacy course list.' },
@@ -423,16 +468,25 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
   'admin.settings.announcements': entry({
     id: 'admin.settings.announcements',
     title: 'Settings: Announcements',
-    summary: 'Shows a banner at the top of the student website, and optionally sends the text as a notification to every student.',
+    summary: 'Targeted announcements for every student or for chosen universities and levels, shown in inboxes on the website and Android, optionally as the banner and as one push. Below it, the simple website banner.',
+    terms: [
+      { term: 'Audience', meaning: 'Universities and levels. Empty means everyone. At most 5 universities and levels combined.' },
+      { term: 'Draft / Scheduled / Published / Archived', meaning: 'Only Published announcements are visible to students. Archived ones disappear from inboxes.' },
+      { term: 'Push', meaning: 'One notification sent to the audience\'s topics when published. It is never sent twice.' },
+      { term: 'Scheduled', meaning: 'Published by the daily run (03:00 to 03:59 UTC) on or after the start time, not at the exact minute.' },
+      { term: 'Legacy broadcast', meaning: 'The old "send to every device", which reads every account. It disappears once every device is on announcement topics.' },
+    ],
     tasks: [
-      { title: 'Banner only', steps: ['Type the text.', 'Save banner.'] },
-      { title: 'Notify everyone', steps: ['Choose Send as notification….', 'Check the preview.', 'Confirm.'] },
-      { title: 'Remove the banner', steps: ['Choose Remove banner.'] },
+      { title: 'Announce something now', steps: ['Write the title and message.', 'Choose the audience, or leave it empty for everyone.', 'Tick Show as the website banner or Also send a push if you want them.', 'Choose Publish now… and confirm.'] },
+      { title: 'Schedule an announcement', steps: ['Fill it in as above.', 'Set Start.', 'Choose Schedule.'] },
+      { title: 'Take an announcement down', steps: ['Find it under Recent announcements.', 'Choose Archive.'] },
+      { title: 'Banner only', steps: ['Type the text in Website banner.', 'Save banner.'] },
     ],
     cautions: [
-      'Each send reaches every student\'s inbox and phone (except those who turned off admin broadcasts) and cannot be recalled.',
-      'Android shows the notification but not the banner.',
-      'Students can dismiss the banner in their browser.',
+      'A push cannot be recalled. Archiving only removes the announcement from inboxes and the banner.',
+      'Never include grades or personal details.',
+      'Changes to who gets pushes can take up to a day to reach every phone.',
+      'Students who turned off admin broadcasts get no push but still see the announcement in their inbox.',
     ],
   }),
 

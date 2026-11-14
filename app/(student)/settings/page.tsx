@@ -23,7 +23,10 @@ import {
   minimumDurationForSemesters,
   parseAcademicSession,
 } from '@/lib/academic/timeline';
-import { requestNotificationPermission } from '@/lib/firebase/fcm';
+import { requestNotificationPermission, syncNotificationTopics } from '@/lib/firebase/fcm';
+import { SupportRequestsCard } from '@/components/support/SupportRequestsCard';
+import { deleteField } from 'firebase/firestore';
+import { CREDIT_LOAD_MAX, CREDIT_LOAD_MIN, parseCreditLoadInputs, readCreditLoadRange } from '@/lib/planning/creditLoadRange';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -54,7 +57,11 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState('');
   const [recordMode, setRecordMode] = useState<'fromScratch' | 'complete'>('fromScratch');
   const [gradeMode, setGradeMode] = useState<'cgpa' | 'pi'>('cgpa');
-  
+  const [unitsMin, setUnitsMin] = useState('');
+  const [unitsMax, setUnitsMax] = useState('');
+  const [unitsError, setUnitsError] = useState<string | undefined>();
+  const [savingUnits, setSavingUnits] = useState(false);
+
   // Notification Preferences
   const [notifPrefs, setNotifPrefs] = useState({
     semesterSaved: true,
@@ -75,7 +82,10 @@ export default function SettingsPage() {
       setAvatarUrl(profile.avatarUrl || '');
       setRecordMode(profile.recordMode || 'fromScratch');
       setGradeMode(profile.gradeMode || 'cgpa');
-      
+      const range = readCreditLoadRange(profile.creditLoadRange);
+      setUnitsMin(range ? String(range.min) : '');
+      setUnitsMax(range ? String(range.max) : '');
+
       if (profile.notificationPreferences) {
         setNotifPrefs({
           semesterSaved: profile.notificationPreferences.semesterSaved ?? true,
@@ -178,6 +188,8 @@ export default function SettingsPage() {
         graduationSession: graduationSession(entrySession, courseDuration),
       } as Parameters<typeof updateProfile>[0]);
       toast.success('Profile updated');
+      // Level or university may have changed: refresh announcement topics (failures are harmless).
+      void Promise.resolve(syncNotificationTopics?.()).catch(() => undefined);
     } catch (err) {
       toast.error('Failed to update profile');
     } finally {
@@ -203,6 +215,26 @@ export default function SettingsPage() {
       toast.error('Could not update record mode');
     } finally {
       setSavingRecordMode(false);
+    }
+  };
+
+  // A7: save or clear the usual units range. Warnings only, so a bad value is simply refused here.
+  const handleSaveUnitsRange = async () => {
+    if (!user || savingUnits) return;
+    const parsed = parseCreditLoadInputs(unitsMin, unitsMax);
+    if ('error' in parsed) {
+      setUnitsError(parsed.error);
+      return;
+    }
+    setUnitsError(undefined);
+    setSavingUnits(true);
+    try {
+      await updateDocument(`users/${user.uid}`, { creditLoadRange: parsed.range ?? deleteField() });
+      toast.success(parsed.range ? 'Units range saved' : 'Units range cleared');
+    } catch {
+      toast.error('Could not save your units range. Try again.');
+    } finally {
+      setSavingUnits(false);
     }
   };
 
@@ -238,6 +270,7 @@ export default function SettingsPage() {
     try {
       await updateDocument(`users/${user.uid}`, { notificationPreferences: newPrefs });
       toast.success('Notification preferences updated');
+      if (key === 'adminBroadcasts') void Promise.resolve(syncNotificationTopics?.()).catch(() => undefined);
     } catch (err) {
       toast.error('Failed to update preferences');
       // Revert on error
@@ -467,6 +500,48 @@ export default function SettingsPage() {
                   <button type="button" aria-pressed={gradeMode === 'pi'} onClick={() => handleToggleGradeMode('pi')} className={`h-12 min-w-24 px-3 rounded-lg text-xs font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${gradeMode === 'pi' ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)]' : 'text-[var(--acade-text-muted)]'}`}>PI</button>
                 </div>
               </div>
+
+              {/* A7: usual units per semester. Only used for gentle warnings on the semester page. */}
+              <div className="border-t border-[var(--acade-border-subtle)] pt-6">
+                <h4 id="units-range-label" className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Usual Units per Semester</h4>
+                <p id="units-range-hint" className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">
+                  Optional. You will see a gentle note when a semester falls outside this range. It never stops you saving.
+                </p>
+                <div role="group" aria-labelledby="units-range-label" aria-describedby="units-range-hint" className="mt-4 grid grid-cols-2 gap-4">
+                  <Input
+                    label="Fewest units"
+                    type="number"
+                    inputMode="numeric"
+                    min={CREDIT_LOAD_MIN}
+                    max={CREDIT_LOAD_MAX}
+                    step={1}
+                    placeholder="e.g. 15"
+                    value={unitsMin}
+                    onChange={(event) => { setUnitsMin(event.target.value); setUnitsError(undefined); }}
+                    aria-invalid={unitsError ? 'true' : undefined}
+                  />
+                  <Input
+                    label="Most units"
+                    type="number"
+                    inputMode="numeric"
+                    min={CREDIT_LOAD_MIN}
+                    max={CREDIT_LOAD_MAX}
+                    step={1}
+                    placeholder="e.g. 24"
+                    value={unitsMax}
+                    onChange={(event) => { setUnitsMax(event.target.value); setUnitsError(undefined); }}
+                    aria-invalid={unitsError ? 'true' : undefined}
+                  />
+                </div>
+                {unitsError && (
+                  <p role="alert" className="mt-2 text-[length:var(--text-xs)] text-[var(--acade-danger)]">{unitsError}</p>
+                )}
+                <div className="mt-4 flex justify-end">
+                  <Button variant="outline" onClick={handleSaveUnitsRange} disabled={savingUnits || !user}>
+                    <Save size={16} className="mr-2" /> {savingUnits ? 'Saving...' : 'Save Units Range'}
+                  </Button>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -510,6 +585,9 @@ export default function SettingsPage() {
           {user && (
             <PrivacyChoices uid={user.uid} profile={profile} getToken={() => user.getIdToken()} />
           )}
+
+          {/* HELP & SUPPORT: hides itself when the admin switches "support" off */}
+          <SupportRequestsCard />
 
           {/* SECURITY & DANGER SECTION */}
           <section id="section-security" className="relative bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">

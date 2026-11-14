@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useMemo, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, CheckCircle2, AlertCircle, RefreshCw, Camera } from 'lucide-react';
@@ -17,6 +17,9 @@ import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
 import { GRADE_SCALE } from '@/lib/utils/constants';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { readCreditLoadRange } from '@/lib/planning/creditLoadRange';
+import { useSemesters } from '@/hooks/useSemesters';
+import { SemesterPreview } from '@/components/cgpa/SemesterPreview';
 
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -42,6 +45,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const { profile } = useProfile();
   const router = useRouter();
   const { isFeatureDisabled } = usePlatformSettings();
+  const { semesters: allSemesters, loading: semestersLoading, error: semestersError } = useSemesters();
+  const creditLoadRange = useMemo(() => readCreditLoadRange(profile?.creditLoadRange), [profile?.creditLoadRange]);
 
   const [semester, setSemester] = useState<Semester | null>(null);
   const [initialCourses, setInitialCourses] = useState<CourseInput[]>([]);
@@ -181,7 +186,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
       }).catch(console.error);
 
       toast.success('Semester saved successfully!');
-      router.push('/results');
+      // C3: the results list opens a one-time recap for this (now complete) semester.
+      router.push(`/results?recap=${encodeURIComponent(semesterId)}`);
     } catch (err) {
       console.error(err);
       toast.error(err instanceof SemesterSaveValidationError ? err.message : 'Failed to save semester');
@@ -430,8 +436,16 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           restoreDraftOnMount={fromCalculator}
           importRequest={importRequest}
           onImportResult={handleImportResult}
+          creditLoadRange={creditLoadRange}
         />
       </motion.div>
+
+      {/* A3: what-if preview for courses awaiting a result. Device-only; never saved. */}
+      {user && !semestersLoading && !semestersError && (
+        <div className="mt-6">
+          <SemesterPreview uid={user.uid} semesterId={semesterId} courses={initialCourses} semesters={allSemesters} />
+        </div>
+      )}
 
       {/* Modals */}
       <Modal open={isImportSlipOpen} onClose={() => setIsImportSlipOpen(false)} title="Import Result Slip">

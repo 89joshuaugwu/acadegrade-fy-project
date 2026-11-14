@@ -357,5 +357,127 @@
       ],
       "expected": { "cgpa": 4, "display": "4.00", "shortLabel": "2:1" }
     }
+  ],
+  "weightedAverageScore": [
+    {
+      "name": "equals the continuous PI average x 20 when nothing is excluded",
+      "courses": [
+        { "units": 3, "caScore": 25, "examScore": 50 },
+        { "units": 2, "caScore": 20, "examScore": 30 }
+      ],
+      "expected": { "average": 65, "includedUnits": 5, "excludedEstimated": 0, "excludedNotGraded": 0 }
+    },
+    {
+      "name": "CA plus exam wins over a stored total score",
+      "courses": [ { "units": 4, "caScore": 20, "examScore": 40, "totalScore": 99 } ],
+      "expected": { "average": 60, "includedUnits": 4, "excludedEstimated": 0, "excludedNotGraded": 0 }
+    },
+    {
+      "name": "falls back to the total score when CA or exam is missing",
+      "courses": [
+        { "units": 2, "caScore": null, "examScore": null, "totalScore": 70 },
+        { "units": 2, "caScore": 30, "examScore": null, "totalScore": 50 }
+      ],
+      "expected": { "average": 60, "includedUnits": 4, "excludedEstimated": 0, "excludedNotGraded": 0 }
+    },
+    {
+      "name": "leaves out awaiting-result, pending and score-less rows",
+      "courses": [
+        { "units": 3, "caScore": 30, "examScore": 50 },
+        { "units": 6, "isAR": true, "caScore": null, "examScore": null },
+        { "units": 2, "pending": true, "caScore": 10, "examScore": 10 },
+        { "units": 2, "caScore": null, "examScore": null }
+      ],
+      "expected": { "average": 80, "includedUnits": 3, "excludedEstimated": 0, "excludedNotGraded": 3 }
+    },
+    {
+      "name": "leaves out grade-only estimated rows and counts them separately",
+      "courses": [
+        { "units": 3, "caScore": 20, "examScore": 40 },
+        { "units": 3, "caScore": null, "examScore": null, "estimated": true },
+        { "units": 2, "caScore": null, "examScore": null, "estimated": true }
+      ],
+      "expected": { "average": 60, "includedUnits": 3, "excludedEstimated": 2, "excludedNotGraded": 0 }
+    },
+    {
+      "name": "is null when no row has a score",
+      "courses": [ { "units": 3, "isAR": true }, { "units": 2, "estimated": true } ],
+      "expected": { "average": null, "includedUnits": 0, "excludedEstimated": 1, "excludedNotGraded": 1 }
+    },
+    {
+      "name": "a real zero score counts and drags the average down",
+      "courses": [
+        { "units": 3, "caScore": 30, "examScore": 70 },
+        { "units": 3, "caScore": 0, "examScore": 0 }
+      ],
+      "expected": { "average": 50, "includedUnits": 6, "excludedEstimated": 0, "excludedNotGraded": 0 }
+    },
+    {
+      "name": "rows with no usable units are left out",
+      "courses": [
+        { "units": 0, "caScore": 30, "examScore": 70 },
+        { "units": 3, "caScore": 20, "examScore": 30 }
+      ],
+      "expected": { "average": 50, "includedUnits": 3, "excludedEstimated": 0, "excludedNotGraded": 1 }
+    }
+  ],
+  "creditLoadWarnings": [
+    {
+      "name": "no range and no duplicates means no warnings",
+      "courses": [ { "code": "CSC 201", "units": 3 }, { "code": "MTH 201", "units": 3 } ],
+      "range": null,
+      "expected": []
+    },
+    {
+      "name": "a load inside the range is quiet, and the edges are inside",
+      "courses": [ { "code": "CSC 201", "units": 15 }, { "code": "MTH 201", "units": 9 } ],
+      "range": { "min": 15, "max": 24 },
+      "expected": []
+    },
+    {
+      "name": "below the minimum",
+      "courses": [ { "code": "CSC 201", "units": 3 }, { "code": "MTH 201", "units": 3 } ],
+      "range": { "min": 15, "max": 24 },
+      "expected": [ { "kind": "below_min", "units": 6, "min": 15 } ]
+    },
+    {
+      "name": "above the maximum",
+      "courses": [ { "code": "CSC 201", "units": 14 }, { "code": "MTH 201", "units": 14 } ],
+      "range": { "min": 15, "max": 24 },
+      "expected": [ { "kind": "above_max", "units": 28, "max": 24 } ]
+    },
+    {
+      "name": "awaiting-result rows still count toward the registered load",
+      "courses": [ { "code": "CSC 201", "units": 12 }, { "code": "CSC 299", "units": 6, "isAR": true } ],
+      "range": { "min": 15, "max": 24 },
+      "expected": []
+    },
+    {
+      "name": "duplicates match ignoring case and spaces and are listed once",
+      "courses": [
+        { "code": "csc 201", "units": 3 }, { "code": "CSC201", "units": 3 }, { "code": "CSC 201", "units": 3 },
+        { "code": "MTH 201", "units": 3 }, { "code": "mth201", "units": 3 }, { "code": "PHY 101", "units": 3 }
+      ],
+      "range": null,
+      "expected": [ { "kind": "duplicate_codes", "codes": ["CSC201", "MTH201"] } ]
+    },
+    {
+      "name": "duplicates are reported before range problems",
+      "courses": [ { "code": "CSC 201", "units": 3 }, { "code": "CSC201", "units": 3 } ],
+      "range": { "min": 15, "max": 24 },
+      "expected": [ { "kind": "duplicate_codes", "codes": ["CSC201"] }, { "kind": "below_min", "units": 6, "min": 15 } ]
+    },
+    {
+      "name": "blank codes are not duplicates, and an empty semester does not warn",
+      "courses": [ { "code": "", "units": 3 }, { "code": " ", "units": 3 } ],
+      "range": null,
+      "expected": []
+    },
+    {
+      "name": "an empty semester has no range warning",
+      "courses": [],
+      "range": { "min": 15, "max": 24 },
+      "expected": []
+    }
   ]
 }

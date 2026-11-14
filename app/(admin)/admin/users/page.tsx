@@ -12,6 +12,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { AgeCorrectionDialog, type AgeStatus } from '@/components/admin/users/AgeCorrectionDialog';
+import { UserDetailDrawer } from '@/components/admin/users/UserDetailDrawer';
 import { cn } from '@/lib/utils/cn';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
 import toast from 'react-hot-toast';
@@ -43,6 +44,12 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDisable, setConfirmDisable] = useState<UserRecord | null>(null);
   const [correctAge, setCorrectAge] = useState<UserRecord | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [searching, setSearching] = useState(false);
+  /** Results of an exact server search; null while browsing the loaded list. */
+  const [exactResults, setExactResults] = useState<UserRecord[] | null>(null);
+  const [detailUid, setDetailUid] = useState<string | null>(null);
 
   const submitAgeCorrection = async ({ uid, ageStatus, reason }: { uid: string; ageStatus: AgeStatus; reason: string }) => {
     if (!user) throw new Error('Your admin session is unavailable.');
@@ -50,7 +57,7 @@ export default function AdminUsersPage() {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      // `reason` is sent for the record; the current API accepts and ignores it.
+      // `reason` is stored in the audit record summary.
       body: JSON.stringify({ action: 'set-age', uid, ageStatus, reason }),
     });
     if (!res.ok) {
@@ -65,14 +72,17 @@ export default function AdminUsersPage() {
     if (!user) return;
     setLoading(true);
     setError(null);
+    setExactResults(null);
     try {
       const token = await user.getIdToken();
+      // Newest 50 first; "Load more" continues from nextCursor.
       const res = await fetch('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('User list request failed.');
       const data = await res.json();
       setUsers(Array.isArray(data.users) ? data.users : []);
+      setNextCursor(typeof data.nextCursor === 'string' ? data.nextCursor : null);
     } catch (err) {
       console.error(err);
       setError('The user service did not respond. No accounts were changed.');
@@ -80,6 +90,42 @@ export default function AdminUsersPage() {
       setLoading(false);
     }
   }, [user]);
+
+  const loadMore = async () => {
+    if (!user || !nextCursor) return;
+    setLoadingMore(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/admin/users?cursor=${encodeURIComponent(nextCursor)}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('more');
+      const data = await res.json();
+      const more: UserRecord[] = Array.isArray(data.users) ? data.users : [];
+      setUsers((prev) => [...prev, ...more.filter((row) => !prev.some((existing) => existing.uid === row.uid))]);
+      setNextCursor(typeof data.nextCursor === 'string' ? data.nextCursor : null);
+    } catch {
+      toast.error('More accounts could not be loaded. Try again.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  /** Exact email or matric lookup across every account (not only the loaded pages). */
+  const searchExact = async () => {
+    const q = searchQuery.trim();
+    if (!user || !q) return;
+    setSearching(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`/api/admin/users?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error('search');
+      const data = await res.json();
+      setExactResults(Array.isArray(data.users) ? data.users : []);
+    } catch {
+      toast.error('The search did not complete. Try again.');
+    } finally {
+      setSearching(false);
+    }
+  };
 
   useEffect(() => { void loadUsers(); }, [loadUsers]);
 
@@ -93,12 +139,13 @@ export default function AdminUsersPage() {
   };
 
   const filteredUsers = useMemo(() => {
+    if (exactResults) return exactResults;
     if (!searchQuery.trim()) return users;
     const q = searchQuery.toLowerCase();
     return users.filter(
       u => u.fullName.toLowerCase().includes(q) || u.matric.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
     );
-  }, [users, searchQuery]);
+  }, [users, searchQuery, exactResults]);
 
   const handleToggleDisable = async (targetUid: string, currentlyDisabled: boolean) => {
     setActionLoading(targetUid);
@@ -111,6 +158,7 @@ export default function AdminUsersPage() {
       });
       if (res.ok) {
         setUsers(prev => prev.map(u => u.uid === targetUid ? { ...u, disabled: !currentlyDisabled } : u));
+        setExactResults(prev => prev ? prev.map(u => u.uid === targetUid ? { ...u, disabled: !currentlyDisabled } : u) : prev);
         toast.success(currentlyDisabled ? 'Sign-in enabled.' : 'Sign-in disabled.');
       } else {
         toast.error('Failed to update user status.');
@@ -145,22 +193,37 @@ export default function AdminUsersPage() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Users"
-        description={`Find a student account and turn its sign-in off or on. ${users.length} registered user${users.length !== 1 ? 's' : ''}.`}
+        description={`Find a student account and turn its sign-in off or on. Showing ${users.length} account${users.length !== 1 ? 's' : ''}, newest first.`}
         helpId="admin.users"
       />
 
-      {/* Search */}
-      <div className="relative">
-        <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
-        <input
-          type="search"
-          aria-label="Search users"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search by name, matric, or email..."
-          className="w-full h-12 pl-12 pr-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] placeholder:text-[var(--acade-text-faint)] focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
-        />
-      </div>
+      {/* Search: typing filters the loaded accounts; Enter looks up an exact email or matric across all accounts. */}
+      <form
+        role="search"
+        className="flex flex-col gap-2 sm:flex-row"
+        onSubmit={(event) => { event.preventDefault(); void searchExact(); }}
+      >
+        <div className="relative flex-1">
+          <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
+          <input
+            type="search"
+            aria-label="Search users"
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setExactResults(null); }}
+            placeholder="Search by name, matric, or email..."
+            className="w-full h-12 pl-12 pr-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] placeholder:text-[var(--acade-text-faint)] focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
+          />
+        </div>
+        <Button type="submit" variant="outline" size="md" loading={searching} loadingLabel="Searching all accounts" disabled={!searchQuery.trim()}>
+          Find exact email or matric
+        </Button>
+      </form>
+      {exactResults ? (
+        <p role="status" className="text-sm text-[var(--acade-text-muted)]">
+          {exactResults.length === 0 ? 'No account has exactly that email or matric number.' : `Exact match across all accounts.`}{' '}
+          <button type="button" className="underline underline-offset-2 hover:text-[var(--acade-text)]" onClick={() => { setExactResults(null); setSearchQuery(''); }}>Back to the list</button>
+        </p>
+      ) : null}
 
       {/* Users Table */}
       <Card variant="default" padding="none" className="overflow-hidden">
@@ -266,6 +329,9 @@ export default function AdminUsersPage() {
                         <Button variant="ghost" size="sm" onClick={() => setCorrectAge(u)}>
                           Correct age…
                         </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setDetailUid(u.uid)}>
+                          Details and support actions…
+                        </Button>
                       </div>
                     </div>
                   </motion.div>
@@ -275,6 +341,25 @@ export default function AdminUsersPage() {
           ))
         )}
       </Card>
+
+      {!exactResults && nextCursor ? (
+        <div className="flex justify-center">
+          <Button variant="outline" size="md" loading={loadingMore} loadingLabel="Loading more accounts" onClick={() => { void loadMore(); }}>
+            Load more
+          </Button>
+        </div>
+      ) : null}
+
+      <UserDetailDrawer
+        uid={detailUid}
+        getToken={async () => { if (!user) throw new Error('Your admin session is unavailable.'); return user.getIdToken(); }}
+        onClose={() => setDetailUid(null)}
+        onDeleted={(uid) => {
+          setUsers(prev => prev.filter(u => u.uid !== uid));
+          setExactResults(prev => prev ? prev.filter(u => u.uid !== uid) : prev);
+          setDetailUid(null);
+        }}
+      />
 
       <AgeCorrectionDialog student={correctAge} onClose={() => setCorrectAge(null)} onSubmit={submitAgeCorrection} />
 

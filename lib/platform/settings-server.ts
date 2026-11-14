@@ -21,6 +21,7 @@ export const PLATFORM_FEATURES = [
   'ai_whatif',
   'transcript_pdf',
   'transcript_share',
+  'support',
 ] as const;
 export type PlatformFeature = typeof PLATFORM_FEATURES[number];
 

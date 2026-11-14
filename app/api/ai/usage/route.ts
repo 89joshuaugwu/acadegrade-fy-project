@@ -3,14 +3,17 @@ import { getVerifiedApiUser } from '@/lib/api/auth';
 import { coins, rewards } from '@/lib/ads/reward';
 import { getUsageSummary } from '@/lib/usage/server';
 import { getAiEligibility } from '@/lib/user/age';
+import { touchLastActive } from '@/lib/user/activity';
 
 const headers = { 'Cache-Control': 'private, no-store' };
 
-// Read-only: never creates sessions, sweeps holds or increments counters.
+// Read-only for usage: never creates sessions, sweeps holds or increments counters.
+// The only write is the throttled, fire-and-forget `lastActiveAt` touch (admin metrics).
 export async function GET(request: NextRequest) {
   try {
     const user = await getVerifiedApiUser(request);
     if (!user?.uid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
+    void touchLastActive(user.uid);
     const [summary, writtenRewards, wallet, eligibility] = await Promise.all([
       getUsageSummary(user.uid), rewards.dailySummary(user.uid), coins.summary(user.uid), getAiEligibility(user.uid),
     ]);

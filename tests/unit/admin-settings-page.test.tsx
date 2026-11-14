@@ -224,7 +224,7 @@ describe('settings: announcements', () => {
     const spy = mockFetch(settingsRoute({ announcementBanner: 'Exams start Monday' }));
     const user = await renderOn('announcements');
     expect(screen.getByRole('textbox', { name: 'Banner text' })).toHaveValue('Exams start Monday');
-    await user.click(screen.getByRole('button', { name: 'Send as notification…' }));
+    await user.click(screen.getByRole('button', { name: 'Send to every device (legacy; reads every account)…' }));
     const dialog = screen.getByRole('dialog', { name: /send to every student/i });
     expect(dialog).toHaveTextContent("Send 'Exams start Monday' to every student's inbox and phone?");
     expect(posts(spy, '/api/notifications/send')).toHaveLength(0);
@@ -233,8 +233,18 @@ describe('settings: announcements', () => {
     expect(posts(spy, '/api/notifications/send')[0]).toMatchObject({ uid: 'all', message: 'Exams start Monday', type: 'broadcast' });
     expect(posts(spy, '/api/admin/settings')).toHaveLength(0);
     expect(await screen.findByText(/Last sent/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Send as notification…' }));
+    await user.click(screen.getByRole('button', { name: 'Send to every device (legacy; reads every account)…' }));
     expect(screen.getByRole('dialog', { name: /send to every student/i })).toHaveTextContent(/already sent this exact text/i);
+  });
+
+  it('hides the legacy broadcast once every device is on announcement topics', async () => {
+    mockFetch(settingsRoute({ announcementBanner: 'Exams start Monday' }, (url, init) => (
+      url === '/api/admin/announcements' && !init?.method ? { body: { announcements: [], topicsBackfill: { completedOnce: true } } } : undefined
+    )));
+    await renderOn('announcements');
+    expect(await screen.findByText('No announcements yet.')).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('button', { name: /legacy/ })).not.toBeInTheDocument());
+    expect(screen.getByRole('heading', { name: 'Targeted announcements' })).toBeInTheDocument();
   });
 
   it('removes the banner', async () => {

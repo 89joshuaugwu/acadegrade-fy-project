@@ -15,7 +15,8 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ErrorState } from '@/components/shared';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DEGREE_CLASS_BANDS, formatCgpa } from '@/lib/cgpa/academicRules';
-import { bucketKeyFor } from '@/lib/admin/metrics';
+import { bucketKeyFor, type FunnelRow } from '@/lib/admin/metrics';
+import { MetricsFreshness } from '@/components/admin/overview/MetricsFreshness';
 import toast from 'react-hot-toast';
 
 interface AnalyticsData {
@@ -25,7 +26,12 @@ interface AnalyticsData {
   cgpaBuckets: Record<string, number>;
   degreeClassCounts: Record<string, number>;
   departmentBreakdown: { department: string; count: number; avgCGPA: number }[];
+  funnel?: FunnelRow[];
+  generatedAt?: string | null;
+  stale?: boolean;
 }
+
+const pct = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : '–');
 
 const DEGREE_COLORS: Record<string, string> = {
   'First Class': '#22C55E',
@@ -68,6 +74,24 @@ export default function AdminAnalyticsPage() {
       // Empty charts would read as "no students"; say the data is missing instead.
       setError('The stats service did not respond, so these charts would be incomplete.');
     } finally { setLoading(false); }
+  }, [user]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshData = useCallback(async () => {
+    if (!user) return;
+    setRefreshing(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch('/api/admin/stats?refresh=1', { headers: { Authorization: `Bearer ${token}` } });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(typeof body.error === 'string' ? body.error : 'The numbers could not be refreshed.');
+      setData(body);
+      toast.success('Numbers refreshed.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'The numbers could not be refreshed.');
+    } finally {
+      setRefreshing(false);
+    }
   }, [user]);
 
   useEffect(() => { void loadData(); }, [loadData]);
@@ -124,10 +148,12 @@ export default function AdminAnalyticsPage() {
     <div className="space-y-8">
       <AdminPageHeader
         title="Academic analytics"
-        description="How students are doing overall: CGPA spread, degree classes and department averages. Completed semesters only."
+        description="How students are doing overall: CGPA spread, degree classes and department averages. Every semester with graded courses counts."
         helpId="admin.analytics"
         actions={<Button variant="outline" size="sm" onClick={handleExportCSV}><Download size={16} aria-hidden="true" />Export CSV</Button>}
-      />
+      >
+        {data ? <MetricsFreshness generatedAt={data.generatedAt} stale={data.stale} refreshing={refreshing} onRefresh={() => { void refreshData(); }} /> : null}
+      </AdminPageHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* CGPA Distribution Curve with Reference Lines */}
@@ -156,7 +182,7 @@ export default function AdminAnalyticsPage() {
         <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card variant="glass" padding="lg">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">Platform Metric Averages</h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-6">Calculated from completed semesters with recorded credits.</p>
+            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-6">Calculated from every semester with recorded credits.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {[
                 { label: 'Average CGPA', value: data?.avgCGPA ?? 0, color: 'var(--acade-primary)' },
@@ -233,6 +259,45 @@ export default function AdminAnalyticsPage() {
           </Card>
         </motion.div>
       </div>
+
+      <Card variant="glass" padding="lg">
+        <section aria-labelledby="funnel-title">
+          <h2 id="funnel-title" className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">Sign-up funnel</h2>
+          <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">
+            Students grouped by the week they signed up (UTC). &quot;Came back&quot; means they were last seen at least 7 or 30 days after signing up.
+          </p>
+          {(data?.funnel ?? []).length === 0 ? (
+            <p className="py-6 text-center text-[var(--acade-text-muted)]">No funnel yet. It appears after the next daily run, or press Refresh now.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-left text-sm">
+                <thead className="text-[var(--acade-text-muted)]">
+                  <tr className="border-b border-[var(--acade-border)]">
+                    <th scope="col" className="py-2 pr-4 font-medium">Week</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Signed up</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Added a semester</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Used AI</th>
+                    <th scope="col" className="py-2 pr-4 text-right font-medium">Came back 7d</th>
+                    <th scope="col" className="py-2 text-right font-medium">Came back 30d</th>
+                  </tr>
+                </thead>
+                <tbody className="font-[family-name:var(--font-geist-mono)] tabular-nums text-[var(--acade-text)]">
+                  {[...(data?.funnel ?? [])].reverse().map((row) => (
+                    <tr key={row.week} className="border-b border-[var(--acade-border-subtle)] last:border-0">
+                      <th scope="row" className="py-2 pr-4 font-normal">{row.week}</th>
+                      <td className="py-2 pr-4 text-right">{row.registered}</td>
+                      <td className="py-2 pr-4 text-right">{row.firstSemester} <span className="text-[var(--acade-text-faint)]">{pct(row.firstSemester, row.registered)}</span></td>
+                      <td className="py-2 pr-4 text-right">{row.usedAi} <span className="text-[var(--acade-text-faint)]">{pct(row.usedAi, row.registered)}</span></td>
+                      <td className="py-2 pr-4 text-right">{row.returned7d} <span className="text-[var(--acade-text-faint)]">{pct(row.returned7d, row.registered)}</span></td>
+                      <td className="py-2 text-right">{row.returned30d} <span className="text-[var(--acade-text-faint)]">{pct(row.returned30d, row.registered)}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </Card>
     </div>
   );
 }

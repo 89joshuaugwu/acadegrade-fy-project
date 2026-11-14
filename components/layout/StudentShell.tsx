@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { getDocument } from '@/lib/firebase/firestore';
 import { onForegroundMessage, removeNotificationToken } from '@/lib/firebase/fcm';
+import { loadActiveAnnouncements } from '@/lib/announcements/client';
 import toast from 'react-hot-toast';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
@@ -49,22 +50,31 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const [announcement, setAnnouncement] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchBanner = async () => {
-      try {
-        const doc = await getDocument<any>('config/settings');
-        if (doc?.announcementBanner) {
-          // Check if dismissed in localStorage
-          const dismissed = localStorage.getItem('dismissed_banner');
-          if (dismissed !== doc.announcementBanner) {
-            setAnnouncement(doc.announcementBanner);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load banner', err);
+      // The newest active announcement marked "show as banner" wins; the
+      // config/settings banner stays as the fallback. Both are fail-open.
+      let text: string | null = null;
+      if (user?.uid) {
+        const banner = (await loadActiveAnnouncements(user.uid)).find((entry) => entry.showAsBanner);
+        if (banner) text = `${banner.title}: ${banner.body}`;
       }
+      if (!text) {
+        try {
+          const doc = await getDocument<any>('config/settings');
+          if (typeof doc?.announcementBanner === 'string' && doc.announcementBanner) text = doc.announcementBanner;
+        } catch (err) {
+          console.error('Failed to load banner', err);
+        }
+      }
+      // Check if dismissed in localStorage
+      let dismissed: string | null = null;
+      try { dismissed = localStorage.getItem('dismissed_banner'); } catch { /* storage blocked */ }
+      if (!cancelled && text && dismissed !== text) setAnnouncement(text);
     };
-    fetchBanner();
-  }, []);
+    void fetchBanner();
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
   // Listen for foreground messages. Permission is requested from Settings after an explicit action.
   useEffect(() => {

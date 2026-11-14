@@ -11,7 +11,7 @@ const usersBlock = () => {
 
 describe('users/{uid} rules: server-owned age and consent fields', () => {
   it('lists every server-owned field once in a shared helper', () => {
-    expect(rules()).toContain("function serverOwnedUserFields() {\n      return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents'];\n    }");
+    expect(rules()).toContain("function serverOwnedUserFields() {\n      return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents', 'lastActiveAt', 'fcmTopics', 'fcmTopicsTokensHash'];\n    }");
   });
 
   it('forbids creating a profile that already carries them', () => {
@@ -61,6 +61,16 @@ describe('new server-only collections and config/legal', () => {
 
   it('denies every client read and write to the daily job run records', () => {
     expect(rules()).toContain('match /_cron_runs/{document=**} {\n      allow read, write: if false;\n    }');
+  });
+
+  it('denies every client read and write to admin metrics and cron job cursors', () => {
+    for (const collection of ['admin_metrics', '_cron_state', '_admin_grants', 'support_tickets']) {
+      expect(rules()).toContain(`match /${collection}/{document=**} {\n      allow read, write: if false;\n    }`);
+    }
+  });
+
+  it('lets signed-in students read published announcements only, and never write them', () => {
+    expect(rules()).toContain("match /announcements/{announcementId} {\n      allow get, list: if isAuthenticated() && resource.data.status == 'published';\n      allow write: if false;\n    }");
   });
 
   it('denies every client read and write to legal document drafts and versions', () => {

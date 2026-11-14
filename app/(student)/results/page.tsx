@@ -24,6 +24,7 @@ import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { CalculatorHandoffOffer } from './CalculatorHandoffOffer';
+import { SemesterRecapLauncher } from '@/components/dashboard/SemesterRecapDialog';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 
 function SemesterAccordionItem({ semester }: { semester: SemesterWithId }) {
@@ -226,6 +227,8 @@ export default function ResultsListPage() {
       </div>
 
       <CalculatorHandoffOffer semesters={semesters} />
+      {/* C3: one-time recap after completing a semester (/results?recap=<id>). */}
+      <SemesterRecapLauncher semesters={semesters} />
 
       {semesters.length === 0 ? (
         <motion.div 

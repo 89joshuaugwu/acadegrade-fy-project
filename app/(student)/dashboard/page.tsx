@@ -10,6 +10,11 @@ import { useAnalytics } from '@/hooks/useAnalytics';
 import { useAuth } from '@/hooks/useAuth';
 import { useCGPA } from '@/hooks/useCGPA';
 import { useProfile } from '@/hooks/useProfile';
+import { useSemesters } from '@/hooks/useSemesters';
+import { useMilestones } from '@/hooks/useMilestones';
+import { getAcademicPlan } from '@/lib/academic/timeline';
+import type { CarryOverCourse } from '@/lib/cgpa/academicRules';
+import { MilestoneCard } from '@/components/dashboard/MilestoneCard';
 import { getDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
 import { getGreeting } from '@/lib/utils/format';
 import {
@@ -33,8 +38,9 @@ import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { profile } = useProfile();
+  const { profile, loading: profileLoading } = useProfile();
   const { cgpa, pi, degreeClass, semesterHistory, totalCredits, loading: cgpaLoading, error: cgpaError } = useCGPA();
+  const { semesters: fullSemesters, loading: semestersLoading, error: semestersError } = useSemesters();
   const { insightsStale } = useAnalytics();
 
   const [isPIMode, setIsPIMode] = useState(false);
@@ -47,6 +53,8 @@ export default function DashboardPage() {
   const [recentCourses, setRecentCourses] = useState<DashboardCourseRecord[]>([]);
   const [courseDataError, setCourseDataError] = useState(false);
   const [courseRefreshKey, setCourseRefreshKey] = useState(0);
+  // Courses keyed by semester, tagged with the history they were loaded for (C1 waits for a match).
+  const [coursesBySemester, setCoursesBySemester] = useState<{ history: unknown; courses: Record<string, unknown[]> } | null>(null);
 
   useEffect(() => {
     if (profile?.gradeMode) setIsPIMode(profile.gradeMode === 'pi');
@@ -96,8 +104,10 @@ export default function DashboardPage() {
       setUnknownCount(0);
       setRecentCourses([]);
       setCourseDataError(false);
+      setCoursesBySemester(user?.uid && !cgpaLoading ? { history: semesterHistory, courses: {} } : null);
       return;
     }
+    setCoursesBySemester(null);
 
     let isMounted = true;
     const fetchCoursesData = async () => {
@@ -120,6 +130,10 @@ export default function DashboardPage() {
         setAtRiskCount(summary.atRiskCount);
         setUnknownCount(summary.unknownCount);
         setRecentCourses(summary.recent);
+        setCoursesBySemester({
+          history: semesterHistory,
+          courses: Object.fromEntries(semesterCourses.map((item) => [item.semesterId, item.courses])),
+        });
       } catch (error) {
         console.error('Failed to load dashboard course summary', error);
         if (isMounted) setCourseDataError(true);
@@ -130,7 +144,36 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [courseRefreshKey, semesterHistory, user?.uid]);
+  }, [cgpaLoading, courseRefreshKey, semesterHistory, user?.uid]);
+
+  // C1: milestones run only when the profile, semesters and every course list have loaded.
+  const milestoneSemesters = useMemo(() => {
+    if (!coursesBySemester || coursesBySemester.history !== semesterHistory || semestersLoading || semestersError) return null;
+    // Both semester listeners must agree: every semester needs its loaded course list.
+    if (fullSemesters.length !== semesterHistory.length) return null;
+    if (fullSemesters.some((semester) => !(semester.id in coursesBySemester.courses))) return null;
+    return fullSemesters.map((semester) => ({
+      id: semester.id,
+      gpa: semester.gpa,
+      pi: semester.pi,
+      creditLoaded: semester.creditLoaded,
+      isComplete: semester.isComplete,
+      level: semester.level,
+      semester: semester.semester,
+      courses: (coursesBySemester.courses[semester.id] ?? []) as CarryOverCourse[],
+    }));
+  }, [coursesBySemester, fullSemesters, semesterHistory, semestersError, semestersLoading]);
+  const isGraduated = useMemo(
+    () => (profile ? getAcademicPlan(profile, fullSemesters).isGraduated : false),
+    [fullSemesters, profile],
+  );
+  const milestones = useMilestones({
+    uid: user?.uid,
+    stored: profile?.milestones,
+    semesters: milestoneSemesters,
+    isGraduated,
+    ready: Boolean(profile) && !profileLoading && !cgpaLoading && !cgpaError && !courseDataError,
+  });
 
   const latestSemester = semesterHistory[semesterHistory.length - 1];
   const hasAcademicData = totalCredits > 0 && semesterHistory.length > 0;
@@ -206,6 +249,8 @@ export default function DashboardPage() {
         />
         <NextActionCard action={nextAction} />
       </section>
+
+      <MilestoneCard ids={milestones.celebrate} onDismiss={milestones.dismiss} />
 
       {courseDataError ? (
         <Card role="alert" className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">

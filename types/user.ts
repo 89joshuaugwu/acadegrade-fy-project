@@ -43,6 +43,10 @@ export interface User {
   tourCompleted?: boolean;
   resultsTourCompleted?: boolean;
   tourVersions?: Record<string, number>;
+  /** A7: the student's usual units per semester (integers 1-60, min <= max). Warnings only. */
+  creditLoadRange?: { min: number; max: number };
+  /** C1: milestone id -> when it was first reached. Missing on older accounts (seeded silently). */
+  milestones?: Record<string, unknown>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

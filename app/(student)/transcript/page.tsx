@@ -14,7 +14,7 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { ShareQr } from '@/components/transcript/ShareQr';
 import { EmptyState, ErrorState } from '@/components/shared';
 import { cn } from '@/lib/utils/cn';
-import { computeCumulativeCGPA, formatCgpa, resolveDegreeClass } from '@/lib/cgpa/academicRules';
+import { computeCumulativeCGPA, formatCgpa, resolveDegreeClass, weightedAverageScore } from '@/lib/cgpa/academicRules';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
@@ -271,6 +271,11 @@ export default function TranscriptPage() {
   // Classified from the same rounded CGPA that is displayed
   const degreeClass = resolveDegreeClass(cumulative.cgpa).transcriptLabel;
   const universityName = profile?.university?.trim() || 'University not specified';
+  // Credit-weighted mean of the course scores. Not a CGPA, not official, no 4.0 conversion.
+  const weighted = weightedAverageScore(semesters.flatMap((sem) => sem.courses));
+  const weightedNote = weighted.excludedEstimated > 0
+    ? `; ${weighted.excludedEstimated} grade-only ${weighted.excludedEstimated === 1 ? 'course' : 'courses'} left out.`
+    : '.';
 
   const hide = (label: string, value: React.ReactNode) => <DiscreetValue label={label}>{value}</DiscreetValue>;
 
@@ -548,6 +553,11 @@ export default function TranscriptPage() {
               </div>
             </div>
           </div>
+          {weighted.average !== null && (
+            <p className="mt-4 border-t border-gray-300 pt-3 text-xs leading-5 text-gray-700">
+              Weighted average score {hide('Average score', `${weighted.average.toFixed(1)}%`)}: credit-weighted over {weighted.includedUnits} {weighted.includedUnits === 1 ? 'unit' : 'units'}{weightedNote}
+            </p>
+          )}
         </div>
 
         {/* Footer with logo */}

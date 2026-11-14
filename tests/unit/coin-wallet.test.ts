@@ -252,3 +252,42 @@ describe('read-only coin summaries', () => {
     expect(coinDocs()).toEqual(before);
   });
 });
+
+describe('admin goodwill grants', () => {
+  const grantDoc = (email: string, month: string) => store.docs.get(`_admin_grants/${sha(email)}_${month}`);
+
+  it('grant ledger entry', async () => {
+    coins();
+    const result = await wallet.grant('alice', 5, { actorEmail: 'Boss@Test.example', reason: 'Lost coins during outage' });
+    expect(result).toEqual({ granted: 5, balance: 5, monthTotal: 5 });
+    expect(walletDoc()).toMatchObject({ balance: 5, earnedToday: 0 });
+    expect(ledger()).toEqual([{ uidHash: sha('alice'), type: 'grant', amount: 5, balanceAfter: 5, actorEmail: 'boss@test.example', at: now }]);
+    expect(grantDoc('boss@test.example', '2026-10')).toMatchObject({ total: 5, count: 1 });
+  });
+
+  it('enforces the per-grant, monthly and balance caps', async () => {
+    coins({ balanceCap: 30 });
+    await expect(wallet.grant('alice', 0, { actorEmail: 'boss@test.example', reason: 'x' })).rejects.toMatchObject({ status: 400 });
+    await expect(wallet.grant('alice', 11, { actorEmail: 'boss@test.example', reason: 'x' })).rejects.toMatchObject({ status: 400 });
+    await expect(wallet.grant('alice', 2.5, { actorEmail: 'boss@test.example', reason: 'x' })).rejects.toMatchObject({ status: 400 });
+
+    await wallet.grant('alice', 10, { actorEmail: 'boss@test.example', reason: 'x' });
+    await wallet.grant('alice', 10, { actorEmail: 'boss@test.example', reason: 'x' });
+    await wallet.grant('alice', 10, { actorEmail: 'boss@test.example', reason: 'x' });
+    // The balance is at the cap: nothing more fits.
+    await expect(wallet.grant('alice', 1, { actorEmail: 'boss@test.example', reason: 'x' })).rejects.toMatchObject({ status: 409, details: { code: 'BALANCE_CAP' } });
+
+    // Monthly cap of 100 per admin (here 30 used; 70 left), across students.
+    store.docs.set(`_admin_grants/${sha('boss@test.example')}_2026-10`, { total: 95, count: 12 });
+    await expect(wallet.grant('bob', 6, { actorEmail: 'boss@test.example', reason: 'x' })).rejects.toMatchObject({ status: 409, details: { code: 'CAP_REACHED' } });
+    expect(await wallet.grant('bob', 5, { actorEmail: 'boss@test.example', reason: 'x' })).toMatchObject({ granted: 5, monthTotal: 100 });
+    // A new month starts a new allowance.
+    now = Date.UTC(2026, 10, 1, 1);
+    expect(await wallet.grant('bob', 5, { actorEmail: 'boss@test.example', reason: 'x' })).toMatchObject({ monthTotal: 5 });
+  });
+
+  it('refuses while coins are switched off', async () => {
+    await expect(wallet.grant('alice', 3, { actorEmail: 'boss@test.example', reason: 'x' })).rejects.toMatchObject({ status: 409, details: { code: 'COINS_DISABLED' } });
+    expect(ledger()).toEqual([]);
+  });
+});

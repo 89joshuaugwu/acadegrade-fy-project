@@ -8,6 +8,7 @@ import {
   registrationOtpEmail,
   resetPasswordOtpEmail,
   semesterSavedEmail,
+  supportReplyEmail,
   welcomeEmail,
 } from './templates';
 
@@ -18,6 +19,7 @@ export {
   registrationOtpEmail,
   resetPasswordOtpEmail,
   semesterSavedEmail,
+  supportReplyEmail,
   welcomeEmail,
 };
 
