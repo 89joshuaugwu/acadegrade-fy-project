@@ -75,6 +75,6 @@ export interface PlatformAnalytics {
   avgPI: number;
   activeThisWeek: number;
   cgpaDistribution: { bucket: string; count: number }[];
-  departmentBreakdown: { dept: string; count: number; avgCGPA: number }[];
+  departmentBreakdown: { department: string; count: number; avgCGPA: number }[];
   dailySignups: { date: string; count: number }[];
 }

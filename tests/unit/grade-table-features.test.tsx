@@ -137,6 +137,17 @@ describe('loadCourseCatalog', () => {
     expect(cached.revision).toBe(5);
   });
 
+  it('catalogue rows prefer department and fall back to the older dept field', async () => {
+    const legacy = [
+      { code: 'GST 111', title: 'Use of English', units: 2, dept: 'Computer Science', level: 100, semester: 1 },
+      { code: 'CSC 111', title: 'Intro', units: 3, department: 'Computer Science', dept: 'Other', level: 100, semester: 1 },
+      { code: 'PHY 111', title: 'Physics', units: 3, dept: 'Physics', level: 100, semester: 1 },
+    ] as CatalogCourseDoc[];
+    const rows = await loadCourseCatalog({ department: 'Computer Science', level: 100, semester: 1 }, vi.fn().mockResolvedValue(legacy));
+    // The student's own department comes first, including a row that only has the older `dept` field.
+    expect(rows.map((course) => course.code)).toEqual(['CSC 111', 'GST 111', 'PHY 111']);
+  });
+
   it('returns an empty list when the catalogue cannot be read', async () => {
     const query = vi.fn().mockRejectedValue(new Error('permission-denied'));
     await expect(loadCourseCatalog({ department: 'X', level: 100, semester: 2 }, query)).resolves.toEqual([]);

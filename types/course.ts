@@ -57,7 +57,8 @@ export interface CatalogCourse {
   code: string;
   title: string;
   units: number;
-  dept: string;
+  /** Older catalogue documents may carry `dept`; readers fall back to it. */
+  department: string;
   level: number;
   semester: 1 | 2;
   createdAt: Timestamp;

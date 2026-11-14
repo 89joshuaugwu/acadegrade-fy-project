@@ -169,7 +169,6 @@ export default function SettingsPage() {
         fullName,
         name: fullName, // Legacy compatibility
         department,
-        dept: department, // Legacy compatibility
         programme,
         currentLevel: level,
         level: level, // Legacy compatibility
