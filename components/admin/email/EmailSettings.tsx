@@ -6,14 +6,34 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { StatusChip } from '@/components/admin/StatusChip';
 
 type Kind = 'general' | 'otp';
-type Account = { kind: Kind; configured: boolean; email: string | null };
+/** The last "Verify Gmail login" result, when the server reports it. */
+type EmailStatus = { ok: boolean; verifiedAt: string | null; checkedAt: string | null; source: string | null; error?: string };
+type Account = { kind: Kind; configured: boolean; email: string | null; status?: EmailStatus | null };
 const kinds: Kind[] = ['general', 'otp'];
 const emptyAccounts: Record<Kind, Account> = {
   general: { kind: 'general', configured: false, email: null },
   otp: { kind: 'otp', configured: false, email: null },
 };
+
+const SOURCE_TEXT: Record<string, string> = {
+  saved: 'Sending with the account saved here.',
+  'fallback-general': 'No OTP account is saved, so the General account is used.',
+  env: 'Sending with the server settings (environment variables), not an account saved here.',
+};
+
+function AccountStatus({ account }: Readonly<{ account: Account }>) {
+  const status = account.status;
+  if (!account.configured) return <StatusChip state="off" detail="no account saved here" />;
+  if (status?.ok === false) return <StatusChip state="problem" detail={status.error ?? 'the last check failed'} />;
+  if (status?.ok) {
+    const when = status.verifiedAt ? new Date(status.verifiedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'recently';
+    return <StatusChip state="verified" detail={when} />;
+  }
+  return <StatusChip state="configured" />;
+}
 
 export function EmailSettings() {
   const { user } = useAuth();
@@ -60,7 +80,7 @@ export function EmailSettings() {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await user.getIdToken()}` },
       body: JSON.stringify(body),
     });
-    const data = await response.json() as { error?: string; account?: Account };
+    const data = await response.json() as { error?: string; account?: Account; source?: string };
     if (!response.ok) throw new Error(data.error || 'Email operation failed.');
     return data;
   }
@@ -74,12 +94,21 @@ export function EmailSettings() {
         ? { operation, kind, email: emails[kind], appPassword: passwords[kind] }
         : { operation, kind });
       if (operation === 'save' && data.account) {
-        setAccounts((current) => ({ ...current, [kind]: data.account! }));
+        // A new login has not been checked yet: the server cleared its old result.
+        setAccounts((current) => ({ ...current, [kind]: { ...data.account!, status: null } }));
         setPasswords((current) => ({ ...current, [kind]: '' }));
+      }
+      if (operation === 'verify') {
+        const now = new Date().toISOString();
+        setAccounts((current) => ({ ...current, [kind]: { ...current[kind], status: { ok: true, verifiedAt: now, checkedAt: now, source: data.source ?? null } } }));
       }
       setNotice(`${kind === 'otp' ? 'OTP' : 'General'} email ${operation === 'save' ? 'saved. Verify the Gmail login before relying on it.' : 'login verified.'}`);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Email operation failed.');
+      const message = cause instanceof Error ? cause.message : 'Email operation failed.';
+      if (operation === 'verify') {
+        setAccounts((current) => ({ ...current, [kind]: { ...current[kind], status: { ok: false, verifiedAt: null, checkedAt: new Date().toISOString(), source: current[kind].status?.source ?? null, error: message } } }));
+      }
+      setError(message);
     } finally {
       setBusy(null);
     }
@@ -103,6 +132,10 @@ export function EmailSettings() {
                 <div>
                   <h3 className="font-semibold text-[var(--acade-text)]">{label} email</h3>
                   <p className="text-sm text-[var(--acade-text-muted)]">{accounts[kind].configured ? `Saved sender: ${accounts[kind].email}` : 'No managed account saved yet.'}</p>
+                  <div className="mt-2" aria-label={`${label} email status`}><AccountStatus account={accounts[kind]} /></div>
+                  {accounts[kind].status?.source && SOURCE_TEXT[accounts[kind].status!.source!] && (
+                    <p className="mt-1 text-xs text-[var(--acade-text-muted)]">{SOURCE_TEXT[accounts[kind].status!.source!]}</p>
+                  )}
                 </div>
                 <Input label={`${label} sender email`} type="email" autoComplete="off" disabled={loading} value={emails[kind]} onChange={(event) => setEmails((current) => ({ ...current, [kind]: event.target.value }))} />
                 <Input label={`${label} Gmail App Password`} type="password" autoComplete="new-password" disabled={loading} value={passwords[kind]} onChange={(event) => setPasswords((current) => ({ ...current, [kind]: event.target.value }))} hint="Use a Gmail App Password, not your regular Google password." />

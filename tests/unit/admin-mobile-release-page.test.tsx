@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { adminNavigation, getRouteMeta } from '@/lib/ui/route-meta';
+import { ADMIN_NAV_GROUPS } from '@/components/admin/navigation';
+import { getRouteMeta } from '@/lib/ui/route-meta';
 
 vi.mock('@/hooks/useAuth', () => {
   const user = { getIdToken: async () => 'test-token' };
@@ -85,7 +86,7 @@ describe('mobile release admin', () => {
     render(<MobileReleasePage />);
     expect(await screen.findByLabelText('Saved release status', {}, { timeout: 5000 })).toHaveTextContent(/^Off\b/);
     expect(fetchMock).toHaveBeenCalledWith('/api/admin/mobile-release', expect.objectContaining({ headers: { Authorization: 'Bearer test-token' } }));
-    expect(adminNavigation).toContainEqual(expect.objectContaining({ href: '/admin/mobile-release' }));
+    expect(ADMIN_NAV_GROUPS.flatMap((group) => group.items)).toContainEqual(expect.objectContaining({ href: '/admin/mobile-release' }));
     expect(getRouteMeta('/admin/mobile-release').title).toMatch(/Android/i);
   });
 

@@ -1,3 +1,5 @@
+import { adminRouteTitle } from '@/components/admin/navigation';
+
 export type NavigationIcon =
   | 'dashboard'
   | 'results'
@@ -27,20 +29,6 @@ export const studentNavigation: NavigationItem[] = [
   { href: '/results', label: 'Results', icon: 'results' },
   { href: '/insights', label: 'Insights', icon: 'insights' },
   { href: '/transcript', label: 'Transcript', icon: 'transcript' },
-];
-
-export const adminNavigation: NavigationItem[] = [
-  { href: '/admin/dashboard', label: 'Overview', icon: 'dashboard' },
-  { href: '/admin/users', label: 'Users', icon: 'users' },
-  { href: '/admin/courses', label: 'Course catalogue', icon: 'courses' },
-  { href: '/admin/academic-catalog', label: 'Academic catalog', icon: 'courses' },
-  { href: '/admin/analytics', label: 'Analytics', icon: 'analytics' },
-  { href: '/admin/api-analytics', label: 'API monitor', icon: 'activity' },
-  { href: '/admin/ai', label: 'AI Operations', icon: 'ai' },
-  { href: '/admin/usage', label: 'Feature credits', icon: 'activity' },
-  { href: '/admin/ads', label: 'Advertising', icon: 'ads' },
-  { href: '/admin/mobile-release', label: 'Android release', icon: 'settings' },
-  { href: '/admin/settings', label: 'Settings', icon: 'settings' },
 ];
 
 function cleanPath(pathname: string) {
@@ -73,22 +61,13 @@ export function getRouteMeta(pathname: string): RouteMeta {
     '/transcript': { title: 'Academic transcript' },
     '/notifications': { title: 'Notifications' },
     '/settings': { title: 'Settings' },
-    '/admin/dashboard': { title: 'Admin overview' },
-    '/admin/users': { title: 'Users' },
-    '/admin/courses': { title: 'Course catalogue' },
-    '/admin/academic-catalog': { title: 'Academic catalog' },
-    '/admin/analytics': { title: 'Analytics' },
-    '/admin/api-analytics': { title: 'API monitor' },
-    '/admin/ai': { title: 'AI Operations' },
-    '/admin/usage': { title: 'Feature credits' },
-    '/admin/ads': { title: 'Advertising' },
-    '/admin/mobile-release': { title: 'Android release' },
-    '/admin/settings': { title: 'Admin settings' },
   };
   if (known[current]) return known[current];
 
-  const owner = [...studentNavigation, ...adminNavigation]
-    .find((item) => isRouteActive(current, item.href));
+  // Admin titles have one source of truth: components/admin/navigation.ts.
+  if (current === '/admin' || current.startsWith('/admin/')) return { title: adminRouteTitle(current) };
+
+  const owner = studentNavigation.find((item) => isRouteActive(current, item.href));
   return owner
     ? { title: owner.label, parentHref: owner.href }
     : { title: 'AcadeGrade' };

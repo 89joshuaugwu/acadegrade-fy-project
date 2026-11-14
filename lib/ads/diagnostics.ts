@@ -267,10 +267,13 @@ export function diagnoseAndroidHousePlacements({ houseConfig, adsConfig, legacyB
     if (!houseConfig.placements[placement]) return { ...base, outcome: 'none' as const, summary: 'Off on this Android placement.', reasons: ['Placement switch is off.'], notes };
     if (!adsConfig) return { ...base, outcome: 'unknown' as const, summary: 'Website house campaigns could not be loaded, so Android campaigns are unknown.', reasons: ['Retry My promotions to check this placement.'], notes };
 
-    // Mirrors buildHouseDelivery: active house campaigns that target web Dashboard overview.
+    // Mirrors buildHouseDelivery and the app: Dashboard uses campaigns ticked for Dashboard overview;
+    // Results uses those ticked for Results overview and, when none are, the Dashboard ones (as the app does).
     const activeHouse = adsConfig.campaigns.filter((campaign) => campaign.active && campaign.deliveryMode === 'house');
-    const shared = activeHouse.filter((campaign) => campaign.placementIds.includes('dashboard.overview'));
-    const unshared = activeHouse.length - shared.length;
+    const forDashboard = activeHouse.filter((campaign) => campaign.placementIds.includes('dashboard.overview'));
+    const forResults = activeHouse.filter((campaign) => campaign.placementIds.includes('results.overview'));
+    const shared = placement === 'results' && forResults.length ? forResults : forDashboard;
+    const unshared = activeHouse.filter((campaign) => !forDashboard.includes(campaign) && !forResults.includes(campaign)).length;
     const running = shared.filter((campaign) => scheduleState(campaign, now) === 'running');
     const house = candidates(running, 'campaign');
     const nextChangeAt = nextBoundary(shared, now);
@@ -279,7 +282,7 @@ export function diagnoseAndroidHousePlacements({ houseConfig, adsConfig, legacyB
     else if (!running.length) reasons.push(...campaignReasons(shared, now));
     else if (!house.length) reasons.push('Every eligible campaign has a delivery weight of 0.');
     const unsharedReasons = unshared
-      ? [`${plural(unshared, 'active campaign is', 'active campaigns are')} not shared because Android uses only campaigns that target web Dashboard overview.`]
+      ? [`${plural(unshared, 'active campaign is', 'active campaigns are')} not shared because Android uses only campaigns ticked for Dashboard overview or Results overview.`]
       : [];
     const warnings = houseConfig.includeLegacy ? legacyWarnings(legacy) : [];
     const capped = 'Caps apply per Android installation and count only visible promotions on the focused screen.';

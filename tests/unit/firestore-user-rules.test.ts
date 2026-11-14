@@ -35,8 +35,37 @@ describe('new server-only collections and config/legal', () => {
     }
   });
 
+  it('share-code create checks the switch; clients may get a code but not list them', () => {
+    const text = rules();
+    const start = text.indexOf('match /shareCodes/{codeId} {');
+    const block = text.slice(start, text.indexOf('// 7. Shared Transcripts', start));
+
+    // Creating a code is refused while the admin has switched share_code off (admins always may).
+    expect(block).toMatch(/allow create: if isAdmin\(\) \|\| \(isAuthenticated\(\) && platformFeatureEnabled\('share_code'\)\);/);
+    expect(text).toContain("function platformFeatureEnabled(feature) {");
+    expect(text).toContain("get(/databases/$(database)/documents/config/settings).data.get('disabledFeatures', [])");
+    // The platform settings document may not exist yet: that must not lock everyone out.
+    expect(text).toContain('!exists(/databases/$(database)/documents/config/settings)');
+
+    // A single code can be fetched by a signed-in user; nobody can list every code.
+    expect(block).toContain('allow get: if isAuthenticated();');
+    expect(block).not.toMatch(/allow (read|list)\b/);
+
+    // Importing still works: only the use counter may be updated by a non-admin.
+    expect(block).toContain("hasOnly(['useCount'])");
+  });
+
+  it('denies every client read and write to the email verification status', () => {
+    expect(rules()).toContain('match /_email_status/{document=**} {\n      allow read, write: if false;\n    }');
+  });
+
   it('denies every client read and write to the daily job run records', () => {
     expect(rules()).toContain('match /_cron_runs/{document=**} {\n      allow read, write: if false;\n    }');
+  });
+
+  it('denies every client read and write to legal document drafts and versions', () => {
+    // Includes the versions subcollection: the public pages read it through the server only.
+    expect(rules()).toContain('match /legal_documents/{document=**} {\n      allow read, write: if false;\n    }');
   });
 
   it('makes legal versions public-read and server-written', () => {

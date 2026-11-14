@@ -25,11 +25,14 @@ describe('route metadata', () => {
   it('identifies the advertising control plane as its own admin destination', () => {
     expect(isRouteActive('/admin/ads', '/admin/ads')).toBe(true);
     expect(getRouteMeta('/admin/ads')).toEqual({ title: 'Advertising' });
+    expect(getRouteMeta('/admin/ads').title).not.toBe('Admin');
   });
 
-  it('makes AI Operations a discoverable admin destination', () => {
+  it('admin titles come from ADMIN_NAV_GROUPS', () => {
     expect(isRouteActive('/admin/ai', '/admin/ai')).toBe(true);
-    expect(getRouteMeta('/admin/ai')).toEqual({ title: 'AI Operations' });
+    expect(getRouteMeta('/admin/ai')).toEqual({ title: 'AI providers' });
+    expect(getRouteMeta('/admin/settings').title).toBe('Settings');
+    expect(getRouteMeta('/admin/legal').title).toBe('Legal documents');
   });
 });
 

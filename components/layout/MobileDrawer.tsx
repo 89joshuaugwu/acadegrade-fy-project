@@ -2,52 +2,25 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import {
-  Activity,
-  BarChart3,
-  BookOpen,
-  BrainCircuit,
-  LayoutDashboard,
-  LogOut,
-  Megaphone,
-  Settings,
-  Shield,
-  Users,
-} from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils/cn';
 import { Sheet, ThemeControl } from '@/components/ui';
-import { adminNavigation, isRouteActive, type NavigationIcon } from '@/lib/ui/route-meta';
+import { isRouteActive } from '@/lib/ui/route-meta';
 import type { UserWithId } from '@/types/user';
 
 interface MobileDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  isAdmin?: boolean;
   profile?: UserWithId | null;
   unreadCount?: number;
 }
 
-const ADMIN_ICONS: Record<NavigationIcon, React.ElementType> = {
-  dashboard: LayoutDashboard,
-  users: Users,
-  courses: BookOpen,
-  analytics: BarChart3,
-  activity: Activity,
-  ads: Megaphone,
-  ai: BrainCircuit,
-  settings: Settings,
-  results: BookOpen,
-  insights: BrainCircuit,
-  transcript: BookOpen,
-};
-
 export function MobileDrawer({
   isOpen,
   onClose,
-  isAdmin = false,
   profile,
 }: MobileDrawerProps) {
   const { user } = useAuth();
@@ -66,12 +39,12 @@ export function MobileDrawer({
     <Sheet
       open={isOpen}
       onClose={onClose}
-      title={isAdmin ? 'Admin navigation' : 'Account and preferences'}
-      description={isAdmin ? 'Manage AcadeGrade operations.' : 'Manage your profile, display preferences and session.'}
+      title="Account and preferences"
+      description="Manage your profile, display preferences and session."
       className="h-auto max-h-[calc(100dvh-0.75rem)] lg:hidden"
     >
       <div className="pb-[max(0px,env(safe-area-inset-bottom))]">
-        {!isAdmin && user && (
+        {user && (
           <div className="mb-4 flex items-center gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
             <div className="size-12 shrink-0 overflow-hidden rounded-full border-2 border-[var(--acade-primary)]/35 bg-[var(--acade-overlay)]">
               <img
@@ -91,31 +64,19 @@ export function MobileDrawer({
           </div>
         )}
 
-        {isAdmin ? (
-          <nav aria-label="Admin mobile navigation" className="grid gap-1">
-            {adminNavigation.map((item) => {
-              const Icon = ADMIN_ICONS[item.icon];
-              return <DrawerLink key={item.href} href={item.href} icon={Icon} label={item.label} onClick={onClose} />;
-            })}
-          </nav>
-        ) : (
-          <nav aria-label="Account settings" className="grid gap-1">
-            <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
-          </nav>
-        )}
+        <nav aria-label="Account settings" className="grid gap-1">
+          <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
+        </nav>
 
         <div className="mt-4 border-t border-[var(--acade-border-subtle)] pt-4">
           <ThemeControl className="w-full" />
-          {isAdmin && user?.email && (
-            <p className="mt-3 truncate text-center text-xs text-[var(--acade-text-muted)]">{user.email}</p>
-          )}
           <button
             type="button"
             id="tour-mobile-nav-logout"
             onClick={handleSignOut}
             className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
           >
-            {isAdmin ? <Shield className="size-5" aria-hidden="true" /> : <LogOut className="size-5" aria-hidden="true" />}
+            <LogOut className="size-5" aria-hidden="true" />
             Sign out
           </button>
         </div>

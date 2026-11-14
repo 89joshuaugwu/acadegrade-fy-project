@@ -198,10 +198,19 @@ These stay open: `GET /api/ai/usage`, `GET /api/user/requirements`,
 release, ads config, the academic catalogue and the SSV callback.
 
 `share_code`, `add_semester` and `edit_profile` gate direct client Firestore
-writes. The server can't see those writes. Rules could enforce
-`share_code`/`add_semester` with `get(/config/settings)`, at one billed read per
-write, but installed APKs would show a generic "permission denied". So they are
-not enforced on the server, and the web UI keeps honouring them.
+writes, which the API routes never see.
+
+- **`share_code` is enforced by the Firestore rules, for creating a code only.**
+  `shareCodes` `create` is refused while `share_code` is in
+  `config/settings.disabledFeatures` (admins always may). It costs one billed read
+  per new code, which is rare. Importing a code (a `get`) still works, and clients can
+  no longer list every code (`allow get`, not `allow read`). If the settings document
+  does not exist, the rule treats every feature as on.
+- **`add_semester` and `edit_profile` are not enforced on the server.** A rule would
+  add a read to every academic write, and installed APKs would show a generic
+  "permission denied" on core record keeping. The web and Android UIs honour them.
+
+Deploy the rules (`firebase deploy --only firestore:rules`) for this to take effect.
 
 ## 4. Account deletion
 

@@ -132,7 +132,7 @@ describe('settings: access', () => {
   it('saves only the changed switches, in one save, and can discard', async () => {
     const spy = mockFetch(settingsRoute({ disabledFeatures: ['share_code'] }));
     const user = await renderOn();
-    expect(screen.getByRole('switch', { name: 'Share and import course codes' })).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByRole('switch', { name: 'Share and import course codes (new codes blocked everywhere)' })).toHaveAttribute('aria-checked', 'false');
     await user.click(screen.getByRole('switch', { name: 'Add semester' }));
     expect(screen.getByRole('switch', { name: 'Add semester' })).toHaveAttribute('aria-checked', 'false');
     await user.click(screen.getByRole('button', { name: 'Discard changes' }));
@@ -143,6 +143,8 @@ describe('settings: access', () => {
     const items = screen.getAllByRole('listitem');
     expect(items.find((item) => item.textContent?.startsWith('Add semester'))).toHaveTextContent('Web only');
     expect(items.find((item) => item.textContent?.startsWith('Written Analysis'))).toHaveTextContent('Web + API');
+    // Creating share codes is blocked by the database rules too, so it is not "web only" any more.
+    expect(items.find((item) => item.textContent?.startsWith('Share and import course codes'))).toHaveTextContent('Web + API');
   });
 
   it('confirms before pausing sign-ups', async () => {
@@ -189,28 +191,21 @@ describe('settings: access', () => {
     expect(within(legal).queryByRole('button', { name: /publish/i })).not.toBeInTheDocument();
   });
 
-  it('publishes a new Terms version only after confirming that everyone must agree again', async () => {
-    const spy = mockFetch(settingsRoute({}, (url, init) => {
+  it('shows the current versions and links to the text editor instead of bumping a version without text', async () => {
+    const spy = mockFetch(settingsRoute({}, (url) => {
       if (url !== '/api/admin/legal') return undefined;
-      if (!init?.method) return { body: { termsVersion: '2026-11-13', privacyVersion: '2026-11-13' } };
-      return { body: JSON.parse(String(init.body)) };
+      return { body: { termsVersion: '2026-11-13', privacyVersion: '2026-12-01' } };
     }));
-    const user = await renderOn();
+    await renderOn();
     const legal = await screen.findByRole('region', { name: 'Legal versions' });
     expect(await within(legal).findByText('Terms of Service')).toBeInTheDocument();
-    expect(within(legal).getAllByText('2026-11-13')).toHaveLength(2);
-    await user.click(within(legal).getByRole('button', { name: 'Publish new Terms version' }));
-    const dialog = screen.getByRole('dialog', { name: /publish a new terms version/i });
-    expect(dialog).toHaveTextContent('Every student will be asked to agree again the next time they open AcadeGrade.');
+    expect(within(legal).getByText('2026-11-13')).toBeInTheDocument();
+    expect(within(legal).getByText('2026-12-01')).toBeInTheDocument();
+    expect(within(legal).getByRole('link', { name: 'Edit Terms text and publish' })).toHaveAttribute('href', '/admin/legal?doc=terms');
+    expect(within(legal).getByRole('link', { name: 'Edit Privacy text and publish' })).toHaveAttribute('href', '/admin/legal?doc=privacy');
+    // A version can no longer be published from here: nothing is written.
+    expect(within(legal).queryByRole('button', { name: /publish/i })).not.toBeInTheDocument();
     expect(puts(spy, '/api/admin/legal')).toHaveLength(0);
-    await user.click(within(dialog).getByRole('button', { name: 'Publish new version' }));
-    await waitFor(() => expect(puts(spy, '/api/admin/legal')).toHaveLength(1));
-    const body = puts(spy, '/api/admin/legal')[0];
-    expect(Object.keys(body).sort()).toEqual(['privacyVersion', 'termsVersion']);
-    expect(body.privacyVersion).toBe('2026-11-13');
-    expect(body.termsVersion).toMatch(/^\d{4}-\d{2}-\d{2}(\.\d+)?$/);
-    expect(body.termsVersion).not.toBe('2026-11-13');
-    expect(await within(legal).findByText(body.termsVersion)).toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,5 @@
 import {
-  Activity, BarChart3, BookOpen, BrainCircuit, Coins, LayoutDashboard, Megaphone, ScrollText,
+  Activity, BarChart3, BookOpen, BrainCircuit, Coins, FileText, LayoutDashboard, Megaphone, ScrollText,
   Settings, Smartphone, Users, type LucideIcon,
 } from 'lucide-react';
 
@@ -41,6 +41,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     items: [
       { href: '/admin/mobile-release', label: 'Android release', icon: Smartphone },
       { href: '/admin/settings', label: 'Settings', icon: Settings },
+      { href: '/admin/legal', label: 'Legal documents', icon: FileText },
       { href: '/admin/audit', label: 'Audit log', icon: ScrollText },
     ],
   },

@@ -321,7 +321,6 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       <MobileDrawer
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        isAdmin={false}
         profile={profile}
         unreadCount={unreadCount}
       />

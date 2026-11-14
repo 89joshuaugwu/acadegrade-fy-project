@@ -31,6 +31,7 @@ import {
   sendOtpEmail,
   welcomeEmail,
 } from '@/lib/email/mailer';
+import { htmlToPlainText } from '@/lib/email/templates';
 
 const originalEnvironment = { ...process.env };
 
@@ -81,13 +82,94 @@ describe('transactional email templates', () => {
 
     for (const html of templates) {
       expect(html).toContain('<!doctype html>');
+      expect(html).toContain('<html lang="en"');
+      expect(html).toContain('<meta name="color-scheme" content="light dark">');
       expect(html).toContain('data-email-preheader');
       expect(html).toContain('role="presentation"');
       expect(html).toContain('alt="AcadeGrade"');
       expect(html).toContain('Acade<span');
       expect(html).toContain('@media only screen and (max-width: 620px)');
-      expect(html).not.toMatch(/\u00e2|\u00f0\u0178|\ufffd/u);
+      expect(html).toContain('You received this because');
+      expect(html).not.toMatch(/\u00e2|\u00c2|\u00f0\u0178|\ufffd/u);
+      // No emoji anywhere in the markup.
+      expect(html).not.toMatch(/\p{Extended_Pictographic}/u);
     }
+  });
+
+  it('links Privacy, Terms and Support in every footer from the configured origin', () => {
+    process.env.NEXT_PUBLIC_SITE_URL = 'https://app.acadegrade.com/';
+
+    for (const html of [welcomeEmail('Ada'), registrationOtpEmail('123456'), adminNewUserEmail('Ada', 'CSC/1')]) {
+      expect(html).toContain('href="https://app.acadegrade.com/privacy"');
+      expect(html).toContain('href="https://app.acadegrade.com/terms"');
+      expect(html).toContain('href="https://app.acadegrade.com/support"');
+    }
+  });
+
+  it('shows the unofficial-records line only on academic emails', () => {
+    const notice = 'AcadeGrade records are unofficial and self-reported.';
+
+    expect(welcomeEmail('Ada')).toContain(notice);
+    expect(semesterSavedEmail('Ada', 3.2, 'First Semester')).toContain(notice);
+    expect(degreeClassEmail('Ada', 'First Class')).toContain(notice);
+    expect(registrationOtpEmail('123456')).not.toContain(notice);
+    expect(adminNewUserEmail('Ada', 'CSC/1')).not.toContain(notice);
+  });
+
+  it('never prints an email address or mailto link that was not passed in', () => {
+    process.env.NEXT_PUBLIC_SUPPORT_EMAIL = 'help@acadegrade.test';
+    process.env.GMAIL_USER = 'sender@acadegrade.test';
+    const addressPattern = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i;
+
+    const templates = [
+      welcomeEmail('Ada'),
+      semesterSavedEmail('Ada', 4.12, 'First Semester'),
+      degreeClassEmail('Ada', 'First Class'),
+      adminNewUserEmail('Ada', 'CSC/1'),
+      registrationOtpEmail('482916'),
+      resetPasswordOtpEmail('482916'),
+    ];
+
+    for (const html of templates) {
+      expect(html).not.toMatch(addressPattern);
+      expect(html).not.toContain('mailto:');
+    }
+  });
+
+  it('escapes the preheader and every name-bearing template', () => {
+    const hostile = '<script>alert("x")</script>';
+
+    for (const html of [
+      welcomeEmail(hostile),
+      semesterSavedEmail(hostile, 3, hostile),
+      degreeClassEmail(hostile, hostile),
+      adminNewUserEmail(hostile, hostile),
+    ]) {
+      expect(html).not.toContain('<script>');
+      expect(html).toContain('&lt;script&gt;');
+    }
+
+    const preheader = /<div data-email-preheader[^>]*>([^<]*)/.exec(welcomeEmail('Ada & <b>Co</b>'))?.[1];
+    expect(preheader).toContain('Welcome Ada &amp; &lt;b&gt;Co&lt;/b&gt;. Your AcadeGrade account is ready.');
+  });
+
+  it('puts the GPA and semester in the semester email preheader, with a fallback for a blank semester', () => {
+    expect(semesterSavedEmail('Ada', 4.12, 'First Semester')).toContain('First Semester is saved. Semester GPA: 4.12.');
+
+    const blank = semesterSavedEmail('Ada', 4.12, '   ');
+    expect(blank).toContain('Your latest semester is saved. Semester GPA: 4.12.');
+    expect(blank).toContain('Latest semester');
+    expect(blank).toContain('href="https://acadegrade.vercel.app/insights"');
+  });
+
+  it('keeps button destinations in the plain-text alternative', () => {
+    const text = htmlToPlainText(semesterSavedEmail('Ada', 4.12, 'First Semester'));
+
+    expect(text).toContain('Review your insights (https://acadegrade.vercel.app/insights)');
+    expect(text).toContain('Support (https://acadegrade.vercel.app/support)');
+    expect(text).toContain('AcadeGrade');
+    expect(text).not.toContain('Acade Grade');
+    expect(text).not.toMatch(/<[a-z!/]/i);
   });
 
   it('uses the configured site origin and removes a trailing slash', () => {
@@ -110,10 +192,31 @@ describe('transactional email templates', () => {
     const html = registrationOtpEmail('120934');
 
     expect(html.match(/data-otp-code/g)).toHaveLength(1);
-    expect(html).toContain('>120934</');
+    const codeElement = /<p data-otp-code[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1] ?? '';
+    // Shown as two groups of three, but the gap is padding: the text is contiguous.
+    expect(codeElement.replace(/<[^>]+>/g, '')).toBe('120934');
+    expect(codeElement).toContain('<span>120</span><span style="padding-left:14px;">934</span>');
     expect(html).toContain('href="https://acadegrade.com/copy-code#code=120934"');
     expect(html).not.toContain('/copy-code?code=');
     expect(html).not.toContain('Legacy fallback');
+    expect(html).toContain('This code expires in 5 minutes.');
+    expect(html).toContain('Never share this code.');
+  });
+
+  it('keeps the reset OTP code in the plain text exactly once and never leaks the copy link', () => {
+    const text = htmlToPlainText(resetPasswordOtpEmail('482916'));
+
+    expect(text.match(/482916/g)).toHaveLength(1);
+    expect(text).not.toContain('copy-code');
+    expect(text).toContain('Reset your password');
+    expect(text).toContain('This code expires in 5 minutes.');
+  });
+
+  it('escapes a hostile OTP value', () => {
+    const html = registrationOtpEmail('<b>1</b>');
+
+    expect(html).not.toContain('<b>1</b>');
+    expect(html).toContain('&lt;b&gt;1&lt;/b&gt;');
   });
 
   it('escapes user-controlled values before adding them to HTML', () => {

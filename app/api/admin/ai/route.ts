@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { AdminAuthorizationError, requireAdmin } from '@/lib/api/admin-auth';
 import { writeAdminAudit } from '@/lib/api/admin-audit';
+import { checkRateLimit, rateLimitResponse } from '@/lib/api/rate-limit';
+import { AiSecretTestError, testAiSecret } from '@/lib/ai/manager';
 import { encryptSecret, type SupportedProviderId } from '@/lib/ai/secrets';
 import { createManagedRuntimeConfig, SUPPORTED_PROVIDERS, toMaskedAdminProjection, type StoredAiSecret } from '@/lib/ai/runtime-config';
 
 const noStore = { 'Cache-Control': 'private, no-store' };
+const MODEL_ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:/+-]{0,127}$/;
 class RevisionConflictError extends Error {}
 class InvalidAiConfigurationError extends Error {}
 
@@ -130,6 +133,33 @@ export async function POST(request: Request) {
       });
       await writeAudit(actor, body.operation, '_ai_runtime/config', { revision: body.expectedRevision }, { revision: result.revision, routes: result.routes });
       return NextResponse.json({ config: result }, { headers: noStore });
+    }
+    if (body.operation === 'test-secret') {
+      if (typeof body.secretId !== 'string' || !body.secretId.trim() || body.secretId.length > 80) {
+        throw new InvalidAiConfigurationError('Send the credential ID to test.');
+      }
+      if (body.modelId !== undefined && (typeof body.modelId !== 'string' || !MODEL_ID_PATTERN.test(body.modelId) || body.modelId.includes('://'))) {
+        throw new InvalidAiConfigurationError('The model name is invalid.');
+      }
+      const limit = await checkRateLimit(actor.uid, 'admin_ai_test', [{ name: 'hour', limit: 20, windowMs: 3_600_000 }]);
+      if (!limit.allowed) {
+        return rateLimitResponse(limit, `Key tests are limited to 20 per hour. Try again in ${limit.retryAfterSeconds} seconds.`);
+      }
+
+      const secretId = body.secretId.trim();
+      let result;
+      try {
+        result = await testAiSecret(secretId, { modelId: body.modelId });
+      } catch (error) {
+        if (error instanceof AiSecretTestError) return NextResponse.json({ error: error.message }, { status: error.status, headers: noStore });
+        throw error;
+      }
+      const testedAt = new Date();
+      await adminDb.collection('_ai_secrets').doc(secretId).set({
+        lastTest: { ok: result.ok, at: testedAt, latencyMs: result.latencyMs, ...(result.error ? { error: result.error.slice(0, 200) } : {}) },
+      }, { merge: true });
+      await writeAudit(actor, 'test-secret', `_ai_secrets/${secretId}`, undefined, { ok: result.ok, providerId: result.providerId, modelId: result.modelId, latencyMs: result.latencyMs });
+      return NextResponse.json({ ...result, testedAt: testedAt.toISOString() }, { headers: noStore });
     }
     if (body.operation === 'set-gemini-billing') {
       if (body.geminiBilling !== 'confirmed' && body.geminiBilling !== 'unconfirmed') {

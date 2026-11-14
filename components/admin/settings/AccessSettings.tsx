@@ -25,7 +25,7 @@ const BASE_FEATURES = [
   { id: 'ai_insights', label: 'Written Analysis', server: true },
   { id: 'extract_slip', label: 'Import result slip', server: true },
   { id: 'add_semester', label: 'Add semester', server: false },
-  { id: 'share_code', label: 'Share and import course codes', server: false },
+  { id: 'share_code', label: 'Share and import course codes (new codes blocked everywhere)', server: true },
   { id: 'edit_profile', label: 'Edit profile', server: false },
 ];
 /** Shown only when the settings schema accepts them. */

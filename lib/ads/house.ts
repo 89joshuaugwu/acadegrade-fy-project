@@ -12,7 +12,10 @@ export interface HouseDelivery {
   version: 1;
   enabled: boolean;
   placements: HouseConfig['placements'];
+  /** Campaigns ticked for the Dashboard slot only. */
   campaigns: HouseCampaign[];
+  /** Campaigns ticked for the Results slot. Old apps ignore this field. */
+  resultsCampaigns: HouseCampaign[];
   legacyCampaigns: HouseCampaign[];
 }
 export class HouseConfigError extends Error {}
@@ -37,11 +40,13 @@ function displayCampaign(campaign: AdCampaign, source: 'campaign' | 'legacy'): H
 }
 export function buildHouseDelivery(rawConfig: unknown, rawSettings: unknown): HouseDelivery {
   const config = safeHouseConfig(rawConfig);
-  const result: HouseDelivery = { version: 1, enabled: config.enabled, placements: config.placements, campaigns: [], legacyCampaigns: [] };
+  const result: HouseDelivery = { version: 1, enabled: config.enabled, placements: config.placements, campaigns: [], resultsCampaigns: [], legacyCampaigns: [] };
   if (!config.enabled || !record(rawSettings)) return result;
   const website = safeParseAdsConfig(rawSettings.adsConfig);
   // Android opts in independently; web's master/placement switches remain web-only.
-  result.campaigns = (website?.campaigns ?? []).filter(c => c.active && c.deliveryMode === 'house' && c.placementIds.includes('dashboard.overview')).map(c => displayCampaign(c, 'campaign'));
+  const houseCampaigns = (website?.campaigns ?? []).filter(c => c.active && c.deliveryMode === 'house');
+  result.campaigns = houseCampaigns.filter(c => c.placementIds.includes('dashboard.overview')).map(c => displayCampaign(c, 'campaign'));
+  result.resultsCampaigns = houseCampaigns.filter(c => c.placementIds.includes('results.overview')).map(c => displayCampaign(c, 'campaign'));
   if (config.includeLegacy) {
     result.legacyCampaigns = (legacyBannersToAdsConfig(rawSettings.advertBanners)?.campaigns ?? []).slice(0, 24).map(c => displayCampaign(c, 'legacy'));
   }

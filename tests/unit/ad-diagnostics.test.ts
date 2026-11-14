@@ -160,10 +160,16 @@ describe('Android house-promotion diagnostics', () => {
     expect(result[0].notes.join(' ')).toMatch(/installation/i);
   });
 
-  it('reports active campaigns that are not shared because they do not target web Dashboard overview', () => {
-    const result = android(house(), ads([campaign({ placementIds: ['results.overview'] })]));
+  it('serves a Results-ticked campaign in the Android Results slot only', () => {
+    const result = android(house({ placements: { dashboard: true, results: true } }), ads([campaign({ placementIds: ['results.overview'] })]));
     expect(result[0].outcome).toBe('none');
-    expect(result[0].reasons.join(' ')).toMatch(/1 active campaign .*Dashboard overview/i);
+    expect(result[1].outcome).toBe('house');
+  });
+
+  it('reports active campaigns that target neither Android slot', () => {
+    const result = android(house(), ads([campaign({ placementIds: [] })]));
+    expect(result[0].outcome).toBe('none');
+    expect(result[0].reasons.join(' ')).toMatch(/1 active campaign .*Dashboard overview or Results overview/i);
   });
 
   it('falls back to legacy only when the Android legacy switch is on', () => {

@@ -6,10 +6,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button, Card, Input, Modal, Skeleton, Switch } from '@/components/ui';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { StatusChip } from '@/components/admin/StatusChip';
 import { cn } from '@/lib/utils/cn';
 import { CustomInstructions } from './CustomInstructions';
 import {
-  getAdminAiSnapshot, saveAdminAiRouting, setAdminAiGeminiBilling, setAdminAiSecretState, upsertAdminAiSecret,
+  getAdminAiSnapshot, saveAdminAiRouting, setAdminAiGeminiBilling, setAdminAiSecretState, testAdminAiSecret, upsertAdminAiSecret,
   type AdminAiConfig, type AdminAiFeature, type AdminAiMode, type AdminAiProviderId,
   type AdminAiProviders, type AdminAiRoute, type AdminAiRouteTarget,
   type AdminAiSecretProjection, type AdminAiSnapshot,
@@ -99,6 +100,7 @@ export function AiOperations() {
   const [keyToDisable, setKeyToDisable] = useState<{ secret: AdminAiSecretProjection; features: string[] } | null>(null);
   const [confirmBilling, setConfirmBilling] = useState(false);
   const [billingSaving, setBillingSaving] = useState(false);
+  const [testingKey, setTestingKey] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!user) return;
@@ -119,6 +121,19 @@ export function AiOperations() {
       ? { ...current, [providerId]: [...current[providerId], details.modelId] }
       : current);
     setNotice(`${secretId} saved. Select it in a route to use it.`);
+  };
+
+  /** Sends one tiny request with the key and records whether the provider accepted it. */
+  const testKey = async (secret: AdminAiSecretProjection) => {
+    if (!user) return;
+    setTestingKey(secret.secretId); setError(null); setNotice(null);
+    try {
+      const result = await testAdminAiSecret(await user.getIdToken(), secret.secretId);
+      const lastTest = { ok: result.ok, at: result.at, latencyMs: result.latencyMs, ...(result.error ? { error: result.error } : {}) };
+      setSnapshot((current) => current ? { ...current, secrets: current.secrets.map((item) => item.secretId === secret.secretId ? { ...item, lastTest } : item) } : current);
+      setNotice(result.ok ? `${secret.secretId} works (${result.latencyMs} ms).` : `${secret.secretId} did not pass the test.`);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to test the key.');
+    } finally { setTestingKey(null); }
   };
 
   const changeKeyState = async (secret: AdminAiSecretProjection) => {
@@ -217,7 +232,7 @@ export function AiOperations() {
           <Button loading={saving} loadingLabel="Saving routing…" onClick={() => void save()}><ShieldCheck className="size-4" aria-hidden="true" /> Save routing</Button>
         </div>
       </section>
-      <section aria-labelledby="catalog-title" className="space-y-4"><div><h2 id="catalog-title" className="text-xl font-bold text-[var(--acade-text)]">Provider keys and models</h2><p className="text-sm text-[var(--acade-text-muted)]">Models listed here can be chosen in the features above.</p></div><div className="grid gap-4 xl:grid-cols-3">{PROVIDERS.map((id) => <ProviderEditor key={id} providerId={id} models={models[id]} secrets={snapshot.secrets.filter((secret) => secret.providerId === id)} onModelsChange={(next) => setModels((current) => current ? { ...current, [id]: next } : current)} onSaveKey={saveKey} onStateChange={requestKeyState} />)}</div></section>
+      <section aria-labelledby="catalog-title" className="space-y-4"><div><h2 id="catalog-title" className="text-xl font-bold text-[var(--acade-text)]">Provider keys and models</h2><p className="text-sm text-[var(--acade-text-muted)]">Models listed here can be chosen in the features above.</p></div><div className="grid gap-4 xl:grid-cols-3">{PROVIDERS.map((id) => <ProviderEditor key={id} providerId={id} models={models[id]} secrets={snapshot.secrets.filter((secret) => secret.providerId === id)} onModelsChange={(next) => setModels((current) => current ? { ...current, [id]: next } : current)} onSaveKey={saveKey} onStateChange={requestKeyState} onTest={testKey} testingKey={testingKey} />)}</div></section>
     </>}
     <Modal
       open={confirmBilling}
@@ -321,7 +336,18 @@ function RouteEditor({ feature, route, providers, models, secrets, onChange, chi
   </Card>;
 }
 
-function ProviderEditor({ providerId, models, secrets, onModelsChange, onSaveKey, onStateChange }: { providerId: AdminAiProviderId; models: string[]; secrets: AdminAiSecretProjection[]; onModelsChange: (models: string[]) => void; onSaveKey: (providerId: AdminAiProviderId, secretId: string, value: string, details: { label: string; modelId: string; priority: number; purpose: 'general' | 'ocr' | 'fallback' }) => Promise<void>; onStateChange: (secret: AdminAiSecretProjection) => Promise<void> }) {
+/** What the chip beside a saved key says: switched off, never tested, tested OK, or the plain-language problem. */
+function KeyStatusChip({ secret }: { secret: AdminAiSecretProjection }) {
+  if (secret.state === 'inactive') return <StatusChip state="off" detail="disabled" />;
+  if (!secret.lastTest) return <StatusChip state="configured" />;
+  if (secret.lastTest.ok) {
+    const when = secret.lastTest.at ? new Date(secret.lastTest.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'recently';
+    return <StatusChip state="verified" detail={when} />;
+  }
+  return <StatusChip state="problem" detail={secret.lastTest.error ?? 'the last test failed'} />;
+}
+
+function ProviderEditor({ providerId, models, secrets, onModelsChange, onSaveKey, onStateChange, onTest, testingKey }: { onTest: (secret: AdminAiSecretProjection) => Promise<void>; testingKey: string | null; providerId: AdminAiProviderId; models: string[]; secrets: AdminAiSecretProjection[]; onModelsChange: (models: string[]) => void; onSaveKey: (providerId: AdminAiProviderId, secretId: string, value: string, details: { label: string; modelId: string; priority: number; purpose: 'general' | 'ocr' | 'fallback' }) => Promise<void>; onStateChange: (secret: AdminAiSecretProjection) => Promise<void> }) {
   const [newModel, setNewModel] = useState('');
   const [slot, setSlot] = useState(providerId === 'gemini' ? 'ocr' : 'primary');
   const [label, setLabel] = useState(providerId === 'gemini' ? 'Gemini OCR' : `${LABELS[providerId]} primary`);
@@ -351,7 +377,7 @@ function ProviderEditor({ providerId, models, secrets, onModelsChange, onSaveKey
     </div>
     <div className="border-t border-[var(--acade-border)] pt-4"><h4 className="text-sm font-semibold text-[var(--acade-text)]">Saved keys</h4>
       {secrets.length === 0 && <p className="mt-2 text-xs text-[var(--acade-text-muted)]">No keys saved yet.</p>}
-      {[...secrets].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).map((secret) => <div key={secret.secretId} className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--acade-overlay)] p-2 text-xs"><div className="min-w-0"><p className="font-semibold text-[var(--acade-text)]">{secret.label ?? secret.secretId} · priority {secret.priority ?? 'unset'}</p><p className="break-all font-mono text-[var(--acade-text-muted)]">{secret.secretId} · {secret.modelId ?? 'model unset'} · {secret.purpose ?? 'general'} · {secret.state}</p></div>{secret.state !== 'retired' && <button type="button" aria-label={`${secret.state === 'active' ? 'Disable' : 'Activate'} ${secret.secretId}`} className="min-h-9 rounded-lg px-2 font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" onClick={() => void onStateChange(secret)}>{secret.state === 'active' ? 'Disable' : 'Activate'}</button>}</div>)}
+      {[...secrets].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).map((secret) => <div key={secret.secretId} className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--acade-overlay)] p-2 text-xs"><div className="min-w-0"><p className="font-semibold text-[var(--acade-text)]">{secret.label ?? secret.secretId} · priority {secret.priority ?? 'unset'}</p><p className="break-all font-mono text-[var(--acade-text-muted)]">{secret.secretId} · {secret.modelId ?? 'model unset'} · {secret.purpose ?? 'general'} · {secret.state}</p><div className="mt-1"><KeyStatusChip secret={secret} /></div></div><div className="flex shrink-0 items-center gap-1">{secret.state !== 'retired' && <button type="button" aria-label={`Test ${secret.secretId}`} disabled={testingKey !== null} className="min-h-9 rounded-lg px-2 font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)] disabled:opacity-50" onClick={() => void onTest(secret)}>{testingKey === secret.secretId ? 'Testing…' : 'Test key'}</button>}{secret.state !== 'retired' && <button type="button" aria-label={`${secret.state === 'active' ? 'Disable' : 'Activate'} ${secret.secretId}`} className="min-h-9 rounded-lg px-2 font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" onClick={() => void onStateChange(secret)}>{secret.state === 'active' ? 'Disable' : 'Activate'}</button>}</div></div>)}
     </div>
     <form onSubmit={saveKey} className="space-y-3 border-t border-[var(--acade-border)] pt-4"><h4 className="text-sm font-semibold text-[var(--acade-text)]">Add or rotate a key</h4>
       <Input id={`${providerId}-label`} label="Key label" value={label} onChange={(event) => setLabel(event.target.value)} />

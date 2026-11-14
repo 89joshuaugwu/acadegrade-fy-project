@@ -19,6 +19,14 @@ describe('Android house bridge', () => {
     expect(result.campaigns[0]).toEqual({ id: 'campaign:offer', schedule: campaign.schedule, weight: 7, frequencyCap: campaign.frequencyCap, creative: campaign.creative, linkUrl: campaign.linkUrl });
     expect(JSON.stringify(result)).not.toMatch(/Private campaign name|secret|placementIds|deliveryMode/);
   });
+  it('splits campaigns by slot: Dashboard-ticked, Results-ticked, or both', () => {
+    const resultsOnly = { ...campaign, id: 'res', placementIds: ['results.overview'] };
+    const both = { ...campaign, id: 'both', placementIds: ['dashboard.overview', 'results.overview'] };
+    const result = buildHouseDelivery({ ...defaultHouseConfig(), enabled: true }, { adsConfig: { ...createDefaultAdsConfig(), campaigns: [campaign, resultsOnly, both] } });
+    expect(result.campaigns.map(c => c.id)).toEqual(['campaign:offer', 'campaign:both']);
+    expect(result.resultsCampaigns.map(c => c.id)).toEqual(['campaign:res', 'campaign:both']);
+    expect(buildHouseDelivery(null, null).resultsCampaigns).toEqual([]);
+  });
   it('keeps legacy as a separate safe fallback and honors its opt-out', () => {
     const settings = { adsConfig: { ...createDefaultAdsConfig(), campaigns: [campaign] }, advertBanners: [
       { id: 'offer', isActive: true, imageUrl: 'https://example.com/a.png', linkUrl: '' },

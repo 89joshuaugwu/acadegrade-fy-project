@@ -23,6 +23,14 @@ service cloud.firestore {
       return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents'];
     }
 
+    // True unless the admin has switched this feature off in Settings > Access
+    // (config/settings.disabledFeatures). A missing settings document means "all on",
+    // so a fresh project is never locked out. Both reads hit the same document, billed once.
+    function platformFeatureEnabled(feature) {
+      return !exists(/databases/$(database)/documents/config/settings)
+        || !(feature in get(/databases/$(database)/documents/config/settings).data.get('disabledFeatures', []));
+    }
+
     // 1. Users Collection
     match /users/{userId} {
       allow read, delete: if isOwner(userId) || isAdmin();
@@ -78,8 +86,10 @@ service cloud.firestore {
     
     // 6. Share Codes
     match /shareCodes/{codeId} {
-      allow read: if isAuthenticated() || isAdmin();
-      allow create: if isAuthenticated() || isAdmin();
+      // A signed-in user can fetch one code they know; nobody can list every code.
+      allow get: if isAuthenticated();
+      // New codes stop while the admin has switched "share_code" off (admins always may).
+      allow create: if isAdmin() || (isAuthenticated() && platformFeatureEnabled('share_code'));
       allow update: if (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])) || isAdmin();
       allow delete: if isAdmin();
     }
@@ -150,6 +160,17 @@ service cloud.firestore {
     }
 
     match /_ai_feedback/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Result of the last "Verify login" for each email account (login address and source only).
+    match /_email_status/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Terms and Privacy drafts and published versions (Admin > Legal documents).
+    // The public pages read them through the server, never from a browser or the app.
+    match /legal_documents/{document=**} {
       allow read, write: if false;
     }
 

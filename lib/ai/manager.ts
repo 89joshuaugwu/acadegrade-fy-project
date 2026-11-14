@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import { GoogleGenAI } from '@google/genai';
 import { adminDb } from '@/lib/firebase/admin';
 import { decryptSecret, type SupportedProviderId } from '@/lib/ai/secrets';
-import { getAiRuntimeConfig, openRouterDataCollection, type AiFeature, type AiRouteTarget, type OpenRouterDataCollection, type StoredAiSecret } from '@/lib/ai/runtime-config';
+import { getAiRuntimeConfig, openRouterDataCollection, SUPPORTED_PROVIDERS, type AiFeature, type AiRouteTarget, type OpenRouterDataCollection, type StoredAiSecret } from '@/lib/ai/runtime-config';
 import { safeParseJSON, extractJsonObjectAndParse } from '@/lib/utils/safeParseJSON';
 
 export type AiGenerationResult = { text: string; providerId: SupportedProviderId; modelId: string; configRevision: number };
@@ -89,6 +89,70 @@ async function generate(feature: AiFeature, prompt: string | any[], responseMime
   }
   throw publicProviderError(lastError);
 }
+/** Thrown by `testAiSecret` for a key that cannot be tested at all (the route turns it into 404 / 409). */
+export class AiSecretTestError extends Error {
+  constructor(message: string, readonly status: 404 | 409) { super(message); }
+}
+export type AiSecretTestResult = { ok: boolean; latencyMs: number; providerId: SupportedProviderId; modelId: string; error?: string };
+
+const TEST_PROMPT = 'Reply with the single word OK.';
+const TEST_TIMEOUT_MS = 15_000;
+class AiTestTimeout extends Error {}
+// Plain-language reasons. Provider error text is never shown: it can echo the key or request.
+const TEST_FAILURE_MESSAGES: Partial<Record<TargetFailureCategory, string>> = {
+  provider_auth: 'The provider rejected this key. Check that it is correct and still active.',
+  provider_rate_limit: 'The provider is rate limiting this key right now. Try again in a few minutes.',
+  provider_rejected: 'The provider rejected the test request. Check that the model name is valid for this key.',
+  provider_unavailable: 'The provider is unavailable at the moment. Try again later.',
+  empty_response: 'The provider answered with an empty reply.',
+};
+
+/**
+ * Sends one tiny request ("Reply with the single word OK.") with a saved key, to check
+ * that it works. An inactive key can be tested; a retired or unknown one cannot.
+ * OpenRouter is asked not to let providers collect the request. Never returns key material.
+ */
+export async function testAiSecret(secretId: string, options: { modelId?: string } = {}): Promise<AiSecretTestResult> {
+  const snapshot = await adminDb.collection('_ai_secrets').doc(secretId).get();
+  if (!snapshot.exists) throw new AiSecretTestError('Credential was not found.', 404);
+  const secret = snapshot.data() as StoredAiSecret;
+  if (secret.state === 'retired') throw new AiSecretTestError('Retired credentials cannot be tested.', 409);
+  const provider = SUPPORTED_PROVIDERS[secret.providerId];
+  if (!provider) throw new AiSecretTestError('This credential uses an unsupported provider.', 409);
+
+  const modelId = options.modelId ?? secret.modelId ?? provider.models[0];
+  const startedAt = Date.now();
+  const finish = (ok: boolean, error?: string): AiSecretTestResult => ({
+    ok, latencyMs: Date.now() - startedAt, providerId: secret.providerId, modelId, ...(error ? { error } : {}),
+  });
+
+  let apiKey: string;
+  try {
+    apiKey = decryptSecret(secret, { secretId, providerId: secret.providerId });
+  } catch {
+    return finish(false, 'The saved key could not be read. Save it again.');
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const text = await Promise.race([
+      invoke({ providerId: secret.providerId, modelId, secretId }, apiKey, TEST_PROMPT, undefined, 'deny'),
+      new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new AiTestTimeout()), TEST_TIMEOUT_MS); }),
+    ]);
+    if (!text?.trim()) return finish(false, TEST_FAILURE_MESSAGES.empty_response);
+    return finish(true);
+  } catch (error) {
+    if (error instanceof AiTestTimeout) return finish(false, 'The provider did not answer within 15 seconds (timed out).');
+    const status = providerStatus(error);
+    const category = targetFailureCategory(error, 'provider', status);
+    // Only fixed identifiers and categories, as in generate().
+    console.warn('[AI key test failed]', { providerId: secret.providerId, modelId, secretId, category, status });
+    return finish(false, TEST_FAILURE_MESSAGES[category] ?? 'The test request failed.');
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function getAiConfigRevision() { return (await getAiRuntimeConfig(adminDb)).revision; }
 export const generateFastResponseWithMetadata = (prompt: string) => generate('whatif', prompt);
 export const generateDeepInsightWithMetadata = (prompt: string) => generate('insights', prompt);

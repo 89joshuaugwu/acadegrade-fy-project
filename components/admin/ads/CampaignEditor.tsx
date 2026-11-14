@@ -119,7 +119,7 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
             })}
           </div>
           <p id={`${campaign.id}-android-hint`} className="mt-2 text-xs leading-5 text-[var(--acade-text-muted)]">
-            Android uses only campaigns ticked for Dashboard, in both Android slots.
+            Android shows Dashboard-ticked campaigns on its Dashboard and Results-ticked ones on its Results screen.
           </p>
         </fieldset>
       </div>

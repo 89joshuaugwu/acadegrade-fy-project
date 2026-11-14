@@ -1,7 +1,17 @@
 import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ email: null as string | null }));
+const mocks = vi.hoisted(() => ({ email: null as string | null, published: null as null | Record<string, unknown> }));
+
+// Built-in text unless a test sets `mocks.published` (an admin-published version).
+vi.mock('@/lib/legal/server', async () => {
+  const { BUILTIN_LEGAL } = await vi.importActual<typeof import('@/lib/legal/builtin')>('@/lib/legal/builtin');
+  return {
+    getPublishedLegal: async (document: 'terms' | 'privacy') => (
+      mocks.published ?? { ...BUILTIN_LEGAL[document], source: 'builtin' }
+    ),
+  };
+});
 
 vi.mock('@/lib/site/contact', async () => {
   const pure = await vi.importActual<typeof import('@/lib/site/contact-email')>('@/lib/site/contact-email');
@@ -26,6 +36,33 @@ async function renderServer(page: () => Promise<React.ReactElement>) {
 
 beforeEach(() => {
   mocks.email = null;
+  mocks.published = null;
+});
+
+describe('Published legal text (R5)', () => {
+  const published = (title: string) => ({
+    version: '2026-12-01', effectiveDate: '2026-12-01', title, summary: 'Updated rules.',
+    body: '## New section {#new}\n\nPublished by an admin. Contact {{contact:Terms of use question}}.',
+    source: 'published',
+  });
+
+  it('renders a published version with its own version and effective date', async () => {
+    mocks.published = published('Terms of use');
+    mocks.email = 'help@example.org';
+    const { container } = await renderServer(TermsPage);
+    expect(screen.getByText('2026-12-01')).toBeInTheDocument();
+    expect(container).toHaveTextContent('1 December 2026');
+    expect(screen.getByRole('heading', { level: 2, name: 'New section' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'help@example.org' })).toHaveAttribute('href', expect.stringContaining('mailto:help@example.org'));
+    // The old built-in sections are gone.
+    expect(container).not.toHaveTextContent('Agreement and eligibility');
+  });
+
+  it('the privacy page renders its own published text too', async () => {
+    mocks.published = published('Privacy notice');
+    const { container } = await renderServer(PrivacyPage);
+    expect(container).toHaveTextContent('Published by an admin.');
+  });
 });
 
 describe('Privacy notice', () => {

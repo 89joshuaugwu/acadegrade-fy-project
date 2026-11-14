@@ -18,6 +18,16 @@ export interface AdminAiSecretProjection {
   modelId?: string;
   priority?: number;
   purpose?: 'general' | 'ocr' | 'fallback';
+  /** The last "Test key" result. Absent until the key has been tested. */
+  lastTest?: AdminAiKeyTest;
+}
+
+export interface AdminAiKeyTest {
+  ok: boolean;
+  /** ISO time of the test, when known. */
+  at: string | null;
+  latencyMs: number;
+  error?: string;
 }
 
 export type AdminAiFeature = 'insights' | 'forecast' | 'whatif' | 'extract';
@@ -134,6 +144,26 @@ export async function setAdminAiGeminiBilling(token: string, geminiBilling: Admi
   if (!response.ok) throw new AdminAiClientError(await getErrorMessage(response));
   const body = await response.json().catch(() => null) as { geminiBilling?: unknown } | null;
   return body?.geminiBilling === 'confirmed' || body?.geminiBilling === 'unconfirmed' ? body.geminiBilling : geminiBilling;
+}
+
+/** Sends one tiny request with a saved key. A failed test still resolves (ok: false); only a failed call throws. */
+export async function testAdminAiSecret(token: string, secretId: string): Promise<AdminAiKeyTest & { providerId: string; modelId: string }> {
+  const response = await fetch('/api/admin/ai', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ operation: 'test-secret', secretId }),
+  });
+  if (!response.ok) throw new AdminAiClientError(await getErrorMessage(response));
+  const body = await response.json().catch(() => null) as { ok?: unknown; latencyMs?: unknown; testedAt?: unknown; error?: unknown; providerId?: unknown; modelId?: unknown } | null;
+  if (!body || typeof body.ok !== 'boolean') throw new AdminAiClientError('The key test returned an unexpected answer.');
+  return {
+    ok: body.ok,
+    at: typeof body.testedAt === 'string' ? body.testedAt : null,
+    latencyMs: Number(body.latencyMs) || 0,
+    ...(typeof body.error === 'string' && body.error ? { error: body.error } : {}),
+    providerId: String(body.providerId ?? ''),
+    modelId: String(body.modelId ?? ''),
+  };
 }
 
 export async function setAdminAiSecretState(

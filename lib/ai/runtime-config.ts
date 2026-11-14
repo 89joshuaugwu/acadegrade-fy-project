@@ -49,7 +49,17 @@ export type StoredAiSecret = EncryptedSecret & {
   priority?: number;
   purpose?: 'general' | 'ocr' | 'fallback';
   updatedAt?: unknown;
+  /** The result of the last "Test key" (written by the admin AI route). */
+  lastTest?: { ok: boolean; at: unknown; latencyMs: number; error?: string };
 };
+
+function isoOrNull(value: unknown): string | null {
+  const withToDate = value as { toDate?: () => Date } | null;
+  let date: Date | null = null;
+  if (withToDate && typeof withToDate.toDate === 'function') date = withToDate.toDate();
+  else if (value instanceof Date) date = value;
+  return date && Number.isFinite(date.getTime()) ? date.toISOString() : null;
+}
 
 const FEATURES: AiFeature[] = ['insights', 'forecast', 'whatif', 'extract'];
 const MODES: AiMode[] = ['disabled', 'local-only', 'single', 'fallback-chain'];
@@ -162,6 +172,14 @@ export function toMaskedAdminProjection(secret: StoredAiSecret) {
     ...(secret.modelId ? { modelId: secret.modelId } : {}),
     ...(secret.priority ? { priority: secret.priority } : {}),
     ...(secret.purpose ? { purpose: secret.purpose } : {}),
+    ...(secret.lastTest && typeof secret.lastTest.ok === 'boolean' ? {
+      lastTest: {
+        ok: secret.lastTest.ok,
+        at: isoOrNull(secret.lastTest.at),
+        latencyMs: Number(secret.lastTest.latencyMs) || 0,
+        ...(secret.lastTest.error ? { error: String(secret.lastTest.error).slice(0, 200) } : {}),
+      },
+    } : {}),
   };
 }
 

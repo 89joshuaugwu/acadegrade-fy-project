@@ -17,6 +17,7 @@ const ROUTES = {
   'admin.ads': '/admin/ads',
   'admin.release': '/admin/mobile-release',
   'admin.settings': '/admin/settings',
+  'admin.legal': '/admin/legal',
   'admin.audit': '/admin/audit',
 } as const;
 
@@ -292,7 +293,7 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
       { title: 'Show on Android', steps: ['Turn on Show house promotions in the Android app and the Android slot.', 'Make sure the campaign is ticked for Dashboard.', 'Save house promotions.'] },
     ],
     cautions: [
-      'Android uses only campaigns ticked for Dashboard, in both Android slots.',
+      'Android shows Dashboard-ticked campaigns on its Dashboard and Results-ticked ones on its Results screen.',
       'Legacy banners (Advanced) appear on the web Dashboard even when website promotions are off; switch each banner\'s Active off to stop them.',
       'Image and link URLs must start with https://.',
     ],
@@ -400,17 +401,17 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
       { term: 'Pause new sign-ups', meaning: 'Blocks new accounts on the website and Android; existing students can still sign in.' },
       { term: 'Feature switches', meaning: 'Turn single features off. Web + API switches are refused by the server, so they stop the Android app too; Web only switches just hide website buttons.' },
       { term: 'Require age confirmation and AI consent for AI', meaning: 'Accounts that have not confirmed their age or allowed AI processing cannot use AI or scanning until they do. Under-18s and users who declined are always blocked.' },
-      { term: 'Legal versions', meaning: 'The current Terms and Privacy versions. Publishing a new version asks every student to agree again.' },
+      { term: 'Legal versions', meaning: 'The current Terms and Privacy versions students are asked to accept. Change them by publishing new text in Legal documents.' },
     ],
     tasks: [
       { title: 'Short maintenance window', steps: ['Turn on Maintenance mode.', 'Save and confirm.', 'Turn it off and save when you are done.'] },
       { title: 'Turn one feature off', steps: ['Switch the feature off under Feature switches.', 'Save.'] },
-      { title: 'Ask everyone to accept new Terms', steps: ['Update the Terms page first.', 'In Legal versions, choose Publish new version for Terms.', 'Confirm.'] },
+      { title: 'Ask everyone to accept new Terms', steps: ['In Legal versions, choose Edit text and publish for Terms.', 'Change the wording in Legal documents and save the draft.', 'Choose Publish and confirm.'] },
     ],
     cautions: [
       'Maintenance mode stops every student on every platform until you turn it off.',
       'Installed Android apps older than the coming update cannot ask the age and consent questions, so with the check on their users are blocked from AI until they update; pair it with a required update or turn it off until most have updated.',
-      'Publishing a legal version cannot be undone; every student is asked again the next time they open AcadeGrade.',
+      'Publishing legal text cannot be undone; every student is asked to agree again the next time they open AcadeGrade.',
       'To change which AI provider answers a feature, use AI providers.',
     ],
     related: [
@@ -482,6 +483,32 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     related: [
       { label: 'Legacy course list', to: 'admin.course-list' },
       { label: 'Academic catalogue', to: 'admin.academic-catalogue' },
+    ],
+  }),
+
+  'admin.legal': entry({
+    id: 'admin.legal',
+    title: 'Legal documents',
+    summary: 'Write and publish the Terms of use and the Privacy notice that students and visitors read. Publishing asks every student to agree again.',
+    terms: [
+      { term: 'Draft', meaning: 'Your saved, unpublished wording. Students never see it until you publish.' },
+      { term: 'Version', meaning: 'A numbered, permanent copy created each time you publish. Students agree to a specific version.' },
+      { term: 'Effective date', meaning: 'The date shown at the top of the page as when this wording applies.' },
+      { term: 'Contact token', meaning: 'Writing {{contact}} shows the public contact email from Settings, or a link to the support page when none is set.' },
+    ],
+    tasks: [
+      { title: 'Change the wording', steps: ['Pick Terms or Privacy.', 'Choose Start from current text, or keep your saved draft.', 'Edit the text and check the preview and any formatting problems.', 'Choose Save draft.'] },
+      { title: 'Publish it', steps: ['Save the draft first.', 'Choose Publish and read the confirmation.', 'Confirm. The public page updates and every student is asked to agree again.'] },
+    ],
+    cautions: [
+      'Publishing cannot be undone, but you can publish a newer version that replaces it.',
+      'Do not type an email address into the text. Use {{contact}} so it follows the contact email in Settings.',
+      'Have a Nigerian data-protection lawyer review wording changes before you publish.',
+      'Only simple formatting works: ## headings, bullets, tables, bold and links. Anything else shows as plain text.',
+    ],
+    related: [
+      { label: 'Settings: Access', to: 'admin.settings.access' },
+      { label: 'Audit log', to: 'admin.audit' },
     ],
   }),
 

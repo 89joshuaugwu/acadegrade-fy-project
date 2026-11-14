@@ -123,7 +123,7 @@ describe('AdsEditor', () => {
     const showOn = screen.getByRole('group', { name: 'Show on' });
     expect(within(showOn).getByRole('checkbox', { name: 'Dashboard' })).toBeChecked();
     expect(within(showOn).getByRole('checkbox', { name: 'Results' })).not.toBeChecked();
-    expect(within(showOn).getByText('Android uses only campaigns ticked for Dashboard, in both Android slots.')).toBeInTheDocument();
+    expect(within(showOn).getByText('Android shows Dashboard-ticked campaigns on its Dashboard and Results-ticked ones on its Results screen.')).toBeInTheDocument();
   });
 
   it('lists the Results placement as off for an older saved configuration without marking it unsaved', async () => {
