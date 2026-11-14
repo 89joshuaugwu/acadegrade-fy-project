@@ -257,8 +257,8 @@ export default function InsightsPage() {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
             uid: user.uid,
-            title: 'Degree Class Update! 🎓',
-            message: `Your CGPA trajectory has shifted your degree class to: ${newDegreeClass}.`,
+            title: 'Your degree-class outlook has changed',
+            message: `Based on your results so far, you are now on track for: ${newDegreeClass}. This is a projection, not an official result.`,
             type: 'achievement',
             event: 'degreeClass'
           })

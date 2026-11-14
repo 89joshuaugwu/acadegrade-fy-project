@@ -140,8 +140,8 @@ export async function POST(request: NextRequest) {
         },
         body: JSON.stringify({
           uid,
-          title: 'Academic Risk Alert ⚠️',
-          message: 'Your recent trajectory indicates high academic risk. Check your insights for recommendations.',
+          title: 'Your results need attention',
+          message: 'Your recent results suggest your CGPA may be at risk. Open Insights to see what could help.',
           type: 'warning',
           event: 'aiInsights',
         }),

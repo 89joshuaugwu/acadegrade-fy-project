@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       }
       const targetEmail = userEmail || providedToken; // if token was abused to pass email
       
-      const { sendEmail, welcomeEmail, semesterSavedEmail, degreeClassEmail, adminNewUserEmail } = await import('@/lib/email/mailer');
+      const { sendEmail, welcomeEmail, semesterSavedEmail, degreeClassEmail } = await import('@/lib/email/mailer');
       
       const emailEvent = event;
       const eventData = data || {};
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
         emailSubject = 'Semester Results Saved';
       } else if (emailEvent === 'degreeClass') {
         htmlBody = degreeClassEmail(eventData.name || 'Student', eventData.degreeClass || '');
-        emailSubject = 'Degree Class Achievement! 🎓';
+        emailSubject = 'Your degree-class outlook has changed';
       }
 
       await sendEmail(targetEmail, emailSubject, htmlBody);
