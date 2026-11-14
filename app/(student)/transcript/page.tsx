@@ -11,6 +11,7 @@ import { queryCollection, deleteDocument, where } from '@/lib/firebase/firestore
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
+import { ShareQr } from '@/components/transcript/ShareQr';
 import { EmptyState, ErrorState } from '@/components/shared';
 import { cn } from '@/lib/utils/cn';
 import { computeCumulativeCGPA, formatCgpa, resolveDegreeClass } from '@/lib/cgpa/academicRules';
@@ -395,13 +396,7 @@ export default function TranscriptPage() {
               <Share2 size={24} className="text-[var(--acade-primary)]" aria-hidden="true" />
             </div>
             <div className="mx-auto inline-block rounded-xl bg-white p-4">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=4f46e5`}
-                alt="QR code for the shared transcript link"
-                width={180}
-                height={180}
-                className="mx-auto"
-              />
+              <ShareQr url={shareUrl} size={180} />
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-2">
               <input

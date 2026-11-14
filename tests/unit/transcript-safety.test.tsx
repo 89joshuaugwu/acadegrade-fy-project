@@ -182,6 +182,28 @@ describe('Transcript safety states', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /delete shared link/i })).not.toBeInTheDocument());
   });
 
+  it('renders the share QR code locally and never sends the private link to a third party', async () => {
+    const user = userEvent.setup();
+    mocks.user.getIdToken.mockResolvedValue('token');
+    mocks.queryCollection
+      .mockResolvedValueOnce([{ id: 'semester-1', label: 'First Semester', session: '2025/2026', level: 300, semester: 1, gpa: 4.2, pi: 4.1, creditLoaded: 18, isComplete: true }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: vi.fn().mockResolvedValue({ shareUrl: 'https://grade.example/share/secret-id' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<TranscriptPage />);
+    await user.click(await screen.findByRole('button', { name: /share link/i }));
+
+    const qr = await screen.findByAltText('QR code for your transcript link');
+    await waitFor(() => expect(qr.getAttribute('src') ?? '').toMatch(/^data:image\/svg\+xml/));
+    expect(document.querySelector('img[src*="qrserver"]')).toBeNull();
+    // The only network call is our own share endpoint: nothing leaves for another site.
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.every((url) => !/^https?:\/\//.test(url) || url.startsWith('https://grade.example'))).toBe(true);
+    expect(urls.some((url) => url.includes('qrserver'))).toBe(false);
+  });
+
   it('opens the generated share link in the accessible modal and restores trigger focus', async () => {
     const user = userEvent.setup();
     mocks.user.getIdToken.mockResolvedValue('token');
