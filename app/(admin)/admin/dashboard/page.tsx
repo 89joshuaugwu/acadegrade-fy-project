@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
@@ -89,8 +90,8 @@ export default function AdminDashboardPage() {
   const kpis = [
     { label: 'Total users', value: stats.totalUsers.toLocaleString() },
     { label: 'Active this week', value: stats.activeThisWeek.toLocaleString() },
-    { label: 'Average CGPA', value: stats.avgCGPA.toFixed(2) },
-    { label: 'Average PI', value: stats.avgPI.toFixed(2) },
+    { label: 'Average CGPA', value: formatCgpa(stats.avgCGPA) },
+    { label: 'Average PI', value: formatCgpa(stats.avgPI) },
   ];
   const signups = stats.signupChartData ?? [];
   const signupTotal = signups.reduce((sum, day) => sum + day.count, 0);

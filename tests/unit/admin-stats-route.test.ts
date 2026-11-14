@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-type Semester = { gpa: number; pi: number; creditLoaded: number };
+type Semester = { gpa: number; pi: number; creditLoaded: number; isComplete?: boolean };
 const state = vi.hoisted(() => ({ users: {} as Record<string, Semester[]> }));
 
 vi.mock('@/lib/firebase/admin', () => {
@@ -17,13 +17,18 @@ vi.mock('@/lib/firebase/admin', () => {
           return { get: async () => snapshot(Object.keys(state.users).map((id) => ({ id, data: { department: 'CSC', currentLevel: 300 } }))) };
         }
         const uid = path.split('/')[1];
-        return { where: () => ({ get: async () => snapshot((state.users[uid] ?? []).map((data, i) => ({ id: `s${i}`, data }))) }) };
+        const all = () => (state.users[uid] ?? []).map((data, i) => ({ id: `s${i}`, data: data as unknown as Record<string, unknown> }));
+        return {
+          get: async () => snapshot(all()),
+          where: (field: string, _op: string, value: unknown) => ({ get: async () => snapshot(all().filter((doc) => doc.data[field] === undefined || doc.data[field] === value)) }),
+        };
       },
     },
   };
 });
 
 import { GET } from '@/app/api/admin/stats/route';
+import { GET as usersGET } from '@/app/api/admin/users/route';
 
 async function degreeClassCounts() {
   const response = await GET(new Request('https://example.com/api/admin/stats', { headers: { Authorization: 'Bearer token' } }));
@@ -50,4 +55,32 @@ describe('/api/admin/stats degree classes', () => {
       Fail: 1,
     });
   });
-});
+
+  it('stats averages use every semester with graded credits', async () => {
+    state.users = {
+      mixed: [
+        { gpa: 4, pi: 4, creditLoaded: 20, isComplete: true },
+        { gpa: 2, pi: 2, creditLoaded: 20, isComplete: false },
+      ],
+    };
+    const response = await GET(new Request('https://example.com/api/admin/stats', { headers: { Authorization: 'Bearer token' } }));
+    const json = await response.json();
+    // Student rule: every graded course counts. (4 + 2) / 2 = 3, not 4 from the complete semester alone.
+    expect(json.avgCGPA).toBeCloseTo(3, 2);
+    expect(json.avgPI).toBeCloseTo(3, 2);
+  });
+  it('users GET cgpa equals computeCumulativeCGPA over every semester', async () => {
+    state.users = {
+      mixed: [
+        { gpa: 4, pi: 4, creditLoaded: 20, isComplete: true },
+        { gpa: 2, pi: 2, creditLoaded: 20, isComplete: false },
+      ],
+    };
+    const response = await usersGET(new Request('https://example.com/api/admin/users', { headers: { Authorization: 'Bearer token' } }));
+    expect(response.status).toBe(200);
+    const { users } = await response.json();
+    expect(users).toHaveLength(1);
+    expect(users[0].cgpa).toBeCloseTo(3, 10);
+    expect(users[0].pi).toBeCloseTo(3, 10);
+    expect(users[0].semesterCount).toBe(2);
+  });});

@@ -18,6 +18,8 @@ interface WhatIfCalculatorProps {
   totalCredits: number;
   initialRemainingSemesters: number;
   initialCreditLoad?: number;
+  /** Graded units in unfinished semesters. Already inside the CGPA, so not counted as remaining again. */
+  gradedInProgressUnits?: number;
   /** Called after each AI guidance request completes (success or error), e.g. to refresh credit counts. */
   onRequestSettled?: () => void;
   /** AI is not allowed (age, consent, maintenance): no guidance requests; the maths still works. */
@@ -33,6 +35,7 @@ export function WhatIfCalculator({
   totalCredits,
   initialRemainingSemesters,
   initialCreditLoad = 18,
+  gradedInProgressUnits = 0,
   onRequestSettled,
   aiBlock = null,
   onAiBlocked,
@@ -60,6 +63,10 @@ export function WhatIfCalculator({
   const [serverBlock, setServerBlock] = useState<AiBlock | null>(null);
   const block = aiBlock ?? serverBlock;
   const aiAllowed = !block;
+  // Remaining units = planned units less units already graded in unfinished semesters (R3).
+  const gradedInProgress = Math.max(0, Number(gradedInProgressUnits) || 0);
+  const remainingUnits = Math.max(0, remainingSemesters * creditLoad - gradedInProgress);
+  const nothingLeft = remainingUnits <= 0;
 
   useEffect(() => {
     setRemainingSemesters(initialRemainingSemesters);
@@ -71,13 +78,13 @@ export function WhatIfCalculator({
       currentCgpa: currentCGPA,
       completedUnits: totalCredits,
       targetCgpa: targetCGPA,
-      remainingUnits: remainingSemesters * creditLoad,
+      remainingUnits,
     });
     if (reqGPA !== null) {
       setRequiredGPA(reqGPA);
       setRequiredAvgScore((reqGPA / 5) * 100);
     }
-  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits]);
+  }, [targetCGPA, remainingUnits, currentCGPA, totalCredits]);
 
   // Cooldown effect
   useEffect(() => {
@@ -88,7 +95,8 @@ export function WhatIfCalculator({
 
   // Debounced API call for AI note
   useEffect(() => {
-    if (cooldown > 0 || !user || !aiAllowed) return; // Skip in cooldown, while auth resolves, or when AI is not allowed
+    // Skip in cooldown, while auth resolves, when AI is not allowed, or when there is nothing left to plan.
+    if (cooldown > 0 || !user || !aiAllowed || nothingLeft) return;
 
     setCountdown(5);
 
@@ -112,7 +120,8 @@ export function WhatIfCalculator({
         const res = await fetch('/api/ai/whatif', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad })
+          // gradedInProgressUnits is additive: older servers ignore it.
+          body: JSON.stringify({ currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad, ...(gradedInProgress > 0 ? { gradedInProgressUnits: gradedInProgress } : {}) })
         });
         settledRef.current?.();
 
@@ -147,7 +156,7 @@ export function WhatIfCalculator({
       clearTimeout(timer);
       clearInterval(interval);
     };
-  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, user, aiAllowed]);
+  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, user, aiAllowed, nothingLeft, gradedInProgress]);
 
   const locked = aiAllowed && (cooldown > 0 || loading);
   const span = Math.max(0.01, MAX_GRADE_POINT - currentCGPA);
@@ -276,7 +285,11 @@ export function WhatIfCalculator({
           <div className="flex-1 bg-[var(--acade-overlay)] rounded-[var(--radius-control)] p-4 border border-[var(--acade-border-subtle)] min-h-[80px] flex items-start gap-3 w-full">
             <Sparkles size={16} className="mt-1 shrink-0 text-[var(--acade-gold)]" aria-hidden="true" />
             <div className="min-w-0 flex-1" aria-live="polite">
-              {block ? (
+              {nothingLeft ? (
+                <p className="text-sm text-[var(--acade-text)] leading-relaxed text-pretty">
+                  Nothing left to plan: every remaining unit is already graded, so your CGPA can no longer change. Add a future semester to explore a target.
+                </p>
+              ) : block ? (
                 <p className="text-sm text-[var(--acade-text-muted)] leading-relaxed">{block.message}</p>
               ) : loading ? (
                 <div className="flex items-center gap-2 text-[var(--acade-text-muted)] text-sm">

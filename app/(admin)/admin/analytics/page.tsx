@@ -14,6 +14,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { ErrorState } from '@/components/shared';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { DEGREE_CLASS_BANDS, formatCgpa } from '@/lib/cgpa/academicRules';
+import { bucketKeyFor } from '@/lib/admin/metrics';
 import toast from 'react-hot-toast';
 
 interface AnalyticsData {
@@ -34,12 +36,16 @@ const DEGREE_COLORS: Record<string, string> = {
   'Fail': '#6B7280',
 };
 
-const DEGREE_THRESHOLDS = [
-  { value: 4.5, label: 'First Class', color: '#22C55E' },
-  { value: 3.5, label: '2:1', color: '#6366F1' },
-  { value: 2.4, label: '2:2', color: '#F59E0B' },
-  { value: 1.5, label: 'Third', color: '#F97316' },
-];
+// Reference lines sit in the histogram bucket that holds each class minimum.
+const CLASS_LINE_COLORS: Record<string, string> = { '1st': '#22C55E', '2:1': '#6366F1', '2:2': '#F59E0B', '3rd': '#F97316' };
+const DEGREE_THRESHOLDS = DEGREE_CLASS_BANDS
+  .filter((band) => band.shortLabel in CLASS_LINE_COLORS)
+  .map((band) => ({
+    key: band.shortLabel,
+    label: band.shortLabel === '1st' ? 'First Class' : band.shortLabel === '3rd' ? 'Third' : band.shortLabel,
+    color: CLASS_LINE_COLORS[band.shortLabel],
+    bucket: bucketKeyFor(band.minCGPA),
+  }));
 
 export default function AdminAnalyticsPage() {
   const { user } = useAuth();
@@ -69,7 +75,7 @@ export default function AdminAnalyticsPage() {
   const handleExportCSV = () => {
     if (!data?.departmentBreakdown) return;
     const headers = 'Department,Users,Avg CGPA\n';
-    const rows = data.departmentBreakdown.map(d => `"${d.department}",${d.count},${d.avgCGPA.toFixed(2)}`).join('\n');
+    const rows = data.departmentBreakdown.map(d => `"${d.department}",${d.count},${formatCgpa(d.avgCGPA)}`).join('\n');
     const csv = headers + rows;
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -138,7 +144,7 @@ export default function AdminAnalyticsPage() {
                   <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '8px', color: 'var(--acade-text)' }} />
                   <Bar dataKey="count" fill="var(--acade-primary)" radius={[4, 4, 0, 0]} />
                   {DEGREE_THRESHOLDS.map(t => (
-                    <ReferenceLine key={t.label} x={`${(t.value - 0.5).toFixed(1)}-${t.value.toFixed(1)}`} stroke={t.color} strokeDasharray="4 4" label={{ value: t.label, fill: t.color, fontSize: 9, position: 'top' }} />
+                    <ReferenceLine key={t.key} x={t.bucket} stroke={t.color} strokeDasharray="4 4" label={{ value: t.label, fill: t.color, fontSize: 9, position: 'top' }} />
                   ))}
                 </BarChart>
               </ResponsiveContainer>
@@ -158,7 +164,7 @@ export default function AdminAnalyticsPage() {
               ].map((metric) => (
                 <div key={metric.label} className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-5">
                   <p className="text-xs font-semibold text-[var(--acade-text-muted)]">{metric.label}</p>
-                  <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-4xl font-bold text-[var(--acade-text)]">{metric.value.toFixed(2)}</p>
+                  <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-4xl font-bold text-[var(--acade-text)]">{formatCgpa(metric.value)}</p>
                   <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--acade-overlay)]">
                     <div
                       className="h-full rounded-full"
@@ -219,7 +225,7 @@ export default function AdminAnalyticsPage() {
                     <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">{dept.count} student{dept.count !== 1 ? 's' : ''}</span>
                   </div>
                   <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
-                    {dept.avgCGPA.toFixed(2)}
+                    {formatCgpa(dept.avgCGPA)}
                   </span>
                 </div>
               ))}

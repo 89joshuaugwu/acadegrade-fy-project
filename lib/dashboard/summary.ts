@@ -1,4 +1,5 @@
 import type { Grade } from '@/types/course';
+import { isNotYetGraded } from '@/lib/cgpa/academicRules';
 
 interface TimestampLike {
   toMillis?: () => number;
@@ -15,6 +16,9 @@ export interface DashboardCourseSource {
   caScore?: number | null;
   examScore?: number | null;
   estimated?: boolean;
+  /** Awaiting a result, or a share-code placeholder: never graded, never at risk. */
+  isAR?: boolean;
+  pending?: boolean;
   updatedAt?: TimestampLike | Date | number | string | null;
   createdAt?: TimestampLike | Date | number | string | null;
 }
@@ -85,6 +89,7 @@ export function buildDashboardSummary(
   let atRiskCount = 0;
   let unknownCount = 0;
   for (const course of records) {
+    if (isNotYetGraded(course)) continue;
     const state = attentionState(course);
     if (state === 'risk') atRiskCount += 1;
     if (state === 'unknown') unknownCount += 1;

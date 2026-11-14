@@ -155,3 +155,48 @@ describe('GradeTable discreet mode', () => {
     expect(screen.getByTestId('grade-table-gpa')).toHaveTextContent('4.00');
   });
 });
+
+describe('import requests (R1.2)', () => {
+  const csc201: CourseInput = { code: 'CSC 201', title: 'Programming', units: 3, caScore: 20, examScore: 50 };
+  const mth202: CourseInput = { code: 'MTH 202', title: 'Calculus', units: 3, caScore: null, examScore: null };
+
+  it('merges rows, skips codes already present (normalised) and reports counts', () => {
+    const onImportResult = vi.fn();
+    const { rerender } = render(<GradeTable editable initialCourses={[csc201]} />);
+    expect(screen.getAllByLabelText(/Course \d+ CA score out of 30/).length).toBeGreaterThan(0);
+
+    rerender(
+      <GradeTable
+        editable
+        initialCourses={[csc201]}
+        importRequest={{ id: 1, rows: [{ ...csc201, code: 'csc201' }, mth202] }}
+        onImportResult={onImportResult}
+      />,
+    );
+
+    expect(onImportResult).toHaveBeenCalledTimes(1);
+    expect(onImportResult).toHaveBeenCalledWith({ added: 1, skipped: 1 });
+    expect(screen.getAllByLabelText('Course 2 CA score out of 30').length).toBeGreaterThan(0);
+    expect(screen.queryAllByLabelText('Course 3 CA score out of 30')).toHaveLength(0);
+  });
+
+  it('does not run on first mount and runs once per request id', () => {
+    const onImportResult = vi.fn();
+    const request = { id: 7, rows: [mth202] };
+    const { rerender } = render(<GradeTable editable initialCourses={[csc201]} importRequest={request} onImportResult={onImportResult} />);
+    expect(onImportResult).not.toHaveBeenCalled();
+
+    rerender(<GradeTable editable initialCourses={[csc201]} importRequest={{ id: 8, rows: [mth202] }} onImportResult={onImportResult} />);
+    rerender(<GradeTable editable initialCourses={[csc201]} importRequest={{ id: 8, rows: [mth202] }} onImportResult={onImportResult} />);
+    expect(onImportResult).toHaveBeenCalledTimes(1);
+  });
+
+  it('replaces a single blank placeholder row instead of keeping it', () => {
+    const onImportResult = vi.fn();
+    const blank: CourseInput = { code: '', title: '', units: 3, caScore: null, examScore: null };
+    const { rerender } = render(<GradeTable editable initialCourses={[blank]} />);
+    rerender(<GradeTable editable initialCourses={[blank]} importRequest={{ id: 1, rows: [mth202] }} onImportResult={onImportResult} />);
+    expect(onImportResult).toHaveBeenCalledWith({ added: 1, skipped: 0 });
+    expect(screen.queryAllByLabelText('Course 2 CA score out of 30')).toHaveLength(0);
+  });
+});

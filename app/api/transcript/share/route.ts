@@ -139,7 +139,9 @@ export async function GET(request: NextRequest) {
     }
 
     logApiCall({ endpoint: '/api/transcript/share', category: 'transcript', uid: null, status: 200, durationMs: timer() });
-    return NextResponse.json({ transcript: data });
+    // The link is public: never expose the owner's internal user id.
+    const { uid: _ownerUid, ...transcript } = data;
+    return NextResponse.json({ transcript });
   } catch (error: any) {
     console.error('Get shared transcript error:', error);
     logApiCall({ endpoint: '/api/transcript/share', category: 'transcript', uid: null, status: 500, durationMs: 0, error: error?.message });

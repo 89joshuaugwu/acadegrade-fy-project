@@ -40,8 +40,12 @@ vi.mock('@/lib/firebase/semester', () => ({
   commitSemesterRecord: vi.fn(),
 }));
 
+// The page writes the share-code counter directly (only { useCount }), so it imports these.
+vi.mock('@/lib/firebase/client', () => ({ db: {} }));
 vi.mock('firebase/firestore', () => ({
   increment: vi.fn(),
+  doc: vi.fn(),
+  updateDoc: vi.fn(),
 }));
 
 vi.mock('react-hot-toast', () => ({

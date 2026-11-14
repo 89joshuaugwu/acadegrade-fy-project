@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { readAgeStatusFrom, readAiConsent } from '@/lib/user/requirements';
+import { computeCumulativeCGPA } from '@/lib/cgpa/academicRules';
 
 /**
  * GET /api/admin/users — List all users with profile data
@@ -29,24 +30,11 @@ export async function GET(request: Request) {
     for (const doc of usersSnap.docs) {
       const data = doc.data();
 
-      // Count semesters
+      // Student rule: every graded course counts, whether or not its semester is complete.
       const semSnap = await adminDb.collection(`users/${doc.id}/semesters`).get();
-      let totalCredits = 0;
-      let totalPoints = 0;
-      let totalPIPoints = 0;
-
-      for (const semDoc of semSnap.docs) {
-        const semData = semDoc.data();
-        if (semData.isComplete) {
-          const credits = semData.creditLoaded || 0;
-          totalCredits += credits;
-          totalPoints += (semData.gpa || 0) * credits;
-          totalPIPoints += (semData.pi || 0) * credits;
-        }
-      }
-
-      const cgpa = totalCredits > 0 ? totalPoints / totalCredits : 0;
-      const pi = totalCredits > 0 ? totalPIPoints / totalCredits : 0;
+      const { cgpa, pi } = computeCumulativeCGPA(
+        semSnap.docs.map((semDoc) => semDoc.data() as { gpa: number; pi: number; creditLoaded: number }),
+      );
 
       users.push({
         uid: doc.id,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { resolveDegreeClass, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+import { computeCumulativeCGPA, resolveDegreeClass, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+import { CGPA_BUCKET_KEYS, bucketKeyFor } from '@/lib/admin/metrics';
 
 /** Response keys for degreeClassCounts (kept stable for the admin analytics page). */
 const DEGREE_CLASS_COUNT_KEYS: Record<DegreeClassShortLabel, string> = {
@@ -55,11 +56,7 @@ export async function GET(request: Request) {
     };
 
     // Initialize CGPA buckets (0.0-0.5, 0.5-1.0, ..., 4.5-5.0)
-    for (let i = 0; i < 10; i++) {
-      const low = (i * 0.5).toFixed(1);
-      const high = ((i + 1) * 0.5).toFixed(1);
-      cgpaBuckets[`${low}-${high}`] = 0;
-    }
+    for (const key of CGPA_BUCKET_KEYS) cgpaBuckets[key] = 0;
 
     // Recent signups for last 30 days
     const thirtyDaysAgo = new Date();
@@ -83,23 +80,13 @@ export async function GET(request: Request) {
       const level = `${data.currentLevel || 100}L`;
       levelCounts[level] = (levelCounts[level] || 0) + 1;
 
-      // Compute CGPA from semesters
-      const semSnap = await adminDb.collection(`users/${doc.id}/semesters`).where('isComplete', '==', true).get();
-      let userTotalPoints = 0;
-      let userTotalCredits = 0;
-      let userTotalPIPoints = 0;
-
-      for (const semDoc of semSnap.docs) {
-        const semData = semDoc.data();
-        const credits = semData.creditLoaded || 0;
-        userTotalCredits += credits;
-        userTotalPoints += (semData.gpa || 0) * credits;
-        userTotalPIPoints += (semData.pi || 0) * credits;
-      }
+      // Student rule: every graded course counts, whether or not its semester is complete.
+      const semSnap = await adminDb.collection(`users/${doc.id}/semesters`).get();
+      const { cgpa: userCGPA, pi: userPI, totalCredits: userTotalCredits } = computeCumulativeCGPA(
+        semSnap.docs.map((semDoc) => semDoc.data() as { gpa: number; pi: number; creditLoaded: number }),
+      );
 
       if (userTotalCredits > 0) {
-        const userCGPA = userTotalPoints / userTotalCredits;
-        const userPI = userTotalPIPoints / userTotalCredits;
         totalCGPA += userCGPA;
         totalPI += userPI;
         usersWithCGPA++;
@@ -108,10 +95,8 @@ export async function GET(request: Request) {
         deptCounts[dept].usersWithCGPA++;
 
         // Bucket
-        const bucketIndex = Math.min(Math.floor(userCGPA / 0.5), 9);
-        const low = (bucketIndex * 0.5).toFixed(1);
-        const high = ((bucketIndex + 1) * 0.5).toFixed(1);
-        cgpaBuckets[`${low}-${high}`] = (cgpaBuckets[`${low}-${high}`] || 0) + 1;
+        const bucketKey = bucketKeyFor(userCGPA);
+        cgpaBuckets[bucketKey] = (cgpaBuckets[bucketKey] || 0) + 1;
 
         // Degree class (shared rules: rounded CGPA, lower-bound thresholds)
         degreeClassCounts[DEGREE_CLASS_COUNT_KEYS[resolveDegreeClass(userCGPA).shortLabel]]++;

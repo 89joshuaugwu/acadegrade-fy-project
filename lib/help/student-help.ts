@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Student help for the web app (spec 2026-11-13, Part 4).
  *
  * `student-help.json` is the canonical copy shared byte-for-byte with

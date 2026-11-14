@@ -87,6 +87,8 @@ export default function InsightsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsDoc | null>(null);
   const [currentCGPA, setCurrentCGPA] = useState(0);
   const [gradedCredits, setGradedCredits] = useState(0);
+  // Graded units in unfinished semesters: already in the CGPA, so not "remaining" (R3).
+  const [gradedInProgressUnits, setGradedInProgressUnits] = useState(0);
   const [unitsPerSemester, setUnitsPerSemester] = useState(18);
   const [carryReport, setCarryReport] = useState<CarryOverReport>(EMPTY_REPORT);
   const [piHistory, setPiHistory] = useState<number[]>([]);
@@ -234,6 +236,9 @@ export default function InsightsPage() {
       setSemesterLabels(series.labels);
       setCurrentCGPA(series.currentCgpa);
       setGradedCredits(series.gradedCredits);
+      setGradedInProgressUnits(semesters
+        .filter((semester) => !semester.isComplete)
+        .reduce((sum, semester) => sum + (Number(semester.creditLoaded) || 0), 0));
       setUnitsPerSemester(series.labels.length > 0
         ? Math.min(30, Math.max(1, Math.round(series.gradedCredits / series.labels.length)))
         : 18);
@@ -581,6 +586,7 @@ export default function InsightsPage() {
               gradedCredits={gradedCredits}
               remainingSemesters={isGraduated ? 0 : remainingAcademicSemesters}
               unitsPerSemester={unitsPerSemester}
+              gradedInProgressUnits={gradedInProgressUnits}
               targetClass={targetClass}
               onTargetChange={(next) => void handleTargetChange(next)}
               saving={savingGoal}
@@ -596,6 +602,7 @@ export default function InsightsPage() {
                 totalCredits={gradedCredits}
                 initialRemainingSemesters={remainingAcademicSemesters}
                 initialCreditLoad={unitsPerSemester}
+                gradedInProgressUnits={gradedInProgressUnits}
                 onRequestSettled={() => setCreditsRevision(value => value + 1)}
                 aiBlock={blockFor('whatif') ?? (disableInsights ? { kind: 'feature-disabled', message: 'AI guidance is switched off for now. The numbers above still work.' } : null)}
                 onAiBlocked={(block) => recordBlock('whatif', block)}

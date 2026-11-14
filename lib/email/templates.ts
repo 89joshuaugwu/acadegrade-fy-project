@@ -1,3 +1,5 @@
+import { formatCgpa, resolveDegreeClass } from '@/lib/cgpa/academicRules';
+
 const FALLBACK_SITE_URL = 'https://acadegrade.vercel.app';
 
 const COLORS = {
@@ -119,8 +121,10 @@ export function welcomeEmail(name: string): string {
 export function semesterSavedEmail(name: string, gpa: number, semester: string): string {
   const safeName = escapeEmailHtml(name);
   const safeSemester = escapeEmailHtml(semester);
-  const formattedGpa = Number.isFinite(gpa) ? gpa.toFixed(2) : '0.00';
-  const gpaColor = gpa >= 4.5 ? COLORS.success : gpa >= 3.5 ? COLORS.primarySoft : gpa >= 2.5 ? COLORS.gold : COLORS.danger;
+  const formattedGpa = Number.isFinite(gpa) ? formatCgpa(gpa) : '0.00';
+  // Same bands and rounding as the app: 1st success, 2:1 primary, 2:2 gold, lower danger.
+  const classColors: Record<string, string> = { '1st': COLORS.success, '2:1': COLORS.primarySoft, '2:2': COLORS.gold };
+  const gpaColor = classColors[resolveDegreeClass(gpa).shortLabel] ?? COLORS.danger;
   return renderEmail('Semester results saved', `${eyebrow('Academic record updated')}${heading('Your semester is safely recorded')}${paragraph(`Hi ${safeName}, your results for <strong style="color:${COLORS.text};">${safeSemester}</strong> are now part of your AcadeGrade record.`)}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:18px 0 24px;"><tr>${metric('Semester GPA', formattedGpa, gpaColor)}${metric('Semester', safeSemester, COLORS.text)}</tr></table>${paragraph('Your CGPA trend and degree-class outlook have been recalculated from the saved record.', true)}${button('Review your insights', `${getEmailSiteUrl()}/insights`)}${infoBox('Always compare AcadeGrade with your institution\'s official result and transcript.')}`, { preheader: `${semester} is saved. Semester GPA: ${formattedGpa}.` });
 }
 

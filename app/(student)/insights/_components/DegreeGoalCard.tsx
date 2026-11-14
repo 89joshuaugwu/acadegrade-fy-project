@@ -13,6 +13,8 @@ export interface DegreeGoalCardProps {
   gradedCredits: number;
   remainingSemesters: number;
   unitsPerSemester: number;
+  /** Graded units already inside the CGPA that belong to unfinished semesters (not counted as remaining). */
+  gradedInProgressUnits?: number;
   targetClass: TargetClass | null;
   onTargetChange: (target: TargetClass) => void;
   saving?: boolean;
@@ -27,10 +29,10 @@ function requirementValue(req: ClassRequirement): { text: string; tone: 'ink' | 
 const toneClass = { ink: 'text-[var(--acade-text)]', good: 'text-[var(--acade-success)]', bad: 'text-[var(--acade-danger)]' } as const;
 
 /** A6: a saved degree-class goal with the GPA it needs. Pure maths, no AI call. */
-export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters, unitsPerSemester, targetClass, onTargetChange, saving = false }: DegreeGoalCardProps) {
+export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits = 0, targetClass, onTargetChange, saving = false }: DegreeGoalCardProps) {
   const headingId = useId();
   const selectId = useId();
-  const plan = planDegreeGoal({ currentCgpa, completedUnits: gradedCredits, remainingSemesters, unitsPerSemester, targetClass: targetClass ?? '2:1' });
+  const plan = planDegreeGoal({ currentCgpa, completedUnits: gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits, targetClass: targetClass ?? '2:1' });
   const target = targetClass && plan.kind === 'plan' ? plan.target : null;
   const semesters = `${remainingSemesters} remaining ${remainingSemesters === 1 ? 'semester' : 'semesters'}`;
 
@@ -124,7 +126,7 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
       )}
       {plan.kind === 'plan' && (
         <p className="mt-4 text-xs leading-5 text-[var(--acade-text-muted)]">
-          Assumes {semesters} of {unitsPerSemester} units at the same GPA. Uses every graded course so far; courses awaiting results are left out. Each class starts at its lowest CGPA ({formatCgpa(bandFor(targetClass ?? '2:1').minCGPA)} for {targetClass ?? '2:1'}).
+          Assumes {semesters} of {unitsPerSemester} units at the same GPA, less units already graded in your current semester. Uses every graded course so far; courses awaiting results are left out. Each class starts at its lowest CGPA ({formatCgpa(bandFor(targetClass ?? '2:1').minCGPA)} for {targetClass ?? '2:1'}).
         </p>
       )}
     </section>

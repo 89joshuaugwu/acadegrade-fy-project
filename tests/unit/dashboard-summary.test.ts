@@ -84,4 +84,23 @@ describe('dashboard academic summary', () => {
 
     expect(summary.recent.map((course) => course.id)).toEqual(['course-a', 'course-b']);
   });
-});
+
+  it('awaiting-result and pending rows are neither unknown nor at risk', () => {
+    const summary = buildDashboardSummary([
+      {
+        semesterId: 's1',
+        semesterLabel: '300L First Semester',
+        session: '2025/2026',
+        semesterIndex: 0,
+        courses: [
+          { id: 'ar', code: 'CSC 301', title: 'Algorithms', totalScore: null, grade: null, isAR: true },
+          { id: 'pending', code: 'CSC 302', title: 'Databases', totalScore: null, grade: null, pending: true },
+          { id: 'open', code: 'CSC 303', title: 'Networks', totalScore: null, grade: null },
+          { id: 'low', code: 'CSC 304', title: 'Compilers', totalScore: 44, grade: 'E' },
+        ],
+      },
+    ]);
+
+    expect(summary.unknownCount).toBe(1);
+    expect(summary.atRiskCount).toBe(1);
+  });});

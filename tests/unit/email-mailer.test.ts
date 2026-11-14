@@ -53,6 +53,22 @@ describe('transactional email templates', () => {
     process.env = { ...originalEnvironment };
   });
 
+  it('semester email colour follows resolveDegreeClass', () => {
+    const GOLD = '#F4B544';
+    const SUCCESS = '#46C98B';
+    const PRIMARY_SOFT = '#B0AAFF';
+    const DANGER = '#FF6B6B';
+    const colourOf = (gpa: number) => {
+      const html = semesterSavedEmail('Ada', gpa, 'First Semester');
+      const match = /Semester GPA<\/p><p style="[^"]*?color:(#[0-9A-Fa-f]{6})/.exec(html);
+      return [SUCCESS, PRIMARY_SOFT, GOLD, DANGER].find((colour) => colour === match?.[1]);
+    };
+    expect(colourOf(2.45)).toBe(GOLD);      // 2:2 starts at 2.40, not 2.50
+    expect(colourOf(2.4)).toBe(GOLD);
+    expect(colourOf(4.495)).toBe(SUCCESS);  // rounds to 4.50: First Class
+    expect(colourOf(3.5)).toBe(PRIMARY_SOFT);
+    expect(colourOf(2.39)).toBe(DANGER);    // Third Class and below stay red
+  });
   it('renders every existing template through the responsive branded shell', () => {
     const templates = [
       welcomeEmail('Ada'),

@@ -39,6 +39,11 @@ export interface DegreeGoalInput {
   completedUnits: number;
   remainingSemesters: number;
   unitsPerSemester: number;
+  /**
+   * Graded units in semesters not yet marked complete. They are already inside
+   * `currentCgpa`/`completedUnits`, so they must not be counted as remaining again.
+   */
+  gradedInProgressUnits?: number;
   targetClass: TargetClass;
 }
 
@@ -63,7 +68,11 @@ export type DegreeGoalPlan =
 export function planDegreeGoal(input: DegreeGoalInput): DegreeGoalPlan {
   const completedUnits = Math.max(0, Number(input.completedUnits) || 0);
   const currentCgpa = completedUnits > 0 ? Number(input.currentCgpa) || 0 : 0;
-  const remainingUnits = Math.max(0, Math.floor(input.remainingSemesters)) * Math.max(0, Number(input.unitsPerSemester) || 0);
+  const gradedInProgress = Math.max(0, Number(input.gradedInProgressUnits) || 0);
+  const remainingUnits = Math.max(
+    0,
+    Math.max(0, Math.floor(input.remainingSemesters)) * Math.max(0, Number(input.unitsPerSemester) || 0) - gradedInProgress,
+  );
   const current = resolveDegreeClass(currentCgpa);
   if (!(remainingUnits > 0)) return { kind: 'final', current };
 

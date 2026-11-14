@@ -7,6 +7,7 @@ import { resolveFeatureWindows } from '@/lib/usage/server';
 import { coins, RewardError, type CoinHold } from '@/lib/ads/reward';
 import { checkPlatformAccess } from '@/lib/platform/settings-server';
 import { aiAgeGate } from '@/lib/user/age';
+import { MAX_GRADE_POINT, requiredAverageForTarget } from '@/lib/cgpa/academicRules';
 import { chargedFailureResponse, chargedHeaders, freeCoinHeaders, readCoinSpend, refundQuietly, rewardErrorResponse, withCoinHint } from '@/lib/ads/reward/http';
 
 export async function POST(request: NextRequest) {
@@ -42,15 +43,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Credits, remaining semesters, or credit load are outside the supported range.' }, { status: 400 });
     }
 
-    const futureCredits = remainingSemesters * creditLoad;
-    const requiredGPATotal = (targetCGPA * (totalCredits + futureCredits)) - (currentCGPA * totalCredits);
-    const requiredGPA = requiredGPATotal / futureCredits;
-    const requiredAvgScore = (requiredGPA / 5) * 100;
+    // Additive field: graded units in unfinished semesters are already in the CGPA. Older clients
+    // omit it (0). Anything not a finite number in 0-1000 is ignored rather than rejected.
+    const gradedInProgressRaw = Number(body.gradedInProgressUnits);
+    const gradedInProgress = Number.isFinite(gradedInProgressRaw) && gradedInProgressRaw >= 0 && gradedInProgressRaw <= 1000 ? gradedInProgressRaw : 0;
+    const futureCredits = remainingSemesters * creditLoad - gradedInProgress;
+    if (futureCredits <= 0) {
+      return NextResponse.json({ error: 'Nothing left to plan: every remaining unit is already graded.' }, { status: 400 });
+    }
+    // One shared formula for web, Android and this route (never null: futureCredits >= 1).
+    const requiredGPA = requiredAverageForTarget({
+      currentCgpa: currentCGPA,
+      completedUnits: totalCredits,
+      remainingUnits: futureCredits,
+      targetCgpa: targetCGPA,
+    }) as number;
+    const requiredAvgScore = (requiredGPA / MAX_GRADE_POINT) * 100;
 
     let feasibilityNote = '';
     let charge: { spent: number; balance: number } | undefined;
     // Impossible/secured targets are answered locally: no provider call, never charged.
-    if (requiredGPA > 5) {
+    if (requiredGPA > MAX_GRADE_POINT) {
       feasibilityNote = "Mathematically impossible. The required GPA exceeds the maximum 5.0 scale.";
     } else if (requiredGPA < 0) {
       feasibilityNote = "Target already secured. You could fail all remaining courses and still hit this target.";

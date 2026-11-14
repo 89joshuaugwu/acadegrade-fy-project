@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { AgeCorrectionDialog, type AgeStatus } from '@/components/admin/users/AgeCorrectionDialog';
 import { cn } from '@/lib/utils/cn';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
 import toast from 'react-hot-toast';
 
 interface UserRecord {
@@ -26,6 +27,9 @@ interface UserRecord {
   pi: number;
   semesterCount: number;
   disabled: boolean;
+  /** From the admin users API: 'unknown' for accounts that have not answered yet. */
+  ageStatus?: AgeStatus | 'unknown';
+  aiConsent?: boolean | null;
   createdAt: string | null;
 }
 
@@ -196,14 +200,14 @@ export default function AdminUsersPage() {
                   </div>
                   {/* Small screens hide the columns; keep their facts on a second line. */}
                   <p className="mt-1 truncate text-xs text-[var(--acade-text-muted)] md:hidden">
-                    {u.department || 'No department'} · {u.currentLevel}L · CGPA {u.cgpa.toFixed(2)}
+                    {u.department || 'No department'} · {u.currentLevel}L · CGPA {formatCgpa(u.cgpa)}
                   </p>
                 </div>
                 <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.matric}</span>
                 <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hidden md:block truncate">{u.department}</span>
                 <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.currentLevel}L</span>
-                <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.cgpa.toFixed(2)}</span>
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-gold)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.pi.toFixed(2)}</span>
+                <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] hidden md:block">{formatCgpa(u.cgpa)}</span>
+                <span className="text-[length:var(--text-sm)] text-[var(--acade-gold)] font-[family-name:var(--font-geist-mono)] hidden md:block">{formatCgpa(u.pi)}</span>
                 <span className="hidden md:block">
                   <Badge variant={u.disabled ? 'status' : 'status'} className={u.disabled ? 'bg-[var(--acade-danger)]/10 text-[var(--acade-danger)] border-[var(--acade-danger)]/30' : 'bg-[var(--acade-success)]/10 text-[var(--acade-success)] border-[var(--acade-success)]/30'}>
                     {u.disabled ? 'Disabled' : 'Active'}

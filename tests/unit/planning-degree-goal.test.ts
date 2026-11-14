@@ -70,6 +70,35 @@ describe('planDegreeGoal (A6)', () => {
   });
 });
 
+describe('planDegreeGoal remaining units (R3.1)', () => {
+  it('graded units in an in-progress semester are not counted as remaining', () => {
+    // 2 semesters x 18 units, but 9 units of the current semester are already graded
+    // (and so already inside the CGPA): 36 - 9 = 27 units still to earn.
+    const plan = planDegreeGoal({
+      currentCgpa: 3.2, completedUnits: 60, remainingSemesters: 2, unitsPerSemester: 18,
+      gradedInProgressUnits: 9, targetClass: '2:1',
+    });
+    expect(plan.kind).toBe('plan');
+    if (plan.kind !== 'plan') return;
+    expect(plan.remainingUnits).toBe(27);
+    // (3.5 x (60 + 27) - 3.2 x 60) / 27
+    expect(plan.target.requiredGpa).toBeCloseTo((3.5 * 87 - 3.2 * 60) / 27, 10);
+  });
+
+  it('never goes negative and omitted units behave exactly as before', () => {
+    const none = planDegreeGoal({ ...base, targetClass: '2:1' });
+    const same = planDegreeGoal({ ...base, gradedInProgressUnits: 0, targetClass: '2:1' });
+    expect(same).toEqual(none);
+    const over = planDegreeGoal({ ...base, gradedInProgressUnits: 500, targetClass: '2:1' });
+    expect(over.kind).toBe('final');
+  });
+
+  it('ignores invalid graded-unit values', () => {
+    const plan = planDegreeGoal({ ...base, gradedInProgressUnits: Number.NaN, targetClass: '2:1' });
+    expect(plan.kind === 'plan' && plan.remainingUnits).toBe(40);
+  });
+});
+
 describe('parseTargetClass', () => {
   it('accepts the saved short labels and rejects anything else', () => {
     expect(TARGET_CLASS_OPTIONS.map(o => o.value)).toEqual(['1st', '2:1', '2:2', '3rd', 'Pass']);

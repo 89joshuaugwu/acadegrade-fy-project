@@ -27,7 +27,9 @@ vi.mock('@/lib/firebase/firestore', () => ({
   updateDocument: vi.fn(),
 }));
 vi.mock('@/lib/firebase/semester', () => ({ commitSemesterRecord: mocks.commit }));
-vi.mock('firebase/firestore', () => ({ increment: vi.fn(), where: (...args: unknown[]) => ({ where: args }) }));
+const fs = vi.hoisted(() => ({ updateDoc: vi.fn(), doc: vi.fn((...segments: unknown[]) => ({ path: segments.slice(1).join('/') })) }));
+vi.mock('@/lib/firebase/client', () => ({ db: {} }));
+vi.mock('firebase/firestore', () => ({ increment: (n: number) => ({ increment: n }), updateDoc: fs.updateDoc, doc: fs.doc, where: (...args: unknown[]) => ({ where: args }) }));
 vi.mock('react-hot-toast', () => ({ default: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@/components/onboarding/ResultsTour', () => ({ ResultsTour: () => null }));
 vi.mock('@/components/ai/FeatureCredits', () => ({ FeatureCredits: () => null }));
@@ -45,6 +47,7 @@ vi.mock('@/components/cgpa/GradeTable', () => ({
 
 import SemesterDetailPage from '@/app/(student)/results/[semesterId]/page';
 import { loadDraft, saveDraft } from '@/lib/drafts';
+import toast from 'react-hot-toast';
 
 async function renderPage() {
   const params = Promise.resolve({ semesterId: 'semester-1' });
@@ -144,4 +147,36 @@ describe('semester detail results entry', () => {
     await screen.findByText('Grade table');
     expect(mocks.gradeTableProps?.restoreDraftOnMount).toBe(false);
   });
-});
+
+  it('import by course code increments useCount with only the useCount field and shows no error', async () => {
+    mocks.getDocument.mockImplementation((path: string) => Promise.resolve(path === 'shareCodes/ABC123'
+      ? { code: 'ABC123', courses: [{ code: 'CSC 301', title: 'Data Structures', units: 3 }] }
+      : { id: 'semester-1', label: 'First Semester', level: 300, semester: 1, session: '2025/2026' }));
+    fs.updateDoc.mockResolvedValue(undefined);
+    await renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Import Code/ }));
+    fireEvent.change(await screen.findByPlaceholderText('Enter 6-character code'), { target: { value: 'ABC123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Import Courses' }));
+
+    await waitFor(() => expect(fs.updateDoc).toHaveBeenCalledTimes(1));
+    expect(fs.updateDoc.mock.calls[0][0]).toEqual({ path: 'shareCodes/ABC123' });
+    expect(fs.updateDoc.mock.calls[0][1]).toEqual({ useCount: { increment: 1 } });
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(mocks.gradeTableProps?.importRequest).toMatchObject({ rows: [{ code: 'CSC 301' }] });
+  });
+
+  it('a failed use-count write never turns a successful import into an error', async () => {
+    mocks.getDocument.mockImplementation((path: string) => Promise.resolve(path === 'shareCodes/ABC123'
+      ? { code: 'ABC123', courses: [{ code: 'CSC 301', title: 'Data Structures', units: 3 }] }
+      : { id: 'semester-1', label: 'First Semester', level: 300, semester: 1, session: '2025/2026' }));
+    fs.updateDoc.mockRejectedValue(new Error('permission-denied'));
+    await renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: /Import Code/ }));
+    fireEvent.change(await screen.findByPlaceholderText('Enter 6-character code'), { target: { value: 'ABC123' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Import Courses' }));
+
+    await waitFor(() => expect(fs.updateDoc).toHaveBeenCalled());
+    expect(toast.error).not.toHaveBeenCalled();
+  });});

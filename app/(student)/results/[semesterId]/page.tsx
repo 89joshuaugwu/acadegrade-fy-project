@@ -7,10 +7,12 @@ import { Save, ArrowLeft, Loader2, Upload, Share2, Download, Copy, FileText, Che
 import toast from 'react-hot-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { getDocument, setDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
+import { getDocument, setDocument, queryCollection } from '@/lib/firebase/firestore';
+import { db } from '@/lib/firebase/client';
 import { commitSemesterRecord } from '@/lib/firebase/semester';
 import { prepareSemesterSave, SemesterSaveValidationError } from '@/lib/results/semester-save';
-import { increment } from 'firebase/firestore';
+import { doc, increment, updateDoc } from 'firebase/firestore';
+import { mapExtractedCourse } from './import-mapping';
 import type { Semester } from '@/types/semester';
 import type { CourseInput, Course } from '@/types/course';
 import { GRADE_SCALE } from '@/lib/utils/constants';
@@ -43,6 +45,14 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
   const [semester, setSemester] = useState<Semester | null>(null);
   const [initialCourses, setInitialCourses] = useState<CourseInput[]>([]);
+  // Imports (share code, slip scan) merge into the table; each request has a fresh id.
+  const [importRequest, setImportRequest] = useState<{ id: number; rows: CourseInput[] } | undefined>(undefined);
+  const requestImport = (rows: CourseInput[]) => setImportRequest({ id: Date.now(), rows });
+  const handleImportResult = ({ added, skipped }: { added: number; skipped: number }) => {
+    if (added === 0 && skipped > 0) toast.success(`Nothing new to add. ${skipped} already in this semester.`);
+    else if (skipped > 0) toast.success(`${added} added, ${skipped} already in this semester. Fill in your scores.`);
+    else toast.success(`${added} course${added === 1 ? '' : 's'} added. Fill in your scores.`);
+  };
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -230,19 +240,9 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         return;
       }
 
-      // Format extracted courses
-      const mappedCourses: CourseInput[] = data.courses.map((c: any) => ({
-        code: c.code || '',
-        title: c.title || '',
-        units: c.units || 3,
-        caScore: c.caScore || null,
-        examScore: c.examScore || null,
-        isAR: c.isAR || false,
-        estimated: c.isAR ? true : false,
-      }));
-
-      setInitialCourses(mappedCourses);
-      toast.success(`Extracted ${mappedCourses.length} courses!`);
+      // Format extracted courses (a score of 0 is a real score), then merge into the table.
+      const mappedCourses: CourseInput[] = data.courses.map(mapExtractedCourse);
+      requestImport(mappedCourses);
       setIsImportSlipOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -309,15 +309,19 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         examScore: null,
       }));
 
-      setInitialCourses(importedCourses);
-      toast.success(`${importedCourses.length} courses imported. Fill in your scores.`);
+      requestImport(importedCourses);
       setIsImportCodeOpen(false);
+      const importedCode = shareCodeInput.toUpperCase();
       setShareCodeInput('');
 
-      // Increment use count safely using updateDocument with increment value
-      await updateDocument(`shareCodes/${shareCodeInput.toUpperCase()}`, {
-        useCount: increment(1)
-      });
+      // The rules allow only { useCount } on a share code. updateDocument adds updatedAt,
+      // which the rules reject, so write the counter directly. A counter failure must
+      // never turn a successful import into an error.
+      try {
+        await updateDoc(doc(db, 'shareCodes', importedCode), { useCount: increment(1) });
+      } catch (counterError) {
+        console.warn('Share code use count not recorded', counterError);
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to import courses');
@@ -424,6 +428,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           catalog={catalog}
           draft={user ? { uid: user.uid, semesterId } : undefined}
           restoreDraftOnMount={fromCalculator}
+          importRequest={importRequest}
+          onImportResult={handleImportResult}
         />
       </motion.div>
 

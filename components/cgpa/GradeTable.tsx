@@ -6,7 +6,7 @@ import { Plus, Trash2, CheckCircle2, History } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 import { MAX_CA_SCORE, MAX_EXAM_SCORE } from '@/lib/utils/constants';
-import { computeSemesterGPA, formatCgpa, gradeFromScore } from '@/lib/cgpa/academicRules';
+import { computeSemesterGPA, formatCgpa, gradeFromScore, normaliseCourseCode } from '@/lib/cgpa/academicRules';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue, useDiscreetMode } from '@/lib/discreet';
 import { DRAFT_DEBOUNCE_MS, clearDraft, draftDiffers, loadDraft, saveDraft, type SemesterDraft } from '@/lib/drafts/semester-drafts';
 import type { CourseInput, Grade } from '@/types/course';
@@ -30,7 +30,17 @@ interface GradeTableProps {
   draft?: { uid: string; semesterId: string };
   /** Apply a stored draft straight away for review (rows handed over from the calculator). */
   restoreDraftOnMount?: boolean;
+  /**
+   * Merge imported rows (share code, slip scan) into the table. Runs once per new `id`,
+   * never on first mount. Codes already present (normalised) are skipped.
+   */
+  importRequest?: { id: number; rows: CourseInput[] };
+  onImportResult?: (result: { added: number; skipped: number }) => void;
 }
+
+const isBlankRow = (course: CourseInput) => (
+  !course.code.trim() && !course.title.trim() && course.caScore === null && course.examScore === null && !course.grade
+);
 
 const newId = () => Math.random().toString(36).slice(2, 11);
 const withIds = (courses: CourseInput[]): LocalCourse[] => courses.map((course) => ({ ...course, localId: newId() }));
@@ -61,8 +71,9 @@ function draftTimeLabel(savedAt: number) {
 const inputBase = 'min-h-11 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
 const headerCell = 'text-xs font-semibold text-[var(--acade-text-muted)]';
 
-export function GradeTable({ initialCourses = [], editable = false, onSave, isSaving = false, catalog, draft, restoreDraftOnMount = false }: GradeTableProps) {
+export function GradeTable({ initialCourses = [], editable = false, onSave, isSaving = false, catalog, draft, restoreDraftOnMount = false, importRequest, onImportResult }: GradeTableProps) {
   const shouldReduceMotion = useReducedMotion();
+  const lastImportId = useRef(importRequest?.id);
   const { enabled: discreet } = useDiscreetMode();
   const previousInitialCourses = useRef(initialCourses);
   const listId = useId();
@@ -104,6 +115,31 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       setDirty(true);
     }
   }, [initialCourses]);
+
+  // R1.2: merge imported rows (share code, slip scan) instead of replacing the table.
+  useEffect(() => {
+    if (!importRequest || importRequest.id === lastImportId.current) return;
+    lastImportId.current = importRequest.id;
+    const existing = new Set(courses.filter((course) => course.code.trim()).map((course) => normaliseCourseCode(course.code)));
+    const fresh: CourseInput[] = [];
+    let skipped = 0;
+    for (const row of importRequest.rows) {
+      const key = normaliseCourseCode(row.code);
+      if (key && existing.has(key)) { skipped += 1; continue; }
+      if (key) existing.add(key);
+      fresh.push(row);
+    }
+    if (fresh.length > 0) {
+      setCourses((previous) => {
+        const kept = previous.length === 1 && isBlankRow(previous[0]) ? [] : previous;
+        return [...kept, ...withIds(fresh)];
+      });
+      setDirty(true);
+    }
+    onImportResult?.({ added: fresh.length, skipped });
+    // Only a new request id should merge; `courses` is read at that moment.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importRequest]);
 
   // Auto-add an empty row if empty and editable
   useEffect(() => {
