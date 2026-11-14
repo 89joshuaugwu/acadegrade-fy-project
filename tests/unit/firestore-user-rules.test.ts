@@ -35,6 +35,10 @@ describe('new server-only collections and config/legal', () => {
     }
   });
 
+  it('denies every client read and write to the daily job run records', () => {
+    expect(rules()).toContain('match /_cron_runs/{document=**} {\n      allow read, write: if false;\n    }');
+  });
+
   it('makes legal versions public-read and server-written', () => {
     expect(rules()).toContain('match /config/legal {\n      allow read: if true;\n      allow write: if false;\n    }');
   });

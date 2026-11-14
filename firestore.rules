@@ -153,6 +153,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Record of each daily clean-up run (/api/cron/daily). Read through the admin API only.
+    match /_cron_runs/{document=**} {
+      allow read, write: if false;
+    }
+
     // Gmail App Passwords are encrypted and managed only by server routes.
     match /_email_secrets/{document=**} {
       allow read, write: if false;

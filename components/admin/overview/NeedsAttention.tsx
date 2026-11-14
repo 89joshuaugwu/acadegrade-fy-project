@@ -12,7 +12,13 @@ interface Sources {
   maintenanceMode: boolean | null;
   coinsEnabled: boolean | null;
   mobileAds: RewardedMobileAds | null;
+  /** The last daily-job run. Null or omitted means "could not be read": no alarm is raised. */
+  dailyJobs?: { never: boolean; finishedAt: number | null; failedJobs: string[] } | null;
+  /** Current time in ms; passed in so the check is testable. */
+  now?: number;
 }
+
+const DAILY_JOB_STALE_MS = 48 * 60 * 60 * 1000;
 
 export interface AttentionItem { id: string; text: string; href: string }
 
@@ -37,6 +43,18 @@ export function attentionItems(sources: Sources): AttentionItem[] {
   if (sources.maintenanceMode) {
     items.push({ id: 'maintenance', text: 'Maintenance mode is on: students are blocked everywhere', href: '/admin/settings?tab=access' });
   }
+  const daily = sources.dailyJobs;
+  if (daily) {
+    const now = sources.now ?? Date.now();
+    const href = '/admin/audit';
+    if (daily.never) {
+      items.push({ id: 'daily-never', text: 'The daily clean-up has not run yet. Check that CRON_SECRET is set in Vercel and that Vercel Cron is enabled', href });
+    } else if (daily.failedJobs.length > 0) {
+      items.push({ id: 'daily-failed', text: `A daily job failed in the last run: ${daily.failedJobs.join(', ')}`, href });
+    } else if (daily.finishedAt !== null && now - daily.finishedAt > DAILY_JOB_STALE_MS) {
+      items.push({ id: 'daily-stale', text: 'The daily jobs have not run in over 48 hours. Check Vercel Cron and CRON_SECRET', href });
+    }
+  }
   if (sources.coinsEnabled && sources.mobileAds) {
     const readiness = rewardedReadiness({ mobileAds: sources.mobileAds, coinsEnabled: true });
     if (readiness.failed) {
@@ -56,13 +74,15 @@ const record = (value: unknown) => (value && typeof value === 'object' ? value :
 
 async function loadSources(token: string): Promise<Sources> {
   const settle = <T,>(promise: Promise<T>) => promise.catch(() => null);
-  const [suggestions, ai, release, settings, usage] = await Promise.all([
+  const [suggestions, ai, release, settings, usage, cron] = await Promise.all([
     settle(getJson('/api/admin/academic-catalog/suggestions', token)),
     settle(getJson('/api/admin/ai', token)),
     settle(getJson('/api/admin/mobile-release', token)),
     settle(getJson('/api/admin/settings', token)),
     settle(getJson('/api/admin/usage', token)),
+    settle(getJson('/api/admin/cron', token)),
   ]);
+  const dailyJobs = dailyJobsFrom(cron);
   const list = record(suggestions).suggestions;
   const coins = record(record(record(usage).policy).coins).enabled;
   const coinsEnabled = typeof coins === 'boolean' ? coins : null;
@@ -76,7 +96,21 @@ async function loadSources(token: string): Promise<Sources> {
     maintenanceMode: settings ? maintenance === true : null,
     coinsEnabled,
     mobileAds: mobile && typeof mobile === 'object' ? mobile as RewardedMobileAds : null,
+    dailyJobs,
   };
+}
+
+/** Reads GET /api/admin/cron. Anything unexpected (old deployment, error) gives null: no alarm. */
+function dailyJobsFrom(payload: unknown): Sources['dailyJobs'] {
+  if (!payload || typeof payload !== 'object' || !('lastRun' in payload)) return null;
+  const lastRun = (payload as { lastRun: unknown }).lastRun;
+  if (lastRun === null) return { never: true, finishedAt: null, failedJobs: [] };
+  const run = record(lastRun);
+  const finished = typeof run.finishedAt === 'string' ? Date.parse(run.finishedAt) : Number.NaN;
+  const failedJobs = Object.entries(record(run.results))
+    .filter(([, outcome]) => 'error' in record(outcome))
+    .map(([id]) => id);
+  return { never: false, finishedAt: Number.isFinite(finished) ? finished : null, failedJobs };
 }
 
 export function NeedsAttention({ getToken }: { getToken: () => Promise<string> }) {
