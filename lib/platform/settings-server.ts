@@ -22,6 +22,7 @@ export const PLATFORM_FEATURES = [
   'transcript_pdf',
   'transcript_share',
   'support',
+  'timetable',
 ] as const;
 export type PlatformFeature = typeof PLATFORM_FEATURES[number];
 

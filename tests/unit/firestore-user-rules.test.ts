@@ -14,6 +14,12 @@ describe('users/{uid} rules: server-owned age and consent fields', () => {
     expect(rules()).toContain("function serverOwnedUserFields() {\n      return ['ageStatus', 'ageDeclaredAt', 'ageUpgradedAt', 'consents', 'lastActiveAt', 'fcmTopics', 'fcmTopicsTokensHash'];\n    }");
   });
 
+  it('leaves fcmTokens and fcmDevices client-written (E4 device list)', () => {
+    const helper = rules().slice(rules().indexOf('function serverOwnedUserFields()'), rules().indexOf('function platformFeatureEnabled'));
+    expect(helper).not.toContain('fcmDevices');
+    expect(helper).not.toContain('fcmTokens');
+  });
+
   it('forbids creating a profile that already carries them', () => {
     expect(usersBlock()).toContain('allow create: if (isOwner(userId) || isAdmin())\n        && !request.resource.data.keys().hasAny(serverOwnedUserFields());');
   });
@@ -25,6 +31,19 @@ describe('users/{uid} rules: server-owned age and consent fields', () => {
   it('keeps owner and admin reads and deletes', () => {
     expect(usersBlock()).toContain('allow read, delete: if isOwner(userId) || isAdmin();');
     expect(usersBlock()).not.toContain('allow read, write: if isOwner(userId) || isAdmin();\n      \n      // Subcollection');
+  });
+});
+
+describe('users/{uid}/timetables (T1)', () => {
+  it('lets the owner read and write their timetables and admins read them', () => {
+    expect(rules()).toContain('match /timetables/{timetableId} {\n        allow read: if isOwner(userId) || isAdmin();\n        allow write: if isOwner(userId);\n      }');
+    // Nested inside the users/{userId} block, so the owner check uses the profile id.
+    const text = rules();
+    const usersStart = text.indexOf('match /users/{userId} {');
+    const analyticsStart = text.indexOf('// 2. Analytics Collection');
+    const timetables = text.indexOf('match /timetables/{timetableId} {');
+    expect(timetables).toBeGreaterThan(usersStart);
+    expect(timetables).toBeLessThan(analyticsStart);
   });
 });
 
@@ -48,7 +67,8 @@ describe('new server-only collections and config/legal', () => {
     expect(text).toContain('!exists(/databases/$(database)/documents/config/settings)');
 
     // A single code can be fetched by a signed-in user; nobody can list every code.
-    expect(block).toContain('allow get: if isAuthenticated();');
+    // ... unless an admin disabled it (G7 moderation); a missing flag reads as enabled.
+    expect(block).toContain("allow get: if isAuthenticated() && resource.data.get('disabled', false) != true;");
     expect(block).not.toMatch(/allow (read|list)\b/);
 
     // Importing still works: only the use counter may be updated by a non-admin.

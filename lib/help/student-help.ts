@@ -11,8 +11,8 @@ import webOnly from './web-help.json';
 import type { HelpEntry, HelpId, HelpSource } from './types';
 
 /** sha256 of student-help.json with CRLF normalised to LF; matches the Android lock file. */
-export const STUDENT_HELP_SHA256 = '153c789bf959530566bec7f0e17a504ba21624ba53fdbd4254b0c0b9ec71dd89';
-export const STUDENT_HELP_CONTENT_VERSION = '2026-11-13.3';
+export const STUDENT_HELP_SHA256 = '1d5e0dd86bda46a12395bd0772ce32f1b210d152ac64718cc6c002acae6a9bf9';
+export const STUDENT_HELP_CONTENT_VERSION = '2026-11-13.5';
 
 /** Help ids for each authenticated student page (spec 4.4). */
 export const STUDENT_HELP = {
@@ -50,6 +50,7 @@ function toWebEntries(...files: SharedHelpFile[]): Record<HelpId, HelpEntry> {
 }
 
 const ROUTES: Record<string, string> = {
+  'student.timetable': '/timetable',
   'student.dashboard': '/dashboard',
   'student.results': '/results',
   'student.new-semester': '/results/new',

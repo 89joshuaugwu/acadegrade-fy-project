@@ -26,6 +26,10 @@ export interface User {
   entrySession?: string;
   graduationSession?: string;
   courseDuration?: number;
+  /** A5: level the student entered at (default 100). */
+  entryLevel?: 100 | 200 | 300;
+  /** A5: 0..4 extra semesters after the final level. */
+  spilloverSemesters?: number;
   semestersCompleted?: number;
   matricNormalized?: string;
   setupComplete?: boolean;
@@ -34,6 +38,8 @@ export interface User {
   disabled: boolean;
   fcmToken: string | null;
   fcmTokens?: string[];
+  /** Client-written device list keyed by sha256(token).slice(0, 16); see lib/firebase/fcm-devices.ts. */
+  fcmDevices?: Record<string, { platform?: string; label?: string; appVersion?: string; addedAt?: number; lastSeenAt?: number }>;
   notificationPreferences?: {
     semesterSaved?: boolean;
     degreeClass?: boolean;
@@ -71,6 +77,8 @@ export interface RegisterFormData {
   entrySession?: string;
   graduationSession?: string;
   courseDuration: number;
+  entryLevel?: 100 | 200 | 300;
+  spilloverSemesters?: number;
   recordMode: RecordMode;
   semestersCompleted?: number;
 }

@@ -26,10 +26,10 @@ describe('AdminShell', () => {
     render(<AdminShell><p>Content</p></AdminShell>);
     const primary = screen.getByRole('navigation', { name: 'Admin primary navigation' });
     expect(within(primary).getAllByRole('link').map((link) => link.textContent)).toEqual([
-      'Overview', 'Users', 'Academic catalogue', 'Support inbox', 'Academic analytics', 'API health',
+      'Overview', 'Users', 'Academic catalogue', 'Support inbox', 'Share codes', 'Academic analytics', 'API health',
       'AI providers', 'Free uses & coins', 'Advertising', 'Android release', 'Settings', 'Legal documents', 'Audit log',
     ]);
-    expect(groupLinks('Students')).toEqual([['Users', '/admin/users'], ['Academic catalogue', '/admin/academic-catalog'], ['Support inbox', '/admin/support']]);
+    expect(groupLinks('Students')).toEqual([['Users', '/admin/users'], ['Academic catalogue', '/admin/academic-catalog'], ['Support inbox', '/admin/support'], ['Share codes', '/admin/share-codes']]);
     expect(groupLinks('Monitoring')).toEqual([['Academic analytics', '/admin/analytics'], ['API health', '/admin/api-analytics']]);
     expect(groupLinks('AI, limits & ads')).toEqual([['AI providers', '/admin/ai'], ['Free uses & coins', '/admin/usage'], ['Advertising', '/admin/ads']]);
     expect(groupLinks('Release & system')).toEqual([['Android release', '/admin/mobile-release'], ['Settings', '/admin/settings'], ['Legal documents', '/admin/legal'], ['Audit log', '/admin/audit']]);
@@ -70,7 +70,7 @@ describe('AdminShell', () => {
     await user.click(screen.getByRole('button', { name: 'Open Free uses & coins navigation' }));
     const dialog = await screen.findByRole('dialog', { name: 'Admin navigation' });
     const mobile = within(dialog).getByRole('navigation', { name: 'Admin mobile navigation' });
-    expect(within(mobile).getAllByRole('link')).toHaveLength(13);
+    expect(within(mobile).getAllByRole('link')).toHaveLength(14);
     expect(within(mobile).getByRole('link', { name: 'Free uses & coins' })).toHaveAttribute('aria-current', 'page');
     expect(within(mobile).getByRole('group', { name: 'Release & system' })).toBeInTheDocument();
   });

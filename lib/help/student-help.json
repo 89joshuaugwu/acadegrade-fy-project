@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-13.3",
+  "version": "2026-11-13.5",
   "entries": {
     "student.dashboard": {
       "id": "student.dashboard",
@@ -66,6 +66,10 @@
         {
           "label": "Milestones",
           "to": "student.milestones"
+        },
+        {
+          "label": "Timetable",
+          "to": "student.timetable"
         }
       ],
       "tour": {
@@ -155,6 +159,10 @@
         {
           "label": "Settings",
           "to": "student.settings"
+        },
+        {
+          "label": "Direct entry",
+          "to": "student.entry-level"
         }
       ],
       "tour": {
@@ -342,6 +350,10 @@
         {
           "label": "Semester",
           "to": "student.semester"
+        },
+        {
+          "label": "Course code links",
+          "to": "student.share-code-link"
         }
       ],
       "tour": {
@@ -395,6 +407,10 @@
         {
           "label": "Glossary (Free uses, Coins)",
           "to": "student.glossary"
+        },
+        {
+          "label": "Paste from portal",
+          "to": "student.paste-portal"
         }
       ],
       "tour": {
@@ -593,6 +609,10 @@
         {
           "label": "Glossary (Coins, Extra refresh)",
           "to": "student.glossary"
+        },
+        {
+          "label": "Coin history",
+          "to": "student.coin-history"
         }
       ]
     },
@@ -647,6 +667,10 @@
         {
           "label": "Glossary",
           "to": "student.glossary"
+        },
+        {
+          "label": "Link controls",
+          "to": "student.share-link-controls"
         }
       ],
       "tour": {
@@ -770,6 +794,14 @@
         {
           "label": "Usual units",
           "to": "student.credit-load"
+        },
+        {
+          "label": "Devices and sign-out",
+          "to": "student.privacy-devices"
+        },
+        {
+          "label": "Data saver",
+          "to": "student.data-saver"
         }
       ],
       "tour": {
@@ -1055,6 +1087,298 @@
         {
           "label": "Notifications",
           "to": "student.notifications"
+        }
+      ]
+    },
+    "student.timetable": {
+      "audience": "student",
+      "id": "student.timetable",
+      "title": "Timetable",
+      "summary": "Keeps your lectures, classes, exams and study sessions in one place. Each timetable is valid for a number of hours, days, weeks or months, and you can extend it.",
+      "terms": [
+        {
+          "term": "Fixed",
+          "meaning": "A timetable you type in yourself, such as your lectures and exams."
+        },
+        {
+          "term": "Reading",
+          "meaning": "A study timetable, made by hand or with Build with AcadeMind."
+        },
+        {
+          "term": "Custom",
+          "meaning": "Any other timetable you want to keep."
+        },
+        {
+          "term": "Valid for",
+          "meaning": "How long the timetable runs. Weekly events stop when it ends."
+        },
+        {
+          "term": "Ending soon",
+          "meaning": "The timetable ends within the next hour, day, 3 days or 7 days, depending on its length."
+        }
+      ],
+      "tasks": [
+        {
+          "title": "Make a timetable",
+          "steps": [
+            "Open Timetable.",
+            "Choose New timetable.",
+            "Pick Fixed, Reading or Custom, then how long it is valid for.",
+            "Add your events."
+          ]
+        },
+        {
+          "title": "Build a reading plan",
+          "steps": [
+            "Choose Build with AcadeMind.",
+            "Add subjects, days, study times and how long the plan runs.",
+            "Review the preview, then save it."
+          ]
+        },
+        {
+          "title": "Extend a timetable",
+          "steps": [
+            "Choose Extend on the ending soon or expired notice.",
+            "It runs again for the same length, counted from today."
+          ]
+        }
+      ],
+      "cautions": [
+        "Build with AcadeMind follows fixed rules shown in its preview; you can change the plan before saving.",
+        "Archived and expired timetables do not send reminders."
+      ],
+      "related": [
+        {
+          "label": "Dashboard",
+          "to": "student.dashboard"
+        },
+        {
+          "label": "Settings",
+          "to": "student.settings"
+        }
+      ],
+      "platformNotes": {
+        "android": [
+          "Reminders come as notifications, even offline. They may arrive a few minutes late on some phones.",
+          "Some phones stop background reminders: allow AcadeGrade in Settings > Apps > AcadeGrade > Battery > Unrestricted."
+        ],
+        "web": [
+          "The website does not send reminders. Download the .ics file and your calendar app will remind you."
+        ]
+      }
+    },
+    "student.share-link-controls": {
+      "audience": "student",
+      "id": "student.share-link-controls",
+      "title": "Transcript link controls",
+      "summary": "Choose how long a transcript link lasts, whether it shows courses, and whether it needs a PIN.",
+      "tasks": [
+        {
+          "title": "Choose how long a link lasts",
+          "steps": [
+            "Open Transcript.",
+            "Pick 1, 7 or 30 days before you choose Share Link."
+          ]
+        },
+        {
+          "title": "Share a summary only",
+          "steps": [
+            "Tick Summary only.",
+            "The link shows semester totals and your CGPA, not course scores."
+          ]
+        },
+        {
+          "title": "Protect a link with a PIN",
+          "steps": [
+            "Enter a 4 to 6 digit PIN.",
+            "Send the PIN separately from the link."
+          ]
+        }
+      ],
+      "cautions": [
+        "We cannot show or recover a PIN. If you forget it, delete the link and make a new one.",
+        "After 10 wrong tries a link locks for an hour.",
+        "A 6 digit PIN is harder to guess than a 4 digit one."
+      ],
+      "related": [
+        {
+          "label": "Transcript",
+          "to": "student.transcript"
+        }
+      ]
+    },
+    "student.share-code-link": {
+      "audience": "student",
+      "id": "student.share-code-link",
+      "title": "Course code links",
+      "summary": "Share a course list code as a link. Classmates see course codes, titles and units only, never your scores.",
+      "tasks": [
+        {
+          "title": "Share a code",
+          "steps": [
+            "Open a semester.",
+            "Create or export a code.",
+            "Copy or share the link and send it to a classmate."
+          ]
+        },
+        {
+          "title": "Open a shared link",
+          "steps": [
+            "Open the link.",
+            "Sign in if asked.",
+            "Check the code, then choose Import courses."
+          ]
+        }
+      ],
+      "cautions": [
+        "If you have several semesters in progress, you choose where to import.",
+        "Nothing is saved until you save the semester."
+      ],
+      "related": [
+        {
+          "label": "Semester",
+          "to": "student.semester"
+        }
+      ]
+    },
+    "student.paste-portal": {
+      "audience": "student",
+      "id": "student.paste-portal",
+      "title": "Paste from portal",
+      "summary": "Copy your course rows from your university portal and paste them in to fill a semester faster.",
+      "tasks": [
+        {
+          "title": "Import results",
+          "steps": [
+            "Copy the course rows from your portal.",
+            "Open a semester and choose the paste option.",
+            "Review the courses it finds.",
+            "Fill in any missing scores, then save."
+          ]
+        }
+      ],
+      "cautions": [
+        "Nothing is saved until you confirm.",
+        "Lines that cannot be read are skipped and counted; add them by hand.",
+        "Pasted text is read on your device and is not sent for AI analysis, so it works for everyone."
+      ],
+      "related": [
+        {
+          "label": "Semester",
+          "to": "student.semester"
+        },
+        {
+          "label": "Scanner",
+          "to": "student.scanner"
+        }
+      ]
+    },
+    "student.coin-history": {
+      "audience": "student",
+      "id": "student.coin-history",
+      "title": "Coin history",
+      "summary": "Your last coin changes: earned, spent, refunded or given, with the balance after each.",
+      "tasks": [
+        {
+          "title": "See your coin history",
+          "steps": [
+            "Open a feature that shows credits.",
+            "Choose Coin history or Coin activity."
+          ]
+        }
+      ],
+      "cautions": [
+        "Coins are not money and cannot be bought or transferred.",
+        "Accounts that cannot use AI features have no coin history."
+      ],
+      "related": [
+        {
+          "label": "AI insights",
+          "to": "student.insights"
+        }
+      ]
+    },
+    "student.entry-level": {
+      "audience": "student",
+      "id": "student.entry-level",
+      "title": "Direct entry and spill-over",
+      "summary": "If you started in 200L or 300L, set your entry level so your timeline starts there. Spill-over semesters come after your final level.",
+      "tasks": [
+        {
+          "title": "Set it at sign-up",
+          "steps": [
+            "Choose your entry level: 100L, or 200L or 300L for direct entry.",
+            "Add spill-over semesters only if you already know you will stay longer."
+          ]
+        }
+      ],
+      "cautions": [
+        "Course duration counts from 100L, so direct entry has fewer years."
+      ],
+      "related": [
+        {
+          "label": "New semester",
+          "to": "student.new-semester"
+        }
+      ]
+    },
+    "student.privacy-devices": {
+      "audience": "student",
+      "id": "student.privacy-devices",
+      "title": "Devices and sign-out",
+      "summary": "See which devices get notifications from your account, remove one, or sign out everywhere.",
+      "tasks": [
+        {
+          "title": "Remove a device",
+          "steps": [
+            "Open Settings, then Security and data.",
+            "Find the device under Devices.",
+            "Choose Remove."
+          ]
+        },
+        {
+          "title": "Sign out everywhere",
+          "steps": [
+            "Open Settings, then Security and data.",
+            "Choose Sign out everywhere.",
+            "Confirm."
+          ]
+        }
+      ],
+      "cautions": [
+        "Other devices are signed out within an hour, not instantly.",
+        "A device is listed only after it turns notifications on.",
+        "Change your password too if you think someone else has access."
+      ],
+      "related": [
+        {
+          "label": "Settings",
+          "to": "student.settings"
+        }
+      ]
+    },
+    "student.data-saver": {
+      "audience": "student",
+      "id": "student.data-saver",
+      "title": "Data saver",
+      "summary": "Uses less data by turning off animations and optional background loading.",
+      "tasks": [
+        {
+          "title": "Turn Data saver on",
+          "steps": [
+            "Open Settings.",
+            "Switch Data saver on."
+          ]
+        }
+      ],
+      "cautions": [
+        "Your results still save and sync as usual.",
+        "It applies to this browser or phone only."
+      ],
+      "related": [
+        {
+          "label": "Settings",
+          "to": "student.settings"
         }
       ]
     }

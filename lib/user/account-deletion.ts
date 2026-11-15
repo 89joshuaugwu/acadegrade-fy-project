@@ -8,7 +8,7 @@ import { destroyCloudinaryAvatar, type CloudinaryDeleteResult } from '@/lib/clou
  * Deletes every Firestore document that can be found for a user, in bounded,
  * batched pages. Firebase Auth and RTDB are handled by the route.
  *
- * Found by uid:        users/{uid} (+ semesters/courses), notifications/{uid} (+ items),
+ * Found by uid:        users/{uid} (+ semesters/courses, timetables), notifications/{uid} (+ items),
  *                      analytics/{uid}, shareCodes.authorId, shared_transcripts.uid,
  *                      api_logs.uid, _api_rate_limits.uid, _reward_sessions.uid,
  *                      _reward_transactions.uid, _matric_numbers.uid,
@@ -79,6 +79,7 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
     await deleteQuery('courses', semester.ref.collection('courses'));
   }
   await deleteRefs('semesters', semesters.docs.map((doc) => doc.ref));
+  await deleteQuery('timetables', userRef.collection('timetables'));
 
   await deleteQuery('notifications', db.collection('notifications').doc(uid).collection('items'));
   await deleteDoc('notifications', db.collection('notifications').doc(uid));

@@ -10,6 +10,10 @@ vi.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({ user: { uid: 'student-1', email: 'ada@example.com' } }),
 }));
 
+vi.mock('@/hooks/usePlatformSettings', () => ({
+  usePlatformSettings: () => ({ settings: {}, loading: false, isFeatureDisabled: () => false }),
+}));
+
 vi.mock('@/lib/firebase/auth', () => ({ signOut: vi.fn() }));
 vi.mock('@/lib/firebase/fcm', () => ({ removeNotificationToken: vi.fn() }));
 

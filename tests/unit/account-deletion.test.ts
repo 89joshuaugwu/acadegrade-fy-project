@@ -103,6 +103,17 @@ describe('deleteUserData', () => {
     expect(report.deleted.support_tickets).toBe(2);
   });
 
+  it('deletes timetables', async () => {
+    seedAlice(); seedBob();
+    store.docs.set('users/alice/timetables/t1', { title: 'Lectures', kind: 'fixed', events: [] });
+    store.docs.set('users/alice/timetables/t2', { title: 'Reading', kind: 'reading', events: [] });
+    store.docs.set('users/bob/timetables/b1', { title: 'Mine', kind: 'custom', events: [] });
+    const report = await deleteUserData(store.db, uid, { cloudinary: async () => 'skipped' });
+    expect(store.paths('users/alice/timetables/')).toEqual([]);
+    expect(store.paths('users/bob/timetables/')).toEqual(['users/bob/timetables/b1']);
+    expect(report.deleted.timetables).toBe(2);
+  });
+
   it('uses batched deletes rather than one write per round trip', async () => {
     seedAlice();
     for (let index = 0; index < 30; index += 1) store.docs.set(`api_logs/x${index}`, { uid });

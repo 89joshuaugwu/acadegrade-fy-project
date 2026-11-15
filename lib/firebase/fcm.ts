@@ -28,7 +28,8 @@ import {
   deleteToken,
   type Messaging,
 } from 'firebase/messaging';
-import { doc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { buildWebDevice, deviceIdFor, deviceLabel } from './fcm-devices';
 import app, { auth, db } from './client';
 
 let messaging: Messaging | null = null;
@@ -142,6 +143,15 @@ export async function requestNotificationPermission(uid: string): Promise<string
     const userRef = doc(db, `users/${uid}`);
     await setDoc(userRef, { fcmTokens: arrayUnion(fcmToken) }, { merge: true });
 
+    // Device list for Settings > Privacy and security (users/{uid}.fcmDevices). Never blocks the token.
+    try {
+      const id = await deviceIdFor(fcmToken);
+      const existing = (await getDoc(userRef)).data()?.fcmDevices?.[id];
+      await setDoc(userRef, { fcmDevices: { [id]: buildWebDevice(deviceLabel(navigator.userAgent), Date.now(), existing?.addedAt) } }, { merge: true });
+    } catch (err) {
+      console.warn('[FCM] Could not record this device:', err);
+    }
+
     // Cache in sessionStorage for fast logout cleanup
     sessionStorage.setItem('acadegrade_fcm_token', fcmToken);
 
@@ -204,7 +214,10 @@ export async function removeNotificationToken(uid: string, tokenOverride?: strin
     if (tokenToRemove) {
       try {
         const userRef = doc(db, `users/${uid}`);
-        await updateDoc(userRef, { fcmTokens: arrayRemove(tokenToRemove) });
+        await updateDoc(userRef, {
+          fcmTokens: arrayRemove(tokenToRemove),
+          [`fcmDevices.${await deviceIdFor(tokenToRemove)}`]: deleteField(),
+        });
       } catch (err) {
         console.warn('[FCM] Could not remove token from Firestore:', err);
       }

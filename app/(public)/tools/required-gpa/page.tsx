@@ -1,0 +1,12 @@
+import { ToolPage, toolMetadata } from '../ToolPage';
+import { RequiredGpaCalculator } from '../calculators';
+
+export const metadata = toolMetadata('required-gpa');
+
+export default function RequiredGpaPage() {
+  return (
+    <ToolPage slug="required-gpa">
+      <RequiredGpaCalculator />
+    </ToolPage>
+  );
+}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Share2, Printer, Link2, Copy, Check, Trash2, ImageIcon, AlertTriangle, FileText } from 'lucide-react';
+import { Download, Share2, Printer, Link2, Copy, Check, Trash2, ImageIcon, AlertTriangle, FileText, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -18,9 +18,22 @@ import { computeCumulativeCGPA, formatCgpa, resolveDegreeClass, weightedAverageS
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
+import {
+  DEFAULT_SHARE_EXPIRY_DAYS,
+  SHARE_EXPIRY_CHOICES,
+  isValidPin,
+  type ShareExpiryDays,
+  type ShareLevel,
+} from '@/lib/share/options';
 
 import type { SemesterWithId, SemesterWithCourses } from '@/types/semester';
 import type { CourseWithId } from '@/types/course';
+
+function shareModalDescription(created: { expiresInDays: number; hasPin: boolean } | null): string {
+  const days = created?.expiresInDays ?? DEFAULT_SHARE_EXPIRY_DAYS;
+  const who = created?.hasPin ? 'Anyone with this link and the PIN' : 'Anyone with this link';
+  return `${who} can view your transcript. The link expires in ${days} ${days === 1 ? 'day' : 'days'}.`;
+}
 
 export default function TranscriptPage() {
   const { user } = useAuth();
@@ -36,6 +49,12 @@ export default function TranscriptPage() {
   const [copied, setCopied] = useState(false);
   const [showPhoto, setShowPhoto] = useState(true);
   const [sharedLinks, setSharedLinks] = useState<any[]>([]);
+  // Share link settings. The PIN is cleared as soon as the request is sent.
+  const [shareExpiryDays, setShareExpiryDays] = useState<ShareExpiryDays>(DEFAULT_SHARE_EXPIRY_DAYS);
+  const [shareSummaryOnly, setShareSummaryOnly] = useState(false);
+  const [sharePin, setSharePin] = useState('');
+  const [sharePinError, setSharePinError] = useState<string | null>(null);
+  const [createdShare, setCreatedShare] = useState<{ expiresInDays: number; level: ShareLevel; hasPin: boolean } | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -128,16 +147,27 @@ export default function TranscriptPage() {
 
   const handleShareLink = async () => {
     if (!user || loadStatus !== 'ready' || semesters.length === 0) return;
+    const pin = sharePin.trim();
+    if (pin && !isValidPin(pin)) {
+      setSharePinError('Use 4 to 6 digits, or leave the PIN empty.');
+      return;
+    }
+    setSharePinError(null);
+    const level: ShareLevel = shareSummaryOnly ? 'summary' : 'full';
+    const body: Record<string, unknown> = { showPhoto, expiresInDays: shareExpiryDays, level };
+    if (pin) body.pin = pin;
+    // The PIN is not kept on this page once it has been sent.
+    setSharePin('');
     setSharing(true);
     try {
       const token = await user.getIdToken();
       const res = await fetch('/api/transcript/share', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ showPhoto }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
@@ -145,11 +175,28 @@ export default function TranscriptPage() {
         throw new Error(data.error || 'Failed to create share link');
       }
 
-      const { shareUrl: url } = await res.json();
-      setShareUrl(url);
+      const created = await res.json();
+      setShareUrl(created.shareUrl);
+      const summary = {
+        expiresInDays: typeof created.expiresInDays === 'number' ? created.expiresInDays : shareExpiryDays,
+        level: created.level === 'summary' || created.level === 'full' ? created.level : level,
+        hasPin: typeof created.hasPin === 'boolean' ? created.hasPin : Boolean(pin),
+      } as const;
+      setCreatedShare(summary);
       setShareModalOpen(true);
+      // Show the new link in "Active Shared Transcripts" without another read.
+      if (typeof created.shareId === 'string') {
+        const expiresAt = typeof created.expiresAt === 'string'
+          ? new Date(created.expiresAt)
+          : new Date(Date.now() + summary.expiresInDays * 86_400_000);
+        setSharedLinks((prev) => [
+          { id: created.shareId, expiresAt, shareLevel: summary.level, hasPin: summary.hasPin, viewCount: 0 },
+          ...prev.filter((link) => link.id !== created.shareId),
+        ]);
+      }
     } catch (err: any) {
-      console.error(err);
+      // Never log the request body: it may hold the PIN.
+      console.error('Share link failed');
       toast.error(err.message || 'Failed to create share link');
     } finally {
       setSharing(false);
@@ -334,6 +381,98 @@ export default function TranscriptPage() {
         </div>
       </div>
 
+      {/* Share link settings: applied when "Share Link" is pressed */}
+      <fieldset className="mb-8 min-w-0 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 print:hidden">
+        <legend className="sr-only">Share link settings</legend>
+        <div className="mb-4 flex items-center gap-2">
+          <Link2 size={16} className="text-[var(--acade-primary)]" aria-hidden="true" />
+          <h2 className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)]" aria-hidden="true">
+            Share link settings
+          </h2>
+        </div>
+        <div className="grid min-w-0 gap-5 md:grid-cols-3">
+          <div role="radiogroup" aria-labelledby="share-expiry-label" className="min-w-0">
+            <p id="share-expiry-label" className="mb-2 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.12em] text-[var(--acade-text-muted)]">
+              Link expires after
+            </p>
+            <div className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] p-1">
+              {SHARE_EXPIRY_CHOICES.map((days) => (
+                <label
+                  key={days}
+                  className={cn(
+                    'flex min-h-11 cursor-pointer items-center justify-center rounded-md px-2 text-center text-[length:var(--text-xs)] font-medium transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]',
+                    shareExpiryDays === days
+                      ? 'bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
+                      : 'text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="share-expiry"
+                    className="sr-only"
+                    checked={shareExpiryDays === days}
+                    onChange={() => setShareExpiryDays(days)}
+                  />
+                  {days === 1 ? '1 day' : `${days} days`}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <p className="mb-2 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.12em] text-[var(--acade-text-muted)]">
+              What the link shows
+            </p>
+            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
+              <input
+                type="checkbox"
+                checked={shareSummaryOnly}
+                onChange={(event) => setShareSummaryOnly(event.target.checked)}
+                aria-describedby="share-summary-hint"
+                className="mt-0.5 size-4 shrink-0 accent-[var(--acade-primary)]"
+              />
+              <span className="min-w-0">
+                <span className="block text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">Summary only</span>
+                <span id="share-summary-hint" className="block text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
+                  Semester GPAs and your CGPA, without course-by-course scores.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <div className="min-w-0">
+            <label htmlFor="share-pin" className="mb-2 block text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.12em] text-[var(--acade-text-muted)]">
+              PIN (optional)
+            </label>
+            {/* No `name`: the PIN is only ever sent in the share request body. */}
+            <input
+              id="share-pin"
+              type="password"
+              inputMode="numeric"
+              autoComplete="new-password"
+              maxLength={6}
+              placeholder="4 to 6 digits"
+              value={sharePin}
+              onChange={(event) => {
+                setSharePin(event.target.value.replace(/\D/g, '').slice(0, 6));
+                setSharePinError(null);
+              }}
+              aria-invalid={sharePinError ? true : undefined}
+              aria-describedby={sharePinError ? 'share-pin-note share-pin-error' : 'share-pin-note'}
+              className="h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 font-mono tracking-[0.3em] text-[var(--acade-text)] outline-none placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--acade-text-muted)] focus-visible:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30"
+            />
+            {sharePinError && (
+              <p id="share-pin-error" role="alert" className="mt-1.5 text-[length:var(--text-xs)] text-[var(--acade-danger)]">
+                {sharePinError}
+              </p>
+            )}
+            <p id="share-pin-note" className="mt-1.5 text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
+              The person opening the link must type this PIN. Send it separately from the link. It can&apos;t be recovered or shown again, so note it down; if you forget it, delete the link and make a new one.
+            </p>
+          </div>
+        </div>
+      </fieldset>
+
       {/* Active Shared Links */}
       {sharedLinks.length > 0 && (
         <div className="mb-8 print:hidden bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl p-4">
@@ -345,11 +484,23 @@ export default function TranscriptPage() {
             {sharedLinks.map(link => {
               const url = `${window.location.origin}/share/${link.id}`;
               const expiresAt = link.expiresAt?.toDate?.() || new Date(link.expiresAt);
+              const linkHasPin = Boolean(link.pinHash) || link.hasPin === true;
+              const views = typeof link.viewCount === 'number' ? link.viewCount : null;
               return (
                 <div key={link.id} className="grid min-w-0 grid-cols-1 gap-3 rounded-lg border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0 overflow-hidden">
-                    <div className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-1">
-                      Expires: {new Date(expiresAt).toLocaleDateString()}
+                    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
+                      <span>Expires: {new Date(expiresAt).toLocaleDateString()}</span>
+                      {link.shareLevel === 'summary' && (
+                        <span className="rounded-full border border-[var(--acade-border)] px-2 py-0.5 font-medium text-[var(--acade-text)]">Summary</span>
+                      )}
+                      {linkHasPin && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--acade-primary)]/40 bg-[var(--acade-primary)]/10 px-2 py-0.5 font-medium text-[var(--acade-primary)]">
+                          <Lock size={10} aria-hidden="true" />
+                          <span>PIN</span>
+                        </span>
+                      )}
+                      {views !== null && <span>{views === 1 ? '1 view' : `${views} views`}</span>}
                     </div>
                     <a
                       href={url}
@@ -392,11 +543,27 @@ export default function TranscriptPage() {
         open={shareModalOpen && Boolean(shareUrl)}
         onClose={() => setShareModalOpen(false)}
         title="Transcript shared"
-        description="Anyone with this link can view your transcript. The link expires in 30 days."
+        description={shareModalDescription(createdShare)}
         className="print:hidden"
       >
         {shareUrl && (
           <div className="space-y-5 text-center">
+            {createdShare && (createdShare.hasPin || createdShare.level === 'summary') && (
+              <ul className="space-y-1.5 rounded-xl border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-3 text-left text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+                {createdShare.hasPin && (
+                  <li className="flex items-start gap-2">
+                    <Lock size={14} className="mt-1 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+                    <span>PIN protected. Send the PIN separately; it can&apos;t be recovered later.</span>
+                  </li>
+                )}
+                {createdShare.level === 'summary' && (
+                  <li className="flex items-start gap-2">
+                    <FileText size={14} className="mt-1 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+                    <span>Summary only: no course-by-course scores.</span>
+                  </li>
+                )}
+              </ul>
+            )}
             <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-[var(--acade-primary)]/10">
               <Share2 size={24} className="text-[var(--acade-primary)]" aria-hidden="true" />
             </div>

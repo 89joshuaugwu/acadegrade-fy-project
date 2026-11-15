@@ -44,6 +44,9 @@ const profileSchema = z.object({
   courseDuration: z.number().int().min(1).max(10),
   currentLevel: levelSchema,
   entrySession: sessionSchema,
+  // A5, additive: old clients omit both. Direct entry starts at 200 or 300 level.
+  entryLevel: z.union([z.literal(100), z.literal(200), z.literal(300)]).optional(),
+  spilloverSemesters: z.number().int().min(0).max(4).optional(),
   recordMode: z.enum(['fromScratch', 'complete']),
   semestersCompleted: z.number().int().min(0).max(20).optional(),
 });
@@ -78,13 +81,19 @@ const finalizeSchema = z.object({
     context.addIssue({ code: 'custom', path: ['profile', 'currentLevel'], message: 'Current level exceeds the programme duration' });
   }
 
+  const entryLevel = data.profile.entryLevel ?? 100;
+  if (data.profile.currentLevel < entryLevel) {
+    context.addIssue({ code: 'custom', path: ['profile', 'currentLevel'], message: 'Current level cannot be below your entry level' });
+  }
+
   const completed = data.profile.recordMode === 'complete'
     ? data.profile.semestersCompleted ?? 0
     : 0;
-  const maximumCompleted = Math.min(
-    data.profile.courseDuration * 2,
-    (data.profile.currentLevel / 100) * 2
-  );
+  const programmeYears = Math.max(1, data.profile.courseDuration - (entryLevel / 100 - 1));
+  const maximumCompleted = Math.max(0, Math.min(
+    programmeYears * 2,
+    ((data.profile.currentLevel - entryLevel) / 100 + 1) * 2
+  ));
 
   if (data.profile.recordMode === 'complete' && (completed < 1 || completed > maximumCompleted)) {
     context.addIssue({
@@ -291,7 +300,7 @@ export async function POST(request: NextRequest) {
 
     await ensureLegacyMatricIsAvailable(normalizedMatric, profile.matric, uid);
 
-    const expectedSlots = buildAcademicSlots(profile.entrySession, profile.courseDuration)
+    const expectedSlots = buildAcademicSlots(profile.entrySession, profile.courseDuration, profile.entryLevel, profile.spilloverSemesters)
       .filter((slot) => slot.level <= profile.currentLevel)
       .slice(0, profile.recordMode === 'complete' ? profile.semestersCompleted : 0);
 
@@ -376,6 +385,9 @@ export async function POST(request: NextRequest) {
         entrySession: profile.entrySession,
         graduationSession: graduationSession(profile.entrySession, profile.courseDuration),
         courseDuration: profile.courseDuration,
+        // Stored only when set, so accounts that never use them keep the same shape.
+        ...(profile.entryLevel && profile.entryLevel > 100 ? { entryLevel: profile.entryLevel } : {}),
+        ...(profile.spilloverSemesters ? { spilloverSemesters: profile.spilloverSemesters } : {}),
         semestersCompleted: profile.recordMode === 'complete' ? profile.semestersCompleted : 0,
         isAdmin: false,
         disabled: existingUser.disabled === true,

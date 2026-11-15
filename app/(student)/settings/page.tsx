@@ -35,6 +35,8 @@ import { Switch } from '@/components/ui/Switch';
 import { Select } from '@/components/ui/Select';
 import type { StudentLevel } from '@/types/user';
 import { PrivacyChoices } from '@/components/privacy/PrivacyChoices';
+import { DevicesCard } from '@/components/privacy/DevicesCard';
+import { useDataSaver } from '@/lib/dataSaver/useDataSaver';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
@@ -104,6 +106,7 @@ export default function SettingsPage() {
     target?.scrollIntoView({ block: 'start' });
   }, [profile]);
 
+  const dataSaver = useDataSaver();
   const [savingProfile, setSavingProfile] = useState(false);
   const [enablingNotifications, setEnablingNotifications] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -605,6 +608,19 @@ export default function SettingsPage() {
                   <KeyRound size={16} className="mr-2" /> Change
                 </Button>
               </div>
+
+              <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4">
+                <div className="min-w-0">
+                  <h4 id="data-saver-label" className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Data saver</h4>
+                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">
+                    Turns off animations and loads smaller images to use less data on this browser.
+                    {dataSaver.browserRequested ? ' Your browser is also asking for data saving, so it is on.' : ''}
+                  </p>
+                </div>
+                <Switch aria-labelledby="data-saver-label" checked={dataSaver.enabled} disabled={dataSaver.browserRequested && !dataSaver.userChoice} onCheckedChange={dataSaver.setUserChoice} />
+              </div>
+
+              {user && <DevicesCard profile={profile} getToken={() => user.getIdToken()} />}
 
               <div className="flex flex-col gap-3 p-4 bg-[var(--acade-danger-dim)] rounded-xl border border-[var(--acade-danger)]/20 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 sm:pr-4">

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -84,5 +84,20 @@ describe('AiDisclosure', () => {
     expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ feature: 'insights', kind: 'helpful' });
     expect(screen.getByRole('button', { name: 'Helpful' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Not helpful' })).toBeDisabled();
+  });
+
+  it('offers reason chips after Not helpful and sends the reason once', async () => {
+    const user = userEvent.setup();
+    render(<AiDisclosure feature="forecast" />);
+    expect(screen.queryByRole('group', { name: 'What went wrong?' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Not helpful' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string)).toEqual({ feature: 'forecast', kind: 'not_helpful' });
+    const chips = screen.getByRole('group', { name: 'What went wrong?' });
+    await user.click(within(chips).getByRole('button', { name: 'Inaccurate' }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)).toEqual({ feature: 'forecast', kind: 'not_helpful', reason: 'inaccurate' });
+    expect(within(chips).queryByRole('button', { name: 'Inaccurate' })).not.toBeInTheDocument();
+    expect(within(chips).getByText('Thanks for telling us.')).toBeInTheDocument();
   });
 });

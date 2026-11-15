@@ -14,12 +14,16 @@ function expiryMillis(value: unknown): number | null {
 
 /**
  * Link-preview metadata for a shared transcript. A missing or expired link shows no
- * student name, so an old link cannot be used to learn whose record it was.
+ * student name, so an old link cannot be used to learn whose record it was. Neither does
+ * a PIN-protected link.
  */
 export function shareMetadataFor(data: unknown, now: number, shareId: string): Metadata {
   const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
   const expiresAt = record ? expiryMillis(record.expiresAt) : null;
-  const live = record !== null && (expiresAt === null || expiresAt >= now);
+  // A PIN-protected link is treated like a missing one: a link preview must not name the
+  // student to someone who does not have the PIN.
+  const pinProtected = typeof record?.pinHash === 'string' && record.pinHash.length > 0;
+  const live = record !== null && !pinProtected && (expiresAt === null || expiresAt >= now);
   const rawName = live && typeof record?.studentName === 'string' ? record.studentName.trim() : '';
   const name = rawName || null;
 

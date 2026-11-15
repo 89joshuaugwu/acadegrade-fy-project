@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LogOut, Settings } from 'lucide-react';
+import { CalendarDays, LogOut, Settings } from 'lucide-react';
+import { useTimetableEnabled } from '@/hooks/useTimetableEnabled';
 import { signOut } from '@/lib/firebase/auth';
 import { removeNotificationToken } from '@/lib/firebase/fcm';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +25,7 @@ export function MobileDrawer({
   profile,
 }: MobileDrawerProps) {
   const { user } = useAuth();
+  const timetableEnabled = useTimetableEnabled();
 
   const handleSignOut = async () => {
     try {
@@ -65,6 +67,9 @@ export function MobileDrawer({
         )}
 
         <nav aria-label="Account settings" className="grid gap-1">
+          {timetableEnabled && (
+            <DrawerLink href="/timetable" id="tour-mobile-nav-timetable" icon={CalendarDays} label="Timetable" onClick={onClose} />
+          )}
           <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
         </nav>
 

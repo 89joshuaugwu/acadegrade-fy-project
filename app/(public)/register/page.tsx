@@ -72,6 +72,12 @@ const step1Schema = step1Base.refine((data) => {
   path: ['confirmPassword'],
 });
 
+/** Most semesters a student can have completed: from the entry level up to the current level. */
+function maxCompletedSemesters(courseDuration: number, currentLevel: number, entryLevel = 100): number {
+  const years = Math.max(1, courseDuration - (entryLevel / 100 - 1));
+  return Math.max(0, Math.min(years * 2, ((currentLevel - entryLevel) / 100 + 1) * 2));
+}
+
 const step2Base = z.object({
   university: z.string().trim().min(2, 'University is required'),
   department: z.string().trim().min(2, 'Department is required'),
@@ -82,6 +88,9 @@ const step2Base = z.object({
     (value) => parseAcademicSession(value) !== null,
     'Use consecutive years, for example 2022/2023'
   ),
+  // A5: direct entry (200 or 300 level) and extended-stay semesters. Optional; 100 and 0 are the defaults.
+  entryLevel: z.union([z.literal(100), z.literal(200), z.literal(300)]).optional(),
+  spilloverSemesters: z.number().int().min(0).max(4).optional(),
 });
 const step2Schema = step2Base;
 
@@ -160,11 +169,15 @@ const formSchema = step1Base
     }
   )
   .refine(
+    (data) => data.currentLevel >= (data.entryLevel ?? 100),
+    {
+      message: 'Current level cannot be below your entry level',
+      path: ['currentLevel'],
+    }
+  )
+  .refine(
     (data) => data.recordMode !== 'complete' || (
-      (data.semestersCompleted || 0) <= Math.min(
-        data.courseDuration * 2,
-        (data.currentLevel / 100) * 2
-      )
+      (data.semestersCompleted || 0) <= maxCompletedSemesters(data.courseDuration, data.currentLevel, data.entryLevel)
     ),
     {
       message: 'Completed semesters cannot extend beyond your current level',
@@ -211,9 +224,10 @@ function generatePastSemesters(
   currentLevel: number,
   semestersCompleted: number,
   entrySession: string,
-  courseDuration: number
+  courseDuration: number,
+  entryLevel = 100
 ): PastSemesterEntry[] {
-  return buildAcademicSlots(entrySession, courseDuration)
+  return buildAcademicSlots(entrySession, courseDuration, entryLevel)
     .filter((slot) => slot.level <= currentLevel)
     .slice(0, semestersCompleted)
     .map((slot) => ({
@@ -451,26 +465,29 @@ function Step2Programme({ onNext, onBack, catalog, suggestToCatalog, onSuggestTo
   const { register, trigger, formState: { errors }, control, watch } = useFormContext<FormData>();
   
   const handleNext = async () => {
-    const valid = await trigger(['university', 'department', 'programme', 'courseDuration', 'currentLevel', 'entrySession']);
+    const valid = await trigger(['university', 'department', 'programme', 'courseDuration', 'currentLevel', 'entrySession', 'entryLevel', 'spilloverSemesters']);
     if (valid) onNext();
   };
 
   const levelVal = watch('currentLevel');
   const entrySessionVal = watch('entrySession');
   const durationVal = watch('courseDuration');
+  const entryLevelVal = watch('entryLevel') ?? 100;
+  const spilloverVal = watch('spilloverSemesters') ?? 0;
   const setValue = useFormContext<FormData>().setValue;
+  const programmeYears = Math.max(1, (durationVal || 4) - (entryLevelVal / 100 - 1));
 
   // Auto-calculate level using the September academic-year rollover shared
-  // with the mobile app.
+  // with the mobile app. Direct-entry students count years from their entry level.
   useEffect(() => {
     if (parseAcademicSession(entrySessionVal) !== null) {
       setValue(
         'currentLevel',
-        inferCurrentLevel(entrySessionVal, durationVal || 4),
+        inferCurrentLevel(entrySessionVal, programmeYears) + (entryLevelVal - 100),
         { shouldValidate: true }
       );
     }
-  }, [entrySessionVal, durationVal, setValue]);
+  }, [entrySessionVal, programmeYears, entryLevelVal, setValue]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -518,6 +535,30 @@ function Step2Programme({ onNext, onBack, catalog, suggestToCatalog, onSuggestTo
         </div>
       </div>
 
+      <div className="flex flex-col gap-1.5">
+        <span id="entry-level-label" className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Level you started in (direct entry)</span>
+        <div role="radiogroup" aria-labelledby="entry-level-label" className="flex flex-wrap gap-2">
+          {([100, 200, 300] as const).map((level) => (
+            <button
+              key={level}
+              type="button"
+              role="radio"
+              aria-checked={entryLevelVal === level}
+              onClick={() => setValue('entryLevel', level, { shouldValidate: true })}
+              className={cn(
+                'h-10 px-3 rounded-xl text-[length:var(--text-xs)] font-semibold transition-colors border',
+                entryLevelVal === level
+                  ? 'bg-[var(--acade-primary)]/20 border-[var(--acade-primary)] text-[var(--acade-primary-glow)]'
+                  : 'bg-[var(--acade-deep)] border-[var(--acade-border)] text-[var(--acade-text-muted)] hover:border-[var(--acade-text-faint)]'
+              )}
+            >
+              {level === 100 ? '100L (usual)' : `${level}L (direct entry)`}
+            </button>
+          ))}
+        </div>
+        <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)]">Most students start in 100L. Direct-entry students skip the earlier years, so their programme is shorter.</p>
+      </div>
+
       <Input label="Entry Year/Session" placeholder="e.g. 2022/2023" error={errors.entrySession?.message} {...register('entrySession')} />
 
       {parseAcademicSession(entrySessionVal) !== null && (
@@ -529,7 +570,7 @@ function Step2Programme({ onNext, onBack, catalog, suggestToCatalog, onSuggestTo
       <div className="flex flex-col gap-1.5">
         <label className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Current Level (Auto-calculated, you can adjust)</label>
         <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto pr-2">
-          {Array.from({length: durationVal || 4}, (_, i) => (i + 1) * 100).map((level) => (
+          {Array.from({ length: programmeYears }, (_, i) => entryLevelVal + i * 100).map((level) => (
             <Controller
               key={level}
               name="currentLevel"
@@ -553,7 +594,32 @@ function Step2Programme({ onNext, onBack, catalog, suggestToCatalog, onSuggestTo
         </div>
         {errors.currentLevel && <p className="text-[length:var(--text-xs)] text-[var(--acade-danger)] font-[family-name:var(--font-dm-sans)]">{errors.currentLevel.message}</p>}
       </div>
-      
+
+      <div className="flex flex-col gap-1.5">
+        <span id="spillover-label" className="text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] font-[family-name:var(--font-dm-sans)]">Extra semesters after your final level (optional)</span>
+        <div role="radiogroup" aria-labelledby="spillover-label" className="flex flex-wrap gap-2">
+          {[0, 1, 2, 3, 4].map((count) => (
+            <button
+              key={count}
+              type="button"
+              role="radio"
+              aria-checked={spilloverVal === count}
+              aria-label={count === 0 ? 'No extra semesters' : `${count} extra semester${count === 1 ? '' : 's'}`}
+              onClick={() => setValue('spilloverSemesters', count, { shouldValidate: true })}
+              className={cn(
+                'h-10 min-w-10 px-3 rounded-xl text-[length:var(--text-xs)] font-semibold transition-colors border',
+                spilloverVal === count
+                  ? 'bg-[var(--acade-primary)]/20 border-[var(--acade-primary)] text-[var(--acade-primary-glow)]'
+                  : 'bg-[var(--acade-deep)] border-[var(--acade-border)] text-[var(--acade-text-muted)] hover:border-[var(--acade-text-faint)]'
+              )}
+            >
+              {count}
+            </button>
+          ))}
+        </div>
+        <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)]">For an extended stay (spill-over). They are added after your final level so you can record them later.</p>
+      </div>
+
       <div className="flex items-center gap-3 mt-4">
         <Button type="button" variant="ghost" size="lg" onClick={onBack} className="px-4 shrink-0">
           <ArrowLeft size={18} />
@@ -582,7 +648,7 @@ function Step3RecordMode({
   const modeVal = watch('recordMode');
   const durationVal = watch('courseDuration') || 4;
   const currentLevel = watch('currentLevel') || 100;
-  const maxSemesters = Math.min(durationVal * 2, (currentLevel / 100) * 2);
+  const maxSemesters = maxCompletedSemesters(durationVal, currentLevel, watch('entryLevel') ?? 100);
   const semsCompleted = watch('semestersCompleted') || 1;
 
   useEffect(() => {
@@ -727,15 +793,16 @@ function Step4PastSemesters({ onNext, onBack }: { onNext: () => void, onBack: ()
   const semestersCompleted = watch('semestersCompleted') || 1;
   const entrySession = watch('entrySession');
   const courseDuration = watch('courseDuration') || 4;
+  const entryLevel = watch('entryLevel') ?? 100;
   const pastSemesters = watch('pastSemesters') || [];
 
   // Generate if empty
   useEffect(() => {
     if (pastSemesters.length === 0 && currentLevel && entrySession) {
-      const generated = generatePastSemesters(currentLevel, semestersCompleted, entrySession, courseDuration);
+      const generated = generatePastSemesters(currentLevel, semestersCompleted, entrySession, courseDuration, entryLevel);
       setValue('pastSemesters', generated);
     }
-  }, [currentLevel, semestersCompleted, entrySession, courseDuration, pastSemesters, setValue]);
+  }, [currentLevel, semestersCompleted, entrySession, courseDuration, entryLevel, pastSemesters, setValue]);
 
   const handleNext = async () => {
     const valid = await trigger('pastSemesters');
@@ -978,6 +1045,8 @@ export default function RegisterWizard() {
             courseDuration: data.courseDuration,
             currentLevel: data.currentLevel,
             entrySession: data.entrySession,
+            ...(data.entryLevel && data.entryLevel > 100 ? { entryLevel: data.entryLevel } : {}),
+            ...(data.spilloverSemesters ? { spilloverSemesters: data.spilloverSemesters } : {}),
             recordMode: data.recordMode,
             semestersCompleted: data.recordMode === 'complete' ? data.semestersCompleted : 0,
           },

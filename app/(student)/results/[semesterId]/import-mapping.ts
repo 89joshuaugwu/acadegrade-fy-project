@@ -1,4 +1,6 @@
 import { MAX_CA_SCORE, MAX_EXAM_SCORE } from '@/lib/utils/constants';
+import { gradeFromScore } from '@/lib/cgpa/academicRules';
+import type { PortalCourseRow } from '@/lib/import/portalText';
 import type { CourseInput } from '@/types/course';
 
 const asScore = (value: unknown, max: number): number | null => {
@@ -23,5 +25,22 @@ export function mapExtractedCourse(raw: unknown): CourseInput {
     examScore: asScore(row.examScore, MAX_EXAM_SCORE),
     isAR,
     estimated: isAR,
+  };
+}
+
+/**
+ * Turns one row read from pasted portal text into a course row. A letter grade
+ * (or one worked out from a pasted total score) fills the grade only: the CA
+ * and exam split is unknown, so the student adds those scores before saving.
+ */
+export function mapPortalRow(row: PortalCourseRow): CourseInput {
+  const grade = row.grade ?? (row.totalScore !== undefined ? gradeFromScore(row.totalScore).grade : undefined);
+  return {
+    code: row.code,
+    title: row.title,
+    units: row.units,
+    caScore: null,
+    examScore: null,
+    ...(grade ? { grade } : {}),
   };
 }

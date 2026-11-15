@@ -1,0 +1,217 @@
+{
+  "cases": [
+    {
+      "name": "tab separated with header",
+      "input": "Course Code\tCourse Title\tUnits\tScore\tGrade\nCSC 201\tData Structures\t3\t78\tA\nMTH101\tElementary Maths\t4\t45\tD\n",
+      "expected": {
+        "rows": [
+          {
+            "code": "CSC 201",
+            "title": "Data Structures",
+            "units": 3,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 78,
+            "grade": "A"
+          },
+          {
+            "code": "MTH 101",
+            "title": "Elementary Maths",
+            "units": 4,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 45,
+            "grade": "D"
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "grade before score",
+      "input": "CSC 201 | Data Structures | 3 | A | 78",
+      "expected": {
+        "rows": [
+          {
+            "code": "CSC 201",
+            "title": "Data Structures",
+            "units": 3,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 78,
+            "grade": "A"
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "pipes and multiple spaces",
+      "input": "GST 111  |  Use of English  |  2  |  B",
+      "expected": {
+        "rows": [
+          {
+            "code": "GST 111",
+            "title": "Use of English",
+            "units": 2,
+            "caScore": null,
+            "examScore": null,
+            "grade": "B"
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "commas",
+      "input": "PHY 102, General Physics II, 3, 61, B",
+      "expected": {
+        "rows": [
+          {
+            "code": "PHY 102",
+            "title": "General Physics II",
+            "units": 3,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 61,
+            "grade": "B"
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "single spaces only",
+      "input": "CSC 201 Data Structures 3 A 78",
+      "expected": {
+        "rows": [
+          {
+            "code": "CSC 201",
+            "title": "Data Structures",
+            "units": 3,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 78,
+            "grade": "A"
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "units only",
+      "input": "ENG 301 Technical Writing 2",
+      "expected": {
+        "rows": [
+          {
+            "code": "ENG 301",
+            "title": "Technical Writing",
+            "units": 2,
+            "caScore": null,
+            "examScore": null
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "suffix letter code",
+      "input": "BIO 205A\tField Biology\t2\t55",
+      "expected": {
+        "rows": [
+          {
+            "code": "BIO 205A",
+            "title": "Field Biology",
+            "units": 2,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 55
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "lowercase garbage and blank lines",
+      "input": "\n\nhello world\n   \nTotal units: 24\n!!!\n",
+      "expected": {
+        "rows": [],
+        "unparsed": [
+          "hello world",
+          "Total units: 24",
+          "!!!"
+        ]
+      }
+    },
+    {
+      "name": "out of range score and units",
+      "input": "CSC 201 Data Structures 9 A\nCSC 202 Algorithms 3 140\nCSC 203 Compilers 0 50",
+      "expected": {
+        "rows": [],
+        "unparsed": [
+          "CSC 201 Data Structures 9 A",
+          "CSC 202 Algorithms 3 140",
+          "CSC 203 Compilers 0 50"
+        ]
+      }
+    },
+    {
+      "name": "crlf and trailing whitespace",
+      "input": "CSC 201\tData Structures\t3\t78  \r\nMTH 101\tCalculus\t4\t45\r\n",
+      "expected": {
+        "rows": [
+          {
+            "code": "CSC 201",
+            "title": "Data Structures",
+            "units": 3,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 78
+          },
+          {
+            "code": "MTH 101",
+            "title": "Calculus",
+            "units": 4,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 45
+          }
+        ],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "expected": {
+        "rows": [],
+        "unparsed": []
+      }
+    },
+    {
+      "name": "score zero and hundred",
+      "input": "CSC 111\tIntro\t2\t0\nCSC 112\tIntro II\t2\t100",
+      "expected": {
+        "rows": [
+          {
+            "code": "CSC 111",
+            "title": "Intro",
+            "units": 2,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 0
+          },
+          {
+            "code": "CSC 112",
+            "title": "Intro II",
+            "units": 2,
+            "caScore": null,
+            "examScore": null,
+            "totalScore": 100
+          }
+        ],
+        "unparsed": []
+      }
+    }
+  ]
+}

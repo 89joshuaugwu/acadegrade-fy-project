@@ -14,7 +14,8 @@ export const AI_REPORT_NOTE_MAX = 500;
 
 export type AiFeedbackPayload =
   | { feature: AiFeature; kind: 'report'; reason: AiReportReason; note?: string }
-  | { feature: AiFeature; kind: 'helpful' | 'not_helpful' };
+  | { feature: AiFeature; kind: 'helpful' }
+  | { feature: AiFeature; kind: 'not_helpful'; reason?: AiReportReason };
 
 /**
  * `POST /api/ai/report`. Resolves true on a 2xx and false otherwise (including
@@ -27,7 +28,9 @@ export async function sendAiFeedback(getIdToken: () => Promise<string>, payload:
     const token = await getIdToken();
     const body = payload.kind === 'report'
       ? { feature: payload.feature, kind: payload.kind, reason: payload.reason, ...(payload.note?.trim() ? { note: payload.note.trim().slice(0, AI_REPORT_NOTE_MAX) } : {}) }
-      : { feature: payload.feature, kind: payload.kind };
+      : payload.kind === 'not_helpful' && payload.reason
+        ? { feature: payload.feature, kind: payload.kind, reason: payload.reason }
+        : { feature: payload.feature, kind: payload.kind };
     const response = await fetch('/api/ai/report', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

@@ -62,8 +62,47 @@ export function FeatureCredits({ feature, refreshKey = '' }: { feature: CreditFe
       {usage && <p className="text-[var(--acade-text-muted)]">{usage.label} only. {usage.availableNow === 0 && usage.freeRemaining > 0 ? 'Short-window limit is active; remaining credits are not available yet.' : `${usage.availableNow} available now.`} {usage.freeResetAt ? `Daily window resets ${new Date(usage.freeResetAt).toLocaleString()}.` : 'The daily window starts with your first new request.'}</p>}
       {usage?.cooldownUntil && <p className="text-[var(--acade-text-muted)]">Regeneration available at {new Date(usage.cooldownUntil).toLocaleString()}.</p>}
       {showCoins && usage && wallet && coin && <p className="text-[var(--acade-text-muted)]">Coin balance: {wallet.balance}. An extra {usage.label} request costs {coin.price} {coin.price === 1 ? 'coin' : 'coins'} in the Android app after free credits run out ({coin.usesToday} of {coin.dailyUseCap} coin-funded uses today).</p>}
+      {showCoins && <CoinHistory />}
       {rewards && <p className="text-[var(--acade-text-muted)]">Ad rewards today: {rewards.earnedToday} verified, {rewards.usedToday} used. {rewards.earnRemaining} more can be earned. Use a confirmed reward in the Android app.</p>}
     </div>
     <button type="button" onClick={() => { setResult(null); setRevision(value => value + 1); }} aria-label="Refresh credit balance" className="flex size-11 shrink-0 items-center justify-center rounded-lg text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"><RefreshCw className="size-4" aria-hidden="true" /></button>
   </section>;
+}
+
+interface CoinEntry { type: string; amount: number; feature?: string; at: string; balanceAfter: number }
+const COIN_TYPE: Record<string, string> = { earn: 'Earned', spend: 'Spent', refund: 'Refunded', grant: 'Goodwill grant' };
+
+/** Last coin movements (GET /api/coins/history). Loaded only when opened, so the credits line stays one request. */
+function CoinHistory() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [state, setState] = useState<{ status: 'loading' | 'failed' | 'ready'; entries: CoinEntry[] }>({ status: 'loading', entries: [] });
+  useEffect(() => {
+    if (!open || !user) return;
+    let active = true;
+    setState({ status: 'loading', entries: [] });
+    void (async () => {
+      try {
+        const response = await fetch('/api/coins/history?limit=30', { headers: { Authorization: `Bearer ${await user.getIdToken()}` }, cache: 'no-store' });
+        if (!response.ok) throw new Error('History unavailable');
+        const body = await response.json() as { entries?: CoinEntry[] };
+        if (active) setState({ status: 'ready', entries: Array.isArray(body.entries) ? body.entries : [] });
+      } catch { if (active) setState({ status: 'failed', entries: [] }); }
+    })();
+    return () => { active = false; };
+  }, [open, user?.uid]);
+  return <div className="mt-1">
+    <button type="button" aria-expanded={open} onClick={() => setOpen(value => !value)} className="min-h-11 rounded-lg text-sm font-medium text-[var(--acade-primary)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]">{open ? 'Hide coin history' : 'Coin history'}</button>
+    {open && <div aria-label="Coin history">
+      {state.status === 'loading' && <p className="text-[var(--acade-text-muted)]">Loading coin history…</p>}
+      {state.status === 'failed' && <p className="text-[var(--acade-text-muted)]">Coin history is unavailable right now.</p>}
+      {state.status === 'ready' && state.entries.length === 0 && <p className="text-[var(--acade-text-muted)]">No coin activity yet.</p>}
+      {state.status === 'ready' && state.entries.length > 0 && <ul className="divide-y divide-[var(--acade-border)]">
+        {state.entries.map((entry, index) => <li key={`${entry.at}-${index}`} className="flex flex-wrap justify-between gap-2 py-1.5 text-[var(--acade-text-muted)]">
+          <span>{COIN_TYPE[entry.type] ?? entry.type}{entry.feature ? `, ${entry.feature}` : ''} <span className="text-xs">{new Date(entry.at).toLocaleString()}</span></span>
+          <span className="font-medium text-[var(--acade-text)]">{entry.type === 'spend' ? '-' : '+'}{entry.amount} (balance {entry.balanceAfter})</span>
+        </li>)}
+      </ul>}
+    </div>}
+  </div>;
 }

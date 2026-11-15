@@ -115,6 +115,24 @@ describe('Student settings accessibility', () => {
     expect(semesterSwitch.closest('[data-setting-row]')).toHaveClass('min-h-14');
   });
 
+  it('has a Data saver switch that remembers the choice', async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const saver = screen.getByRole('switch', { name: /data saver/i });
+    expect(saver).toHaveAttribute('aria-checked', 'false');
+    await user.click(saver);
+    expect(localStorage.getItem('acadegrade:data-saver:v1')).toBe('1');
+    expect(screen.getByRole('switch', { name: /data saver/i })).toHaveAttribute('aria-checked', 'true');
+    localStorage.clear();
+  });
+
+  it('shows the devices section with the within-an-hour sign-out wording', () => {
+    render(<SettingsPage />);
+    expect(screen.getByRole('button', { name: 'Sign out everywhere' })).toBeInTheDocument();
+    expect(screen.getByText(/within an hour/)).toBeInTheDocument();
+  });
+
   it('associates the Current Level label with its select control', () => {
     render(<SettingsPage />);
 

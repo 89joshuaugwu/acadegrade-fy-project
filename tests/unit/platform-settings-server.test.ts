@@ -26,6 +26,10 @@ describe('platform settings normalisation', () => {
     });
   });
 
+  it('keeps the client-side timetable switch (T1) as a known feature id', () => {
+    expect(normalizePlatformSettings({ disabledFeatures: ['timetable', 'nope'] }).disabledFeatures).toEqual(['timetable']);
+  });
+
   it('keeps only known feature ids and valid fields', () => {
     expect(normalizePlatformSettings({
       maintenanceMode: true, disabledFeatures: ['ai_forecast', 'nope', 3], announcementBanner: 'Hi', ageGate: { enforceUnknown: false },

@@ -24,6 +24,7 @@ import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { CalculatorHandoffOffer } from './CalculatorHandoffOffer';
+import { ImportCodeLauncher } from './ImportCodeLauncher';
 import { SemesterRecapLauncher } from '@/components/dashboard/SemesterRecapDialog';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 
@@ -226,6 +227,7 @@ export default function ResultsListPage() {
         </div>
       </div>
 
+      <ImportCodeLauncher semesters={semesters} />
       <CalculatorHandoffOffer semesters={semesters} />
       {/* C3: one-time recap after completing a semester (/results?recap=<id>). */}
       <SemesterRecapLauncher semesters={semesters} />

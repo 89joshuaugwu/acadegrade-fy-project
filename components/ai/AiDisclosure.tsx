@@ -33,12 +33,25 @@ export function AiDisclosure({ feature, className, ratings = true }: { feature: 
   const [reportOpen, setReportOpen] = useState(false);
   const closeReport = useCallback(() => setReportOpen(false), []);
 
+  const [reasonSent, setReasonSent] = useState<AiReportReason | null>(null);
+
   const rate = async (kind: 'helpful' | 'not_helpful') => {
     if (!user || rating) return;
     setRating(kind);
     const ok = await sendAiFeedback(() => user.getIdToken(), { feature, kind });
     if (!ok) {
       setRating(null);
+      toast.error(FAILED);
+    }
+  };
+
+  // After "Not helpful": one optional reason, sent as a second not_helpful row that carries the reason.
+  const giveReason = async (reason: AiReportReason) => {
+    if (!user || reasonSent) return;
+    setReasonSent(reason);
+    const ok = await sendAiFeedback(() => user.getIdToken(), { feature, kind: 'not_helpful', reason });
+    if (!ok) {
+      setReasonSent(null);
       toast.error(FAILED);
     }
   };
@@ -64,6 +77,14 @@ export function AiDisclosure({ feature, className, ratings = true }: { feature: 
           <button type="button" className={chip} aria-haspopup="dialog" onClick={() => setReportOpen(true)}>
             <Flag className="size-4" aria-hidden="true" />Report
           </button>
+        </div>
+      )}
+      {user && rating === 'not_helpful' && (
+        <div className="flex flex-wrap items-center gap-1 sm:basis-full sm:justify-end" role="group" aria-label="What went wrong?">
+          <span className="text-sm text-[var(--acade-text-muted)]">{reasonSent ? 'Thanks for telling us.' : 'What went wrong?'}</span>
+          {!reasonSent && AI_REPORT_REASONS.map(option => (
+            <button key={option.value} type="button" className={chip} onClick={() => void giveReason(option.value)}>{option.label}</button>
+          ))}
         </div>
       )}
       {user && (

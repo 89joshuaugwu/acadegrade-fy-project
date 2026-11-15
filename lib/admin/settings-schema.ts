@@ -31,6 +31,9 @@ const ALLOWED_FEATURES = new Set([
   'transcript_share',
   // Support requests (/api/support/tickets); stays open during maintenance.
   'support',
+  // T1 timetables: client-written (users/{uid}/timetables), so the website and
+  // the app hide the screens; no route enforces it.
+  'timetable',
 ]);
 
 const ABOUT_FIELDS = [

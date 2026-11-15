@@ -173,7 +173,7 @@ describe('settings: access', () => {
     expect(age).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText(/Under-18s and users who declined are always blocked/)).toBeInTheDocument();
     expect(screen.getByText(/Installed Android apps older than the coming update can't ask these questions/)).toBeInTheDocument();
-    for (const name of ['Forecast', 'What-If guidance', 'Transcript PDF', 'Transcript links']) {
+    for (const name of ['Forecast', 'What-If guidance', 'Transcript PDF', 'Transcript links', 'Timetables']) {
       expect(screen.getByRole('switch', { name })).toBeInTheDocument();
     }
     await user.click(age);

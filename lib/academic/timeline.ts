@@ -12,6 +12,8 @@ export interface AcademicSlot {
   semester: 1 | 2;
   session: string;
   label: string;
+  /** A5: 1..4 for a spill-over semester after the final level. */
+  spillOver?: number;
 }
 
 export interface AcademicPlan {
@@ -55,15 +57,49 @@ export function slotKey(level: number, semester: number): string {
   return `${level}:${semester}`;
 }
 
+/** A5: direct-entry students start at 200 or 300 level; anything else is 100. */
+export function normalizeEntryLevel(entryLevel?: number | null): 100 | 200 | 300 {
+  const value = Number(entryLevel);
+  return value === 200 || value === 300 ? value : 100;
+}
+
+/** A5: 0..4 extra semesters after the final level (extended stay). */
+export function normalizeSpillover(spillover?: number | null): number {
+  const value = Math.round(Number(spillover) || 0);
+  return Math.max(0, Math.min(4, value));
+}
+
+/** Key of a stored semester document: spill-over semesters use `spill:n`. */
+export function semesterSlotKey(semester: { level?: unknown; semester?: unknown; spillOver?: unknown }): string {
+  const spill = Number(semester.spillOver) || 0;
+  return spill > 0 ? `spill:${spill}` : slotKey(Number(semester.level), Number(semester.semester));
+}
+
+/** Document id for a slot's semester: `slot_<level>_<semester>`, or `spill_<n>`. */
+export function slotDocumentId(slot: Pick<AcademicSlot, 'level' | 'semester' | 'spillOver'>): string {
+  return slot.spillOver ? `spill_${slot.spillOver}` : `slot_${slot.level}_${slot.semester}`;
+}
+
+/**
+ * Twin of acadegrade-mobile/lib/academic/timeline.ts. The first level is
+ * `entryLevel` (default 100, which leaves every existing plan unchanged), so a
+ * course of `duration` years has duration - (entryLevel / 100 - 1) years.
+ * Spill-over semesters (key `spill:n`, document id `spill_n`) follow the final
+ * level, alternating first and second semester.
+ */
 export function buildAcademicSlots(
   entrySession: string,
-  duration: number
+  duration: number,
+  entryLevel: number = 100,
+  spillover: number = 0
 ): AcademicSlot[] {
   const start = parseAcademicSession(entrySession);
   if (start == null) return [];
 
-  return Array.from({ length: normalizeDuration(duration) }, (_, yearIndex) => {
-    const level = (yearIndex + 1) * 100;
+  const firstLevel = normalizeEntryLevel(entryLevel);
+  const years = Math.max(1, normalizeDuration(duration) - (firstLevel / 100 - 1));
+  const slots: AcademicSlot[] = Array.from({ length: years }, (_, yearIndex) => {
+    const level = firstLevel + yearIndex * 100;
     const session = formatAcademicSession(start + yearIndex);
     return ([1, 2] as const).map((semester) => ({
       key: slotKey(level, semester),
@@ -74,6 +110,20 @@ export function buildAcademicSlots(
       label: `${level}L ${semester === 1 ? 'First' : 'Second'} Semester`,
     }));
   }).flat();
+
+  const finalLevel = firstLevel + (years - 1) * 100;
+  for (let n = 1; n <= normalizeSpillover(spillover); n += 1) {
+    slots.push({
+      key: `spill:${n}`,
+      yearNumber: years + Math.ceil(n / 2),
+      level: finalLevel,
+      semester: n % 2 === 1 ? 1 : 2,
+      session: formatAcademicSession(start + years - 1 + Math.ceil(n / 2)),
+      label: `${finalLevel}L Spill-over ${n}`,
+      spillOver: n,
+    });
+  }
+  return slots;
 }
 
 export function minimumDurationForSemesters(
@@ -109,17 +159,17 @@ export function getAcademicPlan(
 ): AcademicPlan {
   const entrySession = resolveEntrySession(profile);
   const duration = resolveCourseDuration(profile, semesters);
-  const slots = buildAcademicSlots(entrySession, duration);
+  const slots = buildAcademicSlots(entrySession, duration, profile?.entryLevel, profile?.spilloverSemesters);
   const validKeys = new Set(slots.map((slot) => slot.key));
   const createdKeys = new Set(
     semesters
-      .map((semester) => slotKey(Number(semester.level), Number(semester.semester)))
+      .map((semester) => semesterSlotKey(semester))
       .filter((key) => validKeys.has(key))
   );
   const completedKeys = new Set(
     semesters
       .filter((semester) => semester.isComplete)
-      .map((semester) => slotKey(Number(semester.level), Number(semester.semester)))
+      .map((semester) => semesterSlotKey(semester))
       .filter((key) => validKeys.has(key))
   );
   const remainingSlots = slots.filter((slot) => !createdKeys.has(slot.key));

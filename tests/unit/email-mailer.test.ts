@@ -186,18 +186,20 @@ describe('transactional email templates', () => {
     expect(welcomeEmail('Ada')).toContain('href="https://acadegrade.vercel.app/dashboard"');
   });
 
-  it('renders one visible OTP and keeps quick-copy data in the URL fragment', () => {
+  it('renders one OTP as a single selectable piece of text with no web copy button', () => {
     process.env.NEXT_PUBLIC_SITE_URL = 'https://acadegrade.com';
 
     const html = registrationOtpEmail('120934');
 
     expect(html.match(/data-otp-code/g)).toHaveLength(1);
     const codeElement = /<p data-otp-code[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1] ?? '';
-    // Shown as two groups of three, but the gap is padding: the text is contiguous.
-    expect(codeElement.replace(/<[^>]+>/g, '')).toBe('120934');
-    expect(codeElement).toContain('<span>120</span><span style="padding-left:14px;">934</span>');
-    expect(html).toContain('href="https://acadegrade.com/copy-code#code=120934"');
-    expect(html).not.toContain('/copy-code?code=');
+    // One text node: press-and-hold selects all six digits at once.
+    expect(codeElement).toBe('120934');
+    expect(html).toMatch(/data-otp-code[^>]*user-select:all/);
+    expect(html).toContain('press and hold it, then tap Copy');
+    // An email cannot write to the clipboard, so there is no button that opens a web page.
+    expect(html).not.toContain('copy-code');
+    expect(html).not.toContain('Copy code on this device');
     expect(html).not.toContain('Legacy fallback');
     expect(html).toContain('This code expires in 5 minutes.');
     expect(html).toContain('Never share this code.');

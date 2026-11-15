@@ -10,6 +10,7 @@ const ROUTES = {
   'admin.users': '/admin/users',
   'admin.academic-catalogue': '/admin/academic-catalog',
   'admin.support': '/admin/support',
+  'admin.share-codes': '/admin/share-codes',
   'admin.course-list': '/admin/courses',
   'admin.analytics': '/admin/analytics',
   'admin.api-health': '/admin/api-analytics',
@@ -143,6 +144,34 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     ],
   }),
 
+  'admin.share-codes': entry({
+    id: 'admin.share-codes',
+    title: 'Share codes',
+    summary: 'Course lists students share with a 6-character code, most used first. Switch a bad list off, or add a checked list to the academic catalogue.',
+    terms: [
+      { term: 'Uses', meaning: 'How many times students imported the list.' },
+      { term: 'Disabled', meaning: 'The list no longer opens on the website, in the Android app or on its share page. It is kept and can be enabled again.' },
+      { term: 'Add to catalogue', meaning: 'Copies the courses on the list into the academic catalogue for a department, level and semester. Rows already there are skipped.' },
+      { term: 'Created by account', meaning: 'The student account that made the code. Only admins see it; look it up in Users.' },
+    ],
+    tasks: [
+      { title: 'Disable a bad code', steps: ['Find the code.', 'Choose Disable.', 'Write a reason.', 'Choose Disable code.'] },
+      { title: 'Bring a code back', steps: ['Find the disabled code.', 'Choose Enable.', 'Write a reason and confirm.'] },
+      { title: 'Add a checked list to the catalogue', steps: ['Choose Show courses and check each row.', 'Choose Add to catalogue.', 'Enter department, level and semester, and a reason.', 'Choose Add to catalogue.'] },
+    ],
+    cautions: [
+      'Disabling takes effect for students straight away, including lists they were about to import.',
+      'Student-made course lists can have wrong codes, titles or units; check them before adding.',
+      'Adding to the catalogue cannot be undone from this page; remove rows in Academic catalogue.',
+      'Every action is recorded in the audit log with your reason.',
+    ],
+    related: [
+      { label: 'Academic catalogue', to: 'admin.academic-catalogue' },
+      { label: 'Users', to: 'admin.users' },
+      { label: 'Audit log', to: 'admin.audit' },
+    ],
+  }),
+
   'admin.course-list': entry({
     id: 'admin.course-list',
     title: 'Legacy course list',
@@ -209,6 +238,7 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
       { term: 'Revision', meaning: 'The version number of the saved routing.' },
       { term: 'Custom instructions (system prompt)', meaning: 'The system prompt for Written Analysis only. Leave it empty to use the built-in instructions.' },
       { term: 'Allow OpenRouter data collection', meaning: 'Off by default, which asks OpenRouter to use only providers that do not keep data. Free models with no such provider fail over to the next target.' },
+      { term: 'Student feedback on AI answers', meaning: 'Helpful and not-helpful ratings, reasons and reports from students, per feature and model. Notes appear only on reports, and nothing says who sent them.' },
     ],
     tasks: [
       { title: 'Turn AI on for the first time', steps: ['Add a key for a provider.', 'Pick a mode and target for each feature.', 'Save routing.'] },

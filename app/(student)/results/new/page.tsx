@@ -81,7 +81,7 @@ export default function NewSemesterPage() {
                 </span>
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wide text-[var(--acade-text-muted)]">Next available semester</p>
-                  <h2 className="mt-1 text-lg font-bold text-[var(--acade-text)]">{nextSlot.level}L {nextSlot.semester === 1 ? 'First' : 'Second'} Semester</h2>
+                  <h2 className="mt-1 text-lg font-bold text-[var(--acade-text)]">{nextSlot.label}</h2>
                   <p className="mt-1 text-sm text-[var(--acade-text-muted)]">{nextSlot.session} · {plan.duration}-year programme ending {plan.graduationSession}</p>
                 </div>
               </div>
@@ -91,7 +91,7 @@ export default function NewSemesterPage() {
               </p>
 
               <Button id="tour-create-semester" variant="primary" size="lg" onClick={handleCreate} disabled={creating}>
-                {creating ? 'Creating…' : `Create ${nextSlot.level}L ${nextSlot.semester === 1 ? 'First' : 'Second'} Semester`}
+                {creating ? 'Creating…' : `Create ${nextSlot.label}`}
               </Button>
             </div>
           ) : (

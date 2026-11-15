@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useDataSaver } from '@/lib/dataSaver/useDataSaver';
 import './LandingMotion.css';
 
 /** Wrap the landing content once; descendants opt in with data-landing-motion. */
 export function LandingMotion({ children }: { children: ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
+  const { enabled: dataSaver } = useDataSaver();
 
   useEffect(() => {
     const container = root.current;
@@ -18,7 +20,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
 
     const configure = () => {
       observer?.disconnect();
-      if (preference.matches) {
+      if (preference.matches || dataSaver) {
         // Finish pending entrances too, so switching preferences never replays them.
         targets.forEach((target) => { target.dataset.landingEntered = 'done'; });
         return;
@@ -43,7 +45,7 @@ export function LandingMotion({ children }: { children: ReactNode }) {
       preference.removeEventListener('change', configure);
       delete container.dataset.landingMotionReady;
     };
-  }, []);
+  }, [dataSaver]);
 
   return <div ref={root} data-landing-motion-root="">{children}</div>;
 }

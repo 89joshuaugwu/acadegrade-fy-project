@@ -25,6 +25,7 @@ import {
 import { getDashboardNextAction } from '@/lib/dashboard/next-action';
 import { AdPlacement } from '@/components/ads/AdPlacement';
 import { ProviderPlacement } from '@/components/ads/ProviderPlacement';
+import { TimetableDashboardCard } from '@/components/timetable/TimetableDashboardCard';
 import { NextActionCard } from '@/components/dashboard/NextActionCard';
 import { RecentResults } from '@/components/dashboard/RecentResults';
 import { CalculatorHandoffBanner } from '@/components/dashboard/CalculatorHandoffBanner';
@@ -337,6 +338,8 @@ export default function DashboardPage() {
           </div>
         </Card>
       </section>
+
+      <TimetableDashboardCard />
 
       <AdPlacement placement="dashboard.overview" seed={user?.uid} />
       <ProviderPlacement />

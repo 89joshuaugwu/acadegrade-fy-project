@@ -222,31 +222,20 @@ function renderEmail(title: string, content: string, options: ShellOptions): str
 // One-time codes
 // ---------------------------------------------------------------------------
 
-const otpCopyUrl = (code: string) => `${getEmailSiteUrl()}/copy-code#code=${encodeURIComponent(code)}`;
-
-/**
- * Six-digit codes are shown as two groups of three. The gap is padding, not a
- * character, so copying or long-pressing the code still yields "482916".
- */
-function groupedCode(code: string): string {
-  const safe = (value: string) => escapeEmailHtml(value);
-  if (code.length < 6) return `<span>${safe(code)}</span>`;
-  const split = Math.ceil(code.length / 2);
-  return `<span>${safe(code.slice(0, split))}</span><span style="padding-left:14px;">${safe(code.slice(split))}</span>`;
-}
-
+// The code is one unbroken piece of text (spacing comes from letter-spacing, not from
+// characters or extra elements), so a single press-and-hold or double-tap in the Gmail
+// app selects all six digits and offers Copy. There is deliberately no "copy" button:
+// an email cannot write to the clipboard, so any button would only open a web page.
 function otpPanel(code: string, variant: 'registration' | 'reset'): string {
   const label = variant === 'registration' ? 'Your verification code' : 'Your password reset code';
   const background = variant === 'registration' ? COLORS.otpTint : COLORS.tint;
   return `<table ${TABLE_ATTRS} width="100%" bgcolor="${background}" class="em-otp" style="background-color:${background};border-radius:16px;"><tr><td align="center" style="padding:26px 20px 24px;">`
     + `<p class="em-muted" style="${text(14, 20, COLORS.muted, 'margin:0 0 10px;text-align:center;')}">${label}</p>`
-    + `<p data-otp-code class="em-code" style="margin:0;padding-left:6px;font-family:${FONT.mono};font-size:42px;line-height:50px;font-weight:700;letter-spacing:6px;color:${COLORS.ink};text-align:center;font-variant-numeric:tabular-nums;">${groupedCode(code)}</p>`
+    + `<p data-otp-code class="em-code" style="margin:0;padding-left:6px;font-family:${FONT.mono};font-size:42px;line-height:50px;font-weight:700;letter-spacing:8px;color:${COLORS.ink};text-align:center;font-variant-numeric:tabular-nums;-webkit-user-select:all;user-select:all;">${escapeEmailHtml(code)}</p>`
     + `<p class="em-muted" style="${text(14, 20, COLORS.muted, 'margin:10px 0 0;text-align:center;')}">${OTP_EXPIRY_TEXT}</p>`
     + `</td></tr></table>`
-    + spacer(24)
-    + button('Copy code on this device', otpCopyUrl(code), { align: 'center', plainText: false })
-    + spacer(10)
-    + paragraph('Opens AcadeGrade&#039;s copy screen. Tap once there, then return to the app.', { muted: true, last: true, align: 'center' });
+    + spacer(16)
+    + paragraph('To copy the code, press and hold it, then tap Copy.', { muted: true, last: true, align: 'center' });
 }
 
 function otpEmail(code: string, variant: 'registration' | 'reset'): string {

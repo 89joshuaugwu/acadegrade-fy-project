@@ -31,9 +31,12 @@ import { AiAccessNotice } from '@/components/privacy/AiAccessNotice';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
 import { Modal } from '@/components/ui/Modal';
+import { Tabs, TabsList, TabsPanel, TabsTrigger } from '@/components/ui/Tabs';
+import { PortalPastePanel } from './PortalPastePanel';
 import { Input } from '@/components/ui/Input';
 import { ResultsTour } from '@/components/onboarding/ResultsTour';
 import { FeatureCredits } from '@/components/ai/FeatureCredits';
+import { normaliseImportCode, shareCodeLinkPath } from '@/app/(public)/c/import-link';
 
 const generateRandomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
@@ -65,11 +68,17 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
   // Modals state
   const [isImportSlipOpen, setIsImportSlipOpen] = useState(false);
+  const [slipTab, setSlipTab] = useState<'scan' | 'paste'>('scan');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [isImportCodeOpen, setIsImportCodeOpen] = useState(false);
-  
+  // H5: arriving from a share-code link (/results?importCode= forwards here). The dialog opens
+  // with the code filled in; nothing is imported until the student presses Import Courses.
+  const [linkedCode] = useState(() => (
+    typeof window === 'undefined' ? null : normaliseImportCode(new URLSearchParams(window.location.search).get('importCode'))
+  ));
+  const [isImportCodeOpen, setIsImportCodeOpen] = useState(() => Boolean(linkedCode) && !isFeatureDisabled('share_code'));
+
   const [uploadingSlip, setUploadingSlip] = useState(false);
-  const [shareCodeInput, setShareCodeInput] = useState('');
+  const [shareCodeInput, setShareCodeInput] = useState(linkedCode ?? '');
   const [generatedCode, setGeneratedCode] = useState('');
   const [importingCode, setImportingCode] = useState(false);
 
@@ -449,6 +458,21 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
       {/* Modals */}
       <Modal open={isImportSlipOpen} onClose={() => setIsImportSlipOpen(false)} title="Import Result Slip">
+        <Tabs value={slipTab} onValueChange={(value) => setSlipTab(value === 'paste' ? 'paste' : 'scan')}>
+        <TabsList aria-label="How to import">
+          <TabsTrigger value="scan">Scan or upload</TabsTrigger>
+          <TabsTrigger value="paste">Paste text</TabsTrigger>
+        </TabsList>
+        <TabsPanel value="paste" className="mt-4">
+          {/* A11: rule-based, not AI, so it stays open to minors and when AI is unavailable. */}
+          <PortalPastePanel
+            onImport={(rows) => {
+              requestImport(rows);
+              setIsImportSlipOpen(false);
+            }}
+          />
+        </TabsPanel>
+        <TabsPanel value="scan" className="mt-4">
         {isImportSlipOpen && !scannerBlocked && <FeatureCredits feature="ocr" refreshKey={String(uploadingSlip)} />}
         {scannerBlocked && aiEligibility ? (
           <AiAccessNotice eligibility={aiEligibility} />
@@ -504,6 +528,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           )}
         </div>
         )}
+        </TabsPanel>
+        </Tabs>
       </Modal>
 
       <Modal open={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title="Share Course Code">
@@ -526,6 +552,26 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
             >
               <Copy size={18} />
             </Button>
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">Or send this link. It shows only course codes, titles and units.</p>
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
+              <span className="min-w-0 flex-1 truncate text-sm font-[family-name:var(--font-geist-mono)] text-[var(--acade-text)]">
+                {typeof window === 'undefined' ? '' : `${window.location.origin}${shareCodeLinkPath(generatedCode)}`}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                className="p-2 h-auto"
+                aria-label="Copy share link"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}${shareCodeLinkPath(generatedCode)}`);
+                  toast.success('Link copied!');
+                }}
+              >
+                <Copy size={18} />
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

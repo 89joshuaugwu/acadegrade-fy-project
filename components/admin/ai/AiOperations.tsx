@@ -9,6 +9,7 @@ import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { StatusChip } from '@/components/admin/StatusChip';
 import { cn } from '@/lib/utils/cn';
 import { CustomInstructions } from './CustomInstructions';
+import { AiFeedbackStats } from './AiFeedbackStats';
 import {
   getAdminAiSnapshot, saveAdminAiRouting, setAdminAiGeminiBilling, setAdminAiSecretState, testAdminAiSecret, upsertAdminAiSecret,
   type AdminAiConfig, type AdminAiFeature, type AdminAiMode, type AdminAiProviderId,
@@ -234,6 +235,7 @@ export function AiOperations() {
       </section>
       <section aria-labelledby="catalog-title" className="space-y-4"><div><h2 id="catalog-title" className="text-xl font-bold text-[var(--acade-text)]">Provider keys and models</h2><p className="text-sm text-[var(--acade-text-muted)]">Models listed here can be chosen in the features above.</p></div><div className="grid gap-4 xl:grid-cols-3">{PROVIDERS.map((id) => <ProviderEditor key={id} providerId={id} models={models[id]} secrets={snapshot.secrets.filter((secret) => secret.providerId === id)} onModelsChange={(next) => setModels((current) => current ? { ...current, [id]: next } : current)} onSaveKey={saveKey} onStateChange={requestKeyState} onTest={testKey} testingKey={testingKey} />)}</div></section>
     </>}
+    <AiFeedbackStats />
     <Modal
       open={confirmBilling}
       onClose={() => setConfirmBilling(false)}

@@ -35,6 +35,7 @@ const NEW_FEATURES = [
   { id: 'transcript_pdf', label: 'Transcript PDF', server: true },
   { id: 'transcript_share', label: 'Transcript links', server: true },
   { id: 'support', label: 'Report a problem (support requests)', server: true },
+  { id: 'timetable', label: 'Timetables', server: false },
 ];
 
 type Confirmation = 'maintenance' | 'signups' | 'ageGate';

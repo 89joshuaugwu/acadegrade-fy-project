@@ -51,6 +51,12 @@ service cloud.firestore {
           allow read, write: if isOwner(userId) || isAdmin();
         }
       }
+
+      // Subcollection: Timetables (T1). Written by the student's own app or browser.
+      match /timetables/{timetableId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
+      }
     }
     
     // 2. Analytics Collection
@@ -97,7 +103,8 @@ service cloud.firestore {
     // 6. Share Codes
     match /shareCodes/{codeId} {
       // A signed-in user can fetch one code they know; nobody can list every code.
-      allow get: if isAuthenticated();
+      // A code an admin has disabled (Admin > Share codes) can no longer be fetched.
+      allow get: if isAuthenticated() && resource.data.get('disabled', false) != true;
       // New codes stop while the admin has switched "share_code" off (admins always may).
       allow create: if isAdmin() || (isAuthenticated() && platformFeatureEnabled('share_code'));
       allow update: if (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])) || isAdmin();

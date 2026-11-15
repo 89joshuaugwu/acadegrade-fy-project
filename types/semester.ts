@@ -13,6 +13,8 @@ export interface Semester {
   pi: number;
   creditLoaded: number;
   isComplete: boolean;
+  /** A5: 1..4 for a spill-over semester after the final level. */
+  spillOver?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

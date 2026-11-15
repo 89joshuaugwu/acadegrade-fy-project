@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({ fetch: vi.fn(), user: { uid: 'user-1', getIdToken: async () => 'id-token' } as { uid: string; getIdToken: () => Promise<string> } | null }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: state.user ? { ...state.user } : null }) }));
@@ -55,7 +55,32 @@ describe('feature credit display', () => {
       features: [{ id: 'ocr', label: 'Result scanning', freeDailyLimit: 20, freeRemaining: 0, freeResetAt: null, availableNow: 0, retryAfterSeconds: 9, cooldownUntil: null, coin: { enabled: true, price: 3, usesToday: 1, dailyUseCap: 5 } }] }) });
     render(<FeatureCredits feature="ocr" />);
     expect(await screen.findByText(/Coin balance: 5/)).toHaveTextContent('An extra Result scanning request costs 3 coins in the Android app after free credits run out (1 of 5 coin-funded uses today).');
-    expect(screen.queryByRole('button', { name: /coin|watch|ad/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /watch|earn|buy|spend/i })).not.toBeInTheDocument();
+  });
+  it('loads coin history only when opened and lists entries newest first', async () => {
+    const summary = { ok: true, json: async () => ({ checkedAt: 1,
+      coins: { enabled: true, balance: 5 },
+      features: [{ id: 'ocr', label: 'Result scanning', freeDailyLimit: 20, freeRemaining: 0, freeResetAt: null, availableNow: 0, retryAfterSeconds: 9, cooldownUntil: null, coin: { enabled: true, price: 3, usesToday: 1, dailyUseCap: 5 } }] }) };
+    const history = { ok: true, json: async () => ({ balance: 5, entries: [
+      { type: 'spend', amount: 3, feature: 'ocr', at: '2026-11-10T10:00:00.000Z', balanceAfter: 2 },
+      { type: 'earn', amount: 2, at: '2026-11-09T10:00:00.000Z', balanceAfter: 5 }] }) };
+    state.fetch.mockImplementation(async (url: string) => (String(url).startsWith('/api/coins/history') ? history : summary));
+    render(<FeatureCredits feature="ocr" />);
+    await screen.findByText(/Coin balance: 5/);
+    expect(state.fetch).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Coin history' }));
+    expect(await screen.findByText('-3 (balance 2)')).toBeInTheDocument();
+    expect(screen.getByText('+2 (balance 5)')).toBeInTheDocument();
+    expect(String(state.fetch.mock.calls[1][0])).toBe('/api/coins/history?limit=30');
+  });
+  it('says so when coin history cannot load', async () => {
+    const summary = { ok: true, json: async () => ({ checkedAt: 1, coins: { enabled: true, balance: 5 },
+      features: [{ id: 'ocr', label: 'Result scanning', freeDailyLimit: 20, freeRemaining: 0, freeResetAt: null, availableNow: 0, retryAfterSeconds: 9, cooldownUntil: null, coin: { enabled: true, price: 3, usesToday: 1, dailyUseCap: 5 } }] }) };
+    state.fetch.mockImplementation(async (url: string) => (String(url).startsWith('/api/coins/history') ? { ok: false } : summary));
+    render(<FeatureCredits feature="ocr" />);
+    await screen.findByText(/Coin balance: 5/);
+    fireEvent.click(screen.getByRole('button', { name: 'Coin history' }));
+    expect(await screen.findByText(/Coin history is unavailable/)).toBeInTheDocument();
   });
   it('omits coins when they are off or the feature is not offered for coins', async () => {
     state.fetch.mockResolvedValue({ ok: true, json: async () => ({ checkedAt: 1, coins: null,

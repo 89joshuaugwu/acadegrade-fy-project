@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'motion/react';
-import { FileText, Download, AlertCircle, Clock } from 'lucide-react';
+import { FileText, Download, AlertCircle, Clock, Lock } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { PublicFooter } from '@/components/layout/PublicShell';
 import { Logo } from '@/components/ui/Logo';
@@ -19,6 +19,8 @@ import {
   resolveUniversityName,
 } from './record-labels';
 import { resolveSharedStanding } from './shared-standing';
+import { fetchSharedTranscript } from '@/lib/share/viewer';
+import { isValidPin } from '@/lib/share/options';
 
 interface SharedCourse {
   id: string;
@@ -41,7 +43,8 @@ interface SharedSemester {
   gpa: number;
   pi: number;
   creditLoaded: number;
-  courses: SharedCourse[];
+  /** Empty on a summary link; may be missing on malformed records. */
+  courses?: SharedCourse[];
 }
 
 interface SharedTranscript {
@@ -60,7 +63,16 @@ interface SharedTranscript {
   pi?: number;
   totalCredits?: number;
   semesters: SharedSemester[];
+  /** 'summary' links carry semester totals only. Absent on older links (full). */
+  shareLevel?: 'full' | 'summary';
   createdAt: any;
+}
+
+type ViewState = 'loading' | 'ready' | 'pin' | 'unavailable' | 'error';
+
+function lockedMessage(seconds: number): string {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  return `Too many wrong PINs. This link is locked for about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. Try again later.`;
 }
 
 export default function ShareTranscriptPage() {
@@ -68,24 +80,67 @@ export default function ShareTranscriptPage() {
   const shareId = params.shareId as string;
 
   const [transcript, setTranscript] = useState<SharedTranscript | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [view, setView] = useState<ViewState>('loading');
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [pinLocked, setPinLocked] = useState(false);
+  const [checkingPin, setCheckingPin] = useState(false);
+  const pinField = useRef<HTMLInputElement>(null);
+
+  /** Loads the record; the PIN, when given, goes only in the request header. */
+  const load = useCallback(async (pin?: string) => {
+    const result = await fetchSharedTranscript<SharedTranscript>(shareId, pin);
+    if (result.status === 'ok') {
+      setTranscript(result.transcript);
+      setExpiresAt(result.expiresAt);
+      setPinError(null);
+      setView('ready');
+    } else if (result.status === 'pin-required') {
+      setView('pin');
+    } else if (result.status === 'pin-incorrect') {
+      setPinError('That PIN is not right. Check it with the student and try again.');
+      setView('pin');
+    } else if (result.status === 'locked') {
+      setPinLocked(true);
+      setPinError(lockedMessage(result.retryAfterSeconds));
+      setView('pin');
+    } else {
+      setView(result.status);
+    }
+  }, [shareId]);
 
   useEffect(() => {
     if (!shareId) return;
+    void load();
+  }, [shareId, load]);
 
-    fetch(`/api/transcript/share?id=${shareId}`)
-      .then(async r => {
-        if (!r.ok) {
-          const data = await r.json();
-          throw new Error(data.error || 'Failed to load transcript');
-        }
-        return r.json();
-      })
-      .then(json => setTranscript(json.transcript))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [shareId]);
+  const handlePinSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (pinLocked || checkingPin) return;
+    const pin = pinInput.trim();
+    // The PIN leaves component state as soon as it is sent.
+    setPinInput('');
+    if (!isValidPin(pin)) {
+      setPinError('Enter the 4 to 6 digits the student gave you.');
+      pinField.current?.focus();
+      return;
+    }
+    setCheckingPin(true);
+    try {
+      await load(pin);
+    } finally {
+      setCheckingPin(false);
+      pinField.current?.focus();
+    }
+  };
+
+  const isSummary = transcript?.shareLevel === 'summary';
+  const expiryLabel = (() => {
+    if (!expiresAt) return null;
+    const date = new Date(expiresAt);
+    return Number.isFinite(date.getTime()) ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null;
+  })();
 
 
 
@@ -211,8 +266,31 @@ export default function ShareTranscriptPage() {
     // -- SEMESTER DATA --
     let currentY = boxY + boxHeight + 10;
 
-    transcript.semesters.forEach((sem) => {
-       const body: Array<Array<string | object>> = sem.courses.map(c => [
+    if (isSummary) {
+      // A summary link carries semester totals only: one table, no course rows.
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Semester', 'Session', 'Credits', 'GPA', 'PI']],
+        body: transcript.semesters.map((sem) => [
+          sem.label,
+          sem.session,
+          String(sem.creditLoaded ?? '-'),
+          formatCgpa(sem.gpa),
+          typeof sem.pi === 'number' ? formatCgpa(sem.pi) : '-',
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        styles: { fontSize: 9, cellPadding: 2 },
+        margin: { left: 14, right: 14, bottom: 26 },
+      });
+      currentY = ((doc as any).lastAutoTable?.finalY ?? currentY) + 4;
+      doc.setFontSize(8);
+      doc.text('Summary only: the student chose not to share course-by-course results.', 14, currentY + 2);
+      currentY += 10;
+    }
+
+    (isSummary ? [] : transcript.semesters).forEach((sem) => {
+       const body: Array<Array<string | object>> = (sem.courses ?? []).map(c => [
           c.code,
           (c.title || '').substring(0, 40),
           c.units.toString(),
@@ -397,7 +475,7 @@ export default function ShareTranscriptPage() {
     doc.save(`${transcript.studentName.replace(/\s+/g, '_')}_Transcript.pdf`);
   };
 
-  if (loading) {
+  if (view === 'loading') {
     return (
       <>
         <Navbar />
@@ -413,7 +491,66 @@ export default function ShareTranscriptPage() {
     );
   }
 
-  if (error) {
+  if (view === 'pin') {
+    const describedBy = pinError ? 'share-pin-hint share-pin-error' : 'share-pin-hint';
+    return (
+      <>
+        <Navbar />
+        <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-10 sm:pt-14">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm space-y-5 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 text-center"
+          >
+            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[var(--acade-primary)]/10">
+              <Lock size={26} className="text-[var(--acade-primary)]" aria-hidden="true" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
+                This transcript needs a PIN
+              </h1>
+              <p id="share-pin-hint" className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+                The student set a PIN for this link. Ask them for it, then enter it below.
+              </p>
+            </div>
+            {/* No `name` and no action: the PIN can never be submitted into a URL. */}
+            <form onSubmit={(event) => void handlePinSubmit(event)} className="space-y-3 text-left" noValidate>
+              <label htmlFor="share-pin" className="block text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">
+                PIN
+              </label>
+              <input
+                ref={pinField}
+                id="share-pin"
+                type="password"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={6}
+                value={pinInput}
+                onChange={(event) => setPinInput(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                disabled={pinLocked}
+                aria-invalid={pinError ? true : undefined}
+                aria-describedby={describedBy}
+                className="h-12 w-full rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 text-center font-mono text-lg tracking-[0.4em] text-[var(--acade-text)] outline-none focus-visible:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30 disabled:opacity-60"
+              />
+              {pinError && (
+                <p id="share-pin-error" role="alert" className="text-[length:var(--text-sm)] text-[var(--acade-danger)]">
+                  {pinError}
+                </p>
+              )}
+              <Button type="submit" variant="primary" className="h-12 w-full" disabled={pinLocked || checkingPin}>
+                {checkingPin ? 'Checking...' : 'View transcript'}
+              </Button>
+            </form>
+          </motion.div>
+        </div>
+        <PublicFooter />
+      </>
+    );
+  }
+
+  if (view === 'unavailable' || view === 'error') {
+    // Same screens as before: expired and unknown links both read as expired.
+    const expired = view === 'unavailable';
     return (
       <>
         <Navbar />
@@ -424,17 +561,17 @@ export default function ShareTranscriptPage() {
             className="text-center space-y-4 max-w-md"
           >
             <div className="w-16 h-16 rounded-full bg-[var(--acade-danger)]/10 flex items-center justify-center mx-auto">
-              {error.includes('expired') ? (
+              {expired ? (
                 <Clock size={32} className="text-[var(--acade-gold)]" />
               ) : (
                 <AlertCircle size={32} className="text-[var(--acade-danger)]" />
               )}
             </div>
             <h1 className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-bricolage)]">
-              {error.includes('expired') ? 'Link Expired' : 'Transcript Not Found'}
+              {expired ? 'Link Expired' : 'Transcript Not Found'}
             </h1>
             <p className="text-[var(--acade-text-muted)]">
-              {error.includes('expired')
+              {expired
                 ? 'This shared transcript link has expired. Ask the student to generate a new one.'
                 : 'This transcript link is invalid or has been removed.'}
             </p>
@@ -554,6 +691,37 @@ export default function ShareTranscriptPage() {
             </div>
 
             {/* Semesters */}
+            {isSummary ? (
+              <div className="space-y-3 font-serif relative z-10">
+                <p className="text-xs text-gray-700">
+                  <span className="font-bold">Summary only:</span> the student chose not to share course-by-course results.
+                </p>
+                <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
+                  <table className="w-full min-w-[480px] text-xs text-left border-collapse border border-gray-400">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border border-gray-400 p-1.5">Semester</th>
+                        <th className="border border-gray-400 p-1.5 w-28">Session</th>
+                        <th className="border border-gray-400 p-1.5 w-16 text-center">Credits</th>
+                        <th className="border border-gray-400 p-1.5 w-16 text-center">GPA</th>
+                        <th className="border border-gray-400 p-1.5 w-16 text-center">PI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transcript.semesters.map((sem) => (
+                        <tr key={sem.id}>
+                          <td className="border border-gray-400 p-1.5 font-semibold">{sem.label}</td>
+                          <td className="border border-gray-400 p-1.5">{sem.session}</td>
+                          <td className="border border-gray-400 p-1.5 text-center">{sem.creditLoaded}</td>
+                          <td className="border border-gray-400 p-1.5 text-center font-bold">{formatCgpa(sem.gpa)}</td>
+                          <td className="border border-gray-400 p-1.5 text-center">{typeof sem.pi === 'number' ? formatCgpa(sem.pi) : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-8 font-serif relative z-10">
               {transcript.semesters.map(sem => (
                 <div key={sem.id} className="break-inside-avoid">
@@ -576,7 +744,7 @@ export default function ShareTranscriptPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {sem.courses.map(course => (
+                        {(sem.courses ?? []).map(course => (
                           <tr key={course.id}>
                             <td className="border border-gray-400 p-1.5 font-semibold">
                               {course.code}
@@ -625,6 +793,7 @@ export default function ShareTranscriptPage() {
                 </div>
               ))}
             </div>
+            )}
 
             {/* Cumulative */}
             <div className="mt-8 border-2 border-black p-4 text-sm font-serif break-inside-avoid relative z-10 bg-white/70 backdrop-blur-md print:bg-transparent">
@@ -667,7 +836,10 @@ export default function ShareTranscriptPage() {
                 <span className="font-semibold text-gray-600">AcadeGrade</span>
               </div>
               <span className="font-semibold text-gray-700">{SELF_REPORTED_NOTICE}</span>
-              <span>Generated by AcadeGrade · Not an official university document · Shared link valid for 30 days</span>
+              <span>
+                Generated by AcadeGrade · Not an official university document
+                {expiryLabel ? ` · Shared link expires ${expiryLabel}` : ''}
+              </span>
             </div>
           </motion.div>
         </div>

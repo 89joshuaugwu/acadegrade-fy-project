@@ -82,6 +82,11 @@ describe('parseAdminSettingsMutation', () => {
       .toEqual({ target: 'settings', data: { disabledFeatures: ['ai_forecast', 'ai_whatif', 'transcript_pdf', 'transcript_share'] } });
   });
 
+  it('accepts the timetable switch (T1)', () => {
+    expect(parseAdminSettingsMutation({ field: 'disabledFeatures', value: ['timetable'] }))
+      .toEqual({ target: 'settings', data: { disabledFeatures: ['timetable'] } });
+  });
+
   it('accepts the age/consent gate switch and rejects anything else in it', () => {
     expect(parseAdminSettingsMutation({ field: 'ageGate', value: { enforceUnknown: false } }))
       .toEqual({ target: 'settings', data: { ageGate: { enforceUnknown: false } } });

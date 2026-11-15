@@ -1,5 +1,5 @@
 import { queryCollection, setDocument } from '@/lib/firebase/firestore';
-import { slotKey, type AcademicSlot } from '@/lib/academic/timeline';
+import { semesterSlotKey, slotDocumentId, type AcademicSlot } from '@/lib/academic/timeline';
 import type { SemesterWithId } from '@/types/semester';
 
 export type CreateSemesterResult = { status: 'created'; id: string } | { status: 'duplicate' };
@@ -12,15 +12,16 @@ export type CreateSemesterResult = { status: 'created'; id: string } | { status:
 export async function createSemesterForSlot(uid: string, slot: AcademicSlot): Promise<CreateSemesterResult> {
   const collectionPath = `users/${uid}/semesters`;
   const latest = await queryCollection<SemesterWithId>(collectionPath);
-  if (latest.some((semester) => slotKey(Number(semester.level), Number(semester.semester)) === slot.key)) {
+  if (latest.some((semester) => semesterSlotKey(semester) === slot.key)) {
     return { status: 'duplicate' };
   }
-  const id = `slot_${slot.level}_${slot.semester}`;
+  const id = slotDocumentId(slot);
   await setDocument(`${collectionPath}/${id}`, {
     label: slot.label,
     session: slot.session,
     level: slot.level,
     semester: slot.semester,
+    ...(slot.spillOver ? { spillOver: slot.spillOver } : {}),
     gpa: 0,
     pi: 0,
     creditLoaded: 0,

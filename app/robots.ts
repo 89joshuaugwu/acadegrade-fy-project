@@ -18,7 +18,7 @@ export default function robots(): MetadataRoute.Robots {
         '/login',
         '/register',
         '/forgot-password',
-        '/copy-code',
+        '/c/',
       ],
     },
     sitemap: absoluteUrl('/sitemap.xml'),

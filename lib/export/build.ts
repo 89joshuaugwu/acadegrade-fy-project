@@ -22,6 +22,8 @@ export interface ExportInput {
   semesters: ExportSemester[];
   analytics: unknown;
   notifications: unknown[];
+  /** T1 timetables (users/{uid}/timetables). Optional so older callers keep working. */
+  timetables?: unknown[];
   exportedAt?: Date;
 }
 
@@ -71,6 +73,7 @@ export function buildDataExport(input: ExportInput) {
     semesters: sortSemesters(input.semesters).map((semester) => toPlain(semester) as { [key: string]: Plain } & { id: string; courses: Plain[] }),
     insights: toPlain(input.analytics),
     notifications: input.notifications.map(toPlain) as Array<{ [key: string]: Plain }>,
+    timetables: (input.timetables ?? []).map(toPlain) as Array<{ [key: string]: Plain }>,
   };
 }
 
@@ -120,11 +123,12 @@ export async function collectExportData(uid: string, profile: unknown, readers: 
     ...semester,
     courses: await readers.queryCollection<Record<string, unknown>>(`users/${uid}/semesters/${semester.id}/courses`),
   })));
-  const [analytics, notifications] = await Promise.all([
+  const [analytics, notifications, timetables] = await Promise.all([
     readers.getDocument<unknown>(`analytics/${uid}`).catch(() => null),
     readers.queryCollection<unknown>(`notifications/${uid}/items`).catch(() => [] as unknown[]),
+    readers.queryCollection<unknown>(`users/${uid}/timetables`).catch(() => [] as unknown[]),
   ]);
-  return { uid, profile, semesters: withCourses, analytics, notifications };
+  return { uid, profile, semesters: withCourses, analytics, notifications, timetables };
 }
 
 /** Saves text as a file through a temporary link. Browser only. */

@@ -78,6 +78,23 @@ describe('collectExportData', () => {
     expect(getDocument).toHaveBeenCalledWith('analytics/u1');
   });
 
+  it('includes timetables, and still exports when they cannot be read', async () => {
+    const queryCollection = vi.fn((path: string) => Promise.resolve(
+      path === 'users/u1/timetables' ? [{ id: 't1', title: 'Lectures', kind: 'fixed', events: [] }] : []
+    ));
+    const getDocument = vi.fn().mockResolvedValue(null);
+    const data = await collectExportData('u1', {}, { queryCollection, getDocument } as unknown as ExportReaders);
+    expect(data.timetables).toEqual([{ id: 't1', title: 'Lectures', kind: 'fixed', events: [] }]);
+    const built = buildDataExport({ ...data, exportedAt: new Date('2025-06-01T10:00:00.000Z') });
+    expect(built.timetables).toEqual([{ id: 't1', title: 'Lectures', kind: 'fixed', events: [] }]);
+
+    const failing = vi.fn((path: string) => (path.endsWith('/timetables') ? Promise.reject(new Error('denied')) : Promise.resolve([])));
+    const fallback = await collectExportData('u1', {}, { queryCollection: failing, getDocument } as unknown as ExportReaders);
+    expect(fallback.timetables).toEqual([]);
+    // Older callers that pass no timetables still get an empty list.
+    expect(buildDataExport({ uid: 'u1', profile: {}, semesters: [], analytics: null, notifications: [] }).timetables).toEqual([]);
+  });
+
   it('still exports when the optional insights and notifications cannot be read', async () => {
     const queryCollection = vi.fn((path: string) => (
       path.startsWith('notifications') ? Promise.reject(new Error('denied')) : Promise.resolve([])
