@@ -14,6 +14,11 @@ vi.mock('@/hooks/usePlatformSettings', () => ({
   usePlatformSettings: () => ({ isFeatureDisabled: () => false }),
 }));
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/results',
+}));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { uid: 'student-1' } }) }));
 vi.mock('@/lib/firebase/firestore', () => ({ deleteDocument: vi.fn(), queryCollection: vi.fn() }));
 vi.mock('@/components/onboarding/ResultsTour', () => ({ ResultsTour: () => null }));

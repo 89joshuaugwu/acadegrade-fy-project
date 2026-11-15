@@ -13,6 +13,11 @@ vi.mock('@/hooks/useSemesters', () => ({
 }));
 vi.mock('@/hooks/usePlatformSettings', () => ({ usePlatformSettings: () => ({ isFeatureDisabled: () => false }) }));
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/results',
+}));
 const authValue = { user: { uid: 'student-1', photoURL: null, getIdToken: vi.fn() }, loading: false };
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => authValue }));
 vi.mock('@/hooks/useProfile', () => ({ useProfile: () => ({ profile: mocks.profile }) }));
