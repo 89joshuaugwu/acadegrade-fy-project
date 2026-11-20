@@ -107,7 +107,7 @@ export function MobileAdsEditor({ initialConfig, onSave, platform = 'Android', r
           {unitInput('rewardedUnitId', 'Rewarded ad unit ID')}
           {rewardedReadiness}
           <p className="text-sm">
-            <Link href="/admin/usage" className="font-medium text-[var(--acade-primary)] underline-offset-2 hover:underline">Coin prices and caps → Free uses &amp; coins</Link>
+            <Link href="/admin/usage" className="font-medium text-[var(--acade-primary)] underline-offset-2 hover:underline">Coin prices and caps live in Free uses &amp; coins</Link>
           </p>
         </fieldset>
       ) : (

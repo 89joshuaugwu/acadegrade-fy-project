@@ -57,11 +57,24 @@ describe('built-in text details', () => {
     expect(text).toMatch(/governed by the laws of the Federal Republic of Nigeria/);
   });
 
-  it('is versioned and dated for the first published scheme', () => {
-    for (const id of ['terms', 'privacy'] as const) {
-      expect(BUILTIN_LEGAL[id].version).toBe('2026-11-13');
-      expect(formatLegalDate(BUILTIN_LEGAL[id].effectiveDate)).toBe('13 November 2026');
-    }
+  it('is versioned and dated: terms from the first scheme, privacy corrected on 17 November 2026', () => {
+    expect(BUILTIN_LEGAL.terms.version).toBe('2026-11-13');
+    expect(formatLegalDate(BUILTIN_LEGAL.terms.effectiveDate)).toBe('13 November 2026');
+    expect(BUILTIN_LEGAL.privacy.version).toBe('2026-11-17');
+    expect(formatLegalDate(BUILTIN_LEGAL.privacy.effectiveDate)).toBe('17 November 2026');
+  });
+
+  it('privacy carries the corrected facts (legal-privacy.md §13, owner decision A2)', () => {
+    const text = renderBuiltin('privacy', null).textContent ?? '';
+    expect(text).toMatch(/1, 7 or 30 days/);
+    expect(text).not.toMatch(/30 days after it is created/);
+    expect(text).toMatch(/protect a link with a PIN/);
+    expect(text).toMatch(/share a summary only/);
+    expect(text).toMatch(/Until 180 days after the request is closed/);
+    expect(text).toMatch(/Timetables you build/);
+    expect(text).toMatch(/Suggestions you send for the university and course lists/);
+    expect(text).toMatch(/AcadeMind/);
+    expect(text).toMatch(/does not send your data to AI providers/);
   });
 });
 

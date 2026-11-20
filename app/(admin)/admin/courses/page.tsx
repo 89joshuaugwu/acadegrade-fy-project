@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { TableFrame, tableClass } from '@/components/admin/ui/TableFrame';
+import { AdminSelect } from '@/components/admin/ui/AdminSelect';
+import { Notice } from '@/components/admin/ui/Notice';
 import toast from 'react-hot-toast';
 
 interface CatalogCourse {
@@ -23,6 +25,15 @@ interface CatalogCourse {
 }
 
 const EMPTY_FORM: Omit<CatalogCourse, 'id'> = { code: '', title: '', units: 3, department: '', level: 100, semester: 1 };
+
+const LEVEL_OPTIONS = [100, 200, 300, 400, 500].map(level => ({ value: String(level), label: `${level}L` }));
+const SEMESTER_OPTIONS = [
+  { value: '1', label: 'First semester' },
+  { value: '2', label: 'Second semester' },
+];
+const semesterName = (semester: number) => (semester === 2 ? 'second semester' : semester === 1 ? 'first semester' : `semester ${semester}`);
+
+const iconButtonClass = 'flex size-11 items-center justify-center rounded-[12px] text-[var(--acade-text-muted)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]';
 
 export default function AdminCoursesPage() {
   const { user } = useAuth();
@@ -103,7 +114,6 @@ export default function AdminCoursesPage() {
     finally { setDeleting(false); setDeleteConfirm(null); }
   };
 
-  const selectClass = 'h-12 w-full rounded-xl border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-4 text-[length:var(--text-sm)] text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20';
   const header = (
     <AdminPageHeader
       title="Legacy course list"
@@ -111,9 +121,7 @@ export default function AdminCoursesPage() {
       helpId="admin.course-list"
       actions={<Button size="sm" variant="primary" onClick={openAdd} disabled={!!error}><Plus size={16} aria-hidden="true" />Add course</Button>}
     >
-      <p className="mt-3 max-w-2xl rounded-xl bg-[var(--acade-warning)]/10 px-3 py-2 text-sm text-[var(--acade-text)]">
-        No app reads this list. Course codes students share are created from their own semesters.
-      </p>
+      <Notice tone="warning" className="mt-3 max-w-2xl">No app reads this list. Course codes students share are created from their own semesters.</Notice>
     </AdminPageHeader>
   );
 
@@ -130,8 +138,8 @@ export default function AdminCoursesPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-48" />
-        <div className="flex gap-4"><Skeleton className="h-12 flex-1" /><Skeleton className="h-12 w-36" /></div>
-        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-14" />)}
+        <Skeleton className="h-12 w-full rounded-[12px]" />
+        <Skeleton className="h-96 w-full rounded-[20px]" />
       </div>
     );
   }
@@ -143,38 +151,52 @@ export default function AdminCoursesPage() {
       {/* Search */}
       <div className="relative">
         <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
-        <input type="search" aria-label="Search courses" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by code, title, or department..."
-          className="w-full h-12 pl-12 pr-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] placeholder:text-[var(--acade-text-faint)] focus:outline-none focus:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30 transition-colors" />
+        <input type="search" aria-label="Search courses" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search by code, title or department"
+          className="h-12 w-full rounded-[12px] border border-[var(--acade-control-border)] bg-[var(--acade-deep)] pl-12 pr-4 text-sm text-[var(--acade-text)] placeholder:text-[var(--acade-text-faint)] transition-colors focus:border-[var(--acade-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/20" />
       </div>
 
       {/* Table */}
-      <Card variant="default" padding="none" className="overflow-hidden">
-        <div className="hidden md:grid grid-cols-[1fr_2fr_0.5fr_1.2fr_0.5fr_0.5fr_0.8fr] gap-2 px-5 py-3 bg-[var(--acade-overlay)]/30 border-b border-[var(--acade-border)] text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-wider">
-          <span>Code</span><span>Title</span><span>Units</span><span>Department</span><span>Level</span><span>Sem</span><span>Actions</span>
-        </div>
-        {filtered.length === 0 ? (
-          <div role="status" className="p-12 text-center text-[var(--acade-text-muted)]">{searchQuery ? 'No courses match your search.' : 'No courses in catalog yet.'}</div>
-        ) : (
-          filtered.map(c => (
-            <div key={c.id} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_0.5fr_1.2fr_0.5fr_0.5fr_0.8fr] gap-2 px-5 py-3.5 border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)]/10 transition-colors items-center">
-              <span className="font-bold text-[length:var(--text-sm)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">{c.code}</span>
-              <div className="min-w-0">
-                <span className="block truncate text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">{c.title}</span>
-                {/* Small screens hide the columns; keep their facts on a second line. */}
-                <span className="mt-0.5 block truncate text-xs text-[var(--acade-text-muted)] md:hidden">{c.department || 'No department'} · {c.level}L · {c.units} units · S{c.semester}</span>
-              </div>
-              <span className="text-[length:var(--text-sm)] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] hidden md:block">{c.units}</span>
-              <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] truncate hidden md:block">{c.department}</span>
-              <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{c.level}L</span>
-              <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hidden md:block">S{c.semester}</span>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => openEdit(c)} className="flex size-11 items-center justify-center rounded-lg text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-primary)]/10 hover:text-[var(--acade-primary)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" aria-label={`Edit ${c.code}`}><Pencil size={16} aria-hidden="true" /></button>
-                <button type="button" onClick={() => setDeleteConfirm(c)} className="flex size-11 items-center justify-center rounded-lg text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-danger)]/10 hover:text-[var(--acade-danger)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" aria-label={`Delete ${c.code}`}><Trash2 size={16} aria-hidden="true" /></button>
-              </div>
-            </div>
-          ))
-        )}
-      </Card>
+      {filtered.length === 0 ? (
+        <div role="status" className="rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-12 text-center text-sm text-[var(--acade-text-muted)]">{searchQuery ? 'No courses match your search.' : 'No courses in catalog yet.'}</div>
+      ) : (
+        <TableFrame label="Legacy courses">
+          <table className={tableClass}>
+            <thead>
+              <tr>
+                <th scope="col">Code</th>
+                <th scope="col">Title</th>
+                <th scope="col" className="ag-right hidden md:table-cell">Units</th>
+                <th scope="col" className="hidden md:table-cell">Department</th>
+                <th scope="col" className="hidden md:table-cell">Level</th>
+                <th scope="col" className="hidden lg:table-cell">Semester</th>
+                <th scope="col" className="ag-right"><span className="sr-only md:not-sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(c => (
+                <tr key={c.id}>
+                  <td className="whitespace-nowrap font-semibold">{c.code}</td>
+                  <td className="min-w-0">
+                    <span className="block text-[var(--acade-text)]">{c.title}</span>
+                    {/* Small screens hide the columns; keep their facts on a second line. */}
+                    <span className="mt-0.5 block text-[0.8125rem] text-[var(--acade-text-muted)] md:hidden">{c.department || 'No department'}, {c.level}L, {c.units} units, {semesterName(c.semester)}</span>
+                  </td>
+                  <td className="ag-right hidden md:table-cell">{c.units}</td>
+                  <td className="hidden text-[var(--acade-text-muted)] md:table-cell">{c.department}</td>
+                  <td className="hidden whitespace-nowrap text-[var(--acade-text-muted)] md:table-cell">{c.level}L</td>
+                  <td className="hidden whitespace-nowrap text-[var(--acade-text-muted)] lg:table-cell">{semesterName(c.semester).replace(/^./, (s) => s.toUpperCase())}</td>
+                  <td className="ag-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button type="button" onClick={() => openEdit(c)} className={`${iconButtonClass} hover:bg-[var(--acade-primary-dim)] hover:text-[var(--acade-primary)]`} aria-label={`Edit ${c.code}`}><Pencil size={16} aria-hidden="true" /></button>
+                      <button type="button" onClick={() => setDeleteConfirm(c)} className={`${iconButtonClass} hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)]`} aria-label={`Delete ${c.code}`}><Trash2 size={16} aria-hidden="true" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableFrame>
+      )}
 
       <Modal
         open={modalOpen}
@@ -185,24 +207,13 @@ export default function AdminCoursesPage() {
         <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void handleSave(); }}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input id="course-code" label="Course code" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} placeholder="CSC301" />
-            <Input id="course-units" label="Credit units" type="number" min={0} value={String(form.units)} onChange={e => setForm({ ...form, units: Number(e.target.value) })} placeholder="3" />
+            <Input id="course-units" label="Credit units" type="text" inputMode="numeric" pattern="[0-9]*" value={String(form.units)} onChange={e => setForm({ ...form, units: Number(e.target.value.replace(/[^0-9]/g, '')) })} placeholder="3" />
           </div>
           <Input id="course-title" label="Course title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Data Structures and Algorithms" />
           <Input id="course-dept" label="Department" value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} placeholder="Computer Science" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="course-level" className="mb-1.5 block text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">Level</label>
-              <select id="course-level" value={form.level} onChange={e => setForm({ ...form, level: Number(e.target.value) })} className={selectClass}>
-                {[100, 200, 300, 400, 500].map(l => <option key={l} value={l}>{l}L</option>)}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="course-semester" className="mb-1.5 block text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)]">Semester</label>
-              <select id="course-semester" value={form.semester} onChange={e => setForm({ ...form, semester: Number(e.target.value) })} className={selectClass}>
-                <option value={1}>First Semester</option>
-                <option value={2}>Second Semester</option>
-              </select>
-            </div>
+            <AdminSelect label="Level" options={LEVEL_OPTIONS} value={String(form.level)} onChange={value => setForm({ ...form, level: Number(value) })} />
+            <AdminSelect label="Semester" options={SEMESTER_OPTIONS} value={String(form.semester)} onChange={value => setForm({ ...form, semester: Number(value) })} />
           </div>
           <div className="flex justify-end gap-3 border-t border-[var(--acade-border-subtle)] pt-4">
             <Button type="button" variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Cancel</Button>

@@ -3,6 +3,7 @@ import { getEmailDeliveryCredential } from './managed-credentials';
 
 import {
   adminNewUserEmail,
+  adminSupportRequestEmail,
   degreeClassEmail,
   htmlToPlainText,
   registrationOtpEmail,
@@ -15,6 +16,7 @@ import {
 // Preserve the public template API used by web routes and the mobile-facing APIs.
 export {
   adminNewUserEmail,
+  adminSupportRequestEmail,
   degreeClassEmail,
   registrationOtpEmail,
   resetPasswordOtpEmail,

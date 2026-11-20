@@ -11,6 +11,8 @@ export interface PublishedLegal {
   title: string;
   summary: string;
   body: string;
+  /** The editor's note on what changed in this version; empty for the built-in text. */
+  changeNote: string;
   /** 'published' when an admin published this text; 'builtin' when the built-in text is live. */
   source: 'published' | 'builtin';
 }
@@ -18,9 +20,16 @@ export interface PublishedLegal {
 function readVersionDocument(data: unknown): Omit<PublishedLegal, 'source'> | null {
   if (!data || typeof data !== 'object') return null;
   const value = data as Record<string, unknown>;
-  const { version, effectiveDate, title, summary, body } = value;
+  const { version, effectiveDate, title, summary, body, changeNote } = value;
   if (typeof version !== 'string' || typeof effectiveDate !== 'string' || typeof title !== 'string' || typeof body !== 'string') return null;
-  return { version, effectiveDate, title, summary: typeof summary === 'string' ? summary : '', body };
+  return {
+    version,
+    effectiveDate,
+    title,
+    summary: typeof summary === 'string' ? summary : '',
+    body,
+    changeNote: typeof changeNote === 'string' ? changeNote.trim() : '',
+  };
 }
 
 /**
@@ -44,5 +53,5 @@ export async function getPublishedLegal(document: LegalDocumentId): Promise<Publ
   } catch {
     console.warn('[legal] could not read published text; showing the built-in text');
   }
-  return { ...BUILTIN_LEGAL[document], source: 'builtin' };
+  return { ...BUILTIN_LEGAL[document], changeNote: '', source: 'builtin' };
 }

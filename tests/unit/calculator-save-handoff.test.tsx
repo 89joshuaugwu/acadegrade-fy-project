@@ -14,25 +14,26 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => mocks.auth }));
-vi.mock('@/components/layout/Navbar', () => ({ Navbar: () => null }));
-vi.mock('@/components/layout/PublicShell', () => ({ PublicFooter: () => null }));
 
-import QuickCalculatorPage from '@/app/(public)/calculator/page';
+import CalculatorPage from '@/app/(public)/calculator/page';
+
+const saveButton = () => screen.getAllByRole('button', { name: /save to your record/i })[0];
 
 beforeEach(() => {
   sessionStorage.clear();
   mocks.push.mockReset();
   mocks.auth.user = null;
   mocks.auth.uid = null;
+  window.history.replaceState(null, '', '/calculator');
 });
 
-describe('Calculator "Save to profile" handoff', () => {
+describe('Calculator "Save to your record" handoff', () => {
   it('keeps the entered courses for a signed-out visitor and says so before sign-up', async () => {
     const user = userEvent.setup();
-    render(<QuickCalculatorPage />);
+    render(<CalculatorPage />);
 
-    await screen.findByRole('main', { name: /quick cgpa calculator/i });
-    await user.click(screen.getByRole('button', { name: /save to profile/i }));
+    await screen.findByRole('heading', { level: 1, name: 'Work out your GPA and CGPA' });
+    await user.click(saveButton());
 
     const handoff = readCalculatorHandoff();
     expect(handoff?.mode).toBe('grade');
@@ -42,44 +43,37 @@ describe('Calculator "Save to profile" handoff', () => {
       { code: '', units: 2, grade: 'C' },
     ]);
 
-    const dialog = await screen.findByRole('dialog', { name: /create an account to continue/i });
-    expect(within(dialog).getByText(/your 3 courses are kept on this device/i)).toBeInTheDocument();
-    expect(within(dialog).getByRole('link', { name: /create account/i })).toHaveAttribute('href', '/register');
+    const dialog = await screen.findByRole('dialog', { name: /save these courses to your record/i });
+    expect(within(dialog).getByText(/your 3 courses are kept on this device for 24 hours/i)).toBeInTheDocument();
+    expect(within(dialog).getByRole('link', { name: /create your free record/i })).toHaveAttribute('href', '/register');
     expect(within(dialog).getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login');
+    expect(within(dialog).getByRole('button', { name: /not now/i })).toBeInTheDocument();
   });
 
   it('sends a signed-in student to Results with the courses waiting', async () => {
     const user = userEvent.setup();
     mocks.auth.user = { uid: 'student' };
     mocks.auth.uid = 'student';
-    render(<QuickCalculatorPage />);
+    render(<CalculatorPage />);
 
-    await screen.findByRole('main', { name: /quick cgpa calculator/i });
-    await user.click(screen.getByRole('button', { name: /save to profile/i }));
+    await screen.findByRole('heading', { level: 1, name: 'Work out your GPA and CGPA' });
+    expect(screen.getByText(/adds these courses to results/i)).toBeInTheDocument();
+    await user.click(saveButton());
 
     expect(readCalculatorHandoff()?.courses).toHaveLength(3);
     expect(mocks.push).toHaveBeenCalledWith('/results');
   });
 
-  it('reminds the visitor on sign-in and sign-up that their courses are waiting', async () => {
-    const { saveCalculatorHandoff } = await import('@/lib/handoff/calculator');
-    const { CalculatorHandoffNotice } = await import('@/components/marketing/CalculatorHandoffNotice');
-    const { unmount } = render(<CalculatorHandoffNotice />);
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    unmount();
-
-    saveCalculatorHandoff({ mode: 'grade', courses: [{ code: 'CSC 101', units: 3, grade: 'A' }, { code: 'MTH 101', units: 2, grade: 'B' }] });
-    render(<CalculatorHandoffNotice />);
-    expect(await screen.findByRole('status')).toHaveTextContent(/your 2 calculator courses are saved on this device/i);
-  });
-
-  it('does not keep anything when the share action (not save) asks for an account', async () => {
+  it('shares without an account: copies the link, opens no dialog and keeps nothing', async () => {
     const user = userEvent.setup();
-    render(<QuickCalculatorPage />);
+    render(<CalculatorPage />);
 
-    await screen.findByRole('main', { name: /quick cgpa calculator/i });
-    await user.click(screen.getByRole('button', { name: /share calculation/i }));
+    await screen.findByRole('heading', { level: 1, name: 'Work out your GPA and CGPA' });
+    await user.click(screen.getByRole('button', { name: /share this calculation/i }));
 
+    expect(await screen.findByRole('button', { name: /link copied/i })).toBeInTheDocument();
+    expect(await navigator.clipboard.readText()).toBe(window.location.href);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(readCalculatorHandoff()).toBeNull();
   });
 });

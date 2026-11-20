@@ -19,8 +19,8 @@ import { AI_SKIP_MS, RECHECK_MS, aiSkipKey } from '@/lib/consent/requirements';
 
 type Item = { id: string; blocking: 'app' | 'ai' | 'none'; version?: string; title: string; description: string };
 
-const TERMS: Item = { id: 'terms', blocking: 'app', version: 't-2', title: 'Terms of Use', description: 'Accept the terms.' };
-const PRIVACY: Item = { id: 'privacy', blocking: 'app', version: 'p-2', title: 'Privacy Policy', description: 'Review privacy.' };
+const TERMS: Item = { id: 'terms', blocking: 'app', version: 't-2', title: 'Terms of use', description: 'Accept the terms.' };
+const PRIVACY: Item = { id: 'privacy', blocking: 'app', version: 'p-2', title: 'Privacy notice', description: 'Review privacy.' };
 const AGE: Item = { id: 'age', blocking: 'ai', title: 'How old are you?', description: 'Asked once.' };
 const AI: Item = { id: 'ai_consent', blocking: 'ai', version: 'a-1', title: 'Allow AI processing?', description: 'Server wording.' };
 const MARKETING: Item = { id: 'marketing_consent', blocking: 'none', title: 'Product news by email', description: 'Optional.' };
@@ -72,8 +72,8 @@ describe('RequirementsGate: updated terms', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Updated terms' });
     expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(screen.getByRole('link', { name: /Terms of Use/ })).toHaveAttribute('href', '/terms');
-    expect(screen.getByRole('link', { name: /Privacy Policy/ })).toHaveAttribute('href', '/privacy');
+    expect(screen.getByRole('link', { name: /Terms of use/ })).toHaveAttribute('href', '/terms');
+    expect(screen.getByRole('link', { name: /Privacy notice/ })).toHaveAttribute('href', '/privacy');
     expect(screen.queryByRole('button', { name: /close|skip/i })).not.toBeInTheDocument();
 
     fireEvent.keyDown(document, { key: 'Escape' });

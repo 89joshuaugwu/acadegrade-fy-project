@@ -17,7 +17,7 @@ export function AdvertisingSections({ id, label, sections, selectedId, onSelect 
 
   return (
     <div className="min-w-0 space-y-5">
-      <div role="tablist" aria-label={label} className="flex flex-wrap gap-2 border-b border-[var(--acade-border)] pb-3">
+      <div role="tablist" aria-label={label} className="flex max-w-full gap-1 overflow-x-auto rounded-[14px] border border-[var(--acade-border-subtle)] bg-[var(--acade-overlay)] p-1 sm:inline-flex sm:flex-wrap">
         {sections.map((section, index) => (
           <button
             key={section.id}
@@ -40,7 +40,7 @@ export function AdvertisingSections({ id, label, sections, selectedId, onSelect 
               setSelected(sections[next].id);
               tabs.current[next]?.focus();
             }}
-            className={`min-h-11 rounded-xl px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${selected === section.id ? 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]' : 'text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)]'}`}
+            className={`min-h-11 shrink-0 whitespace-nowrap rounded-[11px] px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] ${selected === section.id ? 'bg-[var(--acade-surface)] text-[var(--acade-text)] shadow-[var(--shadow-card)]' : 'text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]'}`}
           >
             {section.label}
           </button>

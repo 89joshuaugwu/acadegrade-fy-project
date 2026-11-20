@@ -622,7 +622,7 @@ export default function SettingsPage() {
 
               {user && <DevicesCard profile={profile} getToken={() => user.getIdToken()} />}
 
-              <div className="flex flex-col gap-3 p-4 bg-[var(--acade-danger-dim)] rounded-xl border border-[var(--acade-danger)]/20 sm:flex-row sm:items-center sm:justify-between">
+              <div id="delete-account" className="scroll-mt-24 flex flex-col gap-3 p-4 bg-[var(--acade-danger-dim)] rounded-xl border border-[var(--acade-danger)]/20 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 sm:pr-4">
                   <h4 className="font-bold text-[var(--acade-danger)] text-[length:var(--text-sm)]">Danger Zone</h4>
                   <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">Permanently delete your account and all records.</p>

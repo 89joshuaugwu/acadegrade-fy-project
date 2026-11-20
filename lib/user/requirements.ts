@@ -115,14 +115,14 @@ export function pendingRequirements(userData: unknown, legal: LegalVersions): Re
   }
   if (acceptedVersion(userData, 'terms') !== legal.termsVersion) {
     items.push({
-      id: 'terms', blocking: 'app', version: legal.termsVersion, title: 'Terms of Use',
-      description: 'Review and accept the current Terms of Use to keep using AcadeGrade.',
+      id: 'terms', blocking: 'app', version: legal.termsVersion, title: 'Terms of use',
+      description: 'Review and accept the current Terms of use to keep using AcadeGrade.',
     });
   }
   if (acceptedVersion(userData, 'privacy') !== legal.privacyVersion) {
     items.push({
-      id: 'privacy', blocking: 'app', version: legal.privacyVersion, title: 'Privacy Policy',
-      description: 'Review the current Privacy Policy, which explains what AcadeGrade stores and who processes it.',
+      id: 'privacy', blocking: 'app', version: legal.privacyVersion, title: 'Privacy notice',
+      description: 'Review the current Privacy notice, which explains what AcadeGrade stores and who processes it.',
     });
   }
   if (age === 'adult' && readAiConsent(userData) === null) {
@@ -192,7 +192,7 @@ export function computeAnswerUpdate(userData: unknown, answers: RequirementAnswe
     if (!answer) continue;
     const current = key === 'terms' ? legal.termsVersion : legal.privacyVersion;
     if (answer.version !== current) {
-      throw new RequirementError(`The ${key === 'terms' ? 'Terms of Use' : 'Privacy Policy'} has changed. Reload and review the current version.`, 409, 'VERSION_MISMATCH');
+      throw new RequirementError(`The ${key === 'terms' ? 'Terms of use' : 'Privacy notice'} has changed. Reload and review the current version.`, 409, 'VERSION_MISMATCH');
     }
     if (acceptedVersion(userData, key) !== current) {
       nextConsents[key] = { version: current, at: now };

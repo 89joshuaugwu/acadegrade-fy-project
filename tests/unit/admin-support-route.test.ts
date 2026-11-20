@@ -93,6 +93,20 @@ describe('POST /api/admin/support', () => {
     expect(state.audit).toHaveBeenCalledWith(expect.objectContaining({ action: 'support.reply', target: 'support_tickets/t1', actorEmail: ADMIN.email }));
   });
 
+  it('shows public requests as such and replies to them by email only', async () => {
+    ticket('p1', { uid: null, source: 'public', name: null, email: 'locked@test.example', category: 'account' });
+    const listed = await (await get('?status=open')).json();
+    expect(listed.tickets[0]).toMatchObject({ id: 'p1', uid: null, source: 'public', email: 'locked@test.example' });
+    ticket('t1');
+    expect((await (await get('?status=open')).json()).tickets.find((t: { id: string }) => t.id === 't1')).toMatchObject({ source: 'account' });
+
+    const response = await post({ action: 'reply', ticketId: 'p1', message: 'We have reset your access.' });
+    expect(await response.json()).toMatchObject({ success: true, emailSent: true });
+    expect(store.paths('notifications/')).toEqual([]);
+    expect(state.rtdbPath).toEqual([]);
+    expect(state.sendEmail).toHaveBeenCalledWith('locked@test.example', 'Reply from AcadeGrade support', expect.any(String));
+  });
+
   it('a failed email still records the reply', async () => {
     ticket('t1');
     state.sendEmail.mockRejectedValueOnce(new Error('smtp down'));

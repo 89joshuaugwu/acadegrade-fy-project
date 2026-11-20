@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { panelClass } from '@/components/admin/ui/Panel';
+import { cn } from '@/lib/utils/cn';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
@@ -36,8 +37,8 @@ function SourceWarning({ source, fallbacks }: Pick<Loaded, 'source' | 'fallbacks
   const text = source === 'default' ? 'Nothing has been saved yet. The defaults shown here are in force until you save.'
     : source === 'invalid' ? `The saved settings could not be read, so every field uses its default${fields ? ` (${fields})` : ''}. Review and save to replace them.`
     : `Some saved settings could not be used, so defaults are in force for: ${fields}. Review and save to replace them.`;
-  return <section aria-label="Policy source warning" className="flex gap-3 rounded-xl bg-[var(--acade-gold-dim)] p-4 text-sm text-[var(--acade-text)]">
-    <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[var(--acade-gold)]" aria-hidden="true" />
+  return <section aria-label="Policy source warning" className="flex items-start gap-3 rounded-[16px] border border-[color-mix(in_srgb,var(--acade-warning)_30%,transparent)] bg-[var(--acade-gold-dim)] px-4 py-3 text-sm leading-6 text-[var(--acade-text)]">
+    <AlertTriangle className="mt-1 size-4 shrink-0 text-[var(--acade-warning)]" aria-hidden="true" />
     <p>{text}</p>
   </section>;
 }
@@ -140,47 +141,59 @@ export default function UsagePage() {
   }
 
   const coins = saved?.policy.coins;
-  return <div className="max-w-4xl space-y-6">
+  return <div className="max-w-5xl space-y-6">
     <AdminPageHeader
       title="Free uses & coins"
       description="Free AI requests per student and feature, and the Android coins that pay for more. Saving applies to the next request; it does not clear anyone's count or balance."
       helpId="admin.usage"
     />
     {!user ? <p className="text-sm text-[var(--acade-text-muted)]">Sign in as an administrator to manage free uses and coins.</p>
-      : loading ? <p role="status">Loading free uses and coins…</p>
-      : !saved || !draft ? <div className="space-y-3">{error && <p role="alert" className="text-[var(--acade-danger)]">{error}</p>}<Button onClick={() => void load()}>Retry</Button></div>
+      : loading ? <p role="status" className={cn(panelClass, 'p-5 text-sm text-[var(--acade-text-muted)]')}>Loading free uses and coins…</p>
+      : !saved || !draft ? <div className={cn(panelClass, 'space-y-3 p-5')}>{error && <p role="alert" className="text-sm text-[var(--acade-danger)]">{error}</p>}<Button onClick={() => void load()}>Retry</Button></div>
       : <>
         <SourceWarning source={saved.source} fallbacks={saved.fallbacks} />
         <RewardedReadiness mobileAds={mobileAds} coinsEnabled={saved.policy.coins.enabled} />
         <form noValidate onSubmit={submit} className="space-y-6">
-          <Card><section aria-labelledby="free-allowances-title" className="space-y-5">
+          <section aria-labelledby="free-allowances-title" className={cn(panelClass, 'space-y-5 p-5 sm:p-6')}>
             <div>
-              <h2 id="free-allowances-title" className="text-lg font-semibold text-[var(--acade-text)]">Free uses per 24 hours</h2>
+              <h2 id="free-allowances-title" className="ag-admin-h2">Free uses per 24 hours</h2>
               <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Per student and per feature. The window starts at the first request; 0 pauses free use.</p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2">{FEATURE_IDS.map(id => <Input key={id}
-              label={`${FEATURE_LABELS[id]}: free uses per 24 hours`} type="number" inputMode="numeric" min={0} max={MAX_FREE_DAILY_LIMIT} step={1}
+              label={`${FEATURE_LABELS[id]}: free uses per 24 hours`} type="text" inputMode="numeric" autoComplete="off"
               value={String(draft[dailyKey(id)])} aria-invalid={invalid.has(dailyKey(id)) ? 'true' : undefined}
               onChange={event => change(dailyKey(id), event.target.value)}
-              hint={`Also limited to ${USAGE_FEATURES[id].burstHelp}.${EXTRA_HINTS[id] ?? ''}`} />)}</div>
-          </section></Card>
+              className="tabular-nums"
+              hint={`0 to ${MAX_FREE_DAILY_LIMIT}. Also limited to ${USAGE_FEATURES[id].burstHelp}.${EXTRA_HINTS[id] ?? ''}`} />)}</div>
+          </section>
           <CoinSettings draft={draft} invalid={invalid} onChange={change} />
-          <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--acade-void)] px-1 py-3">
-            <div className="min-w-0 flex-1 space-y-1 text-sm">
+          <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 shadow-[var(--shadow-card)]">
+            <div className="min-w-0 flex-1 basis-56 space-y-1 text-sm">
               {error && <p role="alert" className="text-[var(--acade-danger)]">{error}</p>}
               <p role="status" aria-label="Save status" className="text-[var(--acade-text-muted)]">{dirty ? 'Unsaved draft.' : 'No unsaved changes.'} {notice}</p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" onClick={discard} disabled={!dirty || saving}>Discard changes</Button>
               <Button type="submit" loading={saving} disabled={!dirty || saving}>Save free uses and coins</Button>
             </div>
           </div>
         </form>
-        <section aria-label="Saved free uses" className="text-sm text-[var(--acade-text-muted)]"><h2 className="font-semibold text-[var(--acade-text)]">Saved free uses</h2>
-          <ul className="mt-2 grid gap-1 sm:grid-cols-2">{FEATURE_IDS.map(id => <li key={id}>{FEATURE_LABELS[id]}: {saved.policy.dailyLimits[id]} per 24 hours</li>)}</ul></section>
-        {coins && <section aria-label="Saved coin settings" className="text-sm text-[var(--acade-text-muted)]"><h2 className="font-semibold text-[var(--acade-text)]">Saved coin settings</h2>
-          <p className="mt-2">Coins {coins.enabled ? 'On' : 'Off'} · {coins.coinsPerAd} per ad · {coins.dailyEarnCap} per UTC day · balance cap {coins.balanceCap}</p>
-          <ul className="mt-1 grid gap-1 sm:grid-cols-2">{FEATURE_IDS.map(id => <li key={id}>{FEATURE_LABELS[id]}: {coins.features[id].enabled ? `${coins.features[id].price} coins, ${coins.features[id].dailyUseCap} per day` : 'not offered'}</li>)}</ul></section>}
+        <div className="grid gap-4 md:grid-cols-2">
+          <section aria-label="Saved free uses" className={cn(panelClass, 'p-5 text-sm text-[var(--acade-text-muted)]')}>
+            <h2 className="text-[0.9375rem] font-semibold text-[var(--acade-text)]">Saved free uses</h2>
+            <ul className="mt-3 divide-y divide-[var(--acade-border-subtle)]">{FEATURE_IDS.map(id => <li key={id} className="py-2 tabular-nums first:pt-0 last:pb-0">{FEATURE_LABELS[id]}: {saved.policy.dailyLimits[id]} per 24 hours</li>)}</ul>
+          </section>
+          {coins && <section aria-label="Saved coin settings" className={cn(panelClass, 'p-5 text-sm text-[var(--acade-text-muted)]')}>
+            <h2 className="text-[0.9375rem] font-semibold text-[var(--acade-text)]">Saved coin settings</h2>
+            <p className="mt-3 flex flex-wrap gap-1.5">
+              <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', coins.enabled ? 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]' : 'bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]')}>Coins {coins.enabled ? 'On' : 'Off'}</span>
+              <span className="rounded-full bg-[var(--acade-overlay)] px-2.5 py-0.5 text-xs tabular-nums">{coins.coinsPerAd} per ad</span>
+              <span className="rounded-full bg-[var(--acade-overlay)] px-2.5 py-0.5 text-xs tabular-nums">{coins.dailyEarnCap} per UTC day</span>
+              <span className="rounded-full bg-[var(--acade-overlay)] px-2.5 py-0.5 text-xs tabular-nums">Balance cap {coins.balanceCap}</span>
+            </p>
+            <ul className="mt-3 divide-y divide-[var(--acade-border-subtle)]">{FEATURE_IDS.map(id => <li key={id} className="py-2 tabular-nums first:pt-0 last:pb-0">{FEATURE_LABELS[id]}: {coins.features[id].enabled ? `${coins.features[id].price} coins, ${coins.features[id].dailyUseCap} per day` : 'not offered'}</li>)}</ul>
+          </section>}
+        </div>
         <Modal
           open={confirmCoins}
           onClose={() => setConfirmCoins(false)}

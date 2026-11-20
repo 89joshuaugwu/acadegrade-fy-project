@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, ChevronDown, ChevronUp, UserX, UserCheck, Mail } from 'lucide-react';
+import { Search, ChevronDown, UserX, UserCheck, Mail, PanelRightOpen, CalendarClock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Panel } from '@/components/admin/ui/Panel';
 import { AgeCorrectionDialog, type AgeStatus } from '@/components/admin/users/AgeCorrectionDialog';
 import { UserDetailDrawer } from '@/components/admin/users/UserDetailDrawer';
 import { cn } from '@/lib/utils/cn';
@@ -32,6 +31,33 @@ interface UserRecord {
   ageStatus?: AgeStatus | 'unknown';
   aiConsent?: boolean | null;
   createdAt: string | null;
+}
+
+const COLUMNS = 'md:grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1.6fr)_4rem_4.5rem_4.5rem_7rem]';
+
+const initials = (name: string, email: string) => {
+  const parts = (name && name !== 'Unknown' ? name : email).split(/[\s@._-]+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? '?') + (parts[1]?.[0] ?? '')).toUpperCase();
+};
+
+const AGE_LABEL: Record<string, string> = { adult: 'Adult', minor: 'Under 18', unknown: 'Not answered' };
+const consentText = (value: boolean | null | undefined) => (value === true ? 'Allowed' : value === false ? 'Not allowed' : 'Not answered');
+
+function StatusPill({ disabled, className }: { disabled: boolean; className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium leading-4',
+        disabled
+          ? 'bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]'
+          : 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]',
+        className,
+      )}
+    >
+      <span className={cn('size-1.5 rounded-full', disabled ? 'bg-[var(--acade-danger)]' : 'bg-[var(--acade-success)]')} aria-hidden="true" />
+      {disabled ? 'Disabled' : 'Active'}
+    </span>
+  );
 }
 
 export default function AdminUsersPage() {
@@ -170,10 +196,12 @@ export default function AdminUsersPage() {
     }
   };
 
+  const baseDescription = 'Find a student account and turn its sign-in off or on.';
+
   if (error) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader title="Users" description="Find a student account and turn its sign-in off or on." helpId="admin.users" />
+        <AdminPageHeader title="Users" description={baseDescription} helpId="admin.users" />
         <ErrorState title="Users could not be loaded" description={error} onRetry={() => { void loadUsers(); }} />
       </div>
     );
@@ -182,165 +210,193 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-12 w-full" />
-        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16" />)}
+        <AdminPageHeader title="Users" description={baseDescription} helpId="admin.users" />
+        <div role="status" aria-label="Loading accounts" aria-busy="true" className="space-y-3 rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-5">
+          <Skeleton className="h-12 w-full rounded-[12px]" />
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-14 rounded-[12px]" />)}
+        </div>
       </div>
     );
   }
+
+  const disabledCount = users.filter((u) => u.disabled).length;
+  const minorCount = users.filter((u) => u.ageStatus === 'minor').length;
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title="Users"
-        description={`Find a student account and turn its sign-in off or on. Showing ${users.length} account${users.length !== 1 ? 's' : ''}, newest first.`}
+        description={`${baseDescription} Showing ${users.length} account${users.length !== 1 ? 's' : ''}, newest first.`}
         helpId="admin.users"
       />
 
-      {/* Search: typing filters the loaded accounts; Enter looks up an exact email or matric across all accounts. */}
-      <form
-        role="search"
-        className="flex flex-col gap-2 sm:flex-row"
-        onSubmit={(event) => { event.preventDefault(); void searchExact(); }}
+      <Panel
+        title="Accounts"
+        description={
+          <span>
+            <span className="tabular-nums">{users.length}</span> loaded
+            {disabledCount ? <>, <span className="tabular-nums">{disabledCount}</span> with sign-in off</> : null}
+            {minorCount ? <>, <span className="tabular-nums">{minorCount}</span> under 18</> : null}.
+            {' '}Typing filters this list; Find looks up an exact email or matric number across every account.
+          </span>
+        }
+        padded={false}
       >
-        <div className="relative flex-1">
-          <Search size={18} aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
-          <input
-            type="search"
-            aria-label="Search users"
-            value={searchQuery}
-            onChange={e => { setSearchQuery(e.target.value); setExactResults(null); }}
-            placeholder="Search by name, matric, or email..."
-            className="w-full h-12 pl-12 pr-4 rounded-xl bg-[var(--acade-deep)] border border-[var(--acade-border)] text-[var(--acade-text)] text-[length:var(--text-sm)] font-[family-name:var(--font-dm-sans)] placeholder:text-[var(--acade-text-faint)] focus:outline-none focus:border-[var(--acade-primary)] transition-colors"
-          />
-        </div>
-        <Button type="submit" variant="outline" size="md" loading={searching} loadingLabel="Searching all accounts" disabled={!searchQuery.trim()}>
-          Find exact email or matric
-        </Button>
-      </form>
-      {exactResults ? (
-        <p role="status" className="text-sm text-[var(--acade-text-muted)]">
-          {exactResults.length === 0 ? 'No account has exactly that email or matric number.' : `Exact match across all accounts.`}{' '}
-          <button type="button" className="underline underline-offset-2 hover:text-[var(--acade-text)]" onClick={() => { setExactResults(null); setSearchQuery(''); }}>Back to the list</button>
-        </p>
-      ) : null}
+        {/* Search: typing filters the loaded accounts; Enter looks up an exact email or matric across all accounts. */}
+        <form
+          role="search"
+          className="flex flex-col gap-2 px-5 pb-4 pt-4 sm:flex-row sm:px-6"
+          onSubmit={(event) => { event.preventDefault(); void searchExact(); }}
+        >
+          <div className="relative min-w-0 flex-1">
+            <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)]" />
+            <input
+              type="search"
+              aria-label="Search users"
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setExactResults(null); }}
+              placeholder="Search by name, matric or email"
+              className="h-12 w-full rounded-[12px] border border-[var(--acade-control-border)] bg-[var(--acade-deep)] pl-11 pr-4 text-[0.9375rem] text-[var(--acade-text)] transition-colors placeholder:text-[var(--acade-text-faint)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20 [&::-webkit-search-cancel-button]:appearance-none"
+            />
+          </div>
+          <Button type="submit" variant="outline" size="md" loading={searching} loadingLabel="Searching all accounts" disabled={!searchQuery.trim()} className="shrink-0">
+            Find exact email or matric
+          </Button>
+        </form>
+        {exactResults ? (
+          <p role="status" className="mx-5 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[12px] bg-[var(--acade-primary-dim)] px-4 py-2.5 text-sm text-[var(--acade-text)] sm:mx-6">
+            {exactResults.length === 0 ? 'No account has exactly that email or matric number.' : `Exact match across all accounts.`}{' '}
+            <button type="button" className="min-h-8 font-semibold text-[var(--acade-primary)] underline underline-offset-2 hover:no-underline" onClick={() => { setExactResults(null); setSearchQuery(''); }}>Back to the list</button>
+          </p>
+        ) : null}
 
-      {/* Users Table */}
-      <Card variant="default" padding="none" className="overflow-hidden">
-        {/* Table Header */}
-        <div className="hidden md:grid grid-cols-[2fr_1.2fr_1.2fr_0.6fr_0.8fr_0.8fr_0.8fr] gap-2 px-5 py-3 bg-[var(--acade-overlay)]/30 border-b border-[var(--acade-border)] text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-wider font-[family-name:var(--font-dm-sans)]">
-          <span>Name</span>
+        {/* Column labels (tablet and up) */}
+        <div className={cn('hidden gap-3 border-y border-[var(--acade-border-subtle)] bg-[var(--acade-overlay)] px-6 py-2.5 text-[0.8125rem] font-medium text-[var(--acade-text-muted)] md:grid', COLUMNS)} aria-hidden="true">
+          <span>Student</span>
           <span>Matric</span>
           <span>Department</span>
-          <span>Level</span>
-          <span>CGPA</span>
-          <span>PI</span>
-          <span>Status</span>
+          <span className="text-right">Level</span>
+          <span className="text-right">CGPA</span>
+          <span className="text-right">PI</span>
+          <span className="pl-2">Status</span>
         </div>
 
         {filteredUsers.length === 0 ? (
-          <div role="status" className="p-12 text-center text-[var(--acade-text-muted)]">
+          <div role="status" className="border-t border-[var(--acade-border-subtle)] px-6 py-14 text-center text-sm text-[var(--acade-text-muted)] md:border-t-0">
             {searchQuery ? 'No users match your search.' : 'No users found.'}
           </div>
         ) : (
-          filteredUsers.map(u => (
-            <div key={u.uid}>
-              {/* Row */}
-              <button
-                type="button"
-                aria-expanded={expandedUid === u.uid}
-                onClick={() => setExpandedUid(expandedUid === u.uid ? null : u.uid)}
-                className={cn(
-                  "w-full grid grid-cols-1 md:grid-cols-[2fr_1.2fr_1.2fr_0.6fr_0.8fr_0.8fr_0.8fr] gap-2 px-5 py-4 text-left border-b border-[var(--acade-border-subtle)] hover:bg-[var(--acade-overlay)]/20 transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--acade-primary)]",
-                  expandedUid === u.uid && "bg-[var(--acade-overlay)]/10"
-                )}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] truncate">{u.fullName}</span>
-                    {expandedUid === u.uid ? <ChevronUp size={14} aria-hidden="true" className="text-[var(--acade-text-muted)] shrink-0" /> : <ChevronDown size={14} aria-hidden="true" className="text-[var(--acade-text-muted)] shrink-0" />}
-                    {u.disabled && <span className="shrink-0 rounded-full border border-[var(--acade-danger)]/30 bg-[var(--acade-danger)]/10 px-2 py-0.5 text-xs font-medium text-[var(--acade-danger)] md:hidden">Disabled</span>}
-                  </div>
-                  {/* Small screens hide the columns; keep their facts on a second line. */}
-                  <p className="mt-1 truncate text-xs text-[var(--acade-text-muted)] md:hidden">
-                    {u.department || 'No department'} · {u.currentLevel}L · CGPA {formatCgpa(u.cgpa)}
-                  </p>
-                </div>
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.matric}</span>
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] hidden md:block truncate">{u.department}</span>
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)] hidden md:block">{u.currentLevel}L</span>
-                <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] hidden md:block">{formatCgpa(u.cgpa)}</span>
-                <span className="text-[length:var(--text-sm)] text-[var(--acade-gold)] font-[family-name:var(--font-geist-mono)] hidden md:block">{formatCgpa(u.pi)}</span>
-                <span className="hidden md:block">
-                  <Badge variant={u.disabled ? 'status' : 'status'} className={u.disabled ? 'bg-[var(--acade-danger)]/10 text-[var(--acade-danger)] border-[var(--acade-danger)]/30' : 'bg-[var(--acade-success)]/10 text-[var(--acade-success)] border-[var(--acade-success)]/30'}>
-                    {u.disabled ? 'Disabled' : 'Active'}
-                  </Badge>
-                </span>
-              </button>
-
-              {/* Expanded Details */}
-              <AnimatePresence>
-                {expandedUid === u.uid && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden border-b border-[var(--acade-border)]"
+          <ul className="border-t border-[var(--acade-border-subtle)] md:border-t-0">
+            {filteredUsers.map(u => {
+              const expanded = expandedUid === u.uid;
+              return (
+                <li key={u.uid} className="border-b border-[var(--acade-border-subtle)] last:border-b-0">
+                  {/* Row */}
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => setExpandedUid(expanded ? null : u.uid)}
+                    className={cn(
+                      'grid w-full grid-cols-[minmax(0,1fr)] items-center gap-3 px-5 py-3.5 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--acade-primary)_5%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--acade-primary)] sm:px-6',
+                      COLUMNS,
+                      expanded && 'bg-[color-mix(in_srgb,var(--acade-primary)_6%,transparent)]',
+                    )}
                   >
-                    <div className="p-5 bg-[var(--acade-overlay)]/5 space-y-4">
-                      {/* Mobile-visible details */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[length:var(--text-sm)]">
-                        <div>
-                          <span className="text-[var(--acade-text-muted)] block text-[length:var(--text-xs)]">Email</span>
-                          <span className="text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] text-[length:var(--text-xs)] break-all">{u.email}</span>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span aria-hidden="true" className={cn('flex size-10 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-semibold', u.disabled ? 'bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]' : 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]')}>
+                        {initials(u.fullName, u.email)}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-[0.9375rem] font-semibold text-[var(--acade-text)]">{u.fullName}</span>
+                          {u.ageStatus === 'minor' ? <span className="shrink-0 rounded-full bg-[var(--acade-gold-dim)] px-2 py-0.5 text-xs font-medium text-[var(--acade-warning)]">Under 18</span> : null}
+                          {u.disabled && <StatusPill disabled className="shrink-0 md:hidden" />}
                         </div>
-                        <div className="md:hidden">
-                          <span className="text-[var(--acade-text-muted)] block text-[length:var(--text-xs)]">Matric</span>
-                          <span className="text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">{u.matric}</span>
-                        </div>
-                        <div>
-                          <span className="text-[var(--acade-text-muted)] block text-[length:var(--text-xs)]">Semesters</span>
-                          <span className="text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">{u.semesterCount}</span>
-                        </div>
-                        <div>
-                          <span className="text-[var(--acade-text-muted)] block text-[length:var(--text-xs)]">Joined</span>
-                          <span className="text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] text-[length:var(--text-xs)]">
-                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
-                          </span>
-                        </div>
+                        <p className="hidden truncate text-[0.8125rem] text-[var(--acade-text-muted)] md:block">{u.email}</p>
+                        {/* Small screens hide the columns; keep their facts on a second line. */}
+                        <p className="mt-0.5 truncate text-[0.8125rem] text-[var(--acade-text-muted)] tabular-nums md:hidden">
+                          {u.department || 'No department'}, {u.currentLevel}L, CGPA {formatCgpa(u.cgpa)}
+                        </p>
                       </div>
-
-                      {/* Actions */}
-                      <div className="flex flex-wrap items-center gap-3 pt-2">
-                        <Button
-                          variant={u.disabled ? 'primary' : 'danger'}
-                          size="sm"
-                          loading={actionLoading === u.uid}
-                          onClick={() => u.disabled ? handleToggleDisable(u.uid, true) : setConfirmDisable(u)}
-                        >
-                          {u.disabled ? <UserCheck size={14} aria-hidden="true" /> : <UserX size={14} aria-hidden="true" />}
-                          {u.disabled ? 'Enable sign-in' : 'Disable sign-in…'}
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => { void copyEmail(u.email); }}>
-                          <Mail size={14} aria-hidden="true" />
-                          Copy email
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setCorrectAge(u)}>
-                          Correct age…
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setDetailUid(u.uid)}>
-                          Details and support actions…
-                        </Button>
-                      </div>
+                      <ChevronDown size={18} aria-hidden="true" className={cn('shrink-0 text-[var(--acade-text-muted)] transition-transform md:hidden', expanded && 'rotate-180')} />
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))
+                    <span className="hidden truncate text-sm tabular-nums text-[var(--acade-text-muted)] md:block">{u.matric}</span>
+                    <span className="hidden truncate text-sm text-[var(--acade-text-muted)] md:block">{u.department}</span>
+                    <span className="hidden text-right text-sm tabular-nums text-[var(--acade-text-muted)] md:block">{u.currentLevel}L</span>
+                    <span className="hidden text-right text-[0.9375rem] font-semibold tabular-nums text-[var(--acade-text)] md:block">{formatCgpa(u.cgpa)}</span>
+                    <span className="hidden text-right text-sm tabular-nums text-[var(--acade-text-muted)] md:block">{formatCgpa(u.pi)}</span>
+                    <span className="hidden items-center justify-between gap-2 pl-2 md:flex">
+                      <StatusPill disabled={u.disabled} />
+                      <ChevronDown size={16} aria-hidden="true" className={cn('shrink-0 text-[var(--acade-text-muted)] transition-transform', expanded && 'rotate-180')} />
+                    </span>
+                  </button>
+
+                  {/* Expanded details */}
+                  <AnimatePresence>
+                    {expanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="space-y-4 bg-[color-mix(in_srgb,var(--acade-primary)_4%,transparent)] px-5 pb-5 pt-1 sm:px-6">
+                          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[16px] border border-[var(--acade-border-subtle)] bg-[var(--acade-border-subtle)] text-sm md:grid-cols-4">
+                            {[
+                              { label: 'Email', value: u.email, wide: true },
+                              { label: 'Matric', value: u.matric, mobileOnly: true },
+                              { label: 'Semesters', value: String(u.semesterCount) },
+                              { label: 'Joined', value: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A' },
+                              { label: 'Age', value: AGE_LABEL[u.ageStatus ?? 'unknown'] ?? 'Not answered' },
+                              { label: 'AI processing', value: consentText(u.aiConsent) },
+                            ].map((item) => (
+                              <div key={item.label} className={cn('min-w-0 bg-[var(--acade-surface)] px-4 py-3', item.wide && 'col-span-2 md:col-span-1', item.mobileOnly && 'md:hidden')}>
+                                <dt className="text-[0.8125rem] text-[var(--acade-text-muted)]">{item.label}</dt>
+                                <dd className="mt-0.5 break-all font-medium tabular-nums text-[var(--acade-text)]">{item.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+
+                          {/* Actions: everyday ones first, the sign-in switch kept apart on the right. */}
+                          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button variant="primary" size="sm" onClick={() => setDetailUid(u.uid)}>
+                                <PanelRightOpen size={16} aria-hidden="true" />
+                                Details and support actions…
+                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => { void copyEmail(u.email); }}>
+                                <Mail size={16} aria-hidden="true" />
+                                Copy email
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setCorrectAge(u)}>
+                                <CalendarClock size={16} aria-hidden="true" />
+                                Correct age…
+                              </Button>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              loading={actionLoading === u.uid}
+                              onClick={() => u.disabled ? handleToggleDisable(u.uid, true) : setConfirmDisable(u)}
+                              className={u.disabled
+                                ? undefined
+                                : 'border-[color-mix(in_srgb,var(--acade-danger)_45%,transparent)] text-[var(--acade-danger)] hover:border-[var(--acade-danger)] hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)]'}
+                            >
+                              {u.disabled ? <UserCheck size={16} aria-hidden="true" /> : <UserX size={16} aria-hidden="true" />}
+                              {u.disabled ? 'Enable sign-in' : 'Disable sign-in…'}
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </li>
+              );
+            })}
+          </ul>
         )}
-      </Card>
+      </Panel>
 
       {!exactResults && nextCursor ? (
         <div className="flex justify-center">

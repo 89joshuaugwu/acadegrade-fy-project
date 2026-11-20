@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 
 import type { DashboardCourseRecord } from '@/lib/dashboard/summary';
 import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
@@ -12,12 +12,12 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
     <Card padding="none" className="overflow-hidden">
       <div className="flex items-end justify-between gap-4 border-b border-[var(--acade-border-subtle)] px-4 py-4 sm:px-5">
         <div>
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">
-            Latest updates
-          </p>
-          <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)]">
+          <h2 className="font-[family-name:var(--font-bricolage)] text-[1.25rem] font-semibold tracking-[-0.02em] text-[var(--acade-text)]">
             Recent results
           </h2>
+          <p className="mt-0.5 text-sm text-[var(--acade-text-muted)]">
+            Latest updates
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
         {courses.length > 0 && <DiscreetRevealButton label="Grades" />}
@@ -26,7 +26,6 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
           className="flex min-h-12 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
         >
           View all
-          <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
         </div>
       </div>
@@ -82,13 +81,13 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
                     <span className="block truncate text-sm font-semibold text-[var(--acade-text)]">
                       {course.code} <span className="font-medium text-[var(--acade-text-muted)]">{course.title}</span>
                     </span>
-                    <span className="mt-1 block truncate text-xs text-[var(--acade-text-faint)]">
-                      {course.semesterLabel}{course.units ? ` · ${course.units} credit${course.units === 1 ? '' : 's'}` : ''}
+                    <span className="mt-1 block truncate text-[0.8125rem] text-[var(--acade-text-faint)]">
+                      {course.semesterLabel}{course.units ? `, ${course.units} credit${course.units === 1 ? '' : 's'}` : ''}
                     </span>
                   </span>
 
                   <span className="min-w-[4.75rem] text-right">
-                    <span className="block font-[family-name:var(--font-geist-mono)] text-sm font-semibold text-[var(--acade-text)]">
+                    <span className="app-num block text-[0.9375rem] font-semibold text-[var(--acade-text)]">
                       {typeof course.totalScore === 'number' ? <DiscreetValue label="Score">{scoreLabel}</DiscreetValue> : scoreLabel}
                     </span>
                     <span className="mt-1 block text-[0.68rem] text-[var(--acade-text-faint)] transition-colors group-hover:text-[var(--acade-primary)]">

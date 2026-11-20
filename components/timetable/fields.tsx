@@ -1,16 +1,21 @@
 'use client';
 
 import { useId, useState } from 'react';
+import { AlertTriangle, Check, Info, OctagonAlert } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { Button, Input } from '@/components/ui';
+import { Select } from '@/components/ui/Select';
+import { DateField } from '@/components/ui/DateTimeFields';
 import { UNITS } from '@/lib/timetable/validate';
-import { UNIT_LABEL } from '@/lib/timetable/format';
+import { DAY_LONG, DAY_SHORT, UNIT_LABEL, WEEK_ORDER } from '@/lib/timetable/format';
 import { normaliseOffsets, type ValidityUnit } from '@/lib/timetable/engine';
 
-export const controlClass =
-  'h-12 w-full rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 text-[length:var(--text-base)] text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20';
+/** Focus ring for a styled label that wraps a visually hidden native input. */
+const wrappedFocus =
+  'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]';
 
-export function NativeSelect({
+/** A labelled dropdown built on the kit Select (no native <select>). */
+export function FieldSelect({
   label,
   value,
   onChange,
@@ -23,32 +28,195 @@ export function NativeSelect({
   options: { value: string; label: string }[];
   className?: string;
 }) {
-  const id = useId();
+  return <Select label={label} value={value} onChange={onChange} options={options} className={className} />;
+}
+
+/**
+ * A small set of exclusive choices shown as a segmented row of styled radios.
+ * The real radio inputs stay in the DOM (visually hidden) for keyboard and screen readers.
+ */
+export function ChoicePills<T extends string>({
+  legend,
+  value,
+  onChange,
+  options,
+  hideLegend,
+  stretch,
+  className,
+}: {
+  legend: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: { value: T; label: string; hint?: string }[];
+  hideLegend?: boolean;
+  /** Share the row equally between the options. */
+  stretch?: boolean;
+  className?: string;
+}) {
+  const name = useId();
   return (
-    <div className={cn('flex w-full flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-sm font-medium text-[var(--acade-text-muted)]">
-        {label}
-      </label>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={controlClass}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <fieldset className={cn('min-w-0', className)}>
+      <legend className={cn('text-sm font-medium text-[var(--acade-text-muted)]', hideLegend && 'sr-only')}>{legend}</legend>
+      <div
+        className={cn(
+          'mt-2 gap-1.5',
+          stretch ? 'grid grid-cols-[repeat(auto-fit,minmax(min(100%,5.25rem),1fr))]' : 'flex flex-wrap',
+        )}
+      >
+        {options.map((o) => {
+          const on = value === o.value;
+          return (
+            <label
+              key={o.value}
+              className={cn(
+                'relative flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-control)] border py-2 text-center text-sm font-semibold transition-colors',
+                stretch ? 'px-2' : 'px-3.5',
+                wrappedFocus,
+                on
+                  ? 'border-[var(--acade-primary)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]'
+                  : 'border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)] hover:border-[var(--acade-control-border)] hover:text-[var(--acade-text)]',
+              )}
+            >
+              <input type="radio" name={name} className="sr-only" checked={on} onChange={() => onChange(o.value)} />
+              {on && !stretch && <Check className="size-4 shrink-0" aria-hidden="true" />}
+              <span className="min-w-0 break-words">{o.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 
+/** Monday-first weekday toggles (styled checkboxes). */
+export function DayPicker({
+  legend,
+  days,
+  onChange,
+  error,
+  labelStyle = 'short',
+}: {
+  legend: string;
+  days: number[];
+  onChange: (days: number[]) => void;
+  error?: string;
+  /** Accessible name of each day: 'short' (Mon) or 'long' (Monday). */
+  labelStyle?: 'short' | 'long';
+}) {
+  return (
+    <fieldset className="min-w-0">
+      <legend className="text-sm font-medium text-[var(--acade-text-muted)]">{legend}</legend>
+      <div className="mt-2 grid grid-cols-7 gap-1.5">
+        {WEEK_ORDER.map((d) => {
+          const on = days.includes(d);
+          return (
+            <label
+              key={d}
+              className={cn(
+                'flex min-h-11 min-w-0 cursor-pointer items-center justify-center rounded-[var(--radius-control)] border text-[0.8125rem] font-semibold transition-colors sm:text-sm',
+                wrappedFocus,
+                on
+                  ? 'border-[var(--acade-primary)] bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
+                  : 'border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)] hover:border-[var(--acade-control-border)] hover:text-[var(--acade-text)]',
+              )}
+            >
+              <input
+                type="checkbox"
+                className="sr-only"
+                checked={on}
+                aria-label={labelStyle === 'long' ? DAY_LONG[d] : DAY_SHORT[d]}
+                onChange={() => onChange(on ? days.filter((x) => x !== d) : [...days, d])}
+              />
+              <span aria-hidden="true">{DAY_SHORT[d]}</span>
+            </label>
+          );
+        })}
+      </div>
+      {error && <p role="alert" className="mt-1.5 text-[0.8125rem] font-medium text-[var(--acade-danger)]">{error}</p>}
+    </fieldset>
+  );
+}
+
+/** A styled checkbox row: visually hidden native checkbox, custom box, visible label. */
+export function CheckRow({
+  label,
+  checked,
+  onChange,
+  hint,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  hint?: string;
+}) {
+  return (
+    <label className={cn('flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-control)] py-2', wrappedFocus)}>
+      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span
+        aria-hidden="true"
+        className={cn(
+          'mt-px flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors',
+          checked
+            ? 'border-[var(--acade-primary)] bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
+            : 'border-[var(--acade-control-border)] bg-[var(--acade-surface)]',
+        )}
+      >
+        {checked && <Check className="size-3.5" strokeWidth={3} />}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-[var(--acade-text)]">{label}</span>
+        {hint && <span className="mt-0.5 block text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">{hint}</span>}
+      </span>
+    </label>
+  );
+}
+
+/** Whole-number text field (no browser spinner): keeps digits only. */
+export function WholeNumberInput({
+  label,
+  value,
+  onChange,
+  error,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (digits: string) => void;
+  error?: string;
+  hint?: string;
+}) {
+  return (
+    <Input
+      label={label}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      autoComplete="off"
+      value={value}
+      error={error}
+      hint={hint}
+      className="tabular-nums"
+      onChange={(e) => onChange(e.target.value.replace(/\D/g, ''))}
+    />
+  );
+}
+
+const NOTICE_TONE = {
+  info: { colour: 'var(--acade-primary)', Icon: Info },
+  warning: { colour: 'var(--acade-warning)', Icon: AlertTriangle },
+  danger: { colour: 'var(--acade-danger)', Icon: OctagonAlert },
+} as const;
+
 export function PageNotice({ tone = 'info', children }: { tone?: 'info' | 'warning' | 'danger'; children: React.ReactNode }) {
-  const colour = tone === 'danger' ? 'var(--acade-danger)' : tone === 'warning' ? 'var(--acade-warning)' : 'var(--acade-primary)';
+  const { colour, Icon } = NOTICE_TONE[tone];
   return (
     <div
       role={tone === 'info' ? 'note' : 'alert'}
-      className="rounded-[var(--radius-control)] border px-4 py-3 text-sm leading-6 text-[var(--acade-text)]"
-      style={{ borderColor: `color-mix(in srgb, ${colour} 35%, transparent)`, background: `color-mix(in srgb, ${colour} 8%, transparent)` }}
+      className="flex items-start gap-3 rounded-2xl border px-4 py-3.5 text-sm leading-6 text-[var(--acade-text)]"
+      style={{ borderColor: `color-mix(in srgb, ${colour} 26%, transparent)`, background: `color-mix(in srgb, ${colour} 7%, var(--acade-surface))` }}
     >
-      {children}
+      <Icon className="mt-0.5 size-[1.125rem] shrink-0" style={{ color: colour }} aria-hidden="true" />
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -62,6 +230,7 @@ export function ValidityFields({
   errors = {},
   units = UNITS,
   startLabel = 'Starts on',
+  lockStart = false,
 }: {
   startsOn: string;
   unit: ValidityUnit;
@@ -70,27 +239,25 @@ export function ValidityFields({
   errors?: Record<string, string>;
   units?: ValidityUnit[];
   startLabel?: string;
+  /** Show the start date without letting it change (extending keeps the original start). */
+  lockStart?: boolean;
 }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Input
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-3">
+      <DateField
         label={startLabel}
-        type="date"
         value={startsOn}
+        disabled={lockStart}
         error={errors.startsOn}
-        onChange={(e) => onChange({ startsOn: e.target.value, unit, amount })}
+        onChange={(next) => onChange({ startsOn: next, unit, amount })}
       />
-      <Input
+      <WholeNumberInput
         label="Valid for (amount)"
-        type="number"
-        inputMode="numeric"
-        min={1}
-        max={52}
         value={Number.isFinite(amount) ? String(amount) : ''}
         error={errors.amount}
-        onChange={(e) => onChange({ startsOn, unit, amount: e.target.value === '' ? Number.NaN : Number(e.target.value) })}
+        onChange={(digits) => onChange({ startsOn, unit, amount: digits === '' ? Number.NaN : Number(digits) })}
       />
-      <NativeSelect
+      <FieldSelect
         label="Valid for (unit)"
         value={unit}
         onChange={(v) => onChange({ startsOn, unit: v as ValidityUnit, amount })}
@@ -114,6 +281,7 @@ export function ReminderOffsetsField({
 }) {
   const [custom, setCustom] = useState('');
   const selected = new Set(value);
+  const full = value.length >= 3;
   const toggle = (m: number) => {
     if (selected.has(m)) onChange(value.filter((v) => v !== m));
     else if (value.length < 3) onChange(normaliseOffsets([...value, m]));
@@ -128,37 +296,35 @@ export function ReminderOffsetsField({
   return (
     <fieldset className="min-w-0">
       <legend className="text-sm font-medium text-[var(--acade-text-muted)]">{label}</legend>
-      <div className="mt-2 flex flex-wrap gap-2">
-        {[...PRESETS, ...extras].map((m) => (
-          <label
-            key={m}
-            className={cn(
-              'inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border px-4 text-sm font-semibold',
-              selected.has(m)
-                ? 'border-[var(--acade-primary)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]'
-                : 'border-[var(--acade-border)] text-[var(--acade-text-muted)]',
-            )}
-          >
-            <input type="checkbox" className="size-4" checked={selected.has(m)} onChange={() => toggle(m)} aria-label={`${m} minutes before`} />
-            {m} min
-          </label>
-        ))}
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {[...PRESETS, ...extras].map((m) => {
+          const on = selected.has(m);
+          return (
+            <label
+              key={m}
+              className={cn(
+                'inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-[var(--radius-control)] border px-3.5 text-sm font-semibold tabular-nums transition-colors',
+                wrappedFocus,
+                on
+                  ? 'border-[var(--acade-primary)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]'
+                  : 'border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)] hover:border-[var(--acade-control-border)] hover:text-[var(--acade-text)]',
+                !on && full && 'cursor-not-allowed opacity-60',
+              )}
+            >
+              <input type="checkbox" className="sr-only" checked={on} onChange={() => toggle(m)} aria-label={`${m} minutes before`} />
+              {on && <Check className="size-4 shrink-0" aria-hidden="true" />}
+              {m} min
+            </label>
+          );
+        })}
       </div>
-      <div className="mt-3 flex items-end gap-2">
-        <Input
-          label="Custom (minutes, 1 to 1440)"
-          type="number"
-          inputMode="numeric"
-          min={1}
-          max={1440}
-          value={custom}
-          onChange={(e) => setCustom(e.target.value)}
-        />
-        <Button type="button" variant="outline" onClick={addCustom} disabled={value.length >= 3}>
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 sm:max-w-sm">
+        <WholeNumberInput label="Custom (minutes, 1 to 1440)" value={custom} onChange={setCustom} />
+        <Button type="button" variant="outline" onClick={addCustom} disabled={full}>
           Add
         </Button>
       </div>
-      <p className="mt-1.5 text-xs leading-5 text-[var(--acade-text-faint)]">Up to three reminders per timetable or event.</p>
+      <p className="mt-2 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">Up to three reminders per timetable or event.</p>
     </fieldset>
   );
 }

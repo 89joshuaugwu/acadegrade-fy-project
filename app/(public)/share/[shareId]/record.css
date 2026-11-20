@@ -1,0 +1,97 @@
+/*
+ * The shared record on paper. The screen card is a night band over white;
+ * many browsers skip backgrounds when printing, so in print the band and the
+ * tinted blocks become ink text between ink rules and nothing can print
+ * white on white. The shell's bar and footer, the action row, the visitor
+ * note and the cookie card never print.
+ */
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  html:has(.ag-print-record),
+  html:has(.ag-print-record) body,
+  html:has(.ag-print-record) .public-root {
+    background: #fff !important;
+    min-height: 0 !important;
+  }
+
+  html:has(.ag-print-record) .pg-cookie,
+  .ag-print-hide {
+    display: none !important;
+  }
+
+  .ag-print-record {
+    background: #fff !important;
+    min-height: 0 !important;
+  }
+
+  .ag-print-record .ag-record-wrap {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  .ag-record {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .ag-record-head {
+    background: none !important;
+    color: #17133a !important;
+    padding: 0 0 5mm !important;
+    border-bottom: 2px solid #17133a;
+  }
+
+  .ag-record-head * {
+    color: #17133a !important;
+  }
+
+  .ag-record-glow {
+    display: none !important;
+  }
+
+  .ag-record-body {
+    padding: 5mm 0 0 !important;
+    gap: 6mm !important;
+  }
+
+  .ag-record-note {
+    background: none !important;
+    border-radius: 0 !important;
+    border-top: 2px solid #17133a;
+    border-bottom: 2px solid #17133a;
+  }
+
+  .ag-record-summary,
+  .ag-record-total {
+    background: none !important;
+    border: 1px solid #17133a;
+  }
+
+  .ag-record-summary,
+  .ag-record-section {
+    break-inside: avoid;
+  }
+
+  .ag-record svg {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Every column prints, whatever the screen width. */
+  .ag-record .ag-col-wide {
+    display: table-cell !important;
+  }
+
+  .ag-record .ag-sub {
+    display: none !important;
+  }
+
+  .ag-record-foot {
+    padding: 4mm 0 0 !important;
+  }
+}

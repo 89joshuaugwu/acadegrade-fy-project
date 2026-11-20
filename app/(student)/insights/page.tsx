@@ -434,29 +434,20 @@ export default function InsightsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 relative overflow-hidden rounded-3xl border border-[var(--acade-border)] bg-[var(--acade-surface)] shadow-[inset_0_0_100px_rgba(0,0,0,0.5)]">
-        {/* Futuristic Scanning Overlay */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <motion.div
-            data-testid="insights-scanner"
-            data-animated={!shouldReduceMotion}
-            animate={shouldReduceMotion ? undefined : { y: ["-100%", "500%"] }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 3, ease: "linear", repeat: Infinity }}
-            className="absolute top-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent via-[var(--acade-primary)]/5 to-[var(--acade-primary)]/20 border-b-2 border-[var(--acade-primary)]/80 shadow-[0_10px_30px_rgba(99,102,241,0.3)]"
-          />
-          {/* Subtle grid pattern background */}
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:30px_30px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)]" />
-        </div>
-
+      <div className="relative flex min-h-[60vh] flex-col items-center justify-center gap-6 overflow-hidden rounded-[var(--radius-dialog)] bg-ag-night px-6 py-12 text-white">
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 size-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(107,78,255,0.32),transparent_62%)]"
+        />
         <div className="relative z-10">
           <div
             data-testid="insights-loading-glow"
             className={cn(
-              "absolute inset-0 rounded-full blur-2xl bg-[var(--acade-primary)]/30",
+              "absolute -inset-3 rounded-full bg-[radial-gradient(circle,rgba(255,178,63,0.35),transparent_70%)]",
               !shouldReduceMotion && "animate-pulse"
             )}
           />
-          <div className="size-24 relative flex items-center justify-center rounded-full bg-[var(--acade-deep)] border border-[var(--acade-primary)]/40 shadow-[0_0_40px_rgba(99,102,241,0.2)]">
+          <div className="relative flex size-24 items-center justify-center rounded-full bg-ag-night-2 ring-1 ring-white/15">
             <Image
               src="/acadegradeailogo.png"
               alt="AcadeMind"
@@ -467,16 +458,26 @@ export default function InsightsPage() {
           </div>
         </div>
 
-        <div className="text-center z-10 mt-2" role="status">
-          <h3 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-primary-glow)] font-[family-name:var(--font-geist-mono)] tracking-widest uppercase">
-            AcadeMind Synthesizing
+        <div className="relative z-10 mt-2 w-full max-w-xs text-center" role="status">
+          <h3 className="app-display text-[1.375rem] font-semibold text-white">
+            AcadeMind is reading your record
           </h3>
           <p className={cn(
-            "text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium mt-2 font-[family-name:var(--font-geist-mono)]",
+            "mt-2 text-sm font-medium text-ag-mist-night",
             !shouldReduceMotion && "animate-pulse"
           )}>
             Analyzing academic records...
           </p>
+          {/* A thin violet-to-gold bar sweeps while the analysis loads. */}
+          <div className="relative mt-6 h-1 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+            <motion.div
+              data-testid="insights-scanner"
+              data-animated={!shouldReduceMotion}
+              animate={shouldReduceMotion ? undefined : { x: ['-100%', '250%'] }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.8, ease: 'easeInOut', repeat: Infinity }}
+              className="absolute inset-y-0 left-0 w-2/5 rounded-full bg-[linear-gradient(90deg,#6B4EFF,#F08C5A,#FFB23F)]"
+            />
+          </div>
         </div>
       </div>
     );
@@ -486,12 +487,12 @@ export default function InsightsPage() {
     return (
       <div className="mx-auto max-w-3xl pb-10">
         <div className="mb-6">
-          <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-danger)]">
-            Insights unavailable
-          </p>
-          <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+          <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
             Your analysis is paused
           </h1>
+          <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+            Insights unavailable
+          </p>
         </div>
         <ErrorState
           title="We couldn&apos;t load your insights"
@@ -523,11 +524,14 @@ export default function InsightsPage() {
           : [];
         return (
           <motion.div {...motionProps} className="space-y-6">
-            <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-[var(--radius-surface)] p-5 md:p-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
-                <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-                  {projectionMode === 'pi' ? 'Performance Index Projection' : 'Cumulative GPA Projection'}
-                </h2>
+            <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 sm:p-7">
+              <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+                <div className="min-w-0">
+                  <h2 className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">
+                    {projectionMode === 'pi' ? 'Performance Index Projection' : 'Cumulative GPA Projection'}
+                  </h2>
+                  <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Your last three semesters, then the projection for the semesters ahead.</p>
+                </div>
                 <SegmentedControl
                   aria-label="Projection metric"
                   value={projectionMode}
@@ -556,18 +560,18 @@ export default function InsightsPage() {
                     metricName={projectionMode === 'pi' ? 'PI' : 'CGPA'}
                   />
                   </DiscreetValue>
-                  <div className="mt-6 p-4 bg-[var(--acade-deep)] rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
-                    <div>
-                      <span className="text-sm font-medium text-[var(--acade-text-muted)] block mb-1">
+                  <div className="mt-6 flex flex-col justify-between gap-4 rounded-2xl bg-ag-night p-5 text-white sm:flex-row sm:items-center sm:px-6">
+                    <div className="min-w-0">
+                      <span className="mb-1 block text-sm font-medium text-ag-mist-night">
                         Projected next semester {projectionMode === 'pi' ? 'PI' : 'CGPA'}
                       </span>
-                      <span className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums">
+                      <span className="app-num text-[2.5rem] font-bold leading-none text-ag-gold">
                         <DiscreetValue label={`Projected ${projectionMode === 'pi' ? 'PI' : 'CGPA'}`}>
                           {projectedSeries[0] !== undefined ? formatCgpa(projectedSeries[0]) : '—'}
                         </DiscreetValue>
                       </span>
                     </div>
-                    <Badge variant="status" className="self-start sm:self-auto bg-[var(--acade-primary-dim)] text-[var(--acade-primary-glow)] border-[var(--acade-primary)]/30">
+                    <Badge variant="status" className="self-start border-white/15 bg-white/10 text-white sm:self-auto">
                       Trend: {forecast.trendLabel || 'Analyzing...'}
                     </Badge>
                   </div>
@@ -598,7 +602,7 @@ export default function InsightsPage() {
             />
             {isGraduated ? (
               <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-8 text-center">
-                <h2 className="text-lg font-bold text-[var(--acade-text)]">Programme timeline complete</h2>
+                <h2 className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">Programme timeline complete</h2>
                 <p className="mt-2 text-sm text-[var(--acade-text-muted)]">What-If projections stop at {graduationSession || 'graduation'} because no academic semesters remain.</p>
               </div>
             ) : (
@@ -622,24 +626,26 @@ export default function InsightsPage() {
             <CarryOverTracker report={carryReport} />
 
             {!forecast ? (
-              <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-6 py-8 text-center">
-                <AlertTriangle className="mx-auto size-7 text-[var(--acade-warning)]" aria-hidden="true" />
-                <h2 className="mt-4 font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">
+              <div className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-6 py-10 text-center">
+                <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--acade-gold-dim)]">
+                  <AlertTriangle className="size-6 text-[var(--acade-warning)]" aria-hidden="true" />
+                </span>
+                <h2 className="app-display mt-4 text-[1.25rem] font-semibold text-[var(--acade-text)]">
                   Risk analysis unavailable
                 </h2>
-                <p className="mx-auto mt-2 max-w-lg text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-[var(--acade-text-muted)]">
                   AcadeMind does not have a verified forecast to assess yet. Add graded results or refresh later; no risk level has been assigned.
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-3">
                 {/* Risk Gauge */}
-                <div className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-[var(--radius-surface)] p-6 flex flex-col items-center justify-center text-center">
-                  <span className="text-sm font-medium text-[var(--acade-text-muted)] mb-4">Trend risk level</span>
+                <div className="flex flex-col items-center justify-center rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 text-center">
+                  <span className="mb-4 text-sm font-medium text-[var(--acade-text-muted)]">Trend risk level</span>
                   <DiscreetValue label="Risk level" block>
                   <div className="relative size-32 flex items-center justify-center" role="img" aria-label={`Risk level ${forecast.riskScore || 1} of 5`}>
                     <svg className="absolute inset-0 w-full h-full transform -rotate-90" aria-hidden="true">
-                      <circle cx="64" cy="64" r="56" stroke="var(--acade-deep)" strokeWidth="12" fill="none" />
+                      <circle cx="64" cy="64" r="56" stroke="var(--acade-overlay)" strokeWidth="12" fill="none" />
                       <circle
                         cx="64" cy="64" r="56"
                         stroke={
@@ -655,29 +661,29 @@ export default function InsightsPage() {
                         className={cn(!shouldReduceMotion && "transition-all duration-1000 ease-out")}
                       />
                     </svg>
-                    <span className="text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
+                    <span className="app-num text-[2.75rem] font-bold leading-none text-[var(--acade-text)]">
                       {forecast.riskScore || 1}
                     </span>
                   </div>
                   </DiscreetValue>
-                  <span className="text-xs text-[var(--acade-text-muted)] mt-4">1 = Safe, 5 = Critical</span>
+                  <span className="mt-4 text-sm text-[var(--acade-text-muted)]">1 = Safe, 5 = Critical</span>
                 </div>
 
                 {/* Trend Banner */}
-                <div className="md:col-span-2 bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-[var(--radius-surface)] p-6 flex flex-col justify-center gap-4">
+                <div className="flex flex-col justify-center gap-4 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 md:col-span-2">
                   <span className="text-sm font-medium text-[var(--acade-text-muted)]">Trend analysis</span>
                   <div className="flex items-center gap-4">
-                    <div className={`p-4 rounded-full ${
+                    <div className={`flex size-14 shrink-0 items-center justify-center rounded-2xl ${
                       forecast.trendDirection === 'improving' ? 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]' :
                       forecast.trendDirection === 'declining' ? 'bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]' :
                       'bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]'
                     }`} aria-hidden="true">
-                      {forecast.trendDirection === 'improving' ? <TrendingUp size={32} /> :
-                       forecast.trendDirection === 'declining' ? <TrendingDown size={32} /> :
-                       <Minus size={32} />}
+                      {forecast.trendDirection === 'improving' ? <TrendingUp size={28} /> :
+                       forecast.trendDirection === 'declining' ? <TrendingDown size={28} /> :
+                       <Minus size={28} />}
                     </div>
-                    <div>
-                      <h3 className="text-[length:var(--text-xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] capitalize">
+                    <div className="min-w-0">
+                      <h3 className="app-display text-[1.375rem] font-semibold capitalize text-[var(--acade-text)]">
                         {forecast.trendDirection || 'Stable'} Performance
                       </h3>
                       <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
@@ -698,11 +704,11 @@ export default function InsightsPage() {
         return (
           <motion.div {...motionProps} className="space-y-6">
             {showAiActions && isCooldownActive && (
-              <div className="bg-[var(--acade-deep)] border border-[var(--acade-border-subtle)] rounded-[var(--radius-control)] p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <span className="text-sm font-medium text-[var(--acade-text-muted)]">
                   Written Analysis regenerates at most every 12 hours.
                 </span>
-                <Badge variant="status" className="self-start sm:self-auto bg-[var(--acade-warning)]/10 text-[var(--acade-warning)] border-[var(--acade-warning)]/30 tabular-nums">
+                <Badge variant="status" className="self-start border-[var(--acade-warning)]/30 bg-[var(--acade-gold-dim)] tabular-nums text-[var(--acade-warning)] sm:self-auto">
                   Updates unlock in {cooldownText}
                 </Badge>
               </div>
@@ -710,17 +716,17 @@ export default function InsightsPage() {
             {insight && !hideCached ? (
               <>
                 <DiscreetValue label="Written analysis" block>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-3">
+                  <InsightCard title="Degree Outlook" content={insight.degreeOutlook} type="success" variant="hero" className="lg:col-span-3" animated={!shouldReduceMotion} />
                   <InsightCard title="Identified Strengths" content={insight.strengths} type="success" animated={!shouldReduceMotion} />
                   <InsightCard title="Areas of Concern" content={insight.concerns} type="warning" animated={!shouldReduceMotion} />
                   <InsightCard title="Actionable Recommendations" content={insight.recommendations} type="info" animated={!shouldReduceMotion} />
-                  <InsightCard title="Degree Outlook" content={insight.degreeOutlook} type="success" animated={!shouldReduceMotion} />
                 </div>
                 </DiscreetValue>
-                <AiDisclosure feature="insights" className="rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] px-4 py-2" />
+                <AiDisclosure feature="insights" className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-2 sm:px-5" />
               </>
             ) : !activeBlock ? (
-              <div className="p-8 text-center text-[var(--acade-text-muted)] bg-[var(--acade-surface)] rounded-[var(--radius-surface)] border border-[var(--acade-border)]">
+              <div className="rounded-[var(--radius-surface)] border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] p-10 text-center text-[0.9375rem] text-[var(--acade-text-muted)]">
                 No written analysis yet. Choose Refresh Insights to generate one.
               </div>
             ) : null}
@@ -740,11 +746,11 @@ export default function InsightsPage() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={shouldReduceMotion ? undefined : { opacity: 0, height: 0 }}
             role="status"
-            className="mb-6 bg-[var(--acade-warning)]/10 border border-[var(--acade-warning)] text-[var(--acade-text)] rounded-[var(--radius-control)] p-4 flex items-center gap-3"
+            className="mb-6 flex items-start gap-3 rounded-2xl border border-[var(--acade-warning)]/30 bg-[var(--acade-gold-dim)] p-4 text-[var(--acade-text)] sm:px-5"
           >
-            <AlertTriangle size={20} className="shrink-0 text-[var(--acade-warning)]" aria-hidden="true" />
-            <div>
-              <p className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">AI quota temporarily reached.</p>
+            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-[var(--acade-warning)]" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="app-display text-[0.9375rem] font-semibold">AI quota temporarily reached.</p>
               <p className="text-sm text-[var(--acade-text-muted)]">
                 We are serving your last cached insights. {rateLimitCooldown > 0 ? `Please try again in ${rateLimitCooldown} seconds.` : 'You can try refreshing again.'}
               </p>
@@ -757,39 +763,44 @@ export default function InsightsPage() {
             animate={{ opacity: 1, height: 'auto' }}
             exit={shouldReduceMotion ? undefined : { opacity: 0, height: 0 }}
             role="status"
-            className="mb-6 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)] text-[var(--acade-text)] rounded-[var(--radius-control)] p-4 flex items-center gap-3"
+            className="mb-6 flex items-start gap-3 rounded-2xl border border-[var(--acade-primary)]/30 bg-[var(--acade-primary-dim)] p-4 text-[var(--acade-text)] sm:px-5"
           >
-            <RefreshCw size={20} className="shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
-            <div>
-              <p className="font-bold text-[length:var(--text-sm)] font-[family-name:var(--font-bricolage)]">Your results changed.</p>
+            <RefreshCw size={20} className="mt-0.5 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="app-display text-[0.9375rem] font-semibold">Your results changed.</p>
               <p className="text-sm text-[var(--acade-text-muted)]">Refresh your insights to get an updated AI analysis.</p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-        <div className="min-w-0">
-          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] tracking-tight">
-            AI Insights Hub
-          </h1>
-          <div className="flex items-center gap-2 mt-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-            <Image src="/acadegradeailogo.png" alt="" width={20} height={20} className="rounded-md object-contain opacity-80" />
-            <span>Powered by AcadeMind</span>
+      <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="hidden size-14 shrink-0 items-center justify-center rounded-2xl bg-ag-night ring-1 ring-white/10 sm:flex" aria-hidden="true">
+            <Image src="/acadegradeailogo.png" alt="" width={34} height={34} className="object-contain" />
+          </span>
+          <div className="min-w-0">
+            <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
+              AI Insights Hub
+            </h1>
+            <div className="mt-1 flex items-center gap-2 text-[0.9375rem] text-[var(--acade-text-muted)]">
+              <Image src="/acadegradeailogo.png" alt="" width={18} height={18} className="rounded-md object-contain sm:hidden" />
+              <span>Powered by AcadeMind</span>
+            </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
-          <DiscreetRevealButton label="Academic figures" className="border border-[var(--acade-border)]" />
+          <DiscreetRevealButton label="Academic figures" className="border border-[var(--acade-border)] bg-[var(--acade-surface)]" />
           <HelpButton entryId={insightsHelpId(activeTab)} source={studentHelpSource} />
           {showAiActions && (
             <div className="relative">
               <Button
-                variant="outline"
+                variant={analytics?.insightsStale ? 'primary' : 'outline'}
                 size="sm"
                 onClick={handleRefresh}
                 disabled={refreshing || rateLimitCooldown > 0 || !analytics?.insightsStale}
-                className="bg-[var(--acade-surface)] disabled:opacity-50"
+                className={cn(!analytics?.insightsStale && 'bg-[var(--acade-surface)]', 'disabled:opacity-60')}
               >
                 <RefreshCw size={16} className={cn("mr-2", refreshing && !shouldReduceMotion && "animate-spin")} aria-hidden="true" />
                 {refreshing
@@ -821,53 +832,56 @@ export default function InsightsPage() {
 
       {aiBlock && <AiAccessNotice block={aiBlock} className="mb-6" />}
 
-      {/* Animated Tabs */}
-      <div
-        className="flex overflow-x-auto hide-scrollbar border-b border-[var(--acade-border)] mb-6"
-        role="tablist"
-        aria-label="Insights Navigation"
-        aria-orientation="horizontal"
-      >
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              ref={(element) => { tabRefs.current[tab.id] = element; }}
-              type="button"
-              role="tab"
-              id={`insights-tab-${tab.id}`}
-              aria-selected={isActive}
-              aria-controls={`insights-panel-${tab.id}`}
-              tabIndex={isActive ? 0 : -1}
-              onClick={() => setActiveTab(tab.id)}
-              onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
-              className={cn(
-                "relative min-h-12 px-4 sm:px-6 py-3 text-[length:var(--text-sm)] font-bold transition-colors whitespace-nowrap focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acade-primary)]",
-                isActive ? "text-[var(--acade-text)]" : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]"
-              )}
-            >
-              {tab.label}
-              {isActive && (
-                shouldReduceMotion ? (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--acade-primary)]" />
-                ) : (
-                  <motion.div
-                    layoutId="activeTabUnderline"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--acade-primary)]"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  />
-                )
-              )}
-            </button>
-          );
-        })}
+      {/* Tabs: a segmented row of pills that scrolls sideways on small phones */}
+      <div className="-mx-4 mb-5 overflow-x-auto px-4 hide-scrollbar sm:mx-0 sm:px-0">
+        <div
+          className="inline-flex min-w-max gap-1 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-1"
+          role="tablist"
+          aria-label="Insights Navigation"
+          aria-orientation="horizontal"
+        >
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                ref={(element) => { tabRefs.current[tab.id] = element; }}
+                type="button"
+                role="tab"
+                id={`insights-tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`insights-panel-${tab.id}`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, tab.id)}
+                className={cn(
+                  "relative min-h-11 whitespace-nowrap rounded-xl px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] sm:px-5",
+                  isActive ? "text-[var(--acade-on-primary)]" : "text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
+                )}
+              >
+                {isActive && (
+                  shouldReduceMotion ? (
+                    <span aria-hidden="true" className="absolute inset-0 rounded-xl bg-[var(--acade-primary)]" />
+                  ) : (
+                    <motion.span
+                      aria-hidden="true"
+                      layoutId="activeTabUnderline"
+                      className="absolute inset-0 rounded-xl bg-[var(--acade-primary)]"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    />
+                  )
+                )}
+                <span className="relative">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {!aiBlock && (
-        <div className="mb-6 flex items-start gap-3 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/25 bg-[var(--acade-primary)]/10 px-4 py-3">
-          <Clock3 size={16} className="mt-0.5 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
-          <p className="text-sm leading-relaxed text-[var(--acade-text-muted)]">{RATE_LIMIT_GUIDANCE[activeTab]}</p>
+        <div className="mb-5 flex items-start gap-2.5 px-1">
+          <Clock3 size={16} className="mt-[3px] shrink-0 text-[var(--acade-text-faint)]" aria-hidden="true" />
+          <p className="text-sm leading-6 text-[var(--acade-text-muted)]">{RATE_LIMIT_GUIDANCE[activeTab]}</p>
         </div>
       )}
 

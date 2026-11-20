@@ -8,6 +8,15 @@ import { isStudentProfileComplete } from '@/lib/auth/profile';
 const COOLDOWN_MS = 60 * 1000;
 // 5 minutes expiry
 const EXPIRY_MS = 5 * 60 * 1000;
+/** The same body for every successful send, whether or not the email has an account. */
+const SENT_RESPONSE = { success: true, message: 'OTP sent successfully' } as const;
+
+/** Firestore Timestamp or Date to milliseconds; anything else is 0. */
+function toMillis(value: unknown): number {
+  if (value instanceof Date) return value.getTime();
+  const stamp = value as { toMillis?: () => number } | null | undefined;
+  return typeof stamp?.toMillis === 'function' ? stamp.toMillis() : 0;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,16 +59,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if the user exists for reset
+    // Reset answers the same way for every email (owner decision 17 Nov 2026), so the
+    // form cannot be used to find out which addresses have accounts. Only a real
+    // account gets an email; an unknown address gets a code-less marker so the
+    // cooldown below applies to it exactly as it does to a real one.
+    let hasAccount = true;
     if (type === 'reset') {
       try {
         await adminAuth.getUserByEmail(normalizedEmail);
       } catch (e: any) {
-        if (e.code === 'auth/user-not-found') {
-          return NextResponse.json({ error: 'No account found with this email' }, { status: 404 });
+        if (e.code !== 'auth/user-not-found') {
+          console.error('Reset email check failed:', e.code, e.message);
+          return NextResponse.json({ error: 'Unable to verify email. Please try again.' }, { status: 500 });
         }
-        console.error('Reset email check failed:', e.code, e.message);
-        return NextResponse.json({ error: 'Unable to verify email. Please try again.' }, { status: 500 });
+        hasAccount = false;
       }
     }
 
@@ -70,7 +83,7 @@ export async function POST(request: NextRequest) {
     const doc = await otpRef.get();
     if (doc.exists) {
       const data = doc.data();
-      const lastRequested = data?.createdAt?.toMillis() || 0;
+      const lastRequested = toMillis(data?.createdAt);
       const now = Date.now();
       if (now - lastRequested < COOLDOWN_MS) {
         return NextResponse.json({ 
@@ -78,6 +91,22 @@ export async function POST(request: NextRequest) {
           cooldownRemaining: Math.ceil((COOLDOWN_MS - (now - lastRequested)) / 1000)
         }, { status: 429 });
       }
+    }
+
+    if (!hasAccount) {
+      // No code exists for this marker: verify and reset reject any guess. It expires
+      // like a real code and the daily clean-up removes it.
+      await otpRef.set({
+        email: normalizedEmail,
+        code: null,
+        type,
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + EXPIRY_MS),
+        used: false,
+        attempts: 0,
+      });
+      logApiCall({ endpoint: '/api/auth/otp/send', category: 'otp', uid: null, status: 200, durationMs: timer(), provider: 'gmail' });
+      return NextResponse.json(SENT_RESPONSE);
     }
 
     // Generate 6-digit OTP
@@ -113,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     logApiCall({ endpoint: '/api/auth/otp/send', category: 'otp', uid: null, status: 200, durationMs: timer(), provider: 'gmail' });
-    return NextResponse.json({ success: true, message: 'OTP sent successfully' });
+    return NextResponse.json(SENT_RESPONSE);
 
   } catch (error: any) {
     console.error('OTP Send Error:', error?.code, error?.message, error);

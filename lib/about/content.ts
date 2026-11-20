@@ -9,11 +9,15 @@ export interface AboutContent {
   contactEmail: string;
 }
 
+/**
+ * Shown only when the admin has never saved a field (Admin > Settings > Public site).
+ * Saved Firestore text always wins. Wording from docs/public-redesign/pages/about.md §4.
+ */
 export const DEFAULT_ABOUT_CONTENT: AboutContent = {
-  headline: 'Academic progress, made clear.',
-  platformDescription: 'AcadeGrade helps university students understand results, monitor degree progress, and make better academic decisions.',
-  mission: 'Our mission is to give every student a dependable, understandable view of their academic journey.',
-  trustStatement: 'Your academic records remain under your control. Sharing is explicit, revocable, and designed around privacy.',
+  headline: 'A private record, made in Enugu.',
+  platformDescription: 'AcadeGrade works out your GPA, CGPA, PI and degree class from your semester results, on the 5-point scale Nigerian universities use, then helps you plan the next semester. It is free and private.',
+  mission: 'Every Nigerian university student should know exactly where they stand: their GPA, their CGPA and their class, worked out correctly and explained course by course, without paying for it and without handing their record to anyone.',
+  trustStatement: 'Your record is yours. It is private by default, you decide who sees it and for how long, and you can download it or delete it whenever you want.',
   contactEmail: envContactEmail() ?? '',
 };
 

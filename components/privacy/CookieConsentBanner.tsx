@@ -9,6 +9,7 @@ import {
   writeCookieConsent,
   type CookieChoice,
 } from '@/lib/consent/cookies';
+import { usePublicConsentHost } from '@/components/public/consent-host';
 
 const noopSubscribe = () => () => undefined;
 
@@ -20,6 +21,8 @@ const noopSubscribe = () => () => undefined;
 export function CookieConsentBanner() {
   const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const choice = useCookieConsent();
+  // Public pages show the CookieStub instead (same storage and logic).
+  const publicHost = usePublicConsentHost();
   const [reopened, setReopened] = useState(false);
   const titleId = useId();
   const panelRef = useRef<HTMLElement>(null);
@@ -38,7 +41,7 @@ export function CookieConsentBanner() {
     };
   }, []);
 
-  const visible = hydrated && (choice === null || reopened);
+  const visible = hydrated && !publicHost && (choice === null || reopened);
 
   useEffect(() => {
     if (visible && reopened) panelRef.current?.focus();
@@ -67,7 +70,7 @@ export function CookieConsentBanner() {
       aria-modal="false"
       aria-labelledby={titleId}
       tabIndex={-1}
-      className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] mx-auto w-auto max-w-md rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-popover)] focus:outline-none sm:inset-x-auto sm:right-6 sm:bottom-6 sm:mx-0 sm:w-[24rem] sm:p-6"
+      className="fixed inset-x-4 bottom-[max(1rem,env(safe-area-inset-bottom))] mx-auto w-auto max-w-md rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 shadow-[var(--shadow-popover)] focus:outline-none sm:inset-x-auto sm:right-6 sm:bottom-6 sm:mx-0 sm:w-[24rem] sm:p-6" // taste-skill-ignore: a real overlay on student and admin pages (public pages use CookieStub)
       style={{ zIndex: 'var(--z-toast)' }}
     >
       <h2 id={titleId} className="font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">
@@ -85,7 +88,7 @@ export function CookieConsentBanner() {
       <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
         You can change this at any time from Cookie choices. Read our{' '}
         <Link href="/privacy" className="font-semibold text-[var(--acade-primary)] underline underline-offset-4">
-          Privacy Policy
+          Privacy notice
         </Link>
         .
       </p>

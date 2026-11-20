@@ -1,12 +1,15 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, KeyRound, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, KeyRound, Plus, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Card, Input, Modal, Skeleton, Switch } from '@/components/ui';
+import { Button, Input, Modal, Skeleton, Switch } from '@/components/ui';
 import { ErrorState } from '@/components/shared';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { StatusChip } from '@/components/admin/StatusChip';
+import { AdminSelect } from '@/components/admin/ui/AdminSelect';
+import { Notice } from '@/components/admin/ui/Notice';
+import { panelClass } from '@/components/admin/ui/Panel';
 import { cn } from '@/lib/utils/cn';
 import { CustomInstructions } from './CustomInstructions';
 import { AiFeedbackStats } from './AiFeedbackStats';
@@ -45,6 +48,8 @@ const MODE_HELP: Record<AdminAiMode, string> = {
   single: 'One provider, model and key answers.',
   'fallback-chain': 'Backups are tried in order when a provider fails.',
 };
+const PURPOSE_LABELS: Record<'general' | 'ocr' | 'fallback', string> = { general: 'General', ocr: 'OCR', fallback: 'Fallback' };
+const STATE_LABELS: Record<AdminAiSecretProjection['state'], string> = { active: 'Active', inactive: 'Inactive', retired: 'Retired' };
 const BOOTSTRAP_MESSAGE = 'AI is off. No routing has been saved yet, so every AI request fails. Save routing to turn AI on.';
 const GEMINI_BILLING_MESSAGE = "Gemini is on the free tier. Google may use what's sent to improve its products, including result slips. Enable billing on the Google Cloud project, then mark it confirmed here.";
 
@@ -73,7 +78,11 @@ function featuresUsingKey(config: AdminAiConfig | null, secretId: string) {
   }).map((feature) => feature.label);
 }
 const MODEL_ID = /^[a-zA-Z0-9][a-zA-Z0-9._:/+-]{0,127}$/;
-const selectClass = 'mt-1 min-h-11 w-full rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-3 text-sm text-[var(--acade-text)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]';
+/** A plain text field in the console style (the kit Input is used where a visible label is needed). */
+const fieldClass = 'h-12 w-full min-w-0 rounded-[12px] border border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 text-sm text-[var(--acade-text)] placeholder:text-[var(--acade-text-faint)] transition-colors focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20';
+/** A small caption above a control whose accessible name is longer than what is shown. */
+const captionClass = 'mb-1.5 block text-[0.8125rem] font-medium text-[var(--acade-text-muted)]';
+const sectionTitleClass = 'ag-admin-h2 text-[1.25rem] leading-7';
 
 function draftRoutes(config: AdminAiConfig | null): Record<AdminAiFeature, AdminAiRoute> {
   return FEATURES.reduce((draft, feature) => {
@@ -192,48 +201,75 @@ export function AiOperations() {
     ? `${joinNames(keyToDisable.features)} ${keyToDisable.features.length > 1 ? 'use' : 'uses'} this key. Disabling it makes ${keyToDisable.features.length > 1 ? 'those features' : 'that feature'} fail, or fall back to the next provider, immediately.`
     : '';
 
-  return <div className="space-y-7">
+  return <div className="space-y-6">
     <AdminPageHeader title="AI providers" description="Choose which provider, model and key answer each AI feature, on the website and the Android app." helpId="admin.ai" />
     {error && <ErrorState title="AI settings need attention" description={error} onRetry={() => void reload()} />}
-    {notice && <p role="status" className="rounded-xl border border-[var(--acade-success)]/30 bg-[var(--acade-success-dim)] px-4 py-3 text-sm text-[var(--acade-text)]">{notice}</p>}
-    {loading && <div aria-label="Loading AI settings" aria-busy="true" className="grid gap-4 md:grid-cols-2">{[0, 1].map((item) => <Skeleton key={item} className="h-72" />)}</div>}
+    {notice && <Notice tone="success" role="status">{notice}</Notice>}
+    {loading && <div aria-label="Loading AI settings" aria-busy="true" className="grid gap-4 md:grid-cols-2">{[0, 1].map((item) => <Skeleton key={item} className="h-72 rounded-[20px]" />)}</div>}
     {snapshot && models && <>
-      <section aria-label="AI status" className={cn('rounded-[var(--radius-surface)] border p-4 sm:p-5', managed ? 'border-[var(--acade-border)] bg-[var(--acade-surface)]' : 'border-[var(--acade-warning)]/35 bg-[var(--acade-warning)]/10')}>
-        <p className="flex items-start gap-2 text-sm font-semibold text-[var(--acade-text)]">
-          {!managed && <AlertTriangle className="mt-0.5 size-4 shrink-0 text-[var(--acade-warning)]" aria-hidden="true" />}
-          {managed ? `AI is on (revision ${snapshot.config?.revision})` : BOOTSTRAP_MESSAGE}
-        </p>
-        <ul className="mt-3 flex flex-wrap gap-2">
+      <section
+        aria-label="AI status"
+        className={cn(panelClass, 'p-5 sm:p-6', !managed && 'border-[color-mix(in_srgb,var(--acade-warning)_40%,transparent)] bg-[var(--acade-gold-dim)]')}
+      >
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className={cn('flex size-10 shrink-0 items-center justify-center rounded-[12px]', managed ? 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]' : 'bg-[var(--acade-surface)] text-[var(--acade-warning)]')}
+          >
+            {managed ? <ShieldCheck className="size-5" /> : <AlertTriangle className="size-5" />}
+          </span>
+          <div className="min-w-0">
+            <p className={managed ? sectionTitleClass : 'text-base font-semibold leading-6 text-[var(--acade-text)]'}>
+              {managed ? `AI is on (revision ${snapshot.config?.revision})` : BOOTSTRAP_MESSAGE}
+            </p>
+            {managed && <p className="mt-0.5 text-sm text-[var(--acade-text-muted)]">Each feature answers with the provider, model and key chosen below.</p>}
+          </div>
+        </div>
+        <ul className="mt-5 grid grid-cols-2 gap-2 lg:grid-cols-4">
           {FEATURES.map((feature) => {
             const mode = snapshot.config?.routes[feature.id]?.mode ?? 'disabled';
-            return <li key={feature.id} className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-[var(--acade-overlay)] px-3 text-xs">
-              <span className="font-medium text-[var(--acade-text)]">{feature.label}</span>
+            const on = mode !== 'disabled';
+            return <li key={feature.id} className="flex min-w-0 flex-col gap-1 rounded-[16px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] px-4 py-3">
+              <span className="truncate text-[0.8125rem] text-[var(--acade-text-muted)]">{feature.label}</span>
               <span className="sr-only">: </span>
-              <span className={mode === 'disabled' ? 'text-[var(--acade-text-muted)]' : 'font-semibold text-[var(--acade-primary)]'}>{MODE_CHIPS[mode]}</span>
+              <span className={cn('flex items-center gap-2 text-sm font-semibold', on ? 'text-[var(--acade-text)]' : 'text-[var(--acade-text-muted)]')}>
+                <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', on ? 'bg-[var(--acade-success)]' : 'bg-[var(--acade-text-faint)]')} />
+                {MODE_CHIPS[mode]}
+              </span>
             </li>;
           })}
         </ul>
       </section>
-      {geminiWarning && <div className="flex flex-wrap items-start gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-warning)]/35 bg-[var(--acade-warning)]/10 px-4 py-3 text-sm leading-6 text-[var(--acade-text)]">
-        <AlertTriangle className="mt-1 size-4 shrink-0 text-[var(--acade-warning)]" aria-hidden="true" />
-        <p className="min-w-0 flex-1 basis-64">{GEMINI_BILLING_MESSAGE}</p>
-        <Button variant="outline" size="sm" loading={billingSaving} loadingLabel="Saving…" onClick={() => setConfirmBilling(true)}>Mark billing confirmed…</Button>
-      </div>}
+      {geminiWarning && <Notice tone="warning">
+        <p>{GEMINI_BILLING_MESSAGE}</p>
+        <div className="mt-3">
+          <Button variant="outline" size="sm" loading={billingSaving} loadingLabel="Saving…" onClick={() => setConfirmBilling(true)}>Mark billing confirmed…</Button>
+        </div>
+      </Notice>}
       {snapshot.geminiBilling === 'confirmed' && <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--acade-text-muted)]">
         Gemini billing is marked confirmed.
         <button type="button" disabled={billingSaving} onClick={() => void changeGeminiBilling('unconfirmed')} className="min-h-9 rounded-lg font-medium text-[var(--acade-primary)] underline-offset-2 hover:underline disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]">Mark as unconfirmed</button>
       </p>}
       <section aria-labelledby="routing-title" className="space-y-4">
-        <div><h2 id="routing-title" className="text-xl font-bold text-[var(--acade-text)]">Features</h2><p className="text-sm text-[var(--acade-text-muted)]">Pick a mode, then the provider, model and key for each feature.</p></div>
+        <div>
+          <h2 id="routing-title" className={sectionTitleClass}>Features</h2>
+          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Pick a mode, then the provider, model and key for each feature.</p>
+        </div>
         <div className="grid gap-4 xl:grid-cols-2">{FEATURES.map((feature) => <RouteEditor key={feature.id} feature={feature} route={routes[feature.id]} providers={snapshot.providers} models={models} secrets={snapshot.secrets} onChange={(route) => setRoutes((current) => ({ ...current, [feature.id]: route }))}>
           {feature.id === 'insights' && <CustomInstructions />}
         </RouteEditor>)}</div>
-        <div className="sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[var(--acade-void)] px-1 py-3">
-          <p className="min-w-0 flex-1 text-sm text-[var(--acade-text-muted)]">{managed ? `Saved routing: revision ${snapshot.config?.revision}.` : 'Nothing saved yet. AI stays off until you save.'}</p>
+        <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 shadow-[var(--shadow-card)]">
+          <p className="min-w-0 flex-1 basis-56 text-sm text-[var(--acade-text-muted)]">{managed ? `Saved routing: revision ${snapshot.config?.revision}.` : 'Nothing saved yet. AI stays off until you save.'}</p>
           <Button loading={saving} loadingLabel="Saving routing…" onClick={() => void save()}><ShieldCheck className="size-4" aria-hidden="true" /> Save routing</Button>
         </div>
       </section>
-      <section aria-labelledby="catalog-title" className="space-y-4"><div><h2 id="catalog-title" className="text-xl font-bold text-[var(--acade-text)]">Provider keys and models</h2><p className="text-sm text-[var(--acade-text-muted)]">Models listed here can be chosen in the features above.</p></div><div className="grid gap-4 xl:grid-cols-3">{PROVIDERS.map((id) => <ProviderEditor key={id} providerId={id} models={models[id]} secrets={snapshot.secrets.filter((secret) => secret.providerId === id)} onModelsChange={(next) => setModels((current) => current ? { ...current, [id]: next } : current)} onSaveKey={saveKey} onStateChange={requestKeyState} onTest={testKey} testingKey={testingKey} />)}</div></section>
+      <section aria-labelledby="catalog-title" className="space-y-4">
+        <div>
+          <h2 id="catalog-title" className={sectionTitleClass}>Provider keys and models</h2>
+          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Models listed here can be chosen in the features above.</p>
+        </div>
+        <div className="grid gap-4 xl:grid-cols-3">{PROVIDERS.map((id) => <ProviderEditor key={id} providerId={id} models={models[id]} secrets={snapshot.secrets.filter((secret) => secret.providerId === id)} onModelsChange={(next) => setModels((current) => current ? { ...current, [id]: next } : current)} onSaveKey={saveKey} onStateChange={requestKeyState} onTest={testKey} testingKey={testingKey} />)}</div>
+      </section>
     </>}
     <AiFeedbackStats />
     <Modal
@@ -296,46 +332,74 @@ function RouteEditor({ feature, route, providers, models, secrets, onChange, chi
       .map((secret) => ({ providerId: secret.providerId, modelId: secret.modelId && models[secret.providerId].includes(secret.modelId) ? secret.modelId : models[secret.providerId][0], secretId: secret.secretId }));
     onChange({ ...route, mode: ordered.length > 1 ? 'fallback-chain' : ordered.length === 1 ? 'single' : 'disabled', chain: ordered });
   };
-  return <Card padding="lg" className="space-y-4">
-    <div><h3 className="text-lg font-bold text-[var(--acade-text)]">{feature.label}</h3>{feature.capability === 'multimodal' && <p className="text-sm text-[var(--acade-text-muted)]">Needs a provider that can read images.</p>}</div>
-    <label className="block text-sm font-medium text-[var(--acade-text)]">Mode
-      <select aria-label={`${feature.label} mode`} className={selectClass} value={route.mode} onChange={(event) => setMode(event.target.value as AdminAiMode)}>
-        <option value="disabled">{MODE_LABELS.disabled}</option>{feature.id === 'whatif' && <option value="local-only">{MODE_LABELS['local-only']}</option>}<option value="single">{MODE_LABELS.single}</option><option value="fallback-chain">{MODE_LABELS['fallback-chain']}</option>
-      </select>
-    </label>
-    <p className="text-xs text-[var(--acade-text-muted)]">{MODE_HELP[route.mode]}</p>
-    <Button variant="outline" size="sm" aria-label={`${feature.label}: fill from saved keys`} onClick={useSavedPriorities}>Fill from saved keys</Button>
-    {route.chain.map((target, index) => {
-    const activeSecrets = secrets.filter((secret) => secret.providerId === target.providerId && secret.state === 'active');
-    const update = (next: AdminAiRouteTarget) => onChange({ ...route, chain: route.chain.map((item, position) => position === index ? next : item) });
-    return <fieldset key={index} className="grid gap-3 rounded-xl border border-[var(--acade-border)] p-3">
-      <legend className="px-1 text-xs font-semibold text-[var(--acade-text-muted)]">{route.chain.length > 1 ? (index === 0 ? 'First choice' : `Backup ${index}`) : 'Target'}</legend>
-      <label className="block text-xs text-[var(--acade-text-muted)]">Provider
-        <select aria-label={`${feature.label} priority ${index + 1} provider`} className={selectClass} value={target.providerId} onChange={(event) => { const providerId = event.target.value as AdminAiProviderId; update({ providerId, modelId: models[providerId][0] ?? '', secretId: '' }); }}>{eligible.map((id) => <option key={id} value={id}>{LABELS[id]}</option>)}</select>
-      </label>
-      <label className="block text-xs text-[var(--acade-text-muted)]">Model
-        <select aria-label={`${feature.label} priority ${index + 1} model`} className={selectClass} value={target.modelId} onChange={(event) => update({ ...target, modelId: event.target.value })}>{!models[target.providerId].includes(target.modelId) && <option value={target.modelId}>{target.modelId} (not in catalog)</option>}{models[target.providerId].map((model) => <option key={model} value={model}>{model}</option>)}</select>
-      </label>
-      <label className="block text-xs text-[var(--acade-text-muted)]">Key
-        <select aria-label={`${feature.label} priority ${index + 1} key`} className={selectClass} value={target.secretId ?? ''} onChange={(event) => update({ ...target, secretId: event.target.value })}><option value="">Select an active key</option>{activeSecrets.map((secret) => <option key={secret.secretId} value={secret.secretId}>{secret.secretId}</option>)}</select>
-      </label>
-      {route.mode === 'fallback-chain' && <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" disabled={index === 0} aria-label={`Move ${feature.label} priority ${index + 1} earlier`} onClick={() => moveTarget(index, -1)}>Move up</Button>
-        <Button variant="outline" size="sm" disabled={index === route.chain.length - 1} aria-label={`Move ${feature.label} priority ${index + 1} later`} onClick={() => moveTarget(index, 1)}>Move down</Button>
-        <Button variant="ghost" size="sm" disabled={route.chain.length <= 2} aria-label={`Remove ${feature.label} priority ${index + 1}`} onClick={() => onChange({ ...route, chain: route.chain.filter((_, position) => position !== index) })}>Remove</Button>
-      </div>}
-    </fieldset>;
-  })}
-  {route.mode === 'fallback-chain' && <Button variant="outline" disabled={route.chain.length >= 12} onClick={() => onChange({ ...route, chain: [...route.chain, createTarget(route.chain.length)] })}><Plus className="size-4" aria-hidden="true" /> Add backup</Button>}
-  {usesOpenRouter(route) && <div className="flex items-start justify-between gap-4 rounded-xl bg-[var(--acade-overlay)] px-3 py-3">
-    <div className="min-w-0">
-      <p className="text-sm font-medium text-[var(--acade-text)]">Allow OpenRouter data collection</p>
-      <p className="mt-0.5 text-xs leading-5 text-[var(--acade-text-muted)]">Off sends data_collection: deny. Free models with no compliant provider fail over to the next target.</p>
+  const modeOptions = (['disabled', 'local-only', 'single', 'fallback-chain'] as AdminAiMode[])
+    .filter((mode) => mode !== 'local-only' || feature.id === 'whatif')
+    .map((mode) => ({ value: mode, label: MODE_LABELS[mode] }));
+  const on = route.mode !== 'disabled';
+  return <article className={cn(panelClass, 'flex flex-col gap-5 p-5 sm:p-6')}>
+    <header className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="ag-admin-h2">{feature.label}</h3>
+          <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', on ? 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]' : 'bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]')}>
+            <span aria-hidden="true" className={cn('size-1.5 rounded-full', on ? 'bg-[var(--acade-success)]' : 'bg-[var(--acade-text-faint)]')} />
+            {on ? 'On' : 'Off'}
+          </span>
+        </div>
+        {feature.capability === 'multimodal' && <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Needs a provider that can read images.</p>}
+      </div>
+      <Button variant="outline" size="sm" aria-label={`${feature.label}: fill from saved keys`} onClick={useSavedPriorities}>Fill from saved keys</Button>
+    </header>
+    <div>
+      <span aria-hidden="true" className={captionClass}>Mode</span>
+      <AdminSelect label={`${feature.label} mode`} hideLabel options={modeOptions} value={route.mode} onChange={(value) => setMode(value as AdminAiMode)} />
+      <p className="mt-2 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">{MODE_HELP[route.mode]}</p>
     </div>
-    <Switch aria-label={`${feature.label}: allow OpenRouter data collection`} checked={route.dataCollection === 'allow'} onCheckedChange={(allow) => onChange({ ...route, dataCollection: allow ? 'allow' : 'deny' })} />
-  </div>}
-  {children}
-  </Card>;
+    {route.chain.length > 0 && <ol className="space-y-3">{route.chain.map((target, index) => {
+      const activeSecrets = secrets.filter((secret) => secret.providerId === target.providerId && secret.state === 'active');
+      const update = (next: AdminAiRouteTarget) => onChange({ ...route, chain: route.chain.map((item, position) => position === index ? next : item) });
+      const modelOptions = [
+        ...(!models[target.providerId].includes(target.modelId) ? [{ value: target.modelId, label: `${target.modelId} (not in catalog)` }] : []),
+        ...models[target.providerId].map((model) => ({ value: model, label: model })),
+      ];
+      return <li key={index}>
+        <fieldset className="min-w-0 rounded-[16px] border border-[var(--acade-border-subtle)] bg-[color-mix(in_srgb,var(--acade-overlay)_45%,transparent)] p-4">
+          <legend className="float-left mb-3 flex w-full items-center gap-2 text-sm font-semibold text-[var(--acade-text)]">
+            <span aria-hidden="true" className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--acade-primary-dim)] text-xs font-bold tabular-nums text-[var(--acade-primary)]">{index + 1}</span>
+            {route.chain.length > 1 ? (index === 0 ? 'First choice' : `Backup ${index}`) : 'Target'}
+          </legend>
+          <div className="clear-both grid gap-3 sm:grid-cols-[minmax(0,10.5rem)_minmax(0,1fr)]">
+            <div className="min-w-0">
+              <span aria-hidden="true" className={captionClass}>Provider</span>
+              <AdminSelect label={`${feature.label} priority ${index + 1} provider`} hideLabel options={eligible.map((id) => ({ value: id, label: LABELS[id] }))} value={target.providerId} onChange={(value) => { const providerId = value as AdminAiProviderId; update({ providerId, modelId: models[providerId][0] ?? '', secretId: '' }); }} />
+            </div>
+            <div className="min-w-0">
+              <span aria-hidden="true" className={captionClass}>Model</span>
+              <AdminSelect label={`${feature.label} priority ${index + 1} model`} hideLabel options={modelOptions} value={target.modelId} onChange={(value) => update({ ...target, modelId: value })} />
+            </div>
+            <div className="min-w-0 sm:col-span-2">
+              <span aria-hidden="true" className={captionClass}>Key</span>
+              <AdminSelect label={`${feature.label} priority ${index + 1} key`} hideLabel options={[{ value: '', label: 'Select an active key' }, ...activeSecrets.map((secret) => ({ value: secret.secretId, label: secret.secretId }))]} value={target.secretId ?? ''} onChange={(value) => update({ ...target, secretId: value })} />
+            </div>
+          </div>
+          {route.mode === 'fallback-chain' && <div className="mt-3 flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" disabled={index === 0} aria-label={`Move ${feature.label} priority ${index + 1} earlier`} onClick={() => moveTarget(index, -1)}><ArrowUp className="size-4" aria-hidden="true" /> Move up</Button>
+            <Button variant="outline" size="sm" disabled={index === route.chain.length - 1} aria-label={`Move ${feature.label} priority ${index + 1} later`} onClick={() => moveTarget(index, 1)}><ArrowDown className="size-4" aria-hidden="true" /> Move down</Button>
+            <Button variant="ghost" size="sm" disabled={route.chain.length <= 2} aria-label={`Remove ${feature.label} priority ${index + 1}`} onClick={() => onChange({ ...route, chain: route.chain.filter((_, position) => position !== index) })}>Remove</Button>
+          </div>}
+        </fieldset>
+      </li>;
+    })}</ol>}
+    {route.mode === 'fallback-chain' && <Button variant="outline" disabled={route.chain.length >= 12} onClick={() => onChange({ ...route, chain: [...route.chain, createTarget(route.chain.length)] })}><Plus className="size-4" aria-hidden="true" /> Add backup</Button>}
+    {usesOpenRouter(route) && <div className="flex items-start justify-between gap-4 rounded-[16px] bg-[var(--acade-overlay)] px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-[var(--acade-text)]">Allow OpenRouter data collection</p>
+        <p className="mt-0.5 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">Off sends data_collection: deny. Free models with no compliant provider fail over to the next target.</p>
+      </div>
+      <Switch aria-label={`${feature.label}: allow OpenRouter data collection`} checked={route.dataCollection === 'allow'} onCheckedChange={(allow) => onChange({ ...route, dataCollection: allow ? 'allow' : 'deny' })} />
+    </div>}
+    {children}
+  </article>;
 }
 
 /** What the chip beside a saved key says: switched off, never tested, tested OK, or the plain-language problem. */
@@ -371,25 +435,59 @@ function ProviderEditor({ providerId, models, secrets, onModelsChange, onSaveKey
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Unable to save key.');
     } finally { setSaving(false); }
   };
-  return <Card padding="lg" className="space-y-5">
-    <h3 className="text-lg font-bold text-[var(--acade-text)]">{LABELS[providerId]}</h3>
-    <div><h4 className="text-sm font-semibold text-[var(--acade-text)]">Models</h4>
-      <ul className="mt-2 space-y-2">{models.map((model) => <li key={model} className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-[var(--acade-overlay)] px-3 py-2"><span className="min-w-0 break-all font-mono text-xs text-[var(--acade-text)]">{model}</span><button type="button" aria-label={`Remove ${model} from ${LABELS[providerId]}`} onClick={() => onModelsChange(models.filter((item) => item !== model))} className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-danger)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"><Trash2 className="size-4" aria-hidden="true" /></button></li>)}</ul>
-      <div className="mt-3 flex gap-2"><input aria-label={`New ${LABELS[providerId]} model ID`} className={selectClass} value={newModel} onChange={(event) => setNewModel(event.target.value)} placeholder="Provider model ID" /><Button variant="outline" aria-label={`Add ${LABELS[providerId]} model`} onClick={addModel}><Plus className="size-4" aria-hidden="true" /></Button></div>
+  const activeCount = secrets.filter((secret) => secret.state === 'active').length;
+  const tagClass = 'inline-flex max-w-full items-center rounded-full border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] px-2 py-0.5 text-xs text-[var(--acade-text-muted)]';
+  return <article className={cn(panelClass, 'flex min-w-0 flex-col gap-5 p-5 sm:p-6')}>
+    <header className="flex items-center justify-between gap-3">
+      <h3 className="ag-admin-h2">{LABELS[providerId]}</h3>
+      <span className="text-[0.8125rem] tabular-nums text-[var(--acade-text-muted)]">{activeCount} of {secrets.length} {secrets.length === 1 ? 'key' : 'keys'} active</span>
+    </header>
+    <div>
+      <h4 className="text-sm font-semibold text-[var(--acade-text)]">Models</h4>
+      <ul className="mt-2 flex flex-wrap gap-2">{models.map((model) => <li key={model} className="inline-flex min-h-9 max-w-full items-center gap-1 rounded-full border border-[var(--acade-border-subtle)] bg-[var(--acade-overlay)] py-0.5 pl-3 pr-0.5">
+        <span className="min-w-0 break-all text-[0.8125rem] text-[var(--acade-text)]">{model}</span>
+        <button type="button" aria-label={`Remove ${model} from ${LABELS[providerId]}`} onClick={() => onModelsChange(models.filter((item) => item !== model))} className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"><X className="size-3.5" aria-hidden="true" /></button>
+      </li>)}</ul>
+      <div className="mt-3 flex gap-2">
+        <input aria-label={`New ${LABELS[providerId]} model ID`} className={fieldClass} value={newModel} onChange={(event) => setNewModel(event.target.value)} placeholder="Provider model ID" />
+        <Button variant="outline" aria-label={`Add ${LABELS[providerId]} model`} onClick={addModel} className="shrink-0 px-4"><Plus className="size-4" aria-hidden="true" /></Button>
+      </div>
     </div>
-    <div className="border-t border-[var(--acade-border)] pt-4"><h4 className="text-sm font-semibold text-[var(--acade-text)]">Saved keys</h4>
-      {secrets.length === 0 && <p className="mt-2 text-xs text-[var(--acade-text-muted)]">No keys saved yet.</p>}
-      {[...secrets].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).map((secret) => <div key={secret.secretId} className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--acade-overlay)] p-2 text-xs"><div className="min-w-0"><p className="font-semibold text-[var(--acade-text)]">{secret.label ?? secret.secretId} · priority {secret.priority ?? 'unset'}</p><p className="break-all font-mono text-[var(--acade-text-muted)]">{secret.secretId} · {secret.modelId ?? 'model unset'} · {secret.purpose ?? 'general'} · {secret.state}</p><div className="mt-1"><KeyStatusChip secret={secret} /></div></div><div className="flex shrink-0 items-center gap-1">{secret.state !== 'retired' && <button type="button" aria-label={`Test ${secret.secretId}`} disabled={testingKey !== null} className="min-h-9 rounded-lg px-2 font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)] disabled:opacity-50" onClick={() => void onTest(secret)}>{testingKey === secret.secretId ? 'Testing…' : 'Test key'}</button>}{secret.state !== 'retired' && <button type="button" aria-label={`${secret.state === 'active' ? 'Disable' : 'Activate'} ${secret.secretId}`} className="min-h-9 rounded-lg px-2 font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]" onClick={() => void onStateChange(secret)}>{secret.state === 'active' ? 'Disable' : 'Activate'}</button>}</div></div>)}
+    <div className="border-t border-[var(--acade-border-subtle)] pt-4">
+      <h4 className="text-sm font-semibold text-[var(--acade-text)]">Saved keys</h4>
+      {secrets.length === 0 && <p className="mt-2 text-sm text-[var(--acade-text-muted)]">No keys saved yet.</p>}
+      <ul className="mt-2 space-y-2">{[...secrets].sort((a, b) => (a.priority ?? 99) - (b.priority ?? 99)).map((secret) => <li key={secret.secretId} className="rounded-[16px] border border-[var(--acade-border-subtle)] bg-[color-mix(in_srgb,var(--acade-overlay)_45%,transparent)] p-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[var(--acade-text)]">{secret.label ?? secret.secretId}</p>
+            <p className="break-all text-xs text-[var(--acade-text-muted)]">{secret.secretId}</p>
+          </div>
+          <span className="shrink-0 rounded-full bg-[var(--acade-primary-dim)] px-2 py-0.5 text-xs font-medium tabular-nums text-[var(--acade-primary)]">Priority {secret.priority ?? 'unset'}</span>
+        </div>
+        <p className="mt-2 flex flex-wrap gap-1.5">
+          <span className={cn(tagClass, 'break-all')}>{secret.modelId ?? 'Model unset'}</span>
+          <span className={tagClass}>{PURPOSE_LABELS[secret.purpose ?? 'general']}</span>
+          <span className={tagClass}>{STATE_LABELS[secret.state]}</span>
+        </p>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <KeyStatusChip secret={secret} />
+          <div className="flex shrink-0 items-center gap-1">
+            {secret.state !== 'retired' && <button type="button" aria-label={`Test ${secret.secretId}`} disabled={testingKey !== null} className="min-h-10 rounded-[10px] px-3 text-sm font-semibold text-[var(--acade-primary)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)] disabled:opacity-50" onClick={() => void onTest(secret)}>{testingKey === secret.secretId ? 'Testing…' : 'Test key'}</button>}
+            {secret.state !== 'retired' && <button type="button" aria-label={`${secret.state === 'active' ? 'Disable' : 'Activate'} ${secret.secretId}`} className={cn('min-h-10 rounded-[10px] px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]', secret.state === 'active' ? 'text-[var(--acade-text-muted)] hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)]' : 'text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)]')} onClick={() => void onStateChange(secret)}>{secret.state === 'active' ? 'Disable' : 'Activate'}</button>}
+          </div>
+        </div>
+      </li>)}</ul>
     </div>
-    <form onSubmit={saveKey} className="space-y-3 border-t border-[var(--acade-border)] pt-4"><h4 className="text-sm font-semibold text-[var(--acade-text)]">Add or rotate a key</h4>
+    <form onSubmit={saveKey} className="space-y-3 rounded-[16px] bg-[var(--acade-overlay)] p-4">
+      <h4 className="flex items-center gap-2 text-sm font-semibold text-[var(--acade-text)]"><KeyRound className="size-4 text-[var(--acade-primary)]" aria-hidden="true" />Add or rotate a key</h4>
       <Input id={`${providerId}-label`} label="Key label" value={label} onChange={(event) => setLabel(event.target.value)} />
       <Input id={`${providerId}-slot`} label="Key name" value={slot} onChange={(event) => setSlot(event.target.value)} hint="Reusing a saved key name replaces its key." />
-      {providerId === 'gemini' && <label className="block text-sm text-[var(--acade-text)]">Gemini role<select className={selectClass} value={purpose} onChange={(event) => setPurpose(event.target.value as 'ocr' | 'fallback')}><option value="ocr">OCR</option><option value="fallback">Fallback for text features</option></select></label>}
+      {providerId === 'gemini' && <AdminSelect label="Gemini role" options={[{ value: 'ocr', label: 'OCR' }, { value: 'fallback', label: 'Fallback for text features' }]} value={purpose} onChange={(value) => setPurpose(value as 'ocr' | 'fallback')} />}
       <Input id={`${providerId}-model`} label={`${LABELS[providerId]} model ID`} value={connectionModel} onChange={(event) => setConnectionModel(event.target.value)} hint="Added to the models list when you save the key." />
       <Input id={`${providerId}-key`} label={`${LABELS[providerId]} API key`} type="password" autoComplete="new-password" value={keyValue} onChange={(event) => setKeyValue(event.target.value)} hint="Encrypted on save; never shown again." />
-      <Input id={`${providerId}-priority`} label="Priority" type="number" min={1} max={12} value={priority} onChange={(event) => setPriority(event.target.value)} hint="1 is tried first by Fill from saved keys." />
+      <Input id={`${providerId}-priority`} label="Priority" type="text" inputMode="numeric" value={priority} onChange={(event) => setPriority(event.target.value)} hint="1 to 12. 1 is tried first by Fill from saved keys." />
       <Button type="submit" loading={saving} loadingLabel="Saving…" fullWidth><KeyRound className="size-4" aria-hidden="true" /> Save {LABELS[providerId]} key</Button>
     </form>
-    {error && <p role="alert" className="text-sm text-[var(--acade-danger)]">{error}</p>}
-  </Card>;
+    {error && <p role="alert" className="flex items-start gap-2 text-sm text-[var(--acade-danger)]"><AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />{error}</p>}
+  </article>;
 }

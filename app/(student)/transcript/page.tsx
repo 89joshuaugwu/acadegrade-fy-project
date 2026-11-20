@@ -247,8 +247,13 @@ export default function TranscriptPage() {
 
   if (loadStatus === 'loading') {
     return (
-      <div className="flex h-64 items-center justify-center" aria-busy="true" aria-label="Loading transcript">
-        <div className="size-10 animate-spin rounded-full border-4 border-[var(--acade-primary)] border-t-transparent" aria-hidden="true" />
+      <div className="mx-auto max-w-4xl space-y-6 pb-10" aria-busy="true" aria-label="Loading transcript">
+        <div className="space-y-3">
+          <div className="skeleton h-9 w-72 max-w-full rounded-xl" />
+          <div className="skeleton h-4 w-96 max-w-full" />
+        </div>
+        <div className="skeleton h-40 rounded-[var(--radius-surface)]" />
+        <div className="skeleton h-[28rem] rounded-[var(--radius-surface)]" />
       </div>
     );
   }
@@ -257,12 +262,12 @@ export default function TranscriptPage() {
     return (
       <div className="mx-auto max-w-4xl pb-10">
         <div className="mb-8">
-          <p className="text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.18em] text-[var(--acade-danger)]">
-            Transcript unavailable
-          </p>
-          <h1 className="mt-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+          <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
             We couldn&apos;t load your transcript
           </h1>
+          <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+            Transcript unavailable
+          </p>
         </div>
         <ErrorState
           title="Your academic record is temporarily unavailable"
@@ -280,11 +285,11 @@ export default function TranscriptPage() {
   if (semesters.length === 0) {
     return (
       <div className="mx-auto max-w-4xl pb-10">
-        <div className="mb-4">
-          <h1 className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+        <div className="mb-6">
+          <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
             Unofficial Transcript
           </h1>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
+          <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
             Your transcript will be created from semesters marked as complete.
           </p>
         </div>
@@ -297,7 +302,7 @@ export default function TranscriptPage() {
           <div className="flex justify-center px-6 pb-10">
             <Link
               href="/results"
-              className="inline-flex h-12 items-center justify-center rounded-xl bg-[var(--acade-primary)] px-6 text-[length:var(--text-sm)] font-semibold text-[var(--acade-on-primary)] transition-colors hover:bg-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+              className="inline-flex h-12 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary)] px-6 text-[0.9375rem] font-semibold text-[var(--acade-on-primary)] transition-colors hover:bg-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
             >
               Go to Results
             </Link>
@@ -329,81 +334,88 @@ export default function TranscriptPage() {
   return (
     <DiscreetScope>
     <div className="max-w-4xl mx-auto pb-10">
-      {/* Actions Toolbar - Hidden when printing */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 print:hidden">
-        <div>
-          <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-            Unofficial Transcript
-          </h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-1">
-            HTML preview. Use the buttons below to export.
-          </p>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-            Transcript CGPA covers completed semesters only.
-          </p>
-        </div>
-        
-        <div
-          role="group"
-          aria-label="Transcript export options"
-          className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end"
-        >
-          <HelpButton entryId={STUDENT_HELP.transcript} source={studentHelpSource} className="col-span-2 justify-center sm:col-span-1" />
-          <DiscreetRevealButton label="Transcript values" className="col-span-2 border border-[var(--acade-border)] sm:col-span-1" />
-          {/* Photo Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowPhoto(prev => !prev)}
-            className={cn(
-              "flex min-h-12 min-w-0 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2 py-1.5 text-[length:var(--text-xs)] font-medium transition-all sm:w-auto sm:px-3",
-              showPhoto
-                ? "border-[var(--acade-primary)] bg-[var(--acade-primary)]/10 text-[var(--acade-primary)]"
-                : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)]"
-            )}
-            title={showPhoto ? "Click to hide your photo from the transcript" : "Click to show your photo on the transcript"}
-          >
-            <ImageIcon size={14} />
-            {showPhoto ? 'Photo On' : 'Photo Off'}
-          </button>
+      {/* Page heading - hidden when printing */}
+      <header className="mb-6 print:hidden">
+        <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
+          Unofficial Transcript
+        </h1>
+        <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+          HTML preview. Use the buttons below to export.
+        </p>
+        <p className="mt-0.5 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+          Transcript CGPA covers completed semesters only.
+        </p>
+      </header>
 
-          <Button variant="outline" size="sm" onClick={handlePrint} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
-            <Printer size={16} className="shrink-0" aria-hidden="true" />
-            Print HTML
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleShareLink} disabled={sharing} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
-            <Link2 size={16} className={cn("shrink-0", sharing && "animate-spin")} aria-hidden="true" />
-            {sharing ? 'Creating...' : 'Share Link'}
-          </Button>
-          <Button variant="primary" size="sm" onClick={handleDownload} disabled={downloading} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
-            <Download size={16} className={cn("shrink-0", downloading && "animate-bounce")} aria-hidden="true" />
-            Download PDF
-          </Button>
+      {/* Export and share - hidden when printing */}
+      <section aria-label="Export and share" className="mb-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] print:hidden">
+        <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">Export and share</h2>
+            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Print it, save a PDF, or send a private link.</p>
+          </div>
+          <div
+            role="group"
+            aria-label="Transcript export options"
+            className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end"
+          >
+            <HelpButton entryId={STUDENT_HELP.transcript} source={studentHelpSource} className="col-span-2 justify-center sm:col-span-1" />
+            <DiscreetRevealButton label="Transcript values" className="col-span-2 border border-[var(--acade-border)] sm:col-span-1" />
+            {/* Photo Toggle */}
+            <button
+              type="button"
+              aria-pressed={showPhoto}
+              onClick={() => setShowPhoto(prev => !prev)}
+              className={cn(
+                "flex min-h-12 min-w-0 w-full items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] sm:w-auto",
+                showPhoto
+                  ? "border-[var(--acade-primary)]/40 bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]"
+                  : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]"
+              )}
+              title={showPhoto ? "Click to hide your photo from the transcript" : "Click to show your photo on the transcript"}
+            >
+              <ImageIcon size={16} aria-hidden="true" />
+              {showPhoto ? 'Photo On' : 'Photo Off'}
+            </button>
+
+            <Button variant="outline" size="sm" onClick={handlePrint} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
+              <Printer size={16} className="shrink-0" aria-hidden="true" />
+              Print HTML
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleShareLink} disabled={sharing} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
+              <Link2 size={16} className={cn("shrink-0", sharing && "animate-spin")} aria-hidden="true" />
+              {sharing ? 'Creating...' : 'Share Link'}
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleDownload} disabled={downloading} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
+              <Download size={16} className={cn("shrink-0", downloading && "animate-bounce")} aria-hidden="true" />
+              Download PDF
+            </Button>
+          </div>
         </div>
-      </div>
 
       {/* Share link settings: applied when "Share Link" is pressed */}
-      <fieldset className="mb-8 min-w-0 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 print:hidden">
+      <fieldset className="min-w-0 border-t border-[var(--acade-border-subtle)] p-5 sm:p-6">
         <legend className="sr-only">Share link settings</legend>
         <div className="mb-4 flex items-center gap-2">
           <Link2 size={16} className="text-[var(--acade-primary)]" aria-hidden="true" />
-          <h2 className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)]" aria-hidden="true">
+          <h3 className="text-[0.9375rem] font-semibold text-[var(--acade-text)]" aria-hidden="true">
             Share link settings
-          </h2>
+          </h3>
         </div>
         <div className="grid min-w-0 gap-5 md:grid-cols-3">
           <div role="radiogroup" aria-labelledby="share-expiry-label" className="min-w-0">
-            <p id="share-expiry-label" className="mb-2 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.12em] text-[var(--acade-text-muted)]">
+            <p id="share-expiry-label" className="mb-2 text-sm font-medium text-[var(--acade-text-muted)]">
               Link expires after
             </p>
-            <div className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] p-1">
+            <div className="grid grid-cols-3 gap-1 rounded-[var(--radius-control)] border border-[var(--acade-border)] bg-[var(--acade-void)] p-1">
               {SHARE_EXPIRY_CHOICES.map((days) => (
                 <label
                   key={days}
                   className={cn(
-                    'flex min-h-11 cursor-pointer items-center justify-center rounded-md px-2 text-center text-[length:var(--text-xs)] font-medium transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]',
+                    'flex min-h-11 cursor-pointer items-center justify-center rounded-[10px] px-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]',
                     shareExpiryDays === days
                       ? 'bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
-                      : 'text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]',
+                      : 'text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]',
                   )}
                 >
                   <input
@@ -420,20 +432,38 @@ export default function TranscriptPage() {
           </div>
 
           <div className="min-w-0">
-            <p className="mb-2 text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.12em] text-[var(--acade-text-muted)]">
+            <p className="mb-2 text-sm font-medium text-[var(--acade-text-muted)]">
               What the link shows
             </p>
-            <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
+            <label
+              className={cn(
+                'flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-control)] border p-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]',
+                shareSummaryOnly
+                  ? 'border-[var(--acade-primary)]/40 bg-[var(--acade-primary-dim)]'
+                  : 'border-[var(--acade-border)] bg-[var(--acade-void)] hover:border-[var(--acade-control-border)]'
+              )}
+            >
               <input
                 type="checkbox"
                 checked={shareSummaryOnly}
                 onChange={(event) => setShareSummaryOnly(event.target.checked)}
                 aria-describedby="share-summary-hint"
-                className="mt-0.5 size-4 shrink-0 accent-[var(--acade-primary)]"
+                className="peer sr-only"
               />
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
+                  shareSummaryOnly
+                    ? 'border-[var(--acade-primary)] bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
+                    : 'border-[var(--acade-control-border)] bg-[var(--acade-surface)]'
+                )}
+              >
+                {shareSummaryOnly && <Check size={13} strokeWidth={3} />}
+              </span>
               <span className="min-w-0">
-                <span className="block text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">Summary only</span>
-                <span id="share-summary-hint" className="block text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
+                <span className="block text-sm font-semibold text-[var(--acade-text)]">Summary only</span>
+                <span id="share-summary-hint" className="block text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">
                   Semester GPAs and your CGPA, without course-by-course scores.
                 </span>
               </span>
@@ -441,7 +471,7 @@ export default function TranscriptPage() {
           </div>
 
           <div className="min-w-0">
-            <label htmlFor="share-pin" className="mb-2 block text-[length:var(--text-xs)] font-semibold uppercase tracking-[0.12em] text-[var(--acade-text-muted)]">
+            <label htmlFor="share-pin" className="mb-2 block text-sm font-medium text-[var(--acade-text-muted)]">
               PIN (optional)
             </label>
             {/* No `name`: the PIN is only ever sent in the share request body. */}
@@ -459,27 +489,28 @@ export default function TranscriptPage() {
               }}
               aria-invalid={sharePinError ? true : undefined}
               aria-describedby={sharePinError ? 'share-pin-note share-pin-error' : 'share-pin-note'}
-              className="h-11 w-full rounded-lg border border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 font-mono tracking-[0.3em] text-[var(--acade-text)] outline-none placeholder:font-sans placeholder:tracking-normal placeholder:text-[var(--acade-text-muted)] focus-visible:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30"
+              className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-4 text-base tracking-[0.3em] text-[var(--acade-text)] outline-none tabular-nums placeholder:tracking-normal placeholder:text-[var(--acade-text-faint)] focus-visible:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/25"
             />
             {sharePinError && (
-              <p id="share-pin-error" role="alert" className="mt-1.5 text-[length:var(--text-xs)] text-[var(--acade-danger)]">
+              <p id="share-pin-error" role="alert" className="mt-1.5 text-sm font-medium text-[var(--acade-danger)]">
                 {sharePinError}
               </p>
             )}
-            <p id="share-pin-note" className="mt-1.5 text-[length:var(--text-xs)] leading-5 text-[var(--acade-text-muted)]">
+            <p id="share-pin-note" className="mt-1.5 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">
               The person opening the link must type this PIN. Send it separately from the link. It can&apos;t be recovered or shown again, so note it down; if you forget it, delete the link and make a new one.
             </p>
           </div>
         </div>
       </fieldset>
+      </section>
 
       {/* Active Shared Links */}
       {sharedLinks.length > 0 && (
-        <div className="mb-8 print:hidden bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl p-4">
-          <h3 className="text-[length:var(--text-sm)] font-bold mb-3 flex items-center gap-2">
-            <Link2 size={16} className="text-[var(--acade-primary)]" />
+        <div className="mb-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 sm:p-6 print:hidden">
+          <h2 className="app-display mb-4 flex items-center gap-2 text-[1.125rem] font-semibold text-[var(--acade-text)]">
+            <Link2 size={18} className="text-[var(--acade-primary)]" aria-hidden="true" />
             Active Shared Transcripts
-          </h3>
+          </h2>
           <div className="space-y-2">
             {sharedLinks.map(link => {
               const url = `${window.location.origin}/share/${link.id}`;
@@ -487,16 +518,16 @@ export default function TranscriptPage() {
               const linkHasPin = Boolean(link.pinHash) || link.hasPin === true;
               const views = typeof link.viewCount === 'number' ? link.viewCount : null;
               return (
-                <div key={link.id} className="grid min-w-0 grid-cols-1 gap-3 rounded-lg border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div key={link.id} className="grid min-w-0 grid-cols-1 gap-3 rounded-2xl bg-[var(--acade-overlay)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4">
                   <div className="min-w-0 overflow-hidden">
-                    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
+                    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-[var(--acade-text-muted)]">
                       <span>Expires: {new Date(expiresAt).toLocaleDateString()}</span>
                       {link.shareLevel === 'summary' && (
-                        <span className="rounded-full border border-[var(--acade-border)] px-2 py-0.5 font-medium text-[var(--acade-text)]">Summary</span>
+                        <span className="rounded-full bg-[var(--acade-surface)] px-2 py-0.5 font-medium text-[var(--acade-text)]">Summary</span>
                       )}
                       {linkHasPin && (
-                        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--acade-primary)]/40 bg-[var(--acade-primary)]/10 px-2 py-0.5 font-medium text-[var(--acade-primary)]">
-                          <Lock size={10} aria-hidden="true" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--acade-primary-dim)] px-2 py-0.5 font-medium text-[var(--acade-primary)]">
+                          <Lock size={11} aria-hidden="true" />
                           <span>PIN</span>
                         </span>
                       )}
@@ -508,7 +539,7 @@ export default function TranscriptPage() {
                       rel="noreferrer"
                       aria-label="Open shared transcript"
                       title={url}
-                      className="block min-w-0 max-w-full truncate font-mono text-[length:var(--text-sm)] text-[var(--acade-text)] hover:text-[var(--acade-primary)]"
+                      className="block min-w-0 max-w-full truncate text-sm font-medium text-[var(--acade-text)] hover:text-[var(--acade-primary)]"
                     >
                       {url}
                     </a>
@@ -603,7 +634,7 @@ export default function TranscriptPage() {
       </Modal>
 
       {/* Transcript Paper Preview */}
-      <div className="transcript-paper bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden">
+      <div className="transcript-paper mx-auto min-h-[297mm] max-w-full overflow-hidden rounded-[var(--radius-surface)] bg-white p-4 text-black shadow-[0_30px_70px_-40px_rgba(23,19,58,0.45)] ring-1 ring-[var(--acade-border)] sm:p-8 md:p-12 lg:max-w-[210mm] print:m-0 print:max-w-full print:rounded-none print:p-0 print:shadow-none print:ring-0">
         
         {/* Header with Logo */}
         <div className="text-center mb-6 sm:mb-8 border-b-2 border-black pb-4">

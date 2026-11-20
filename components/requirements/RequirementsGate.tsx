@@ -254,8 +254,8 @@ function UpdatedTermsDialog({
         </p>
         <ul className="mt-5 divide-y divide-[var(--acade-border-subtle)] rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)]">
           {[
-            { href: '/terms', label: 'Terms of Use' },
-            { href: '/privacy', label: 'Privacy Policy' },
+            { href: '/terms', label: 'Terms of use' },
+            { href: '/privacy', label: 'Privacy notice' },
           ].map((doc) => (
             <li key={doc.href}>
               <Link

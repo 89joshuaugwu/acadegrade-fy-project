@@ -56,27 +56,36 @@ export function PWABanner() {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 50 }}
-          className="fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:bottom-8 md:w-96 z-50 bg-[var(--acade-card)] border border-[var(--acade-border)] shadow-xl rounded-xl p-4 flex items-start gap-4"
+          role="region"
+          aria-label="Install AcadeGrade"
+          // Solid surface (the old --acade-card/--acade-muted tokens did not exist, so it was see-through);
+          // on phones it sits above the bottom tab bar instead of covering it.
+          className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] left-4 right-4 md:left-auto md:right-8 md:bottom-8 md:w-96 z-50 bg-[var(--acade-surface)] border border-[var(--acade-border)] shadow-[var(--shadow-popover,0_18px_50px_-20px_rgba(14,11,43,0.45))] rounded-[20px] p-4 flex items-start gap-4"
         >
           <div className="flex-1">
             <h3 className="font-semibold text-[var(--acade-text)] flex items-center gap-2">
-              <Download size={18} className="text-[var(--grade-b)]" />
+              <Download size={18} className="text-[var(--acade-primary)]" aria-hidden="true" />
               Install AcadeGrade
             </h3>
-            <p className="text-sm text-[var(--acade-muted)] mt-1">
-              Add our app to your home screen for quick access and offline support!
+            <p className="text-sm text-[var(--acade-text-muted)] mt-1">
+              Add AcadeGrade to your home screen so it opens like an app.
             </p>
             <div className="flex gap-2 mt-3">
               <Button size="sm" onClick={handleInstallClick} className="flex-1">
-                Install App
+                Install
               </Button>
               <Button size="sm" variant="outline" onClick={handleDismiss} className="px-3">
                 Later
               </Button>
             </div>
           </div>
-          <button onClick={handleDismiss} className="text-[var(--acade-muted)] hover:text-white transition-colors">
-            <X size={18} />
+          <button
+            type="button"
+            onClick={handleDismiss}
+            aria-label="Close install suggestion"
+            className="grid size-9 place-items-center rounded-lg text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] transition-colors"
+          >
+            <X size={18} aria-hidden="true" />
           </button>
         </motion.div>
       )}

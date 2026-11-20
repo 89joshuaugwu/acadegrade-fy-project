@@ -24,7 +24,10 @@ describe('public search discovery', () => {
       'https://product.acadegrade.test/features',
       'https://product.acadegrade.test/features/result-scanner',
       'https://product.acadegrade.test/features/ai-insights',
+      'https://product.acadegrade.test/features/timetable',
+      'https://product.acadegrade.test/app',
       'https://product.acadegrade.test/calculator',
+      'https://product.acadegrade.test/tools',
       'https://product.acadegrade.test/tools/degree-class-checker',
       'https://product.acadegrade.test/tools/required-gpa',
       'https://product.acadegrade.test/tools/carry-over-impact',
@@ -55,6 +58,8 @@ describe('public search discovery', () => {
       '/register',
       '/forgot-password',
       '/c/',
+      '/maintenance',
+      '/offline',
     ]));
   });
 });

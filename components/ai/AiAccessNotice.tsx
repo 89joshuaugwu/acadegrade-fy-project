@@ -28,9 +28,17 @@ export function AiAccessNotice({ block, className }: { block: AiBlock; className
         className
       )}
     >
-      <Icon className={cn('size-5 shrink-0', paused ? 'text-[var(--acade-warning)]' : 'text-[var(--acade-primary)]')} aria-hidden="true" />
+      <span
+        aria-hidden="true"
+        className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-xl',
+          paused ? 'bg-[var(--acade-gold-dim)] text-[var(--acade-warning)]' : 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]'
+        )}
+      >
+        <Icon className="size-5" />
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-[var(--acade-text)]">{TITLES[block.kind]}</p>
+        <p className="app-display text-base font-semibold text-[var(--acade-text)]">{TITLES[block.kind]}</p>
         <p className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)] text-pretty">{block.message}</p>
       </div>
       {block.kind === 'requirements' && (

@@ -383,7 +383,11 @@ export async function POST(request: NextRequest) {
         gradeMode: existingUser.gradeMode === 'pi' ? 'pi' : 'cgpa',
         currentSession: profile.entrySession,
         entrySession: profile.entrySession,
-        graduationSession: graduationSession(profile.entrySession, profile.courseDuration),
+        // Direct entry (200 or 300 level) finishes in fewer years: the programme's years from the entry level.
+        graduationSession: graduationSession(
+          profile.entrySession,
+          Math.max(1, profile.courseDuration - ((profile.entryLevel ?? 100) / 100 - 1))
+        ),
         courseDuration: profile.courseDuration,
         // Stored only when set, so accounts that never use them keep the same shape.
         ...(profile.entryLevel && profile.entryLevel > 100 ? { entryLevel: profile.entryLevel } : {}),

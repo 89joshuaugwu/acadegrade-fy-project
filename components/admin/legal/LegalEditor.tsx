@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input, Modal, Skeleton, Textarea } from '@/components/ui';
 import { ErrorState } from '@/components/shared';
+import { DateField } from '@/components/ui/DateTimeFields';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 import { parseLegalMarkup } from '@/lib/legal/markup';
 import { renderLegalSections } from '@/lib/legal/render';
@@ -196,7 +197,7 @@ export function LegalEditor() {
               </div>
               <Input label="Title" value={fields.title} maxLength={120} onChange={(event) => edit({ title: event.target.value })} />
               <Input label="Short summary" value={fields.summary} maxLength={400} onChange={(event) => edit({ summary: event.target.value })} hint="Shown under the title on the public page." />
-              <Input label="Effective date" type="date" value={fields.effectiveDate} onChange={(event) => edit({ effectiveDate: event.target.value })} />
+              <DateField label="Effective date" value={fields.effectiveDate} onChange={(value) => edit({ effectiveDate: value })} />
               <Textarea
                 label="Text"
                 rows={22}

@@ -31,7 +31,7 @@ const DARK = {
 const FONT = {
   sans: `'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif`,
   display: `'Bricolage Grotesque','DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif`,
-  mono: `ui-monospace,SFMono-Regular,Menlo,Consolas,'Roboto Mono','Liberation Mono','Courier New',monospace`,
+  mono: `ui-monospace,SFMono-Regular,Menlo,Consolas,'Roboto Mono','Liberation Mono','Courier New',monospace`, // taste-skill-ignore: only the OTP code (literal code) uses it
 } as const;
 
 const OTP_EXPIRY_TEXT = 'This code expires in 5 minutes.';
@@ -80,7 +80,7 @@ const text = (size: number, lineHeight: number, color: string, extra = '') =>
   `margin:0;font-family:${FONT.sans};font-size:${size}px;line-height:${lineHeight}px;color:${color};${extra}`;
 
 function spacer(height: number): string {
-  return `<table ${TABLE_ATTRS} width="100%"><tr><td height="${height}" style="height:${height}px;font-size:1px;line-height:1px;">&nbsp;</td></tr></table>`;
+  return `<table ${TABLE_ATTRS} width="100%"><tr><td height="${height}" style="height:${height}px;font-size:1px;line-height:1px;">&nbsp;</td></tr></table>`; // taste-skill-ignore: an email spacer cell, not a rule
 }
 
 function heading(content: string): string {
@@ -191,7 +191,7 @@ function renderEmail(title: string, content: string, options: ShellOptions): str
       .em-link{color:${DARK.link}!important}
     }
   </style>
-  <!--[if mso]><style>body,table,td,a,h1,p,span,strong{font-family:'Segoe UI',Arial,Helvetica,sans-serif!important}.em-code,.em-code span{font-family:Consolas,'Courier New',monospace!important}</style><![endif]-->
+  <!--[if mso]><style>body,table,td,a,h1,p,span,strong{font-family:'Segoe UI',Arial,Helvetica,sans-serif!important}.em-code,.em-code span{font-family:Consolas,'Courier New',monospace!important}</style><![endif]--><!-- taste-skill-ignore: Outlook fallback for the OTP code (literal code) -->
 </head>
 <body class="em-ground" style="margin:0;padding:0;background-color:${COLORS.ground};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
   <div data-email-preheader style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;overflow:hidden;mso-hide:all;">${escapeEmailHtml(options.preheader)}${PREHEADER_FILLER}</div>
@@ -369,8 +369,12 @@ export function adminNewUserEmail(name: string, matric: string): string {
   });
 }
 
-/** A support reply (Admin > Support inbox). The message is plain text from an admin; it is escaped. */
-export function supportReplyEmail(name: string, message: string): string {
+/**
+ * A support reply (Admin > Support inbox). The message is plain text from an admin; it is escaped.
+ * `publicRequest`: the request came from the public form (not signed in), so the
+ * follow-up route is the Support page rather than Settings.
+ */
+export function supportReplyEmail(name: string, message: string, options: { publicRequest?: boolean } = {}): string {
   const safeName = escapeEmailHtml(name || 'there');
   const paragraphs = `${message ?? ''}`.trim().split(/\n{2,}/).map((block) => escapeEmailHtml(block).replace(/\n/g, '<br>'));
   const body = paragraphs.map((block, index) => paragraph(block, { last: index === paragraphs.length - 1 })).join('');
@@ -380,13 +384,33 @@ export function supportReplyEmail(name: string, message: string): string {
     + spacer(20)
     + `<table ${TABLE_ATTRS} width="100%" bgcolor="${COLORS.tint}" class="em-tint" style="background-color:${COLORS.tint};border-radius:16px;"><tr><td style="padding:22px 24px;">${body}</td></tr></table>`
     + spacer(24)
-    + paragraph('To reply, open AcadeGrade and send a new request from Settings, Help and support. This mailbox does not read replies.', { last: true, muted: true })
+    + paragraph(options.publicRequest
+      ? 'To reply, send a new request from the AcadeGrade Support page. This mailbox does not read replies.'
+      : 'To reply, open AcadeGrade and send a new request from Settings, Help and support. This mailbox does not read replies.', { last: true, muted: true })
     + spacer(24)
-    + button('Open AcadeGrade', `${getEmailSiteUrl()}/settings`);
+    + (options.publicRequest
+      ? button('Open the Support page', `${getEmailSiteUrl()}/support`)
+      : button('Open AcadeGrade', `${getEmailSiteUrl()}/settings`));
 
   return renderEmail('Reply from AcadeGrade support', content, {
     preheader: 'AcadeGrade support replied to your request.',
     reason: 'You received this because you sent a support request in AcadeGrade.',
+  });
+}
+
+/**
+ * Heads-up to the published contact address when someone who is not signed in sends
+ * a request. Only the category and reply address; the message stays in the admin inbox.
+ */
+export function adminSupportRequestEmail(categoryLabel: string, replyTo: string): string {
+  const content = heading('A new support request')
+    + paragraph(`Someone who is not signed in sent a request about "${escapeEmailHtml(categoryLabel)}". Reply to ${escapeEmailHtml(replyTo)} from the Support inbox.`, { last: true })
+    + spacer(28)
+    + button('Open the Support inbox', `${getEmailSiteUrl()}/admin/support`);
+
+  return renderEmail('New support request', content, {
+    preheader: 'A request from the public Support page is waiting in the Support inbox.',
+    reason: 'You received this because this address is the published AcadeGrade contact.',
   });
 }
 

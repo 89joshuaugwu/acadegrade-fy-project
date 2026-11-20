@@ -265,7 +265,7 @@ export function AdsEditor({ initialConfig, onSave, webUnavailable, android, adva
         </div>
       )}
 
-      <div className="sticky bottom-4 flex flex-wrap items-center justify-end gap-3 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3 shadow-[var(--shadow-popover)]">
+      <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-end gap-3 rounded-[16px] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 shadow-[var(--shadow-card)]">
         <p role="status" className="mr-auto text-sm text-[var(--acade-text-muted)]">
           {savedNote && <span className="mr-1 text-[var(--acade-text)]">{savedNote}</span>}
           {dirtyParts.length ? `Unsaved changes: ${dirtyParts.join(' and ')}` : 'All changes saved'}

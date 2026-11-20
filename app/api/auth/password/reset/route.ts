@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 
+const MIN_PASSWORD_LENGTH = 8;
+
 export async function POST(request: NextRequest) {
   try {
     const timer = apiTimer();
@@ -15,8 +17,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (newPassword.length < 6) {
-      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+    // 8, the same minimum as the reset page (owner decision 17 Nov 2026).
+    if (typeof newPassword !== 'string' || newPassword.length < MIN_PASSWORD_LENGTH) {
+      return NextResponse.json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -32,7 +35,8 @@ export async function POST(request: NextRequest) {
     
     // The code must match, and it must be either unused OR recently used (within 15 minutes)
     // Because the frontend might verify the code first, marking it used, and then submit the password.
-    if (data.code !== code) {
+    // A code-less marker (an email with no account) never matches.
+    if (typeof data.code !== 'string' || !data.code || data.code !== String(code)) {
       return NextResponse.json({ error: 'Invalid OTP code' }, { status: 400 });
     }
 

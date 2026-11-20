@@ -1,0 +1,98 @@
+/* Brand v2 tools lane (calculator, /tools hub, the four tools). Light-ground controls for the white tool panel;
+   the dark .ag-key in site.css stays for the home hero. Utilities do the rest. */
+
+@layer components {
+  /* Grade pills on a light ground (A to F, retake grade, target class). Native radios sit before each pill. */
+  .ag-pill {
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1;
+    color: var(--color-ag-ink);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(23, 19, 58, 0.12);
+    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+    cursor: pointer;
+    user-select: none;
+  }
+  .ag-pill:hover { box-shadow: inset 0 0 0 1.5px var(--color-ag-violet); color: var(--color-ag-violet); }
+  .ag-pill:active { transform: scale(0.94); }
+  input:checked + .ag-pill { background: var(--color-ag-night); color: #fff; box-shadow: none; }
+  input:checked + .ag-pill[data-tone='gold'] { background: var(--color-ag-gold); color: var(--color-ag-night); }
+  input:checked + .ag-pill[data-tone='mark'] { background: #C2361F; color: #fff; }
+  input:focus-visible + .ag-pill { outline: 2px solid var(--color-ag-violet); outline-offset: 2px; }
+  input:disabled + .ag-pill { cursor: default; opacity: 0.6; }
+
+  /* Wide pills: two-line target keys ("First Class / 4.50"). */
+  .ag-pill[data-shape='wide'] {
+    height: auto;
+    min-height: 3.25rem;
+    padding: 0.5rem 0.875rem;
+    border-radius: 0.875rem;
+    white-space: pre-line;
+    text-align: center;
+    line-height: 1.2;
+    font-size: 0.875rem;
+  }
+
+  /* Segmented control (calculator mode). */
+  .ag-seg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.75rem;
+    padding: 0 1rem;
+    border-radius: 0.625rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--color-ag-mist);
+    transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .ag-seg:hover { color: var(--color-ag-ink); }
+  input:checked + .ag-seg { background: #fff; color: var(--color-ag-ink); box-shadow: 0 1px 2px rgba(23, 19, 58, 0.08), 0 4px 14px -6px rgba(23, 19, 58, 0.25); }
+  input:focus-visible + .ag-seg { outline: 2px solid var(--color-ag-violet); outline-offset: 2px; }
+
+  /* Receipt rows: description, dotted leader, value. */
+  .ag-leader {
+    flex: 1 1 1.5rem;
+    min-width: 1.5rem;
+    margin: 0 0.625rem;
+    border-bottom: 2px dotted rgba(23, 19, 58, 0.18);
+    transform: translateY(-0.3rem);
+  }
+
+  /* An empty gauge shows the track only. */
+  .ag-gauge-empty .ag-gauge-dot,
+  .ag-gauge-empty .ag-gauge-progress { opacity: 0; }
+
+  /* The guest save dialog. Preflight zeroes margins; a modal dialog needs margin: auto to sit in the middle. */
+  .ag-dialog { margin: auto; padding: 0; border: 0; background: transparent; max-width: min(30rem, calc(100vw - 2rem)); width: 100%; overflow: visible; }
+  .ag-dialog::backdrop { background: rgba(14, 11, 43, 0.62); }
+  .ag-dialog[open] { animation: ag-dialog-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes ag-dialog-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+  /* Prior-record disclosure chevron. */
+  .ag-disclose summary { list-style: none; cursor: pointer; }
+  .ag-disclose summary::-webkit-details-marker { display: none; }
+  .ag-disclose .ag-disclose-icon { transition: transform 200ms ease; }
+  .ag-disclose[open] .ag-disclose-icon { transform: rotate(180deg); }
+
+  /* A row that has just been added draws attention once. */
+  @keyframes ag-row-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .ag-row-in { animation: ag-row-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-pill, .ag-seg, .ag-disclose .ag-disclose-icon { transition: none; }
+  .ag-dialog[open], .ag-row-in { animation: none; }
+}
+html[data-data-saver='on'] .ag-row-in,
+html[data-data-saver='on'] .ag-dialog[open] { animation: none; }

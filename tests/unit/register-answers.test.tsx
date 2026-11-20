@@ -25,7 +25,6 @@ vi.mock('@/lib/academic-catalog/client', async (importOriginal) => {
   return { ...actual, loadAcademicCatalog: async () => actual.DEFAULT_ACADEMIC_CATALOG };
 });
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: mocks.toastError } }));
-vi.mock('@/components/ui/MobileAppDownload', () => ({ MobileAppDownload: () => null }));
 
 import RegisterPage from '@/app/(public)/register/page';
 
@@ -94,7 +93,7 @@ describe('Registration answers', () => {
     const user = userEvent.setup();
     await renderAtRecordSetup();
 
-    await user.click(screen.getByRole('button', { name: /create account/i }));
+    await user.click(screen.getByRole('button', { name: /create my record/i }));
 
     expect(await screen.findByText('Choose your age group to continue')).toBeInTheDocument();
     expect(screen.getByText('Agree to the Terms and Privacy notice to continue')).toBeInTheDocument();
@@ -108,7 +107,7 @@ describe('Registration answers', () => {
     await user.click(screen.getByRole('radio', { name: "I'm 18 or older" }));
     await user.click(screen.getByRole('checkbox', { name: /allow acadegrade to send my results/i }));
     await user.click(screen.getByRole('checkbox', { name: /i agree to the terms and privacy notice/i }));
-    await user.click(screen.getByRole('button', { name: /create account/i }));
+    await user.click(screen.getByRole('button', { name: /create my record/i }));
 
     await waitFor(() => expect(finalizeBody(fetchMock)).not.toBeNull());
     const body = finalizeBody(fetchMock);
@@ -129,7 +128,7 @@ describe('Registration answers', () => {
     await user.click(screen.getByRole('radio', { name: "I'm under 18" }));
     expect(screen.getByText(/ai features and result scanning are for users 18 and over/i)).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: /i agree to the terms and privacy notice/i }));
-    await user.click(screen.getByRole('button', { name: /create account/i }));
+    await user.click(screen.getByRole('button', { name: /create my record/i }));
 
     await waitFor(() => expect(finalizeBody(fetchMock)).not.toBeNull());
     expect(finalizeBody(fetchMock).answers).toEqual({

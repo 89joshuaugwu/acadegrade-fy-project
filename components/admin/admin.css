@@ -1,0 +1,211 @@
+/*
+ * Admin console, brand v2 "Gold hour" (docs/brand-v2/DESIGN.md).
+ * Scoped to the admin: `.ag-admin` wraps the shell and `body.ag-admin-body` is set by the admin layout,
+ * so dialogs and sheets that portal to <body> get the same type. Colours always come from the app tokens
+ * (--acade-*); only the Night rail uses the brand constants.
+ */
+
+:is(.ag-admin, .ag-admin-body) {
+  --admin-rail-width: 264px;
+  /* The shared kit still names DM Sans; the console speaks Geist. */
+  --font-dm-sans: var(--font-geist-sans);
+}
+
+.ag-admin {
+  font-family: var(--font-ag-text);
+  color: var(--acade-text);
+}
+
+/* No all-caps labels anywhere in the console. */
+:is(.ag-admin, .ag-admin-body) .uppercase {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Numbers and ids are never monospace: Geist with tabular figures. Code blocks keep their mono. */
+:is(.ag-admin, .ag-admin-body) :is(.font-mono, [class*='font-geist-mono']):not(pre, code, pre *, code *) {
+  font-family: var(--font-ag-text);
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.ag-admin, .ag-admin-body) :is(.tabular-nums, .ag-num) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Display face for page titles and big numbers. */
+.ag-admin-display {
+  font-family: var(--font-ag-display);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ag-admin-h2 {
+  font-family: var(--font-ag-display);
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--acade-text);
+}
+
+/* Charts read in the UI face. */
+:is(.ag-admin, .ag-admin-body) .recharts-wrapper,
+:is(.ag-admin, .ag-admin-body) .recharts-text {
+  font-family: var(--font-ag-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Tables: bounded scroll, calm rows ---------- */
+
+.ag-table-frame {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--acade-border-subtle);
+  border-radius: 20px;
+  background: var(--acade-surface);
+  scrollbar-width: thin;
+  scrollbar-color: var(--acade-border) transparent;
+}
+
+.ag-table-frame:focus-visible {
+  outline: 2px solid var(--acade-primary);
+  outline-offset: 2px;
+}
+
+.ag-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ag-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--acade-overlay);
+  color: var(--acade-text-muted);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  text-align: left;
+  white-space: nowrap;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--acade-border-subtle);
+}
+
+.ag-table tbody td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--acade-border-subtle);
+  vertical-align: middle;
+  color: var(--acade-text);
+}
+
+.ag-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ag-table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.ag-table tbody tr:hover {
+  background: color-mix(in srgb, var(--acade-primary) 5%, transparent);
+}
+
+.ag-table :is(th, td).ag-right {
+  text-align: right;
+}
+
+/* ---------- Custom checkbox and radio (the real input is visually hidden) ---------- */
+
+.ag-check-box {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  border: 1.5px solid var(--acade-control-border);
+  border-radius: 6px;
+  background: var(--acade-deep);
+  color: var(--acade-on-primary);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.ag-check-box svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.ag-check-input:checked + .ag-check-box {
+  border-color: var(--acade-primary);
+  background: var(--acade-primary);
+}
+
+.ag-check-input:checked + .ag-check-box svg {
+  opacity: 1;
+  transform: none;
+}
+
+.ag-check-input[type='radio'] + .ag-check-box {
+  border-radius: 999px;
+}
+
+.ag-check-input[type='radio'] + .ag-check-box::after {
+  content: '';
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--acade-on-primary);
+  opacity: 0;
+  transform: scale(0.4);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.ag-check-input[type='radio']:checked + .ag-check-box::after {
+  opacity: 1;
+  transform: none;
+}
+
+.ag-check-input:focus-visible + .ag-check-box {
+  outline: 2px solid var(--acade-primary);
+  outline-offset: 2px;
+}
+
+.ag-check-input:disabled + .ag-check-box {
+  opacity: 0.5;
+}
+
+/* ---------- Night rail ---------- */
+
+.ag-admin-rail {
+  background:
+    radial-gradient(120% 60% at 0% 0%, rgba(107, 78, 255, 0.22), transparent 60%),
+    #0e0b2b;
+  color: #ffffff;
+}
+
+.ag-admin-rail-link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -0.75rem;
+  top: 50%;
+  width: 4px;
+  height: 1.25rem;
+  margin-top: -0.625rem;
+  border-radius: 0 4px 4px 0;
+  background: #ffb23f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-table tbody tr,
+  .ag-check-box,
+  .ag-check-box svg,
+  .ag-check-input[type='radio'] + .ag-check-box::after {
+    transition: none;
+  }
+}

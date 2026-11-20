@@ -4,7 +4,7 @@ import { unsubscribeAllTopics } from '@/lib/notifications/topics';
 import { CoinWallet, GRANT_MAX_AMOUNT } from '@/lib/ads/reward/coins';
 import { RewardError } from '@/lib/ads/reward/errors';
 import { getAiEligibility } from '@/lib/user/age';
-import { deleteUserData } from '@/lib/user/account-deletion';
+import { deleteUserData, queueAccountDeletion, settleAccountDeletion } from '@/lib/user/account-deletion';
 import { deviceTokens } from '@/lib/admin/user-devices';
 import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { readAgeStatusFrom, readAiConsent } from '@/lib/user/requirements';
@@ -233,13 +233,16 @@ export async function POST(request: Request) {
       const email = String(snapshot.data()?.email ?? '').trim().toLowerCase();
       const confirm = typeof body.confirmEmail === 'string' ? body.confirmEmail.trim().toLowerCase() : '';
       if (!email || confirm !== email) return badRequest("Type the student's email exactly to confirm.");
-      const report = await deleteUserData(adminDb, uid);
+      // Queued first: anything left behind is finished by the daily follow-up job.
+      const identity = await queueAccountDeletion(adminDb, uid, 'admin');
+      const report = await deleteUserData(adminDb, uid, { identity });
       await adminRtdb.ref(`notif_counts/${uid}`).remove().catch(() => {});
       try {
         await adminAuth.deleteUser(uid);
       } catch (error) {
         if ((error as { code?: string })?.code !== 'auth/user-not-found') throw error;
       }
+      await settleAccountDeletion(adminDb, uid, report).catch(() => console.warn('[admin users] could not settle the deletion queue entry'));
       await writeAdminAudit({
         ...actor, action: 'users.delete-account', target, summary: 'Deleted the account and its data',
         after: { deleted: report.deleted, truncated: report.truncated },

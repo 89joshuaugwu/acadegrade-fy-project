@@ -10,6 +10,7 @@ import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { RequirementsGate } from '@/components/requirements';
 import { useClearDraftsOnSignOut } from '@/lib/drafts';
+import { buildMaintenanceRedirect, buildSignInRedirect } from '@/lib/public/maintenance-redirect';
 
 export default function StudentLayout({
   children,
@@ -33,7 +34,8 @@ export default function StudentLayout({
       try {
         const doc = await getDocument<any>('config/settings');
         if (doc?.maintenanceMode) {
-          router.replace('/maintenance');
+          // Come back to this page when maintenance ends (?next= is checked by safeNextPath).
+          router.replace(buildMaintenanceRedirect(window.location.pathname + window.location.search));
           return; // Do not clear loading so it doesn't flash the UI
         }
       } catch (err) {
@@ -46,7 +48,7 @@ export default function StudentLayout({
 
   useEffect(() => {
     if (!loading && !user && !maintenanceCheckLoading) {
-      router.replace('/login');
+      router.replace(buildSignInRedirect(window.location.pathname + window.location.search + window.location.hash));
     }
   }, [user, loading, router, maintenanceCheckLoading]);
 

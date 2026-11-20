@@ -1,0 +1,44 @@
+/*
+ * Brand v2 auth and system helpers (docs/brand-v2/BUILD_V2.md). Utilities do
+ * the styling; this file holds only the two small motions Tailwind can't say
+ * well: the error shake and the step rise. Both answer the visitor and both
+ * stop under reduced motion and data saver.
+ */
+
+@keyframes ag-shake {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@keyframes ag-step-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html:not([data-data-saver='on']) .ag-shake[data-shake='true'] {
+    animation: ag-shake 400ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html:not([data-data-saver='on']) .ag-step[data-enter='true'] {
+    animation: ag-step-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+/* The six code cells sit under one transparent input. */
+.ag-code input::selection { background: transparent; }
+
+/*
+ * Fields show focus with their own violet ring; the code field shows it on
+ * its cells. Without these, the public layout's global gold outline would
+ * draw a second ring around them.
+ */
+.ag-site input.ag-input:focus-visible,
+.ag-site .ag-code input:focus-visible { outline: none; }
+
+/* A step heading takes focus only so screen readers hear the new step; it is not a control, so no ring. */
+.ag-site .ag-step h2[tabindex='-1']:focus,
+.ag-site .ag-step h2[tabindex='-1']:focus-visible { outline: none; }

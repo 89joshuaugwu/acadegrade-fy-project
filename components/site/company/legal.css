@@ -1,0 +1,182 @@
+/* Brand v2 legal reading layout (Privacy notice, Terms of use). The text comes from the admin's
+   markup through lib/legal/render.tsx as plain p / ul / table / strong / a, so it is styled here. */
+
+.ag-legal-text {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--color-ag-ink);
+}
+@media (min-width: 640px) {
+  .ag-legal-text { font-size: 1.125rem; }
+}
+
+.ag-legal-text > section { scroll-margin-top: 96px; }
+.ag-legal-text > section + section {
+  margin-top: 3.5rem;
+  padding-top: 3.5rem;
+  border-top: 1px solid rgb(23 19 58 / 0.08);
+}
+
+.ag-legal-text h2 {
+  font-family: var(--font-ag-display);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+  font-size: 1.625rem;
+  line-height: 1.15;
+  color: var(--color-ag-ink);
+  margin-bottom: 1.25rem;
+}
+@media (min-width: 640px) {
+  .ag-legal-text h2 { font-size: 2rem; }
+}
+
+.ag-legal-text p + p,
+.ag-legal-text p + ul,
+.ag-legal-text ul + p,
+.ag-legal-text table + p,
+.ag-legal-text ul + ul { margin-top: 1.1rem; }
+
+.ag-legal-text strong { font-weight: 650; }
+
+.ag-legal-text ul { list-style: none; padding: 0; }
+.ag-legal-text li { position: relative; padding-left: 1.6rem; }
+.ag-legal-text li + li { margin-top: 0.6rem; }
+.ag-legal-text li::before {
+  content: '';
+  position: absolute;
+  left: 0.3rem;
+  top: 0.68em;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--color-ag-violet);
+  transform: rotate(45deg);
+}
+
+/* Tables: a soft card on wide screens, stacked label/value pairs on phones. */
+.ag-legal-text table {
+  width: 100%;
+  margin-top: 1.5rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  border: 1px solid rgb(23 19 58 / 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.ag-legal-text th {
+  background: var(--color-ag-haze);
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.85rem 1.1rem;
+  color: var(--color-ag-ink);
+  vertical-align: bottom;
+}
+.ag-legal-text td {
+  padding: 0.95rem 1.1rem;
+  vertical-align: top;
+  border-top: 1px solid rgb(23 19 58 / 0.08);
+}
+.ag-legal-text td:first-child { font-weight: 600; }
+.ag-legal-text tbody tr:nth-child(even) td { background: #FBFAFF; }
+
+@media (max-width: 639.98px) {
+  .ag-legal-text table,
+  .ag-legal-text tbody,
+  .ag-legal-text tr,
+  .ag-legal-text td { display: block; width: 100%; }
+  .ag-legal-text table { border: 0; border-radius: 0; overflow: visible; }
+  .ag-legal-text thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .ag-legal-text tr {
+    border-radius: 18px;
+    background: var(--color-ag-haze);
+    padding: 1rem 1.1rem;
+  }
+  .ag-legal-text tr + tr { margin-top: 0.75rem; }
+  .ag-legal-text td,
+  .ag-legal-text tbody tr:nth-child(even) td { padding: 0; border: 0; background: none; }
+  .ag-legal-text td + td { margin-top: 0.75rem; }
+  .ag-legal-text td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--color-ag-mist);
+    margin-bottom: 0.15rem;
+  }
+}
+
+/* The page address is printed under the head; hidden on screen. */
+.ag-legal-address { display: none; }
+
+/* Print and save as PDF: the document alone, black on white, A4. */
+@media print {
+  @page { size: A4; margin: 18mm 16mm 20mm; }
+
+  html:has([data-legal-document]),
+  html:has([data-legal-document]) body,
+  html:has([data-legal-document]) .public-root { background: #fff !important; color: #000 !important; }
+
+  html:has([data-legal-document]) .pg-skip,
+  html:has([data-legal-document]) .public-root > header,
+  html:has([data-legal-document]) .public-root > footer,
+  html:has([data-legal-document]) .pg-cookie,
+  html:has([data-legal-document]) nextjs-portal,
+  [data-legal-document] [data-print='hide'] { display: none !important; }
+
+  [data-legal-document] * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+  }
+
+  [data-legal-document] .ag-legal-hero {
+    background: none !important;
+    color: #000 !important;
+    padding: 0 !important;
+  }
+  [data-legal-document] .ag-legal-hero::after { display: none; }
+  [data-legal-document] .ag-legal-hero * { color: #000 !important; }
+  [data-legal-document] .ag-legal-hero h1 { font-size: 20pt; }
+  [data-legal-document] .ag-legal-hero p,
+  [data-legal-document] .ag-legal-hero dl { font-size: 9pt; }
+  [data-legal-document] .ag-legal-address { display: block; font-size: 8.5pt; margin-top: 2mm; }
+
+  [data-legal-document] .ag-legal-body { padding: 8mm 0 0 !important; }
+  [data-legal-document] .ag-legal-grid { display: block !important; max-width: none !important; }
+  [data-legal-document] .ag-legal-text { max-width: none; font-size: 10.5pt; line-height: 1.45; color: #000; }
+  [data-legal-document] .ag-legal-text h2 { font-size: 12.5pt; margin-bottom: 2mm; break-after: avoid; }
+  [data-legal-document] .ag-legal-text > section + section { margin-top: 6mm; padding-top: 0; border-top: 0; }
+  [data-legal-document] .ag-legal-text p { orphans: 3; widows: 3; }
+  [data-legal-document] .ag-legal-text tr,
+  [data-legal-document] .ag-legal-text li { break-inside: avoid; }
+  [data-legal-document] .ag-legal-text thead { display: table-header-group; position: static; width: auto; height: auto; clip: auto; }
+  [data-legal-document] .ag-legal-text table { display: table; border: 1px solid #999; border-radius: 0; font-size: 9.5pt; }
+  [data-legal-document] .ag-legal-text tbody { display: table-row-group; }
+  [data-legal-document] .ag-legal-text tr { display: table-row; padding: 0; background: none; }
+  [data-legal-document] .ag-legal-text th,
+  [data-legal-document] .ag-legal-text td { display: table-cell; background: none !important; padding: 2mm 3mm; border-top: 1px solid #bbb; }
+  [data-legal-document] .ag-legal-text td::before { display: none; }
+  [data-legal-document] .ag-legal-text li::before { background: #000; }
+  [data-legal-document] .ag-legal-text a { color: #000; text-decoration: underline; }
+  [data-legal-document] .ag-legal-text a[href^='https']::after { content: ' (' attr(href) ')'; font-size: 0.85em; }
+
+  [data-legal-document] .ag-legal-end {
+    background: none !important;
+    padding: 4mm 0 0 !important;
+    border-top: 1px solid #000;
+    border-radius: 0 !important;
+    margin-top: 8mm !important;
+    font-size: 8.5pt;
+  }
+  [data-legal-document] .ag-legal-end * { color: #000 !important; }
+}

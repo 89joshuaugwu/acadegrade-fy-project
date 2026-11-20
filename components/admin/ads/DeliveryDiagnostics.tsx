@@ -80,7 +80,7 @@ function PlacementStatus({ diagnosis }: { diagnosis: Diagnosis }) {
   const headingId = `${diagnosis.key.replace(/[^a-z0-9]+/gi, '-')}-heading`;
   const outcome = OUTCOME[diagnosis.outcome];
   return (
-    <section aria-labelledby={headingId} className="min-w-0 space-y-4 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-5">
+    <section aria-labelledby={headingId} className="min-w-0 space-y-4 rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 id={headingId} className="text-base font-semibold text-[var(--acade-text)]">{diagnosis.label}</h3>
         <span className={cn('whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium', outcome.className)}>{outcome.label}</span>

@@ -1,7 +1,8 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
 const TICKET_VERSION = 1;
-export const REGISTRATION_TICKET_TTL_MS = 10 * 60 * 1000;
+/** How long the email check lasts after the code is accepted (owner decision 17 Nov 2026: 30 minutes). */
+export const REGISTRATION_TICKET_TTL_MS = 30 * 60 * 1000;
 
 export interface RegistrationTicketPayload {
   version: typeof TICKET_VERSION;

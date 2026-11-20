@@ -18,10 +18,18 @@ import { destroyCloudinaryAvatar, type CloudinaryDeleteResult } from '@/lib/clou
  * Found by profile:    _matric_numbers/{sha256(matricNormalized)}, otps/{email}_*,
  *                      _registration_tickets.email, the Cloudinary avatar
  */
+/** What a follow-up run needs once the profile document is gone. */
+export interface DeletionIdentity {
+  email?: string | null;
+  matric?: string | null;
+  avatarUrl?: string | null;
+}
 export interface DeletionOptions {
   cloudinary?: (url: string) => Promise<CloudinaryDeleteResult>;
   pageSize?: number;
   maxPages?: number;
+  /** Used when `users/{uid}` no longer exists (a follow-up run). The profile wins when present. */
+  identity?: DeletionIdentity;
 }
 export interface DeletionReport {
   deleted: Record<string, number>;
@@ -32,6 +40,14 @@ export interface DeletionReport {
 
 const BATCH_LIMIT = 450;
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
+
+function profileEmail(profile: Record<string, unknown>): string {
+  return typeof profile.email === 'string' ? profile.email.trim().toLowerCase() : '';
+}
+function profileMatric(profile: Record<string, unknown>): string {
+  if (typeof profile.matricNormalized === 'string') return profile.matricNormalized;
+  return typeof profile.matric === 'string' ? profile.matric.trim().toUpperCase().replace(/\s+/g, '') : '';
+}
 
 export async function deleteUserData(db: Firestore, uid: string, options: DeletionOptions = {}): Promise<DeletionReport> {
   const pageSize = Math.min(options.pageSize ?? 400, BATCH_LIMIT);
@@ -105,8 +121,7 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
   await deleteQuery('support_tickets', db.collection('support_tickets').where('uid', '==', uid));
 
   // Matric reservation: by hashed matric (only if still ours) and by uid.
-  const matric = typeof profile.matricNormalized === 'string' ? profile.matricNormalized
-    : typeof profile.matric === 'string' ? profile.matric.trim().toUpperCase().replace(/\s+/g, '') : '';
+  const matric = profileMatric(profile) || options.identity?.matric || '';
   if (matric) {
     const reservation = db.collection('_matric_numbers').doc(sha256(matric));
     if ((await reservation.get()).data()?.uid === uid) await deleteRefs('_matric_numbers', [reservation]);
@@ -114,17 +129,103 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
   await deleteQuery('_matric_numbers', db.collection('_matric_numbers').where('uid', '==', uid));
 
   // Email-keyed auth leftovers.
-  const email = typeof profile.email === 'string' ? profile.email.trim().toLowerCase() : '';
+  const email = profileEmail(profile) || options.identity?.email?.trim().toLowerCase() || '';
   if (email) {
     await deleteQuery('otps', prefixQuery('otps', `${email}_`));
     await deleteQuery('_registration_tickets', db.collection('_registration_tickets').where('email', '==', email));
   }
 
-  if (typeof profile.avatarUrl === 'string' && profile.avatarUrl) {
-    report.avatar = await (options.cloudinary ?? destroyCloudinaryAvatar)(profile.avatarUrl);
+  const avatarUrl = typeof profile.avatarUrl === 'string' && profile.avatarUrl ? profile.avatarUrl : options.identity?.avatarUrl || '';
+  if (avatarUrl) {
+    report.avatar = await (options.cloudinary ?? destroyCloudinaryAvatar)(avatarUrl);
   }
 
   // The profile last, so a failure above can be retried with the same token.
   await deleteDoc('users', userRef);
   return report;
+}
+
+/*
+ * Follow-up queue (owner decision A3, 17 Nov 2026). `deleteUserData` stops after a
+ * bounded amount of work, and a request can fail part-way. So every deletion is
+ * queued in `_account_deletion_queue/{sha256(uid)}` (server-only) BEFORE any data is
+ * deleted, and the entry is removed only once nothing is left. The daily cron job
+ * (`lib/cron/account-deletion.ts`) finishes whatever remains, including the Auth user,
+ * well inside the 21 days the account-deletion page promises.
+ *
+ * The entry holds the uid and the email/matric/avatar needed to find leftovers once
+ * the profile is gone; it is deleted as soon as the deletion completes.
+ */
+export const DELETION_QUEUE_COLLECTION = '_account_deletion_queue';
+export const DELETION_PROMISE_MS = 21 * 24 * 60 * 60 * 1000;
+/** A request in progress is left alone by the daily job for this long. */
+export const DELETION_GRACE_MS = 60 * 60 * 1000;
+
+export type DeletionSource = 'self' | 'admin';
+
+export function deletionQueueId(uid: string): string {
+  return sha256(uid);
+}
+
+/** Records the request (keeping the first request date) and returns the identity to delete with. */
+export async function queueAccountDeletion(db: Firestore, uid: string, source: DeletionSource, now = new Date()): Promise<Required<DeletionIdentity>> {
+  const profile = ((await db.collection('users').doc(uid).get()).data() ?? {}) as Record<string, unknown>;
+  const identity = {
+    email: profileEmail(profile) || null,
+    matric: profileMatric(profile) || null,
+    avatarUrl: typeof profile.avatarUrl === 'string' && profile.avatarUrl ? profile.avatarUrl : null,
+  };
+  const ref = db.collection(DELETION_QUEUE_COLLECTION).doc(deletionQueueId(uid));
+  const existing = (await ref.get()).data();
+  const requestedAt = existing?.requestedAt ?? now;
+  const requestedMs = requestedAt instanceof Date ? requestedAt.getTime()
+    : typeof requestedAt?.toMillis === 'function' ? requestedAt.toMillis() : now.getTime();
+  await ref.set({
+    uid,
+    // A re-queue after the profile is gone must not erase what is still needed.
+    email: identity.email ?? existing?.email ?? null,
+    matric: identity.matric ?? existing?.matric ?? null,
+    avatarUrl: identity.avatarUrl ?? existing?.avatarUrl ?? null,
+    source: existing?.source ?? source,
+    status: 'running',
+    attempts: typeof existing?.attempts === 'number' ? existing.attempts : 0,
+    truncated: Array.isArray(existing?.truncated) ? existing.truncated : [],
+    lastError: null,
+    requestedAt,
+    dueBy: new Date(requestedMs + DELETION_PROMISE_MS),
+    nextAttemptAt: new Date(now.getTime() + DELETION_GRACE_MS),
+    updatedAt: now,
+  });
+  return {
+    email: identity.email ?? existing?.email ?? null,
+    matric: identity.matric ?? existing?.matric ?? null,
+    avatarUrl: identity.avatarUrl ?? existing?.avatarUrl ?? null,
+  };
+}
+
+/**
+ * Call after Firestore, RTDB and Auth were handled. Removes the entry when nothing
+ * is left, otherwise marks it for the next daily run.
+ */
+export async function settleAccountDeletion(
+  db: Firestore,
+  uid: string,
+  report: DeletionReport,
+  now = new Date(),
+  attempts?: number,
+): Promise<'complete' | 'pending'> {
+  const ref = db.collection(DELETION_QUEUE_COLLECTION).doc(deletionQueueId(uid));
+  if (!report.truncated.length && report.avatar !== 'failed') {
+    await ref.delete();
+    return 'complete';
+  }
+  await ref.set({
+    status: 'pending',
+    truncated: report.truncated,
+    avatarFailed: report.avatar === 'failed',
+    nextAttemptAt: now,
+    updatedAt: now,
+    ...(attempts !== undefined ? { attempts } : {}),
+  }, { merge: true });
+  return 'pending';
 }

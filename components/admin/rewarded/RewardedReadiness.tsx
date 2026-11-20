@@ -67,16 +67,22 @@ export function RewardedReadiness({ mobileAds, coinsEnabled, className }: {
       : 'Readiness could not be checked because a setting did not load.';
 
   return (
-    <section aria-labelledby="rewarded-readiness-title" className={cn('rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 sm:p-5', className)}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id="rewarded-readiness-title" className="text-base font-semibold text-[var(--acade-text)]">Rewarded readiness</h2>
-        <p className={cn('text-sm font-medium', ready ? 'text-[var(--acade-success)]' : failed ? 'text-[var(--acade-text)]' : 'text-[var(--acade-text-muted)]')}>{headline}</p>
+    <section aria-labelledby="rewarded-readiness-title" className={cn('min-w-0 rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-5 sm:p-6', className)}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 id="rewarded-readiness-title" className="ag-admin-h2">Rewarded readiness</h2>
+        <p className={cn(
+          'inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium',
+          ready ? 'bg-[var(--acade-success-dim)] text-[var(--acade-success)]' : failed ? 'bg-[var(--acade-danger-dim)] text-[var(--acade-text)]' : 'bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]',
+        )}>
+          <span aria-hidden="true" className={cn('size-2 shrink-0 rounded-full', ready ? 'bg-[var(--acade-success)]' : failed ? 'bg-[var(--acade-danger)]' : 'bg-[var(--acade-text-faint)]')} />
+          {headline}
+        </p>
       </div>
-      <ul className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <ul className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {checks.map((check) => {
           const Icon = check.state === 'pass' ? Check : check.state === 'fail' ? X : CircleDashed;
           return (
-            <li key={check.id} className="flex min-h-11 items-center gap-2.5 rounded-xl bg-[var(--acade-overlay)] px-3 py-2 text-sm">
+            <li key={check.id} className="flex min-h-12 items-center gap-2.5 rounded-[14px] border border-[var(--acade-border-subtle)] bg-[color-mix(in_srgb,var(--acade-overlay)_55%,transparent)] px-3 py-2 text-sm">
               <Icon
                 aria-hidden="true"
                 className={cn('size-4 shrink-0', check.state === 'pass' ? 'text-[var(--acade-success)]' : check.state === 'fail' ? 'text-[var(--acade-danger)]' : 'text-[var(--acade-text-faint)]')}

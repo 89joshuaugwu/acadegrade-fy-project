@@ -6,10 +6,25 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { DEFAULT_ABOUT_CONTENT } from '@/lib/about/content';
 import { postAdminSettings, settingsCapabilities } from './api';
 import { SaveBar } from './SaveBar';
 
-export interface AppLinks { androidUrl: string; iosUrl: string }
+/** Form values. `androidSizeMb` is the field text ('' when unknown). */
+export interface AppLinks { androidUrl: string; iosUrl: string; androidSizeMb: string; playUrl: string }
+
+/** '' or a whole number from 1 to 500 (android-app.md). */
+export function androidSizeError(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return /^\d+$/.test(trimmed) && Number(trimmed) >= 1 && Number(trimmed) <= 500 ? null : 'Enter a whole number of MB from 1 to 500, or leave it blank.';
+}
+
+/** The settings value saved for the form (all four fields, so neither panel drifts). */
+export function appLinksValue(links: AppLinks) {
+  const size = links.androidSizeMb.trim();
+  return { androidUrl: links.androidUrl.trim(), iosUrl: links.iosUrl.trim(), androidSizeMb: size ? Number(size) : null, playUrl: links.playUrl.trim() };
+}
 
 interface AboutPageData {
   headline: string;
@@ -19,14 +34,9 @@ interface AboutPageData {
   contactEmail: string;
 }
 
-const DEFAULT_ABOUT: AboutPageData = {
-  headline: 'Academic progress, made clear.',
-  platformDescription: 'AcadeGrade helps university students understand results, monitor degree progress, and make better academic decisions.',
-  mission: 'Our mission is to give every student a dependable, understandable view of their academic journey.',
-  trustStatement: 'Your academic records remain under your control. Sharing is explicit, revocable, and designed around privacy.',
-  // No pre-filled address: saving the form must never publish an unconfirmed mailbox.
-  contactEmail: '',
-};
+// The same defaults the public About page shows (lib/about/content.ts). No pre-filled
+// address: saving the form must never publish an unconfirmed mailbox.
+const DEFAULT_ABOUT: AboutPageData = { ...DEFAULT_ABOUT_CONTENT, contactEmail: '' };
 
 const ABOUT_TEXTAREAS: Array<{ key: keyof AboutPageData; label: string }> = [
   { key: 'platformDescription', label: 'Platform description' },
@@ -81,7 +91,13 @@ export function PublicSiteSettings({ initialLinks, initialAdmobAppId, getToken }
   const editLinks = (patch: Partial<AppLinks>) => { setLinks((current) => ({ ...current, ...patch })); setError(null); setNote(null); };
   const editAbout = (patch: Partial<AboutPageData>) => { setAbout((current) => ({ ...current, draft: { ...current.draft, ...patch } })); setError(null); setNote(null); };
 
+  const sizeError = androidSizeError(links.androidSizeMb);
+
   async function save() {
+    if (linksDirty && sizeError) {
+      setError('Nothing was saved. Fix the APK size first.');
+      return;
+    }
     const trimmedAppId = appId.trim();
     if (appIdDirty && trimmedAppId && !ADMOB_APP_ID.test(trimmedAppId)) {
       setAppIdError(ADMOB_APP_ID_ERROR);
@@ -95,7 +111,7 @@ export function PublicSiteSettings({ initialLinks, initialAdmobAppId, getToken }
       if (linksDirty) {
         const submitted = links;
         try {
-          await postAdminSettings(token, { field: 'mobileAppLinks', value: submitted });
+          await postAdminSettings(token, { field: 'mobileAppLinks', value: appLinksValue(submitted) });
           setSavedLinks(submitted);
         } catch (cause) { failures.push(`Download links: ${cause instanceof Error ? cause.message : 'not saved'}`); }
       }
@@ -145,6 +161,23 @@ export function PublicSiteSettings({ initialLinks, initialAdmobAppId, getToken }
               onChange={(event) => editLinks({ iosUrl: event.target.value })}
               placeholder="Leave blank until iOS is available"
               hint={'Blank shows "iOS coming soon".'}
+            />
+            <Input
+              label="APK size (MB)"
+              inputMode="numeric"
+              value={links.androidSizeMb}
+              onChange={(event) => editLinks({ androidSizeMb: event.target.value })}
+              placeholder="For example 45"
+              hint="Shown beside the download button. Update it with each release; blank hides it."
+              error={sizeError ?? undefined}
+            />
+            <Input
+              label="Google Play link"
+              type="url"
+              value={links.playUrl}
+              onChange={(event) => editLinks({ playUrl: event.target.value })}
+              placeholder="https://play.google.com/store/apps/details?id=…"
+              hint="When set, the Android page shows the Google Play badge first. Leave blank until the app is listed."
             />
           </div>
           <p className="text-sm text-[var(--acade-text-muted)]">

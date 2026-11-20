@@ -264,9 +264,9 @@ export function PrivacyChoices({ uid, profile, getToken, readers }: PrivacyChoic
           <h3 className="text-sm font-semibold text-[var(--acade-text)]">Documents and your account</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)]">
             Read the{' '}
-            <Link href="/terms" className="font-semibold text-[var(--acade-primary)] underline underline-offset-4">Terms of Use</Link>
+            <Link href="/terms" className="font-semibold text-[var(--acade-primary)] underline underline-offset-4">Terms of use</Link>
             {' '}and{' '}
-            <Link href="/privacy" className="font-semibold text-[var(--acade-primary)] underline underline-offset-4">Privacy Policy</Link>.
+            <Link href="/privacy" className="font-semibold text-[var(--acade-primary)] underline underline-offset-4">Privacy notice</Link>.
             To delete your account and every record, use Delete in Security &amp; data below.
           </p>
         </div>

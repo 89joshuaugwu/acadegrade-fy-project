@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { useEffect, useRef, useMemo, useCallback, useId, useState } from 'react';
 import { motion, useSpring, useTransform, AnimatePresence } from 'motion/react';
 import CountUp from 'react-countup';
 import { cn } from '@/lib/utils/cn';
@@ -59,6 +59,20 @@ const METRIC_COLORS: Partial<Record<DegreeClassShortLabel, string>> = {
 };
 function getMetricColor(value: number): string {
   return METRIC_COLORS[resolveDegreeClassBand(value).shortLabel] ?? 'var(--grade-e)'; // Below — red
+}
+
+/** Fill tone of the class a value falls in: the arc ends in it and the dot wears it. */
+const CLASS_FILLS: Record<DegreeClassShortLabel, string> = {
+  '1st': 'var(--class-first-fill, #FFB23F)',
+  '2:1': 'var(--class-2upper-fill, #6B4EFF)',
+  '2:2': 'var(--class-2lower-fill, #12A4B0)',
+  '3rd': 'var(--class-third-fill, #F2762E)',
+  Pass: 'var(--class-pass-fill, #E0457B)',
+  Fail: 'var(--class-fail-fill, #E5484D)',
+};
+function getClassFill(value: number): { fill: string; first: boolean } {
+  const label = resolveDegreeClassBand(value).shortLabel;
+  return { fill: CLASS_FILLS[label], first: label === '1st' };
 }
 
 /** PI Info Tooltip Component */
@@ -158,6 +172,7 @@ function CGPAArc({
   const hasAnimated = useRef(false);
 
   const config = sizeConfig[size];
+  const gradientId = `${size}-${useId().replace(/:/g, '')}`;
   const cx = config.viewBox / 2;
   const cy = config.viewBox / 2;
 
@@ -302,6 +317,7 @@ function CGPAArc({
   const cgpaColor = getMetricColor(clampedCGPA);
   const piColor = getMetricColor(clampedPI);
   const primaryColor = primaryMetric === 'cgpa' ? cgpaColor : piColor;
+  const primaryFill = getClassFill(primaryMetric === 'cgpa' ? clampedCGPA : clampedPI);
   const secondaryColor = primaryMetric === 'cgpa' ? piColor : cgpaColor;
 
   return (
@@ -314,20 +330,28 @@ function CGPAArc({
           role="img"
         >
           <defs>
-            <linearGradient id={`primary-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={primaryColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={primaryColor} stopOpacity="1" />
+            {/* The logo arc: violet at the start, gold at the end (brand v2). */}
+            <linearGradient id={`primary-grad-${gradientId}`} x1="0.1" y1="1" x2="1" y2="0.35">
+              {primaryFill.first ? (
+                <>
+                  <stop offset="0%" stopColor="#5B4BFF" />
+                  <stop offset="45%" stopColor="#9C6BE8" />
+                  <stop offset="75%" stopColor="#F08C5A" />
+                  <stop offset="100%" stopColor="#FFB23F" />
+                </>
+              ) : (
+                <>
+                  <stop offset="0%" stopColor="#5B4BFF" />
+                  <stop offset={`${Math.max(20, Math.round(primaryFrac * 100))}%`} stopColor={primaryFill.fill} />
+                </>
+              )}
             </linearGradient>
-            <linearGradient id={`secondary-grad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={secondaryColor} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={secondaryColor} stopOpacity="1" />
+            <linearGradient id={`secondary-grad-${gradientId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={secondaryColor} stopOpacity="0.75" />
+              <stop offset="100%" stopColor={secondaryColor} stopOpacity="0.95" />
             </linearGradient>
-            <filter id={`arc-glow-${size}`}>
-              <feGaussianBlur stdDeviation="2" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
+            <filter id={`arc-glow-${gradientId}`} x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="4" />
             </filter>
           </defs>
 
@@ -335,25 +359,25 @@ function CGPAArc({
           <path
             d={fullArcPath}
             fill="none"
-            stroke="var(--acade-border)"
+            stroke="var(--acade-text)"
             strokeWidth={config.outerStroke}
             strokeLinecap="round"
-            opacity="0.3"
+            opacity="0.09"
           />
           <path
             d={fullInnerPath}
             fill="none"
-            stroke="var(--acade-border)"
+            stroke="var(--acade-text)"
             strokeWidth={config.innerStroke}
             strokeLinecap="round"
-            opacity="0.2"
+            opacity="0.06"
           />
 
           {/* Inner arc (Secondary Metric) */}
           <motion.path
             d={fullInnerPath}
             fill="none"
-            stroke={`url(#secondary-grad-${size})`}
+            stroke={`url(#secondary-grad-${gradientId})`}
             strokeWidth={config.innerStroke}
             strokeLinecap="round"
             strokeDasharray={innerCircumference}
@@ -365,23 +389,33 @@ function CGPAArc({
           <motion.path
             d={fullArcPath}
             fill="none"
-            stroke={`url(#primary-grad-${size})`}
+            stroke={`url(#primary-grad-${gradientId})`}
             strokeWidth={config.outerStroke}
             strokeLinecap="round"
             strokeDasharray={outerCircumference}
             style={{ strokeDashoffset: outerDashOffset }}
-            filter={size === 'lg' ? `url(#arc-glow-${size})` : undefined}
           />
 
-          {/* Glowing dot at arc tip */}
+          {/* Gold dot at the arc tip, like the logo */}
           {size !== 'sm' && (
-            <motion.circle
-              cx={dotX}
-              cy={dotY}
-              r={size === 'lg' ? 5 : 3.5}
-              fill="white"
-              className="animate-[pulse-glow_2s_ease-in-out_infinite]"
-            />
+            <>
+              <motion.circle
+                cx={dotX}
+                cy={dotY}
+                r={config.outerStroke * 1.1}
+                fill={primaryFill.fill}
+                opacity={0.4}
+                filter={`url(#arc-glow-${gradientId})`}
+              />
+              <motion.circle
+                cx={dotX}
+                cy={dotY}
+                r={config.outerStroke * 0.55}
+                fill={primaryFill.first ? '#FFD27F' : '#FFFFFF'}
+                stroke={primaryFill.fill}
+                strokeWidth={config.outerStroke * 0.28}
+              />
+            </>
           )}
         </svg>
 
@@ -390,12 +424,12 @@ function CGPAArc({
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span
               className={cn(
-                'font-[family-name:var(--font-geist-mono)] font-bold tabular-nums leading-none',
+                'app-num font-bold leading-none text-[var(--acade-text)]',
                 size === 'lg'
                   ? 'text-[length:var(--cgpa-num)]'
-                  : 'text-[length:var(--text-3xl)]'
+                  : 'text-[2.5rem]'
               )}
-              style={{ color: primaryColor }}
+              data-tone={primaryColor}
             >
               {animateOnMount && !shouldReduceMotion ? (
                 <CountUp
@@ -410,10 +444,10 @@ function CGPAArc({
             </span>
             <span
               className={cn(
-                'font-[family-name:var(--font-geist-mono)] text-[var(--acade-text-muted)] tabular-nums mt-1 inline-flex items-center',
+                'text-[var(--acade-text-muted)] tabular-nums mt-1.5 inline-flex items-center',
                 size === 'lg'
                   ? 'text-[length:var(--text-sm)]'
-                  : 'text-[length:var(--text-xs)]'
+                  : 'text-[0.8125rem]'
               )}
             >
               {primaryMetric === 'cgpa'

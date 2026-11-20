@@ -1,5 +1,5 @@
 import { ToolPage, toolMetadata } from '../ToolPage';
-import { DegreeClassCalculator } from '../calculators';
+import { DegreeClassCalculator } from '../DegreeClassCalculator';
 
 export const metadata = toolMetadata('degree-class-checker');
 

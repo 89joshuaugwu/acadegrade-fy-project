@@ -1,32 +1,42 @@
-import Link from 'next/link';
-import { WifiOff, ArrowLeft } from 'lucide-react';
-import { Logo } from '@/components/ui';
+import type { Metadata } from 'next';
+import { MinimalShell } from '@/components/public/shells/MinimalShell';
+import { InlineLink } from '@/components/site/auth/controls';
+import { NoticeCard, SystemStage } from '@/components/site/system/NoticeCard';
+import { OfflineWatch } from '@/components/site/system/OfflineWatch';
+import { NO_INDEX_METADATA } from '@/lib/seo/site';
 
+export const metadata: Metadata = {
+  title: "You're offline",
+  ...NO_INDEX_METADATA,
+};
+
+/**
+ * Shown by the old service worker when a navigation fails, or opened directly.
+ * Nothing here needs the network: inline mark and icons, no photographs, all
+ * copy in the HTML. It promises nothing that is not there: the web keeps no
+ * offline copy of the record.
+ */
 export default function OfflinePage() {
   return (
-    <div className="min-h-screen bg-[var(--acade-void)] flex flex-col items-center justify-center p-4 text-center">
-      <div className="mb-8">
-        <Logo size="lg" />
-      </div>
-      
-      <div className="size-20 bg-[var(--acade-primary)]/10 rounded-full flex items-center justify-center mb-6">
-        <WifiOff size={40} className="text-[var(--acade-primary)]" />
-      </div>
-      
-      <h1 className="text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">
-        You're offline
-      </h1>
-      
-      <p className="text-[length:var(--text-lg)] text-[var(--acade-text-muted)] max-w-md mb-8">
-        Please check your internet connection. Don't worry, your last saved data is still available on your device.
-      </p>
-
-      <Link 
-        href="/dashboard"
-        className="flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--acade-primary)] text-white font-bold hover:bg-[var(--acade-primary-glow)] transition-colors"
-      >
-        <ArrowLeft size={18} /> Return to Dashboard
-      </Link>
-    </div>
+    <MinimalShell>
+      <SystemStage>
+        <NoticeCard
+          width="wide"
+          icon="offline"
+          title="You're offline"
+          sentence="AcadeGrade needs a connection to load your record on the web. Your record is safe: it's saved on your account, not on this phone."
+          foot={
+            <>
+              <p className="text-ag-mist">On Android? The AcadeGrade app keeps your timetable and reminders working without data.</p>
+              <InlineLink href="/app" className="inline-flex min-h-11 items-center">
+                Get the Android app
+              </InlineLink>
+            </>
+          }
+        >
+          <OfflineWatch />
+        </NoticeCard>
+      </SystemStage>
+    </MinimalShell>
   );
 }

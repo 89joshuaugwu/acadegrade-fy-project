@@ -1,23 +1,14 @@
 import type { Metadata } from 'next';
-import { adminDb } from '@/lib/firebase/admin';
 import { shareMetadataFor } from './metadata';
 
 type Props = {
   params: Promise<{ shareId: string }>;
 };
 
+/** Generic for every link, so it needs no Firestore read and works when services are down. */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { shareId } = await params;
-  let data: unknown;
-
-  try {
-    const doc = await adminDb.collection('shared_transcripts').doc(shareId).get();
-    data = doc.exists ? doc.data() : undefined;
-  } catch {
-    // Fall back to the generic, name-free metadata.
-  }
-
-  return shareMetadataFor(data, Date.now(), shareId);
+  return shareMetadataFor(shareId);
 }
 
 export default function ShareTranscriptLayout({

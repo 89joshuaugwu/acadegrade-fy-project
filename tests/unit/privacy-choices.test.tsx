@@ -53,8 +53,8 @@ describe('PrivacyChoices', () => {
     setup({ ageStatus: 'adult' });
     const section = screen.getByRole('region', { name: 'Privacy & AI choices' });
     expect(section).toHaveAttribute('id', 'privacy');
-    expect(within(section).getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms');
-    expect(within(section).getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
+    expect(within(section).getByRole('link', { name: 'Terms of use' })).toHaveAttribute('href', '/terms');
+    expect(within(section).getByRole('link', { name: 'Privacy notice' })).toHaveAttribute('href', '/privacy');
     expect(within(section).getByRole('button', { name: 'Cookie choices' })).toBeInTheDocument();
   });
 

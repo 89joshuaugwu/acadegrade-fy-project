@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Archive, ChevronLeft, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { Button, Card, Input } from '@/components/ui';
@@ -15,6 +15,7 @@ import { ExtendPanel } from '@/components/timetable/ExtendPanel';
 import { EventForm } from '@/components/timetable/EventForm';
 import { WeekView } from '@/components/timetable/WeekView';
 import { PageNotice, ReminderOffsetsField, ValidityFields } from '@/components/timetable/fields';
+import { EVENT_TYPE_COLOUR, EVENT_TYPE_LABEL } from '@/components/timetable/status';
 import { downloadTimetableIcs } from '@/lib/timetable/download';
 import { describeOffsets, describeRecurrence, describeValidity, displayStatus, localNowISO, localToday } from '@/lib/timetable/format';
 import { TIMETABLE_LIMITS, validateTimetable, validateTimetableMeta } from '@/lib/timetable/validate';
@@ -29,6 +30,9 @@ export default function TimetableDetailPage() {
 }
 
 type Panel = null | 'details' | 'extend' | { event: TimetableEvent | 'new' };
+
+const backLink =
+  'inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] pr-2 text-sm font-semibold text-[var(--acade-primary)] hover:text-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]';
 
 function TimetableDetail() {
   const params = useParams<{ id: string }>();
@@ -46,7 +50,12 @@ function TimetableDetail() {
   );
 
   if (loading) {
-    return <div aria-busy="true" aria-label="Loading timetable" className="skeleton h-64 w-full max-w-4xl" />;
+    return (
+      <div aria-busy="true" aria-label="Loading timetable" className="grid w-full max-w-5xl gap-4">
+        <div className="skeleton h-24 rounded-[var(--radius-surface)]" />
+        <div className="skeleton h-64 rounded-[var(--radius-surface)]" />
+      </div>
+    );
   }
   if (error) {
     return (
@@ -58,10 +67,12 @@ function TimetableDetail() {
   }
   if (!timetable) {
     return (
-      <Card className="max-w-xl text-center">
-        <h1 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">Timetable not found</h1>
+      <Card className="max-w-xl text-center" padding="lg">
+        <h1 className="app-display text-[1.5rem] font-bold text-[var(--acade-text)]">Timetable not found</h1>
         <p className="mt-2 text-sm text-[var(--acade-text-muted)]">It may have been deleted.</p>
-        <Link href="/timetable" className="mt-4 inline-flex min-h-12 items-center text-sm font-semibold text-[var(--acade-primary)]">Back to timetables</Link>
+        <Link href="/timetable" className={`${backLink} mt-4`}>
+          <ChevronLeft className="size-4" aria-hidden="true" /> Back to timetables
+        </Link>
       </Card>
     );
   }
@@ -108,22 +119,22 @@ function TimetableDetail() {
 
   return (
     <div className="flex w-full min-w-0 max-w-5xl flex-col gap-6 pb-10">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <Link href="/timetable" className="inline-flex min-h-12 items-center gap-1 text-sm font-semibold text-[var(--acade-primary)]">
-            <ArrowLeft className="size-4" aria-hidden="true" /> Timetables
-          </Link>
-          <h1 className="break-words font-[family-name:var(--font-bricolage)] text-[clamp(1.5rem,3vw,2.1rem)] font-semibold leading-tight text-[var(--acade-text)]">
+      <header className="flex flex-col gap-1">
+        <Link href="/timetable" className={`${backLink} self-start`}>
+          <ChevronLeft className="size-4" aria-hidden="true" /> Timetables
+        </Link>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="app-display min-w-0 break-words text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
             {timetable.title}
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <StatusChip status={status} />
-            {timetable.builtWith === 'academind' && <BuiltWithTag />}
-            <span className="text-sm text-[var(--acade-text-muted)]">{describeValidity(timetable)}</span>
-          </div>
-          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Default reminders: {describeOffsets(timetable.reminders.defaultOffsetsMin)}</p>
+          <HelpButton entryId="student.timetable" source={studentHelpSource} className="shrink-0" />
         </div>
-        <HelpButton entryId="student.timetable" source={studentHelpSource} className="self-start" />
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <StatusChip status={status} />
+          {timetable.builtWith === 'academind' && <BuiltWithTag />}
+          <span className="text-sm tabular-nums text-[var(--acade-text-muted)]">{describeValidity(timetable)}</span>
+        </div>
+        <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Default reminders: {describeOffsets(timetable.reminders.defaultOffsetsMin)}</p>
       </header>
 
       <PageNotice>Reminders work in the Android app. Download the calendar file (.ics) to get alerts from your own calendar app.</PageNotice>
@@ -134,7 +145,7 @@ function TimetableDetail() {
         </PageNotice>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button onClick={() => setPanel({ event: 'new' })}>
           <Plus className="size-4" aria-hidden="true" /> Add event
         </Button>
@@ -155,7 +166,7 @@ function TimetableDetail() {
         </Button>
         {status !== 'archived' && (
           <Button variant="ghost" loading={saving} onClick={() => save({ status: 'archived' }, 'Timetable archived.')}>
-            Archive
+            <Archive className="size-4" aria-hidden="true" /> Archive
           </Button>
         )}
       </div>
@@ -183,39 +194,54 @@ function TimetableDetail() {
 
       <WeekView timetable={timetable} weekOf={weekOf} onWeekChange={setWeekOf} onOpenEvent={openEvent} />
 
-      <section aria-label="All events">
-        <h2 className="mb-3 font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">
-          All events ({timetable.events.length})
+      <section aria-label="All events" className="min-w-0">
+        <h2 className="app-display mb-3 text-[1.25rem] font-semibold text-[var(--acade-text)]">
+          All events <span className="app-num text-[var(--acade-text-faint)]">({timetable.events.length})</span>
         </h2>
         {sortedEvents.length === 0 ? (
           <Card className="text-center text-sm text-[var(--acade-text-muted)]">No events yet. Add the first one.</Card>
         ) : (
           <ul className="grid gap-2">
-            {sortedEvents.map((e) => (
-              <li key={e.id}>
-                <Card padding="sm" className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-[var(--acade-text)]">{e.title}</p>
-                    <p className="text-sm text-[var(--acade-text-muted)]">
-                      {describeRecurrence(e)}, {e.startTime} to {e.endTime}
-                      {e.venue ? `, ${e.venue}` : ''}
-                    </p>
-                    <p className="text-xs text-[var(--acade-text-faint)]">
-                      {e.type}{e.courseCode ? `, ${e.courseCode}` : ''}
-                      {Array.isArray(e.reminderOffsetsMin) ? `, ${describeOffsets(e.reminderOffsetsMin)}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" aria-label={`Edit ${e.title}`} onClick={() => setPanel({ event: e })}>
-                      <Pencil className="size-4" aria-hidden="true" />
-                    </Button>
-                    <Button size="sm" variant="ghost" aria-label={`Delete ${e.title}`} onClick={() => setDeleteId(e.id)}>
-                      <Trash2 className="size-4" aria-hidden="true" />
-                    </Button>
+            {sortedEvents.map((e) => {
+              const colour = EVENT_TYPE_COLOUR[e.type] ?? EVENT_TYPE_COLOUR.other;
+              return (
+                <li key={e.id} className="min-w-0 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)]">
+                  <div className="flex items-start gap-3 p-3 sm:gap-4 sm:p-4">
+                    <div className="w-14 shrink-0 border-r border-[var(--acade-border-subtle)] pr-3 sm:w-16">
+                      <p className="text-sm font-semibold tabular-nums text-[var(--acade-text)]">{e.startTime}</p>
+                      <p className="text-[0.8125rem] tabular-nums text-[var(--acade-text-faint)]">{e.endTime}</p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-[var(--acade-text)]">{e.title}</p>
+                      <p className="mt-0.5 text-sm text-[var(--acade-text-muted)]">
+                        {describeRecurrence(e)}, {e.startTime} to {e.endTime}
+                        {e.venue ? `, ${e.venue}` : ''}
+                      </p>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-[var(--acade-text-muted)]">
+                        <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: colour }}>
+                          <span aria-hidden="true" className="size-2 rounded-full" style={{ background: colour }} />
+                          {EVENT_TYPE_LABEL[e.type] ?? e.type}
+                        </span>
+                        {e.courseCode ? <span>{e.courseCode}</span> : null}
+                        {Array.isArray(e.reminderOffsetsMin) ? <span>{describeOffsets(e.reminderOffsetsMin)}</span> : null}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button size="sm" variant="ghost" className="w-11 px-0" aria-label={`Edit ${e.title}`} onClick={() => setPanel({ event: e })}>
+                        <Pencil className="size-4" aria-hidden="true" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="w-11 px-0" aria-label={`Delete ${e.title}`} onClick={() => setDeleteId(e.id)}>
+                        <Trash2 className="size-4" aria-hidden="true" />
+                      </Button>
+                    </div>
                   </div>
                   {deleteId === e.id && (
-                    <div role="alertdialog" aria-label={`Delete ${e.title}`} className="flex w-full flex-wrap items-center gap-2 text-sm text-[var(--acade-text)]">
-                      <span>Delete this event?</span>
+                    <div
+                      role="alertdialog"
+                      aria-label={`Delete ${e.title}`}
+                      className="flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-[var(--acade-danger)]/25 bg-[var(--acade-danger-dim)] px-4 py-3 text-sm font-medium text-[var(--acade-text)]"
+                    >
+                      <span className="mr-auto">Delete this event?</span>
                       <Button
                         size="sm"
                         variant="danger"
@@ -228,9 +254,9 @@ function TimetableDetail() {
                       <Button size="sm" variant="ghost" onClick={() => setDeleteId(null)}>Keep it</Button>
                     </div>
                   )}
-                </Card>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
@@ -273,9 +299,9 @@ function DetailsPanel({
   }
 
   return (
-    <Card>
-      <form onSubmit={submit} aria-label="Edit timetable details" className="grid gap-4" noValidate>
-        <h2 className="font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">Edit details</h2>
+    <Card className="border-[var(--acade-primary)]/30">
+      <form onSubmit={submit} aria-label="Edit timetable details" className="grid gap-5" noValidate>
+        <h2 className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">Edit details</h2>
         <Input label="Title" value={title} maxLength={60} error={errors.title} onChange={(e) => setTitle(e.target.value)} />
         <ValidityFields
           startsOn={startsOn}

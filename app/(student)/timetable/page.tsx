@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarDays, Plus, Sparkles } from 'lucide-react';
+import { BookOpen, CalendarDays, CalendarPlus, CalendarRange, LayoutList } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { Button, Card, LinkButton } from '@/components/ui';
@@ -12,17 +12,52 @@ import { useTimetables } from '@/hooks/useTimetables';
 import { TimetableGate, StatusChip, BuiltWithTag } from '@/components/timetable/TimetableGate';
 import { ExtendPanel } from '@/components/timetable/ExtendPanel';
 import { PageNotice } from '@/components/timetable/fields';
-import { describeValidity, displayStatus, localNowISO } from '@/lib/timetable/format';
+import { DAY_LONG, DAY_SHORT, WEEK_ORDER, describeValidity, displayStatus, localNowISO } from '@/lib/timetable/format';
 import { TIMETABLE_LIMITS, canAddTimetable } from '@/lib/timetable/validate';
-import type { Timetable } from '@/lib/timetable/engine';
+import type { Timetable, TimetableKind } from '@/lib/timetable/engine';
+import { cn } from '@/lib/utils/cn';
 
 const KIND_LABEL = { fixed: 'Fixed', reading: 'Reading', custom: 'Custom' } as const;
+
+const KIND_STYLE: Record<TimetableKind, { Icon: React.ElementType; tile: string }> = {
+  fixed: { Icon: CalendarDays, tile: 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]' },
+  reading: { Icon: BookOpen, tile: 'bg-[var(--acade-gold-dim)] text-[var(--acade-gold)]' },
+  custom: { Icon: LayoutList, tile: 'bg-[var(--acade-info-dim)] text-[var(--acade-info)]' },
+};
 
 export default function TimetablesPage() {
   return (
     <TimetableGate>
       <TimetablesList />
     </TimetableGate>
+  );
+}
+
+/** Which weekdays carry a weekly event, Monday first. */
+function weeklyDays(t: { events: Array<{ recurrence: { kind: string; days?: number[] } }> }) {
+  const set = new Set<number>();
+  for (const e of t.events) if (e.recurrence.kind === 'weekly') for (const d of e.recurrence.days ?? []) set.add(d);
+  return set;
+}
+
+function WeekStrip({ days }: { days: Set<number> }) {
+  if (days.size === 0) return null;
+  const on = WEEK_ORDER.filter((d) => days.has(d));
+  return (
+    <div className="mt-3 flex items-center gap-1" aria-label={`Weekly on ${on.map((d) => DAY_LONG[d]).join(', ')}`} role="img">
+      {WEEK_ORDER.map((d) => (
+        <span
+          key={d}
+          aria-hidden="true"
+          className={cn(
+            'flex h-7 w-9 items-center justify-center rounded-lg text-[0.75rem] font-semibold',
+            days.has(d) ? 'bg-[var(--acade-primary)] text-[var(--acade-on-primary)]' : 'bg-[var(--acade-overlay)] text-[var(--acade-text-faint)]',
+          )}
+        >
+          {DAY_SHORT[d].slice(0, 2)}
+        </span>
+      ))}
+    </div>
   );
 }
 
@@ -54,16 +89,22 @@ function TimetablesList() {
 
   return (
     <div className="flex w-full min-w-0 max-w-4xl flex-col gap-6 pb-10">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="max-w-2xl">
-          <h1 className="font-[family-name:var(--font-bricolage)] text-[clamp(1.6rem,3.4vw,2.25rem)] font-semibold leading-tight tracking-[-0.03em] text-[var(--acade-text)]">
-            Timetables
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)]">
-            Keep your lectures, exams and reading plans in one place.
-          </p>
+      <header className="min-w-0">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">Timetables</h1>
+          <HelpButton entryId="student.timetable" source={studentHelpSource} className="shrink-0" />
         </div>
-        <HelpButton entryId="student.timetable" source={studentHelpSource} className="self-start" />
+        <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+          Keep your lectures, exams and reading plans in one place.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-2">
+          <LinkButton href="/timetable/new" className={atLimit ? 'pointer-events-none opacity-50' : ''} aria-disabled={atLimit}>
+            <CalendarPlus className="size-4" aria-hidden="true" /> New timetable
+          </LinkButton>
+          <LinkButton href="/timetable/build" variant="outline" className={atLimit ? 'pointer-events-none opacity-50' : ''} aria-disabled={atLimit}>
+            <CalendarRange className="size-4" aria-hidden="true" /> Build with AcadeMind
+          </LinkButton>
+        </div>
       </header>
 
       <PageNotice>
@@ -71,14 +112,6 @@ function TimetablesList() {
         calendar file (.ics) and let your calendar app do the reminding.
       </PageNotice>
 
-      <div className="flex flex-wrap gap-2">
-        <LinkButton href="/timetable/new" className={atLimit ? 'pointer-events-none opacity-50' : ''} aria-disabled={atLimit}>
-          <Plus className="size-4" aria-hidden="true" /> New timetable
-        </LinkButton>
-        <LinkButton href="/timetable/build" variant="outline" className={atLimit ? 'pointer-events-none opacity-50' : ''} aria-disabled={atLimit}>
-          <Sparkles className="size-4" aria-hidden="true" /> Build with AcadeMind
-        </LinkButton>
-      </div>
       {atLimit && (
         <PageNotice tone="warning">
           You have {TIMETABLE_LIMITS.maxTimetables} timetables, which is the most you can keep. Delete an archived one to make room.
@@ -87,8 +120,8 @@ function TimetablesList() {
 
       {loading ? (
         <div aria-busy="true" aria-label="Loading timetables" className="grid gap-3">
-          <div className="skeleton h-28" />
-          <div className="skeleton h-28" />
+          <div className="skeleton h-36 rounded-[var(--radius-surface)]" />
+          <div className="skeleton h-36 rounded-[var(--radius-surface)]" />
         </div>
       ) : error ? (
         <Card role="alert" className="text-center">
@@ -98,95 +131,115 @@ function TimetablesList() {
           </Button>
         </Card>
       ) : rows.length === 0 ? (
-        <Card className="text-center">
-          <CalendarDays className="mx-auto size-8 text-[var(--acade-primary)]" aria-hidden="true" />
-          <h2 className="mt-3 font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">No timetables yet</h2>
-          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Create one for your lectures, or build a reading plan around them.</p>
+        <Card className="text-center" padding="lg">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
+            <CalendarDays className="size-6" aria-hidden="true" />
+          </span>
+          <h2 className="app-display mt-4 text-[1.25rem] font-semibold text-[var(--acade-text)]">No timetables yet</h2>
+          <p className="mx-auto mt-1.5 max-w-sm text-sm leading-6 text-[var(--acade-text-muted)]">Create one for your lectures, or build a reading plan around them.</p>
         </Card>
       ) : (
         <ul className="grid gap-3" aria-label="Your timetables">
-          {rows.map(({ t, status }) => (
-            <li key={t.id}>
-              <Card>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="truncate font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">{t.title}</h2>
-                    <p className="mt-1 text-sm text-[var(--acade-text-muted)]">
-                      {KIND_LABEL[t.kind]} timetable, {t.events.length} event{t.events.length === 1 ? '' : 's'}
-                    </p>
-                    <p className="text-sm text-[var(--acade-text-muted)]">{describeValidity(t)}</p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {t.builtWith === 'academind' && <BuiltWithTag />}
-                    <StatusChip status={status} />
-                  </div>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <LinkButton href={`/timetable/${t.id}`} variant="outline" size="sm" aria-label={`Open ${t.title}`}>
-                    Open
-                  </LinkButton>
-                  {(status === 'ending_soon' || status === 'expired') && (
-                    <Button size="sm" aria-label={`Extend ${t.title}`} onClick={() => setExtendingId(t.id)}>
-                      Extend
-                    </Button>
-                  )}
-                  {status !== 'archived' ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Archive ${t.title}`}
-                      loading={busyId === t.id}
-                      onClick={() => run(t.id, () => update(t.id, { status: 'archived' }), 'Timetable archived.')}
-                    >
-                      Archive
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        aria-label={`Restore ${t.title}`}
-                        loading={busyId === t.id}
-                        onClick={() => run(t.id, () => update(t.id, { status: 'active' }), 'Timetable restored.')}
+            {rows.map(({ t, status }) => {
+              const { Icon, tile } = KIND_STYLE[t.kind] ?? KIND_STYLE.custom;
+              const archived = status === 'archived';
+              return (
+                <li key={t.id}>
+                  <Card padding="none" className={cn('overflow-hidden', archived && 'bg-[var(--acade-void)]')}>
+                    <div className="flex gap-4 p-5 sm:p-6">
+                      <span className={cn('hidden size-11 shrink-0 items-center justify-center rounded-xl min-[420px]:flex', tile, archived && 'opacity-60')}>
+                        <Icon className="size-5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                          <h2 className="app-display min-w-0 max-w-full truncate text-[1.125rem] font-semibold leading-snug text-[var(--acade-text)] sm:text-[1.25rem]">
+                            {t.title}
+                          </h2>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {t.builtWith === 'academind' && <BuiltWithTag />}
+                            <StatusChip status={status} />
+                          </div>
+                        </div>
+                        <p className="mt-1 text-sm text-[var(--acade-text-muted)]">
+                          {KIND_LABEL[t.kind]} timetable, {t.events.length} event{t.events.length === 1 ? '' : 's'}
+                        </p>
+                        <p className="text-sm tabular-nums text-[var(--acade-text-muted)]">{describeValidity(t)}</p>
+                        <WeekStrip days={weeklyDays(t)} />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 border-t border-[var(--acade-border-subtle)] bg-[var(--acade-void)]/60 px-5 py-3 sm:px-6">
+                      <LinkButton href={`/timetable/${t.id}`} variant="outline" size="sm" aria-label={`Open ${t.title}`}>
+                        Open
+                      </LinkButton>
+                      {(status === 'ending_soon' || status === 'expired') && (
+                        <Button size="sm" aria-label={`Extend ${t.title}`} onClick={() => setExtendingId(t.id)}>
+                          Extend
+                        </Button>
+                      )}
+                      {status !== 'archived' ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Archive ${t.title}`}
+                          loading={busyId === t.id}
+                          onClick={() => run(t.id, () => update(t.id, { status: 'archived' }), 'Timetable archived.')}
+                        >
+                          Archive
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            aria-label={`Restore ${t.title}`}
+                            loading={busyId === t.id}
+                            onClick={() => run(t.id, () => update(t.id, { status: 'active' }), 'Timetable restored.')}
+                          >
+                            Restore
+                          </Button>
+                          <Button size="sm" variant="ghost" aria-label={`Delete ${t.title}`} onClick={() => setDeletingId(t.id)}>
+                            Delete
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    {deletingId === t.id && (
+                      <div
+                        role="alertdialog"
+                        aria-label={`Delete ${t.title}`}
+                        className="flex flex-wrap items-center gap-2 border-t border-[var(--acade-danger)]/25 bg-[var(--acade-danger-dim)] px-5 py-3 text-sm font-medium text-[var(--acade-text)] sm:px-6"
                       >
-                        Restore
-                      </Button>
-                      <Button size="sm" variant="ghost" aria-label={`Delete ${t.title}`} onClick={() => setDeletingId(t.id)}>
-                        Delete
-                      </Button>
-                    </>
-                  )}
-                </div>
-                {deletingId === t.id && (
-                  <div role="alertdialog" aria-label={`Delete ${t.title}`} className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--acade-text)]">
-                    <span>Delete this timetable for good?</span>
-                    <Button size="sm" variant="danger" onClick={() => run(t.id, async () => { await remove(t.id); setDeletingId(null); }, 'Timetable deleted.')}>
-                      Yes, delete
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setDeletingId(null)}>
-                      Keep it
-                    </Button>
-                  </div>
-                )}
-                {extendingId === t.id && (
-                  <div className="mt-4">
-                    <ExtendPanel
-                      timetable={t as Timetable}
-                      saving={busyId === t.id}
-                      onCancel={() => setExtendingId(null)}
-                      onConfirm={(validity) =>
-                        run(t.id, async () => { await update(t.id, { validity, status: 'active' }); setExtendingId(null); }, 'Timetable extended.')
-                      }
-                    />
-                  </div>
-                )}
-              </Card>
-            </li>
-          ))}
-        </ul>
+                        <span className="mr-auto">Delete this timetable for good?</span>
+                        <Button size="sm" variant="danger" onClick={() => run(t.id, async () => { await remove(t.id); setDeletingId(null); }, 'Timetable deleted.')}>
+                          Yes, delete
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDeletingId(null)}>
+                          Keep it
+                        </Button>
+                      </div>
+                    )}
+                    {extendingId === t.id && (
+                      <div className="border-t border-[var(--acade-border-subtle)] p-3 sm:p-4">
+                        <ExtendPanel
+                          timetable={t as Timetable}
+                          saving={busyId === t.id}
+                          onCancel={() => setExtendingId(null)}
+                          onConfirm={(validity) =>
+                            run(t.id, async () => { await update(t.id, { validity, status: 'active' }); setExtendingId(null); }, 'Timetable extended.')
+                          }
+                        />
+                      </div>
+                    )}
+                  </Card>
+                </li>
+              );
+            })}
+          </ul>
       )}
-      <p className="text-xs text-[var(--acade-text-faint)]">
-        <Link href="/dashboard" className="underline">Back to dashboard</Link>
+      <p className="text-sm text-[var(--acade-text-muted)]">
+        <Link href="/dashboard" className="font-medium underline decoration-[var(--acade-border)] underline-offset-4 hover:text-[var(--acade-primary)]">
+          Back to dashboard
+        </Link>
       </p>
     </div>
   );

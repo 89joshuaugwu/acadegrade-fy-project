@@ -1,11 +1,11 @@
 {
-  "name": "AcadeGrade v2",
+  "name": "AcadeGrade",
   "short_name": "AcadeGrade",
-  "description": "Premium Grade Calculator & Academic Advisor",
+  "description": "CGPA, GPA and degree class for Nigerian university students",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#07090F",
-  "theme_color": "#4F46E5",
+  "background_color": "#E7E5EE",
+  "theme_color": "#18153D",
   "orientation": "portrait",
   "icons": [
     {

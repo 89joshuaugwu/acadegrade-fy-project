@@ -225,5 +225,22 @@ service cloud.firestore {
     match /_academic_catalog_suggestions/{document=**} {
       allow read, write: if false;
     }
+
+    // Unfinished account deletions, finished by the daily cron job (lib/cron/account-deletion.ts).
+    // Holds the uid and email until the deletion completes; server-only.
+    match /_account_deletion_queue/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Student testimonials (Admin > Testimonials). Public pages read approved quotes
+    // through the server only (lib/testimonials/server.ts).
+    match /public_testimonials/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Student-count threshold for the public site; written by /api/admin/testimonials.
+    match /config/proof {
+      allow read, write: if false;
+    }
   }
 }

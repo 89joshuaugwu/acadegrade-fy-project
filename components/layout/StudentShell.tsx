@@ -14,7 +14,6 @@ import { getDocument } from '@/lib/firebase/firestore';
 import { onForegroundMessage, removeNotificationToken } from '@/lib/firebase/fcm';
 import { loadActiveAnnouncements } from '@/lib/announcements/client';
 import toast from 'react-hot-toast';
-import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { MobileDrawer } from './MobileDrawer';
 import { BottomTabBar } from './BottomTabBar';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -117,7 +116,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full min-w-0 max-w-full flex-col overflow-x-clip bg-[var(--acade-void)] lg:flex-row">
+    <div className="ag-app flex min-h-screen w-full min-w-0 max-w-full flex-col overflow-x-clip bg-[var(--acade-void)] font-[family-name:var(--font-geist-sans)] lg:flex-row">
       <a href="#main-content" className="sr-only z-[var(--z-tooltip)] rounded-lg bg-[var(--acade-primary)] px-4 py-3 text-[var(--acade-on-primary)] focus:not-sr-only focus:fixed focus:left-4 focus:top-4">
         Skip to content
       </a>
@@ -147,14 +146,14 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Desktop Sidebar */}
-      <aside aria-label="Student navigation" className="fixed inset-y-4 left-4 hidden w-[var(--student-rail-width)] flex-col overflow-y-auto rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-deep)] shadow-[0_20px_60px_rgba(2,6,23,0.18)] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
-        <div className="flex min-h-[var(--shell-header-height)] items-center border-b border-[var(--acade-border-subtle)] px-5">
+      <aside aria-label="Student navigation" className="app-night fixed inset-y-4 left-4 hidden w-[var(--student-rail-width)] flex-col overflow-y-auto rounded-[var(--radius-dialog)] border border-white/[0.06] lg:flex" style={{ zIndex: 'var(--z-sticky)' }}>
+        <div className="flex min-h-[72px] items-center px-5 pt-1">
           <Logo size="md" />
         </div>
 
-        <div className="px-3 py-5">
-          <p className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">
-            Your workspace
+        <div className="px-3 pb-5 pt-3">
+          <p className="mb-2 px-3 text-[0.8125rem] font-medium text-[var(--acade-text-faint)]">
+            Workspace
           </p>
           <nav id="tour-sidebar-nav" aria-label="Primary" className="flex flex-col gap-1">
             {studentNavigation.map((tab) => {
@@ -167,21 +166,21 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
                   id={`tour-desktop-nav-${tab.label.toLowerCase()}`}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    "group relative flex min-h-12 items-center gap-3 rounded-[var(--radius-control)] px-3.5 text-sm font-semibold transition-colors",
+                    "group relative flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3.5 text-[0.9375rem] font-medium transition-colors",
                     active
-                      ? "text-[var(--acade-primary)]"
-                      : "border border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
+                      ? "text-white"
+                      : "border border-transparent text-[var(--acade-text-muted)] hover:bg-white/[0.05] hover:text-white"
                   )}
                 >
                   {active && (
                     <motion.div
                       layoutId="sidebar-pill"
-                      className="absolute inset-0 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                      className="absolute inset-0 rounded-[var(--radius-control)] bg-white/[0.08] before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-ag-gold before:content-['']"
                       transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                     />
                   )}
                   <div className="relative z-10">
-                    <Icon size={20} className={active ? "text-[var(--acade-primary-glow)]" : ""} />
+                    <Icon size={19} className={active ? "text-ag-gold" : ""} />
                     {tab.label === 'Insights' && insightsStale && (
                       <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full border-2 border-[var(--acade-deep)] bg-[var(--acade-danger)]"></span>
@@ -195,32 +194,35 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
           </nav>
         </div>
 
-        <div className="mt-auto border-t border-[var(--acade-border-subtle)] p-3">
+        <div className="mt-auto p-3">
+          <p className="mb-2 px-3 text-[0.8125rem] font-medium text-[var(--acade-text-faint)]">
+            Account
+          </p>
           <div className="flex flex-col gap-1">
             <Link
               href="/notifications"
               id="tour-desktop-nav-notifications"
               aria-current={isRouteActive(pathname, '/notifications') ? 'page' : undefined}
               className={cn(
-                "group relative flex min-h-12 items-center justify-between rounded-[var(--radius-control)] px-3.5 text-sm font-semibold transition-colors",
+                "group relative flex min-h-11 items-center justify-between rounded-[var(--radius-control)] px-3.5 text-[0.9375rem] font-medium transition-colors",
                 isRouteActive(pathname, '/notifications')
-                  ? "text-[var(--acade-primary)]"
-                  : "text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] hover:bg-[var(--acade-overlay)] border border-transparent"
+                  ? "text-white"
+                  : "text-[var(--acade-text-muted)] hover:text-white hover:bg-white/[0.05] border border-transparent"
               )}
             >
               {isRouteActive(pathname, '/notifications') && (
                 <motion.div
                   layoutId="sidebar-pill"
-                  className="absolute inset-0 bg-[var(--acade-primary)]/10 border border-[var(--acade-primary)]/20 rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.05)]"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="absolute inset-0 rounded-[var(--radius-control)] bg-white/[0.08] before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-ag-gold before:content-['']"
+                  transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                 />
               )}
               <div className="relative z-10 flex items-center gap-3">
-                <Bell size={20} className={isRouteActive(pathname, '/notifications') ? "text-[var(--acade-primary-glow)]" : ""} />
+                <Bell size={19} className={isRouteActive(pathname, '/notifications') ? "text-ag-gold" : ""} />
                 Notifications
               </div>
               {unreadCount > 0 && (
-                <span className="relative z-10 min-w-5 rounded-full bg-[var(--acade-primary)] px-2 py-0.5 text-center text-xs font-bold text-[var(--acade-on-primary)]">
+                <span className="relative z-10 min-w-6 rounded-full bg-ag-gold px-2 py-0.5 text-center text-[0.8125rem] font-semibold tabular-nums text-ag-night">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -230,26 +232,26 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               id="tour-desktop-nav-settings"
               aria-current={isRouteActive(pathname, '/settings') ? 'page' : undefined}
               className={cn(
-                "group relative flex min-h-12 items-center gap-3 rounded-[var(--radius-control)] px-3.5 text-sm font-semibold transition-colors",
+                "group relative flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3.5 text-[0.9375rem] font-medium transition-colors",
                 isRouteActive(pathname, '/settings')
-                  ? "text-[var(--acade-primary)]"
-                  : "border border-transparent text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]"
+                  ? "text-white"
+                  : "border border-transparent text-[var(--acade-text-muted)] hover:bg-white/[0.05] hover:text-white"
               )}
             >
               {isRouteActive(pathname, '/settings') && (
                 <motion.div
                   layoutId="sidebar-pill"
-                  className="absolute inset-0 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/20 bg-[var(--acade-primary-dim)]"
+                  className="absolute inset-0 rounded-[var(--radius-control)] bg-white/[0.08] before:absolute before:inset-y-2.5 before:left-0 before:w-[3px] before:rounded-full before:bg-ag-gold before:content-['']"
                   transition={{ type: 'spring', stiffness: 420, damping: 30, mass: 0.8 }}
                 />
               )}
-              <Settings size={20} className={cn("relative z-10", isRouteActive(pathname, '/settings') ? "text-[var(--acade-primary-glow)]" : "")} />
+              <Settings size={19} className={cn("relative z-10", isRouteActive(pathname, '/settings') ? "text-ag-gold" : "")} />
               <span className="relative z-10">Settings</span>
             </Link>
           </div>
 
-          <div className="mt-3 flex items-center gap-2 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-2">
-            <div className="relative size-10 shrink-0 overflow-hidden rounded-full border border-[var(--acade-border)] bg-[var(--acade-overlay)]">
+          <div className="mt-3 flex items-center gap-2 rounded-2xl bg-white/[0.06] p-2">
+            <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-white/10 ring-2 ring-ag-gold/60">
               <img
                 src={profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`}
                 alt=""
@@ -260,7 +262,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-sm font-semibold text-[var(--acade-text)]">
                 {profile?.fullName || user?.displayName || 'Student'}
               </p>
-              <p className="truncate font-[family-name:var(--font-geist-mono)] text-[0.68rem] text-[var(--acade-text-muted)]">
+              <p className="truncate text-[0.8125rem] text-[var(--acade-text-muted)]">
                 {profile?.matric || user?.email || 'Academic profile'}
               </p>
             </div>
@@ -281,14 +283,12 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
       <main id="main-content" className="relative min-h-screen w-full min-w-0 max-w-full flex-1 overflow-x-clip pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:ml-[calc(var(--student-rail-width)+2rem)] lg:w-auto lg:max-w-none lg:pb-0">
         <header
           aria-label="Student page context"
-          className="sticky top-0 relative hidden min-h-[var(--shell-header-height)] items-center justify-between gap-4 bg-[var(--acade-void)]/94 px-8 backdrop-blur-md lg:flex"
+          className="sticky top-0 relative hidden min-h-[72px] items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)]/90 px-8 backdrop-blur-md lg:flex"
           style={{ zIndex: 'var(--z-sticky)' }}
         >
-          <div className="min-w-0">
-            <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-text-faint)]">
-              Student workspace
-            </p>
-            <p className="truncate font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="size-2 shrink-0 rounded-full bg-ag-gold" aria-hidden="true" />
+            <p className="truncate font-[family-name:var(--font-bricolage)] text-[1.125rem] font-semibold tracking-[-0.02em] text-[var(--acade-text)]">
               {routeMeta.title}
             </p>
           </div>
@@ -297,17 +297,6 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             <ThemeControl compact />
             <NotificationDropdown />
           </div>
-          {/* Animated shimmer line — replaces the static bottom border */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-px"
-            aria-hidden="true"
-            style={{
-              background:
-                'linear-gradient(90deg, transparent, var(--acade-primary), var(--acade-gold), var(--acade-primary), transparent)',
-              backgroundSize: '200% auto',
-              animation: 'dashboard-standing-shimmer 8s linear infinite',
-            }}
-          />
         </header>
 
         {announcement && (

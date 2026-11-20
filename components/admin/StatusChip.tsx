@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils/cn';
 export type StatusChipState = 'off' | 'configured' | 'verified' | 'problem';
 
 const STYLES: Record<StatusChipState, { label: string; className: string; Icon: typeof CircleCheck }> = {
-  off: { label: 'Off', className: 'border-[var(--acade-border)] text-[var(--acade-text-muted)]', Icon: CircleDashed },
-  configured: { label: 'Configured', className: 'border-[var(--acade-border)] text-[var(--acade-text)]', Icon: CircleDot },
-  verified: { label: 'Verified', className: 'border-[var(--acade-success)] text-[var(--acade-success)]', Icon: CircleCheck },
-  problem: { label: 'Problem', className: 'border-[var(--acade-danger)] text-[var(--acade-danger)]', Icon: CircleAlert },
+  off: { label: 'Off', className: 'border-[var(--acade-border-subtle)] bg-[var(--acade-overlay)] text-[var(--acade-text-muted)]', Icon: CircleDashed },
+  configured: { label: 'Configured', className: 'border-[color-mix(in_srgb,var(--acade-info)_30%,transparent)] bg-[var(--acade-info-dim)] text-[var(--acade-info)]', Icon: CircleDot },
+  verified: { label: 'Verified', className: 'border-[color-mix(in_srgb,var(--acade-success)_30%,transparent)] bg-[var(--acade-success-dim)] text-[var(--acade-success)]', Icon: CircleCheck },
+  problem: { label: 'Problem', className: 'border-[color-mix(in_srgb,var(--acade-danger)_30%,transparent)] bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]', Icon: CircleAlert },
 };
 
 /** The words a chip shows. Colour never carries the meaning alone. */
@@ -26,7 +26,7 @@ export function statusChipText(state: StatusChipState, detail?: string): string 
 export function StatusChip({ state, detail, className }: Readonly<{ state: StatusChipState; detail?: string; className?: string }>) {
   const { className: tone, Icon } = STYLES[state];
   return (
-    <span data-state={state} className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium leading-4', tone, className)}>
+    <span data-state={state} className={cn('inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.8125rem] font-medium leading-4', tone, className)}>
       <Icon className="size-3.5 shrink-0" aria-hidden="true" />
       <span className="min-w-0 break-words">{statusChipText(state, detail)}</span>
     </span>

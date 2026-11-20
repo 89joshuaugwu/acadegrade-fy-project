@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Bricolage_Grotesque, DM_Sans } from 'next/font/google';
-import { GeistMono } from 'geist/font/mono';
+import { Bricolage_Grotesque, DM_Sans, Hanken_Grotesk } from 'next/font/google';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono'; // taste-skill-ignore: student and admin pages keep their mono until they are migrated
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/components/layout/AuthProvider';
@@ -31,10 +32,20 @@ const dmSans = DM_Sans({
   weight: ['400', '500', '600', '700'],
 });
 
+// The public site's one family (docs/public-redesign/01 §5): two weights, Latin, self-hosted.
+const hanken = Hanken_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-hanken',
+  display: 'swap',
+  weight: ['400', '500'],
+});
+
+const DEFAULT_TITLE = 'AcadeGrade: CGPA, GPA and degree class for Nigerian universities';
+
 export const metadata: Metadata = {
   metadataBase: new URL(resolveSiteUrl()),
   title: {
-    default: 'AcadeGrade — Understand your academic progress',
+    default: DEFAULT_TITLE,
     template: '%s | AcadeGrade',
   },
   description: SITE_DESCRIPTION,
@@ -54,6 +65,11 @@ export const metadata: Metadata = {
   publisher: SITE_NAME,
   category: 'Education',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: 'default',
+  },
   verification: {
     google: 'F3WW92_FNlQviz77sKTnTL-EnbLbWuh0P1snZC5e72o',
   },
@@ -68,7 +84,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_NG',
     url: '/',
-    title: 'AcadeGrade — Understand your academic progress',
+    title: DEFAULT_TITLE,
     description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
     images: [
@@ -76,13 +92,13 @@ export const metadata: Metadata = {
         url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'AcadeGrade academic progress workspace',
+        alt: 'AcadeGrade: a result slip with the brand stripe',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AcadeGrade — Understand your academic progress',
+    title: DEFAULT_TITLE,
     description: SITE_DESCRIPTION,
     images: ['/opengraph-image'],
   },
@@ -121,7 +137,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${bricolage.variable} ${dmSans.variable} ${GeistMono.variable}`}
+      className={`${bricolage.variable} ${dmSans.variable} ${hanken.variable} ${GeistSans.variable} ${GeistMono.variable}`} // taste-skill-ignore: GeistMono stays for student pages
     >
       <body className="font-body antialiased">
         <script

@@ -347,8 +347,12 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="size-12 border-4 border-[var(--acade-primary)] border-t-transparent rounded-full animate-spin" />
+      <div aria-busy="true" aria-label="Loading semester" className="mx-auto flex max-w-6xl flex-col gap-6 pb-10">
+        <div className="flex flex-col gap-3">
+          <div className="skeleton h-6 w-28 rounded-full" />
+          <div className="skeleton h-10 w-72 max-w-full" />
+        </div>
+        <div className="skeleton h-[26rem] rounded-[var(--radius-surface)]" />
       </div>
     );
   }
@@ -358,10 +362,12 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
       <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-4 py-10">
         <div
           role="alert"
-          className="w-full rounded-[var(--radius-surface)] border border-[var(--acade-danger)]/35 bg-[var(--acade-danger-dim)] px-6 py-10 text-center md:px-10"
+          className="w-full rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] px-6 py-10 text-center md:px-10"
         >
-          <AlertCircle className="mx-auto mb-4 size-7 text-[var(--acade-danger)]" aria-hidden="true" />
-          <h1 className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
+          <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]">
+            <AlertCircle className="size-6" aria-hidden="true" />
+          </span>
+          <h1 className="app-display text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)]">
             Semester could not be loaded
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
@@ -385,21 +391,21 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   if (!semester) return null;
 
   return (
-    <div className="max-w-5xl mx-auto pb-10 relative">
+    <div className="relative mx-auto w-full min-w-0 max-w-6xl pb-10">
       <ResultsTour />
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => router.push('/results')} className="px-2" aria-label="Back to results">
-            <ArrowLeft size={20} />
+      <header className="mb-6 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+          <Button variant="ghost" size="sm" onClick={() => router.push('/results')} className="-ml-2 shrink-0 px-2.5" aria-label="Back to results">
+            <ArrowLeft size={20} aria-hidden="true" />
           </Button>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
+          <div className="min-w-0 pt-0.5">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
               <Badge variant="status">{semester.level}L S{semester.semester}</Badge>
-              <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-[family-name:var(--font-geist-mono)]">
+              <span className="text-sm tabular-nums text-[var(--acade-text-muted)]">
                 {semester.session}
               </span>
             </div>
-            <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
+            <h1 className="app-display mt-2 text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
               {semester.label}
             </h1>
           </div>
@@ -408,32 +414,33 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
         <div
           role="toolbar"
           aria-label="Semester actions"
-          className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:items-center"
+          className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:flex-wrap md:items-center md:justify-end"
         >
           <HelpButton entryId={STUDENT_HELP.semester} source={studentHelpSource} className="col-span-2 justify-center md:col-span-1" />
           <Button id="tour-import-code" variant="outline" size="sm" onClick={() => setIsImportCodeOpen(true)} className="w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
-            <Download size={16} className="mr-2" /> Import Code
+            <Download size={16} aria-hidden="true" /> Import Code
           </Button>
           <Button id="tour-share-code" variant="outline" size="sm" onClick={handleGenerateShareCode} className="w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('share_code')} title={isFeatureDisabled('share_code') ? "Temporarily disabled for maintenance" : ""}>
-            <Share2 size={16} className="mr-2" /> Share
+            <Share2 size={16} aria-hidden="true" /> Share
           </Button>
           <Button id="tour-import-slip" variant="primary" size="sm" onClick={() => setIsImportSlipOpen(true)} className="col-span-2 w-full whitespace-nowrap md:w-auto" disabled={isFeatureDisabled('extract_slip')} title={isFeatureDisabled('extract_slip') ? "Temporarily disabled for maintenance" : ""}>
-            <FileText size={16} className="mr-2" /> Import Result Slip
+            <FileText size={16} aria-hidden="true" /> Import Result Slip
           </Button>
         </div>
-      </div>
+      </header>
 
       {fromCalculator && (
-        <p role="status" className="mb-4 rounded-[var(--radius-control)] border border-[var(--acade-primary)]/30 bg-[var(--acade-primary-dim)] px-4 py-3 text-sm leading-6 text-[var(--acade-text)]">
-          These courses came from the calculator and are not saved yet. Add each course title, enter CA and exam scores where a grade is marked with a question mark, then save the semester.
+        <p role="status" className="mb-5 flex items-start gap-3 rounded-2xl border border-[var(--acade-primary)]/25 bg-[var(--acade-primary-dim)] px-4 py-3.5 text-sm leading-6 text-[var(--acade-text)]">
+          <CheckCircle2 className="mt-0.5 size-[18px] shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+          <span>These courses came from the calculator and are not saved yet. Add each course title, enter CA and exam scores where a grade is marked with a question mark, then save the semester.</span>
         </p>
       )}
 
       <motion.div
         id="tour-grade-table"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-2xl overflow-hidden p-4 md:p-6"
+        className="min-w-0 overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-3 sm:p-5 lg:p-6"
       >
         <GradeTable
           initialCourses={initialCourses}
@@ -482,7 +489,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
             Scan your result slip with your phone camera, or choose an existing image or PDF. AcadeGrade will extract the courses and scores for you to review.
           </p>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="relative flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-[var(--acade-primary)]/35 bg-[var(--acade-primary-dim)] p-5 text-center transition-colors hover:border-[var(--acade-primary)] hover:bg-[var(--acade-overlay)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+            <label className="relative flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--acade-primary)]/30 bg-[var(--acade-primary-dim)] p-5 text-center transition-colors hover:border-[var(--acade-primary)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
               <input
                 type="file"
                 accept="image/*"
@@ -492,16 +499,16 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
                 onChange={handleFileUpload}
                 disabled={uploadingSlip}
               />
-              <span className="flex size-11 items-center justify-center rounded-full bg-[var(--acade-primary)] text-white shadow-sm">
+              <span className="flex size-12 items-center justify-center rounded-full bg-[var(--acade-primary)] text-[var(--acade-on-primary)]">
                 <Camera size={22} aria-hidden="true" />
               </span>
               <span>
-                <span className="block text-sm font-bold text-[var(--acade-text)]">Scan with camera</span>
-                <span className="mt-1 block text-xs leading-5 text-[var(--acade-text-muted)]">Open your rear camera and take a clear photo</span>
+                <span className="block text-[0.9375rem] font-semibold text-[var(--acade-text)]">Scan with camera</span>
+                <span className="mt-1 block text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">Open your rear camera and take a clear photo</span>
               </span>
             </label>
 
-            <label className="relative flex min-h-36 cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 text-center transition-colors hover:border-[var(--acade-primary)] hover:bg-[var(--acade-overlay)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+            <label className="relative flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[var(--acade-control-border)]/60 bg-[var(--acade-surface)] p-5 text-center transition-colors hover:border-[var(--acade-primary)] hover:bg-[var(--acade-void)] focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
               <input
                 type="file"
                 accept="image/*,application/pdf"
@@ -510,12 +517,12 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
                 onChange={handleFileUpload}
                 disabled={uploadingSlip}
               />
-              <span className="flex size-11 items-center justify-center rounded-full border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-text-muted)]">
+              <span className="flex size-12 items-center justify-center rounded-full bg-[var(--acade-overlay)] text-[var(--acade-primary)]">
                 <Upload size={21} aria-hidden="true" />
               </span>
               <span>
-                <span className="block text-sm font-bold text-[var(--acade-text)]">Choose image or PDF</span>
-                <span className="mt-1 block text-xs leading-5 text-[var(--acade-text-muted)]">Select an existing JPG, PNG, or PDF file</span>
+                <span className="block text-[0.9375rem] font-semibold text-[var(--acade-text)]">Choose image or PDF</span>
+                <span className="mt-1 block text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">Select an existing JPG, PNG, or PDF file</span>
               </span>
             </label>
           </div>
@@ -537,32 +544,33 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
           <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
             Share this code with your classmates so they can instantly import your course list (scores are kept private).
           </p>
-          <div className="flex items-center gap-3 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)]">
-            <div className="flex-1 text-center text-3xl font-bold tracking-[0.25em] text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
+          <div className="flex items-center gap-3 rounded-2xl bg-[var(--acade-void)] p-4">
+            <div className="app-num min-w-0 flex-1 text-center text-[2rem] font-bold tracking-[0.22em] text-[var(--acade-text)]">
               {generatedCode}
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
-              className="p-2 h-auto"
+              className="shrink-0 px-3"
+              aria-label="Copy share code"
               onClick={() => {
                 navigator.clipboard.writeText(generatedCode);
                 toast.success('Code copied!');
               }}
             >
-              <Copy size={18} />
+              <Copy size={18} aria-hidden="true" />
             </Button>
           </div>
           <div className="flex flex-col gap-2">
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">Or send this link. It shows only course codes, titles and units.</p>
-            <div className="flex items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
-              <span className="min-w-0 flex-1 truncate text-sm font-[family-name:var(--font-geist-mono)] text-[var(--acade-text)]">
+            <p className="text-[0.8125rem] text-[var(--acade-text-muted)]">Or send this link. It shows only course codes, titles and units.</p>
+            <div className="flex items-center gap-3 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-2 pl-4">
+              <span className="min-w-0 flex-1 truncate text-sm text-[var(--acade-text)]">
                 {typeof window === 'undefined' ? '' : `${window.location.origin}${shareCodeLinkPath(generatedCode)}`}
               </span>
               <Button
                 variant="outline"
                 size="sm"
-                className="p-2 h-auto"
+                className="shrink-0 px-3"
                 aria-label="Copy share link"
                 onClick={() => {
                   navigator.clipboard.writeText(`${window.location.origin}${shareCodeLinkPath(generatedCode)}`);
@@ -587,7 +595,8 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
             value={shareCodeInput}
             onChange={(e) => setShareCodeInput(e.target.value.toUpperCase())}
             maxLength={6}
-            className="text-center text-2xl tracking-[0.2em] uppercase font-[family-name:var(--font-geist-mono)] font-bold"
+            autoComplete="off"
+            className="app-num text-center text-2xl font-bold uppercase tracking-[0.2em]"
           />
           <Button 
             variant="primary" 

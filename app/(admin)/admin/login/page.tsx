@@ -8,6 +8,7 @@ import { signInWithEmail } from '@/lib/firebase/auth';
 import { signOut } from '@/lib/firebase/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { AcadeGradeMark } from '@/components/public/Logo';
 import toast from 'react-hot-toast';
 
 export default function AdminLoginPage() {
@@ -58,35 +59,34 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090F] flex items-center justify-center p-4">
-      {/* Background glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-[var(--acade-danger)]/5 rounded-full blur-[120px] pointer-events-none" />
-
+    <div className="ag-admin ag-admin-rail relative flex min-h-screen items-center justify-center overflow-hidden p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md relative z-10"
+        transition={{ duration: 0.4 }}
+        className="relative z-10 w-full max-w-md"
       >
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center size-16 rounded-2xl bg-[var(--acade-danger)]/10 border border-[var(--acade-danger)]/20 mb-4">
-            <Shield size={32} className="text-[var(--acade-danger)]" />
+        <div className="mb-8 text-center">
+          <div className="mb-5 inline-flex items-center gap-3">
+            <AcadeGradeMark size={40} />
+            <span className="ag-admin-display text-[1.5rem] font-bold text-white">AcadeGrade</span>
           </div>
-          <h1 className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-            Admin Access
+          <h1 className="ag-admin-display flex items-center justify-center gap-2 text-[2rem] font-bold leading-tight text-white">
+            <Shield size={24} className="text-ag-gold" aria-hidden="true" />
+            Admin console
           </h1>
-          <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)] mt-2 font-[family-name:var(--font-dm-sans)]">
-            Sign in with your authorized admin credentials.
+          <p className="mt-2 text-[0.9375rem] text-ag-mist-night">
+            Sign in with your authorised admin account.
           </p>
         </div>
 
         {/* Login Form */}
-        <div className="bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-6 md:p-8">
+        <div className="rounded-[24px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-6 md:p-8">
           <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <Input
               id="admin-email"
-              label="Email Address"
+              label="Email address"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -109,7 +109,7 @@ export default function AdminLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-[38px] p-1 text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] transition-colors"
+                className="absolute right-2 top-[34px] flex size-10 items-center justify-center rounded-[10px] text-[var(--acade-text-muted)] transition-colors hover:text-[var(--acade-text)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -118,21 +118,19 @@ export default function AdminLoginPage() {
 
             <Button
               type="submit"
-              variant="danger"
+              variant="primary"
               size="lg"
               fullWidth
               loading={loading}
             >
-              <LogIn size={18} />
-              Sign In as Admin
+              <LogIn size={18} aria-hidden="true" />
+              Sign in as admin
             </Button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-[var(--acade-border-subtle)] text-center">
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] font-[family-name:var(--font-dm-sans)]">
-              Only authorized administrators can access this panel.
-              <br />
-              Contact the system owner if you need access.
+          <div className="mt-6 border-t border-[var(--acade-border-subtle)] pt-4 text-center">
+            <p className="text-sm leading-6 text-[var(--acade-text-muted)]">
+              Only listed administrators can open the console. Ask the owner if you need access.
             </p>
           </div>
         </div>

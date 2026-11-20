@@ -239,9 +239,12 @@ describe('GET /api/transcript/share: viewCount', () => {
 });
 
 describe('share metadata', () => {
-  it('names no student for a PIN-protected link', () => {
-    const meta = shareMetadataFor({ studentName: 'Alice Okafor', pinHash: 'x', expiresAt: new Date(Date.now() + DAY) }, Date.now(), 'abc');
+  it('names no student for any link, PIN-protected or not', () => {
+    // Owner decision (17 Nov 2026): link previews are generic for every link, so the
+    // metadata no longer reads the record at all.
+    const meta = shareMetadataFor('abc');
     expect(JSON.stringify(meta)).not.toContain('Alice');
-    expect(meta.title).toBe('Shared transcript | AcadeGrade');
+    expect(meta.title).toBe('Shared transcript');
+    expect(meta.openGraph?.title).toBe('Shared transcript | AcadeGrade');
   });
 });

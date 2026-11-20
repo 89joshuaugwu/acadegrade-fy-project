@@ -179,7 +179,7 @@ describe('mobile release admin', () => {
     await user.click(within(links).getByRole('button', { name: 'Save public link' }));
     await waitFor(() => expect(fetchMock.mock.calls.filter(([target, init]) => String(target) === '/api/admin/settings' && init?.method === 'POST')).toHaveLength(1));
     const post = fetchMock.mock.calls.find(([target, init]) => String(target) === '/api/admin/settings' && init?.method === 'POST')!;
-    expect(JSON.parse(String(post[1]!.body))).toEqual({ field: 'mobileAppLinks', value: { androidUrl: 'https://example.com/app.apk', iosUrl: 'https://example.com/ios' } });
+    expect(JSON.parse(String(post[1]!.body))).toEqual({ field: 'mobileAppLinks', value: { androidUrl: 'https://example.com/app.apk', iosUrl: 'https://example.com/ios', androidSizeMb: null, playUrl: '' } });
     expect(within(links).queryByText(/do not match/i)).not.toBeInTheDocument();
   });
 });

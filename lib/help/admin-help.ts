@@ -20,6 +20,7 @@ const ROUTES = {
   'admin.release': '/admin/mobile-release',
   'admin.settings': '/admin/settings',
   'admin.legal': '/admin/legal',
+  'admin.testimonials': '/admin/testimonials',
   'admin.audit': '/admin/audit',
 } as const;
 
@@ -120,11 +121,12 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
   'admin.support': entry({
     id: 'admin.support',
     title: 'Support inbox',
-    summary: 'Requests students send from Settings, Help and support on the website or the Android app. Reply, then close them when they are done.',
+    summary: 'Requests students send from Settings, Help and support on the website or the Android app, and from the public Support page when they cannot sign in. Reply, then close them when they are done.',
     terms: [
       { term: 'Open', meaning: 'New, or reopened, and waiting for you.' },
       { term: 'Waiting', meaning: 'You replied; waiting for the student. They can send a new request if they need more help.' },
       { term: 'Closed', meaning: 'Done. Closed requests are deleted automatically 180 days after closing.' },
+      { term: 'Not signed in', meaning: 'Sent from the public Support page by someone who could not sign in. The email address is not verified, and your reply goes by email only.' },
     ],
     tasks: [
       { title: 'Reply to a request', steps: ['Open the Open tab.', 'Open the request.', 'Write your reply.', 'Choose Send reply. The student gets an inbox message and an email.'] },
@@ -592,6 +594,32 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     ],
     related: [
       { label: 'Settings: Access', to: 'admin.settings.access' },
+      { label: 'Audit log', to: 'admin.audit' },
+    ],
+  }),
+
+  'admin.testimonials': entry({
+    id: 'admin.testimonials',
+    title: 'Testimonials',
+    summary: 'Real quotes from students who agreed to be quoted, for the "What students say" section of the home page, and when the home page may show the student count.',
+    terms: [
+      { term: 'Draft', meaning: 'Saved but not public. Every new quote starts as a draft.' },
+      { term: 'Approved', meaning: 'May appear on the public site. The section shows only when at least 3 quotes are approved.' },
+      { term: 'Hidden', meaning: 'Taken off the public site but kept here. You can approve it again.' },
+      { term: 'Student-count threshold', meaning: 'The home page shows "Used by N students" only once registered students reach this number (100 unless you change it).' },
+    ],
+    tasks: [
+      { title: 'Add a quote', steps: ['Get the student\'s written agreement to be quoted.', 'Choose Add a quote.', 'Type their words (25 at most), first name, level, department, university and the consent date.', 'Choose Save as draft.', 'Choose Approve when it is ready to show.'] },
+      { title: 'Take a quote down', steps: ['Choose Hide to take it off the public site, or Delete if the student withdrew consent.'] },
+      { title: 'Preview the section', steps: ['Open the home page preview link on this page while signed in.', 'Sample quotes appear only to you, never to visitors.'] },
+    ],
+    cautions: [
+      'Only publish real quotes from students who agreed in writing. Invented quotes mislead students and break Google Play rules.',
+      'Use first names only. Never add a surname, matric number or photo.',
+      'Every change is recorded in the audit log.',
+    ],
+    related: [
+      { label: 'Settings: Public site', to: 'admin.settings.public-site' },
       { label: 'Audit log', to: 'admin.audit' },
     ],
   }),

@@ -2,19 +2,12 @@
 
 import { useState } from 'react';
 import { Button, Card, Input, Textarea } from '@/components/ui';
-import { NativeSelect, ReminderOffsetsField } from './fields';
+import { DateField, TimeField } from '@/components/ui/DateTimeFields';
+import { CheckRow, ChoicePills, DayPicker, ReminderOffsetsField } from './fields';
+import { EVENT_TYPE_LABEL } from './status';
 import { validateEvent, EVENT_TYPES } from '@/lib/timetable/validate';
-import { DAY_SHORT, WEEK_ORDER, localToday, newId } from '@/lib/timetable/format';
+import { localToday, newId } from '@/lib/timetable/format';
 import type { EventType, TimetableEvent } from '@/lib/timetable/engine';
-import { cn } from '@/lib/utils/cn';
-
-const TYPE_LABEL: Record<EventType, string> = {
-  lecture: 'Lecture',
-  class: 'Class',
-  exam: 'Exam',
-  study: 'Study session',
-  other: 'Other',
-};
 
 /** Add or edit one event. Calls onSave with a validated event. */
 export function EventForm({
@@ -67,78 +60,54 @@ export function EventForm({
   };
 
   return (
-    <Card>
-      <form onSubmit={submit} aria-label={event ? 'Edit event' : 'Add event'} className="grid gap-4" noValidate>
-        <h2 className="font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">
-          {event ? 'Edit event' : 'Add an event'}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Event title" value={title} maxLength={80} error={errors.title} onChange={(e) => setTitle(e.target.value)} />
-          <NativeSelect
-            label="Event type"
-            value={type}
-            onChange={(v) => setType(v as EventType)}
-            options={EVENT_TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))}
-          />
-          <Input label="Course code (optional)" value={courseCode} maxLength={12} error={errors.courseCode} onChange={(e) => setCourseCode(e.target.value)} />
-          <Input label="Venue (optional)" value={venue} maxLength={80} error={errors.venue} onChange={(e) => setVenue(e.target.value)} />
+    <Card className="border-[var(--acade-primary)]/30">
+      <form onSubmit={submit} aria-label={event ? 'Edit event' : 'Add event'} className="grid gap-6" noValidate>
+        <div>
+          <h2 className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">{event ? 'Edit event' : 'Add an event'}</h2>
+          <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Weekly events repeat until the timetable ends.</p>
         </div>
 
-        <NativeSelect
-          label="Repeats"
-          value={repeat}
-          onChange={(v) => setRepeat(v as 'weekly' | 'once')}
-          options={[
-            { value: 'weekly', label: 'Every week on chosen days' },
-            { value: 'once', label: 'One date only' },
-          ]}
-        />
-        {repeat === 'weekly' ? (
-          <fieldset>
-            <legend className="text-sm font-medium text-[var(--acade-text-muted)]">Days</legend>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {WEEK_ORDER.map((d) => {
-                const on = days.includes(d);
-                return (
-                  <label
-                    key={d}
-                    className={cn(
-                      'inline-flex min-h-12 min-w-12 cursor-pointer items-center justify-center rounded-[var(--radius-control)] border px-3 text-sm font-semibold',
-                      on
-                        ? 'border-[var(--acade-primary)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]'
-                        : 'border-[var(--acade-border)] text-[var(--acade-text-muted)]',
-                    )}
-                  >
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={on}
-                      aria-label={DAY_SHORT[d]}
-                      onChange={() => setDays(on ? days.filter((x) => x !== d) : [...days, d])}
-                    />
-                    {DAY_SHORT[d]}
-                  </label>
-                );
-              })}
-            </div>
-            {errors.recurrence && <p role="alert" className="mt-1 text-xs text-[var(--acade-danger)]">{errors.recurrence}</p>}
-          </fieldset>
-        ) : (
-          <Input label="Date" type="date" value={date} error={errors.recurrence} onChange={(e) => setDate(e.target.value)} />
-        )}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
+          <Input label="Event title" value={title} maxLength={80} error={errors.title} onChange={(e) => setTitle(e.target.value)} />
+          <Input label="Course code (optional)" value={courseCode} maxLength={12} error={errors.courseCode} onChange={(e) => setCourseCode(e.target.value)} />
+          <div className="sm:col-span-2">
+            <Input label="Venue (optional)" value={venue} maxLength={80} error={errors.venue} onChange={(e) => setVenue(e.target.value)} />
+          </div>
+        </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Start time" type="time" value={startTime} error={errors.startTime} onChange={(e) => setStartTime(e.target.value)} />
-          <Input label="End time" type="time" value={endTime} error={errors.endTime} onChange={(e) => setEndTime(e.target.value)} />
+        <ChoicePills<EventType>
+          legend="Event type"
+          value={type}
+          onChange={setType}
+          options={EVENT_TYPES.map((t) => ({ value: t, label: EVENT_TYPE_LABEL[t] }))}
+        />
+
+        <div className="grid gap-4 rounded-2xl bg-[var(--acade-void)] p-4 sm:p-5">
+          <ChoicePills<'weekly' | 'once'>
+            legend="Repeats"
+            value={repeat}
+            onChange={setRepeat}
+            stretch
+            options={[
+              { value: 'weekly', label: 'Every week on chosen days' },
+              { value: 'once', label: 'One date only' },
+            ]}
+          />
+          {repeat === 'weekly' ? (
+            <DayPicker legend="Days" days={days} onChange={setDays} error={errors.recurrence} />
+          ) : (
+            <DateField label="Date" value={date} error={errors.recurrence} onChange={setDate} />
+          )}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <TimeField label="Start time" value={startTime} error={errors.startTime} onChange={setStartTime} />
+            <TimeField label="End time" value={endTime} error={errors.endTime} onChange={setEndTime} />
+          </div>
         </div>
 
         <Textarea label="Notes (optional)" value={notes} maxLength={200} error={errors.notes} className="min-h-24" onChange={(e) => setNotes(e.target.value)} />
 
-        <div className="grid gap-3">
-          <label className="inline-flex min-h-12 items-center gap-3 text-sm font-medium text-[var(--acade-text)]">
-            <input type="checkbox" className="size-5" checked={ownReminders} onChange={(e) => setOwnReminders(e.target.checked)} />
-            Use different reminders for this event
-          </label>
+        <div className="grid gap-3 border-t border-[var(--acade-border-subtle)] pt-5">
+          <CheckRow label="Use different reminders for this event" checked={ownReminders} onChange={setOwnReminders} />
           {ownReminders && <ReminderOffsetsField label="Reminders for this event" value={offsets} onChange={setOffsets} />}
         </div>
 

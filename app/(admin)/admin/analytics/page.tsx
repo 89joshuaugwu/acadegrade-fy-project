@@ -1,22 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { motion } from 'motion/react';
-import { Download, Info } from 'lucide-react';
+import { Download } from 'lucide-react';
 import {
-  BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
+  BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Panel } from '@/components/admin/ui/Panel';
+import { StatGrid, StatTile } from '@/components/admin/ui/StatTile';
+import { TableFrame, tableClass } from '@/components/admin/ui/TableFrame';
+import { Notice } from '@/components/admin/ui/Notice';
 import { ErrorState } from '@/components/shared';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { DEGREE_CLASS_BANDS, formatCgpa } from '@/lib/cgpa/academicRules';
 import { bucketKeyFor, type FunnelRow } from '@/lib/admin/metrics';
 import { MetricsFreshness } from '@/components/admin/overview/MetricsFreshness';
+import { cn } from '@/lib/utils/cn';
 import toast from 'react-hot-toast';
 
 interface AnalyticsData {
@@ -33,17 +34,28 @@ interface AnalyticsData {
 
 const pct = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : '–');
 
+/** Degree class colours come from the app's class tokens, so both themes stay readable. */
 const DEGREE_COLORS: Record<string, string> = {
-  'First Class': '#22C55E',
-  'Second Class Upper': '#6366F1',
-  'Second Class Lower': '#F59E0B',
-  'Third Class': '#F97316',
-  'Pass': '#EF4444',
-  'Fail': '#6B7280',
+  'First Class': 'var(--class-first-fill, #FFB23F)',
+  'Second Class Upper': 'var(--class-2upper-fill, #6B4EFF)',
+  'Second Class Lower': 'var(--class-2lower-fill, #12A4B0)',
+  'Third Class': 'var(--class-third-fill, #F2762E)',
+  'Pass': 'var(--class-pass-fill, #E0457B)',
+  'Fail': 'var(--class-fail-fill, #E5484D)',
 };
 
+/** The class fill for a CGPA (product-wide class colours; labels always name the class too). */
+function classFillFor(cgpa: number): string {
+  if (cgpa >= 4.5) return DEGREE_COLORS['First Class'];
+  if (cgpa >= 3.5) return DEGREE_COLORS['Second Class Upper'];
+  if (cgpa >= 2.4) return DEGREE_COLORS['Second Class Lower'];
+  if (cgpa >= 1.5) return DEGREE_COLORS['Third Class'];
+  if (cgpa >= 1.0) return DEGREE_COLORS.Pass;
+  return DEGREE_COLORS.Fail;
+}
+
 // Reference lines sit in the histogram bucket that holds each class minimum.
-const CLASS_LINE_COLORS: Record<string, string> = { '1st': '#22C55E', '2:1': '#6366F1', '2:2': '#F59E0B', '3rd': '#F97316' };
+const CLASS_LINE_COLORS: Record<string, string> = { '1st': 'var(--class-first)', '2:1': 'var(--class-2upper)', '2:2': 'var(--class-2lower)', '3rd': 'var(--class-third)' };
 const DEGREE_THRESHOLDS = DEGREE_CLASS_BANDS
   .filter((band) => band.shortLabel in CLASS_LINE_COLORS)
   .map((band) => ({
@@ -53,9 +65,21 @@ const DEGREE_THRESHOLDS = DEGREE_CLASS_BANDS
     bucket: bucketKeyFor(band.minCGPA),
   }));
 
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--acade-surface)',
+  border: '1px solid var(--acade-border)',
+  borderRadius: '12px',
+  color: 'var(--acade-text)',
+  fontSize: '13px',
+  boxShadow: 'none',
+};
+const AXIS_TICK = { fill: 'var(--acade-text-muted)', fontSize: 12 };
+const formatCount = (value: number) => value.toLocaleString('en-GB');
+
+const PAGE_DESCRIPTION = 'How students are doing overall: CGPA spread, degree classes and department averages. Every semester with graded courses counts.';
+
 export default function AdminAnalyticsPage() {
   const { user } = useAuth();
-  const shouldReduceMotion = useReducedMotion();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,9 +147,13 @@ export default function AdminAnalyticsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-80" />)}
+        <AdminPageHeader title="Academic analytics" description={PAGE_DESCRIPTION} helpId="admin.analytics" />
+        <div role="status" aria-label="Loading academic analytics" aria-busy="true" className="space-y-6">
+          <Skeleton className="h-28 rounded-[20px]" />
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Skeleton className="h-80 rounded-[20px] lg:col-span-3" />
+            <Skeleton className="h-80 rounded-[20px] lg:col-span-2" />
+          </div>
         </div>
       </div>
     );
@@ -136,168 +164,165 @@ export default function AdminAnalyticsPage() {
     ? Object.entries(data.cgpaBuckets).map(([range, count]) => ({ range, count }))
     : [];
 
-  // Degree class pie data
-  const pieData = data?.degreeClassCounts
-    ? Object.entries(data.degreeClassCounts).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }))
-    : [];
+  // Degree classes, in the order the server sends them (First Class first)
+  const classRows = data?.degreeClassCounts ? Object.entries(data.degreeClassCounts).map(([name, value]) => ({ name, value })) : [];
+  const classTotal = classRows.reduce((sum, row) => sum + row.value, 0);
+  const firstClass = data?.degreeClassCounts?.['First Class'] ?? 0;
 
   // Department leaderboard (sorted by avg CGPA desc)
   const leaderboard = [...(data?.departmentBreakdown || [])].sort((a, b) => b.avgCGPA - a.avgCGPA);
+  const funnel = [...(data?.funnel ?? [])].reverse();
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <AdminPageHeader
         title="Academic analytics"
-        description="How students are doing overall: CGPA spread, degree classes and department averages. Every semester with graded courses counts."
+        description={PAGE_DESCRIPTION}
         helpId="admin.analytics"
         actions={<Button variant="outline" size="sm" onClick={handleExportCSV}><Download size={16} aria-hidden="true" />Export CSV</Button>}
       >
         {data ? <MetricsFreshness generatedAt={data.generatedAt} stale={data.stale} refreshing={refreshing} onRefresh={() => { void refreshData(); }} /> : null}
       </AdminPageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* CGPA Distribution Curve with Reference Lines */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">CGPA Distribution</h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">With degree class thresholds</p>
-            <div className="h-[300px] text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={histogramData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--acade-border-subtle)" />
-                  <XAxis dataKey="range" tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '8px', color: 'var(--acade-text)' }} />
-                  <Bar dataKey="count" fill="var(--acade-primary)" radius={[4, 4, 0, 0]} />
-                  {DEGREE_THRESHOLDS.map(t => (
-                    <ReferenceLine key={t.key} x={t.bucket} stroke={t.color} strokeDasharray="4 4" label={{ value: t.label, fill: t.color, fontSize: 9, position: 'top' }} />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Platform metric averages — only values returned by the server are shown. */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">Platform Metric Averages</h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-6">Calculated from every semester with recorded credits.</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                { label: 'Average CGPA', value: data?.avgCGPA ?? 0, color: 'var(--acade-primary)' },
-                { label: 'Average PI', value: data?.avgPI ?? 0, color: 'var(--acade-gold)' },
-              ].map((metric) => (
-                <div key={metric.label} className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-5">
-                  <p className="text-xs font-semibold text-[var(--acade-text-muted)]">{metric.label}</p>
-                  <p className="mt-2 font-[family-name:var(--font-geist-mono)] text-4xl font-bold text-[var(--acade-text)]">{formatCgpa(metric.value)}</p>
-                  <div className="mt-5 h-2 overflow-hidden rounded-full bg-[var(--acade-overlay)]">
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${Math.min(Math.max(metric.value / 5, 0), 1) * 100}%`, backgroundColor: metric.color }}
-                    />
-                  </div>
-                  <p className="mt-2 text-right font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">out of 5.00</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-5 flex gap-3 rounded-xl bg-[var(--acade-info-dim)] p-4 text-sm leading-6 text-[var(--acade-text-muted)]">
-              <Info className="mt-0.5 size-4 shrink-0 text-[var(--acade-info)]" aria-hidden="true" />
-              <p>PI is shown only from stored semester calculations. AcadeGrade does not estimate missing PI values.</p>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Degree Class Pie Chart */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">Degree Class Distribution</h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">Breakdown by projected degree class</p>
-            <div className="h-[300px]">
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" nameKey="name"
-                      label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: 'var(--acade-text-muted)', strokeWidth: 1 }}
-                    >
-                      {pieData.map((entry) => (
-                        <Cell key={entry.name} fill={DEGREE_COLORS[entry.name] || 'var(--acade-primary)'} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '8px', color: 'var(--acade-text)' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-[var(--acade-text-muted)]">No data yet.</div>
-              )}
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Department Leaderboard */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">Department Leaderboard</h2>
-            <div className="space-y-2">
-              {leaderboard.length === 0 && <p className="text-center text-[var(--acade-text-muted)] py-6">No data.</p>}
-              {leaderboard.map((dept, idx) => (
-                <div key={dept.department} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--acade-overlay)]/10 hover:bg-[var(--acade-overlay)]/20 transition-colors">
-                  <span className={`font-bold text-[length:var(--text-lg)] w-8 text-center font-[family-name:var(--font-geist-mono)] ${idx === 0 ? 'text-[var(--acade-gold)]' : idx === 1 ? 'text-[var(--acade-text-muted)]' : idx === 2 ? 'text-[#CD7F32]' : 'text-[var(--acade-text-faint)]'}`}>
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] truncate block">{dept.department}</span>
-                    <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">{dept.count} student{dept.count !== 1 ? 's' : ''}</span>
-                  </div>
-                  <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)]">
-                    {formatCgpa(dept.avgCGPA)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </motion.div>
+      <div className="space-y-3">
+        <StatGrid aria-label="Platform averages">
+          <StatTile label="Students counted" value={formatCount(data?.totalUsers ?? 0)} detail="Every account with a profile" />
+          <StatTile label="Average CGPA" value={formatCgpa(data?.avgCGPA ?? 0)} detail="Out of 5.00" />
+          <StatTile label="Average PI" value={formatCgpa(data?.avgPI ?? 0)} detail="From stored semester results" />
+          <StatTile label="On First Class" value={formatCount(firstClass)} detail={classTotal > 0 ? `${pct(firstClass, classTotal)} of students with a class` : 'No classes yet'} />
+        </StatGrid>
+        <Notice tone="info">PI is shown only from stored semester calculations. AcadeGrade does not estimate missing PI values.</Notice>
       </div>
 
-      <Card variant="glass" padding="lg">
-        <section aria-labelledby="funnel-title">
-          <h2 id="funnel-title" className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">Sign-up funnel</h2>
-          <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">
-            Students grouped by the week they signed up (UTC). &quot;Came back&quot; means they were last seen at least 7 or 30 days after signing up.
-          </p>
-          {(data?.funnel ?? []).length === 0 ? (
-            <p className="py-6 text-center text-[var(--acade-text-muted)]">No funnel yet. It appears after the next daily run, or press Refresh now.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm">
-                <thead className="text-[var(--acade-text-muted)]">
-                  <tr className="border-b border-[var(--acade-border)]">
-                    <th scope="col" className="py-2 pr-4 font-medium">Week</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Signed up</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Added a semester</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Used AI</th>
-                    <th scope="col" className="py-2 pr-4 text-right font-medium">Came back 7d</th>
-                    <th scope="col" className="py-2 text-right font-medium">Came back 30d</th>
-                  </tr>
-                </thead>
-                <tbody className="font-[family-name:var(--font-geist-mono)] tabular-nums text-[var(--acade-text)]">
-                  {[...(data?.funnel ?? [])].reverse().map((row) => (
-                    <tr key={row.week} className="border-b border-[var(--acade-border-subtle)] last:border-0">
-                      <th scope="row" className="py-2 pr-4 font-normal">{row.week}</th>
-                      <td className="py-2 pr-4 text-right">{row.registered}</td>
-                      <td className="py-2 pr-4 text-right">{row.firstSemester} <span className="text-[var(--acade-text-faint)]">{pct(row.firstSemester, row.registered)}</span></td>
-                      <td className="py-2 pr-4 text-right">{row.usedAi} <span className="text-[var(--acade-text-faint)]">{pct(row.usedAi, row.registered)}</span></td>
-                      <td className="py-2 pr-4 text-right">{row.returned7d} <span className="text-[var(--acade-text-faint)]">{pct(row.returned7d, row.registered)}</span></td>
-                      <td className="py-2 text-right">{row.returned30d} <span className="text-[var(--acade-text-faint)]">{pct(row.returned30d, row.registered)}</span></td>
-                    </tr>
+      <div className="grid gap-6 lg:grid-cols-5">
+        {/* CGPA distribution with class thresholds */}
+        <Panel className="lg:col-span-3" title="CGPA distribution" description="Students in each half-point band, with the degree class lines">
+          <div className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={histogramData} margin={{ top: 22, right: 8, left: -12, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="var(--acade-border-subtle)" />
+                <XAxis dataKey="range" tick={AXIS_TICK} axisLine={false} tickLine={false} tickFormatter={(value: string) => value.split('-')[0]} interval={0} />
+                <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} allowDecimals={false} width={44} />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  cursor={{ fill: 'var(--acade-overlay)' }}
+                  labelFormatter={(label) => `CGPA ${String(label).replace('-', ' to ')}`}
+                  formatter={(value) => [`${formatCount(Number(value))} students`, 'In this band']}
+                />
+                <Bar dataKey="count" fill="var(--chart-cgpa)" radius={[6, 6, 0, 0]} maxBarSize={44}>
+                  {histogramData.map((bucket) => (
+                    <Cell key={bucket.range} fill={classFillFor(Number.parseFloat(bucket.range))} />
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </Bar>
+                {DEGREE_THRESHOLDS.map(t => (
+                  <ReferenceLine key={t.key} x={t.bucket} stroke={t.color} strokeDasharray="4 4" label={{ value: t.label, fill: t.color, fontSize: 11, position: 'top' }} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+
+        {/* Degree classes */}
+        <Panel className="lg:col-span-2" title="Degree classes" description="Students by projected degree class">
+          {classTotal > 0 ? (
+            <ul className="space-y-4">
+              {classRows.map(row => (
+                <li key={row.name}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-[var(--acade-text)]">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: DEGREE_COLORS[row.name] || 'var(--acade-primary)' }} aria-hidden="true" />
+                      <span className="truncate">{row.name}</span>
+                    </span>
+                    <span className="shrink-0 tabular-nums text-[var(--acade-text-muted)]">
+                      <span className="font-semibold text-[var(--acade-text)]">{formatCount(row.value)}</span> ({pct(row.value, classTotal)})
+                    </span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--acade-overlay)]" aria-hidden="true">
+                    <div className="h-full rounded-full" style={{ width: `${(row.value / classTotal) * 100}%`, backgroundColor: DEGREE_COLORS[row.name] || 'var(--acade-primary)' }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="py-10 text-center text-sm text-[var(--acade-text-muted)]">No data yet.</p>
           )}
-        </section>
-      </Card>
+        </Panel>
+      </div>
+
+      {/* Department leaderboard */}
+      <Panel title="Department leaderboard" description="Average CGPA by department, highest first">
+        {leaderboard.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[var(--acade-text-muted)]">No data.</p>
+        ) : (
+          <TableFrame label="Department leaderboard" minWidth="28rem">
+            <table className={tableClass}>
+              <thead>
+                <tr>
+                  <th scope="col" className="w-12">Rank</th>
+                  <th scope="col">Department</th>
+                  <th scope="col" className="ag-right">Students</th>
+                  <th scope="col" className="ag-right">Average CGPA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leaderboard.map((dept, idx) => (
+                  <tr key={dept.department}>
+                    <td className={cn('font-semibold', idx === 0 ? 'text-[var(--acade-gold)]' : 'text-[var(--acade-text-faint)]')}>{idx + 1}</td>
+                    <td className="font-medium">{dept.department}</td>
+                    <td className="ag-right text-[var(--acade-text-muted)]">{formatCount(dept.count)} student{dept.count !== 1 ? 's' : ''}</td>
+                    <td className="ag-right">
+                      <span className="inline-flex items-center justify-end gap-3">
+                        <span className="hidden h-1.5 w-20 overflow-hidden rounded-full bg-[var(--acade-overlay)] sm:block" aria-hidden="true">
+                          <span className="block h-full rounded-full" style={{ width: `${Math.min(Math.max(dept.avgCGPA / 5, 0), 1) * 100}%`, background: classFillFor(dept.avgCGPA) }} />
+                        </span>
+                        <span className="ag-admin-display text-base font-bold">{formatCgpa(dept.avgCGPA)}</span>
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableFrame>
+        )}
+      </Panel>
+
+      {/* Sign-up funnel */}
+      <Panel
+        headingId="funnel-title"
+        title="Sign-up funnel"
+        description={<>Students grouped by the week they signed up (UTC). &quot;Came back&quot; means they were last seen at least 7 or 30 days after signing up.</>}
+      >
+        {funnel.length === 0 ? (
+          <p className="py-6 text-center text-sm text-[var(--acade-text-muted)]">No funnel yet. It appears after the next daily run, or press Refresh now.</p>
+        ) : (
+          <TableFrame label="Sign-up funnel" minWidth="40rem">
+            <table className={tableClass}>
+              <thead>
+                <tr>
+                  <th scope="col">Week</th>
+                  <th scope="col" className="ag-right">Signed up</th>
+                  <th scope="col" className="ag-right">Added a semester</th>
+                  <th scope="col" className="ag-right">Used AI</th>
+                  <th scope="col" className="ag-right">Came back 7d</th>
+                  <th scope="col" className="ag-right">Came back 30d</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funnel.map((row) => (
+                  <tr key={row.week}>
+                    <th scope="row" className="whitespace-nowrap border-b border-[var(--acade-border-subtle)] px-4 py-3 text-left font-medium text-[var(--acade-text)] [tr:last-child>&]:border-b-0">{row.week}</th>
+                    <td className="ag-right font-semibold">{formatCount(row.registered)}</td>
+                    <td className="ag-right">{formatCount(row.firstSemester)} <span className="text-[var(--acade-text-faint)]">{pct(row.firstSemester, row.registered)}</span></td>
+                    <td className="ag-right">{formatCount(row.usedAi)} <span className="text-[var(--acade-text-faint)]">{pct(row.usedAi, row.registered)}</span></td>
+                    <td className="ag-right">{formatCount(row.returned7d)} <span className="text-[var(--acade-text-faint)]">{pct(row.returned7d, row.registered)}</span></td>
+                    <td className="ag-right">{formatCount(row.returned30d)} <span className="text-[var(--acade-text-faint)]">{pct(row.returned30d, row.registered)}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableFrame>
+        )}
+      </Panel>
     </div>
   );
 }

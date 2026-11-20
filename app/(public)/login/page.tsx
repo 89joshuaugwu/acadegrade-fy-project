@@ -1,248 +1,194 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AnimatePresence, motion } from 'motion/react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { ArrowRight, LoaderCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-import { AuthDivider, AuthShell } from '@/components/auth';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
+import { AuthShell } from '@/components/public/shells/AuthShell';
+import { AppLinksLine } from '@/components/site/auth/AppLinksLine';
+import { AuthButton, GoogleButton, InlineLink, OrDivider, PasswordField, TextField } from '@/components/site/auth/controls';
+import { useShake } from '@/components/site/auth/hooks';
+import { AuthNoticeLine, AuthPending, HandoffNote } from '@/components/site/auth/messages';
 import { useAuth } from '@/hooks/useAuth';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { signInWithEmail, signInWithGoogle } from '@/lib/firebase/auth';
 import { getDocument } from '@/lib/firebase/firestore';
-import { AUTH_TEXT_MOTION_CLASS } from '@/components/marketing/PublicTextMotion';
-import { CalculatorHandoffNotice } from '@/components/marketing/CalculatorHandoffNotice';
+import { afterSignInPath, buildMaintenanceRedirect } from '@/lib/public/maintenance-redirect';
+import {
+  CHECKING_SIGN_IN,
+  LOGIN_COPY,
+  messageForGoogleError,
+  messageForSignInError,
+  type AuthNotice,
+} from '@/lib/public/auth-copy';
 
-const loginSchema = z.object({
-  email: z.string().min(1, 'Email is required').email('Enter a valid email'),
-  password: z.string().min(1, 'Password is required'),
-});
+interface LoginFormData {
+  email: string;
+  password: string;
+}
 
-type LoginFormData = z.infer<typeof loginSchema>;
-
-function GoogleIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-    </svg>
-  );
+interface PublicSettings {
+  maintenanceMode?: boolean;
+  mobileAppLinks?: { iosUrl?: string | null } | null;
 }
 
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const shouldReduceMotion = useReducedMotion();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [shakeForm, setShakeForm] = useState(false);
+  const [notice, setNotice] = useState<AuthNotice | null>(null);
+  const [iosUrl, setIosUrl] = useState<string | null>(null);
+  const { shake, props: shakeProps } = useShake();
 
   const routeAuthenticatedUser = useCallback(async (signedInUser: { uid: string }) => {
     const profile = await getDocument(`users/${signedInUser.uid}`);
     const profileComplete = isStudentProfileComplete(profile);
-    router.replace(profileComplete ? '/dashboard' : '/register');
+    // A complete profile returns to the checked ?next= (for example /settings#delete-account).
+    router.replace(profileComplete ? afterSignInPath(window.location.search) : '/register');
     return profileComplete;
   }, [router]);
 
   useEffect(() => {
     if (!authLoading && user) {
       routeAuthenticatedUser(user).catch(() => {
-        toast.error('Could not load your profile. Please try again.');
+        toast.error("We couldn't load your profile. Please finish setting up.");
         router.replace('/register');
       });
     }
   }, [user, authLoading, routeAuthenticatedUser, router]);
 
   useEffect(() => {
+    let active = true;
     const checkMaintenance = async () => {
       try {
-        const doc = await getDocument<any>('config/settings');
-        if (doc?.maintenanceMode) {
-          router.replace('/maintenance');
+        const settings = await getDocument<PublicSettings>('config/settings');
+        if (!active) return;
+        if (settings?.maintenanceMode) {
+          router.replace(buildMaintenanceRedirect(window.location.pathname + window.location.search));
+          return;
         }
+        const ios = settings?.mobileAppLinks?.iosUrl;
+        setIosUrl(typeof ios === 'string' && ios.trim() ? ios : null);
       } catch {}
     };
-    checkMaintenance();
+    void checkMaintenance();
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setError,
-  } = useForm<LoginFormData>();
+  } = useForm<LoginFormData>({ mode: 'onTouched' });
 
   const onSubmit = useCallback(
     async (data: LoginFormData) => {
       setIsSubmitting(true);
+      setNotice(null);
       try {
         const credential = await signInWithEmail(data.email.trim().toLowerCase(), data.password);
         const profileComplete = await routeAuthenticatedUser(credential.user);
-        toast.success(profileComplete ? 'Welcome back!' : 'Finish setting up your profile to continue.');
+        toast.success(profileComplete ? 'Welcome back.' : 'Finish setting up your account to continue.');
       } catch (err: unknown) {
-        const msg =
-          err instanceof Error && err.message.includes('invalid')
-            ? 'Invalid email or password'
-            : 'Something went wrong. Please try again.';
-        setError('root', { message: msg });
-        setShakeForm(true);
-        setTimeout(() => setShakeForm(false), 600);
-        toast.error(msg);
+        setNotice(messageForSignInError(err));
+        shake();
       } finally {
         setIsSubmitting(false);
       }
     },
-    [routeAuthenticatedUser, setError]
+    [routeAuthenticatedUser, shake]
   );
 
   const handleGoogleSignIn = useCallback(async () => {
     setIsGoogleLoading(true);
+    setNotice(null);
     try {
       const credential = await signInWithGoogle();
       const profileComplete = await routeAuthenticatedUser(credential.user);
-      toast.success(profileComplete ? 'Welcome!' : 'Google verified. Complete your academic profile.');
+      toast.success(profileComplete ? 'Welcome back.' : 'Finish setting up your account to continue.');
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error && err.message.includes('popup')
-          ? 'Sign-in popup was closed'
-          : 'Google sign-in failed. Please try again.';
-      toast.error(msg);
+      setNotice(messageForGoogleError(err));
     } finally {
       setIsGoogleLoading(false);
     }
   }, [routeAuthenticatedUser]);
 
+  const below = (
+    <>
+      <p>
+        New to AcadeGrade? <InlineLink href="/register">Create a free account</InlineLink>
+      </p>
+      <AppLinksLine iosUrl={iosUrl} />
+    </>
+  );
+
+  let body;
   if (authLoading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--acade-void)] px-4">
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] px-5 py-4 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] shadow-[var(--shadow-card)]"
-        >
-          <LoaderCircle className="size-5 animate-spin text-[var(--acade-primary)]" aria-hidden="true" />
-          Checking your sign-in status…
-        </div>
-      </div>
-    );
-  }
-
-  if (user) return null;
-
-  return (
-    <AuthShell
-      className={AUTH_TEXT_MOTION_CLASS}
-      eyebrow="Student access"
-      title="Welcome back"
-      description="Sign in to continue tracking your academic progress."
-      proofTitle="Know where you stand before the next result"
-      proofDescription="Bring every semester into one dependable record, then use CGPA and PI together to understand your direction."
-      proofItems={[
-        'Resume from your latest academic record',
-        'Keep incomplete profile setup on the right path',
-        'Review results, forecasts, and transcripts in one place',
-      ]}
-      support={
-        <>
-          New to AcadeGrade? <Link href="/register">Create an account</Link>
-        </>
-      }
-    >
-      <motion.div
-        animate={shakeForm && !shouldReduceMotion ? { x: [0, -8, 8, -5, 5, -2, 2, 0] } : { x: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <CalculatorHandoffNotice className="mb-5" />
-        <Button
-          variant="outline"
-          size="md"
-          fullWidth
-          loading={isGoogleLoading}
-          loadingLabel="Signing in with Google…"
-          onClick={handleGoogleSignIn}
-        >
-          <GoogleIcon />
-          Continue with Google
-        </Button>
-
-        <AuthDivider className="my-5">Or sign in with email</AuthDivider>
-
+    body = <AuthPending text={CHECKING_SIGN_IN} />;
+  } else if (user) {
+    body = <AuthPending text={LOGIN_COPY.routing} bars={false} />;
+  } else {
+    body = (
+      <div className="flex flex-col gap-6">
+        <HandoffNote flow="login" />
+        <GoogleButton busy={isGoogleLoading} onClick={handleGoogleSignIn} />
+        <OrDivider label={LOGIN_COPY.divider} />
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col gap-4"
           aria-label="Sign in with email"
           noValidate
+          {...shakeProps}
+          className={`flex flex-col gap-5 ${shakeProps.className}`}
         >
-          <Input
+          <TextField
             label="Email"
             type="email"
             autoComplete="email"
             inputMode="email"
-            placeholder="you@university.edu"
+            placeholder="you@example.com"
+            readOnly={isSubmitting}
             error={errors.email?.message}
             {...register('email', {
-              required: 'Email is required',
-              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email' },
+              required: 'Enter your email',
+              pattern: { value: /^\S+@\S+\.\S+$/, message: 'Enter a valid email address, like you@example.com' },
             })}
           />
-
-          <Input
-            label="Password"
-            type="password"
-            autoComplete="current-password"
-            placeholder="Enter your password"
-            error={errors.password?.message}
-            {...register('password', { required: 'Password is required' })}
-          />
-
-          <div className="flex justify-end">
-            <Link
-              href="/forgot-password"
-              className="flex min-h-12 items-center rounded-lg text-[length:var(--text-sm)] font-semibold text-[var(--acade-primary)] underline-offset-4 transition-colors hover:text-[var(--acade-primary-hover)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
-            >
-              Forgot password?
-            </Link>
+          <div className="flex flex-col gap-1">
+            <PasswordField
+              label="Password"
+              autoComplete="current-password"
+              readOnly={isSubmitting}
+              error={errors.password?.message}
+              {...register('password', { required: 'Enter your password' })}
+            />
+            <p className="flex justify-end">
+              <InlineLink href="/forgot-password" className="inline-flex min-h-10 items-center text-[0.875rem]">
+                Forgot password?
+              </InlineLink>
+            </p>
           </div>
-
-          <AnimatePresence initial={false}>
-            {errors.root && (
-              <motion.p
-                role="alert"
-                initial={shouldReduceMotion ? {} : { opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                className="overflow-hidden rounded-xl bg-[var(--acade-danger-dim)] px-4 py-3 text-[length:var(--text-sm)] text-[var(--acade-danger)]"
-              >
-                {errors.root.message}
-              </motion.p>
-            )}
-          </AnimatePresence>
-
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            fullWidth
-            loading={isSubmitting}
-            className="marketing-edge-cta"
-            loadingLabel="Signing in…"
-          >
-            Sign in <ArrowRight size={18} aria-hidden="true" />
-          </Button>
+          <AuthNoticeLine notice={notice} />
+          <AuthButton type="submit" block busy={isSubmitting}>
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
+          </AuthButton>
         </form>
+      </div>
+    );
+  }
 
-        <MobileAppDownload compact className="mt-5" />
-      </motion.div>
+  return (
+    <AuthShell
+      title={LOGIN_COPY.h1}
+      sentence={LOGIN_COPY.sentence}
+      photo="auth.login"
+      reassurance={LOGIN_COPY.reassurance}
+      below={authLoading || user ? undefined : below}
+    >
+      {body}
     </AuthShell>
   );
 }

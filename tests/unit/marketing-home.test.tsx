@@ -1,211 +1,222 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  AcademicProof,
-  HomeFAQ,
-  HomeHero,
-  ProductStory,
-  SmartAutomation,
-} from '@/components/marketing';
-import { MobileAppDownload } from '@/components/ui/MobileAppDownload';
-import FeaturesPage from '@/app/(public)/features/page';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { subscribeToDocumentMock } = vi.hoisted(() => ({
-  subscribeToDocumentMock: vi.fn(),
+const { authState, proofState, contactState } = vi.hoisted(() => ({
+  authState: { user: null as { uid: string; getIdToken: () => Promise<string> } | null, uid: null as string | null, loading: false, error: null },
+  proofState: { value: { testimonials: null, count: null, preview: false } as Record<string, unknown> },
+  contactState: { value: null as string | null },
 }));
 
-vi.mock('@/lib/firebase/firestore', () => ({
-  subscribeToDocument: subscribeToDocumentMock,
-}));
+vi.mock('@/hooks/useAuth', () => ({ useAuth: () => authState }));
+vi.mock('@/lib/firebase/admin', () => ({ adminDb: {} }));
+vi.mock('@/lib/site/contact', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/site/contact-email')>('@/lib/site/contact-email');
+  return { ...actual, getContactEmail: async () => contactState.value };
+});
+vi.mock('@/lib/public/proof', async () => {
+  const types = await vi.importActual<typeof import('@/lib/public/home-data-types')>('@/lib/public/home-data-types');
+  return {
+    ...types,
+    resolvePublicProof: async () => proofState.value,
+    sampleProof: () => ({ testimonials: [...types.SAMPLE_TESTIMONIALS], count: { ...types.SAMPLE_COUNT }, preview: true }),
+  };
+});
 
-vi.mock('@/components/marketing/PublicPage', () => ({
-  PublicPage: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  EditorialHero: () => null,
-  ProductCta: () => null,
-  SectionIntro: () => null,
-}));
+import HomePage, { metadata } from '@/app/(public)/page';
+import { CALCULATOR_HANDOFF_KEY } from '@/lib/handoff/calculator';
+import { HOME_FAQ } from '@/lib/public/home';
+
+/** Reduced motion on, so the CGPA figure jumps instead of tweening. */
+function preferStill() {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query.includes('reduce'),
+    media: query,
+    onchange: null,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    dispatchEvent: () => false,
+  }));
+}
+
+async function renderHome() {
+  return render(await HomePage());
+}
+
+function gradeKey(course: string, grade: string) {
+  const group = screen.getByRole('group', { name: new RegExp(`^Grade for ${course}`) });
+  return within(group).getByRole('radio', { name: grade });
+}
+
+function gauge() {
+  return screen.getByRole('img', { name: /^CGPA / });
+}
 
 beforeEach(() => {
-  subscribeToDocumentMock.mockReset();
-  subscribeToDocumentMock.mockImplementation((_path, onData) => {
-    onData({ mobileAppLinks: { androidUrl: 'https://example.com/android.apk', iosUrl: '' } });
-    return () => undefined;
+  Object.assign(authState, { user: null, uid: null, loading: false, error: null });
+  proofState.value = { testimonials: null, count: null, preview: false };
+  contactState.value = null;
+  sessionStorage.clear();
+  preferStill();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+describe('home page (brand v2): first screen', () => {
+  it('answers what it is in one h1 and one sentence, with one primary action', async () => {
+    await renderHome();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Know exactly where your degree stands.' })).toBeInTheDocument();
+    expect(screen.getByText(/turns your results into GPA, CGPA and degree class in seconds/)).toBeInTheDocument();
+    const starts = screen.getAllByRole('link', { name: 'Start your free record' });
+    expect(starts.length).toBeGreaterThanOrEqual(1);
+    for (const link of starts) expect(link).toHaveAttribute('href', '/register');
+    expect(screen.getByRole('link', { name: 'Try the CGPA calculator' })).toHaveAttribute('href', '/calculator');
+  });
+
+  it('renders inside the public shell: no own header, footer or nested main', async () => {
+    const { container } = await renderHome();
+    expect(container.querySelector('main')).toBeNull();
+    expect(screen.queryByRole('contentinfo')).toBeNull();
+    expect(container.innerHTML).not.toMatch(/Smiling Student|heroimage2|heroimage3|mobile-app-images|images\/campus/);
   });
 });
 
-describe('AcadeGrade landing presentation', () => {
-  it('introduces the product with honest actions and privacy framing', () => {
-    const { container } = render(<HomeHero />);
+describe('home page: the live demo runs the real engine', () => {
+  it('loads the example semester at CGPA 4.43, Second Class Upper, GPA 4.15 over 13 units', async () => {
+    await renderHome();
+    expect(gauge()).toHaveAccessibleName('CGPA 4.43 of 5.00, Second Class Upper');
+    expect(screen.getByRole('table', { name: /Example semester/ })).toBeInTheDocument();
+    expect(screen.getByText('Second Class Upper', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('4.15')).toBeInTheDocument();
+    expect(screen.getByText('13')).toBeInTheDocument();
+  });
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'See the path behind every result.' })
-    ).toBeInTheDocument();
-    expect(screen.getByText('Understand your CGPA, spot courses at risk and plan the next semester.')).toHaveClass('sr-only');
-    expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveAttribute(
-      'href',
-      '/register'
-    );
-    expect(screen.getByRole('link', { name: /try the cgpa calculator/i })).toHaveAttribute(
-      'href',
-      '/calculator'
-    );
-    expect(screen.getByText(/private by default/i)).toBeInTheDocument();
-    expect(container.querySelector('[data-hero-type-loop]')).toHaveClass('marketing-hero-type-loop');
-    expect(container.querySelector('[data-hero-type-loop]')).toHaveAttribute('aria-hidden', 'true');
-    expect(screen.getByRole('link', { name: /start your academic record/i })).toHaveClass('marketing-edge-cta');
-    const heroArt = screen.getByRole('img', { name: /students using acadegrade on mobile to review a dashboard and scan academic records/i });
-    expect(heroArt).toHaveClass('aspect-[6/7]');
-    const heroImages = Array.from(heroArt.querySelectorAll('img'));
-    expect(heroImages).toHaveLength(3);
-    const heroSources = heroImages.map((image) => {
-      const source = image.getAttribute('src') || '';
-      const optimizedSource = new URL(source, 'http://localhost').searchParams.get('url') || source;
-      return decodeURIComponent(optimizedSource);
+  it('tells the 4.49 then 4.53 First Class story and announces it politely', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await renderHome();
+    await user.click(gradeKey('MTH 301', 'A'));
+    expect(gauge()).toHaveAccessibleName('CGPA 4.49 of 5.00, Second Class Upper');
+    await user.click(gradeKey('CSC 303', 'A'));
+    expect(gauge()).toHaveAccessibleName('CGPA 4.53 of 5.00, First Class');
+    expect(screen.getByText('First Class', { selector: 'p' })).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(600);
     });
-    expect(heroSources).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('Smiling Student Showcasing Academic Dashboard.png'),
-        expect.stringContaining('heroimage2.png'),
-        expect.stringContaining('heroimage3.png'),
-      ])
-    );
-    expect(heroImages.every((image) => image.getAttribute('alt') === '')).toBe(true);
-    expect(heroImages[0]).toHaveClass('hero-art-image-primary');
-    expect(heroImages[1]).toHaveClass('hero-art-image-secondary');
-    expect(heroImages[2]).toHaveClass('hero-art-image-tertiary');
-    expect(screen.getByText('100L–500L · 2025/2026 sessions')).toBeInTheDocument();
-    expect(screen.getByText('Confirm your institution’s applicable rules')).toBeInTheDocument();
-    expect(screen.getByText(/session and level aware/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1 }).parentElement).toHaveClass('marketing-stagger');
-    expect(container.querySelector('canvas')).not.toBeInTheDocument();
+    expect(document.querySelector('[aria-live="polite"]')?.textContent).toMatch(/4\.53/);
   });
 
-  it('explains the calculation boundary without implying institutional certification', () => {
-    render(<AcademicProof />);
-
-    expect(screen.getByRole('heading', { level: 2, name: /calculation you can follow/i })).toBeInTheDocument();
-    expect(screen.getByText(/a result becomes useful when its basis stays visible/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /record the semester evidence/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /weight the result by its academic load/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /gpa and pi, side by side/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /a trajectory, not just a total/i })).toBeInTheDocument();
-    expect(screen.getByText(/semester gpa = total quality points ÷ total credits/i)).toBeInTheDocument();
-    const sequence = screen.getByRole('list', { name: /illustrative calculation sequence/i });
-    const stages = Array.from(sequence.children);
-    expect(sequence).toHaveClass('academic-proof-deck', 'min-w-0', 'space-y-6', 'lg:space-y-0');
-    expect(stages).toHaveLength(4);
-    expect(stages.map((stage) => stage.getAttribute('data-stage'))).toEqual(['1', '2', '3', '4']);
-    expect(stages.every(stage => stage.querySelector('.academic-proof-card'))).toBe(true);
-    expect(screen.getByRole('table', { name: /illustrative semester result inputs/i }).parentElement).toHaveClass('hidden', 'sm:block');
-    expect(screen.getByRole('list', { name: /illustrative courses on small screens/i })).toHaveClass('sm:hidden');
-    expect(screen.getByText(/u = credit units/i)).toBeInTheDocument();
-    expect(screen.getByText(/records you enter/i)).toBeInTheDocument();
-    expect(screen.getByText(/does not replace an official university record/i)).toBeInTheDocument();
-  });
-
-  it('presents the product workflow as a real ordered sequence', () => {
-    render(<ProductStory />);
-
-    const heading = screen.getByRole('heading', { level: 2, name: /record\. understand\. plan\./i });
-    expect(heading).toBeInTheDocument();
-    const workflow = screen.getByRole('list', { name: /academic workflow/i });
-    expect(workflow).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.getByRole('heading', { level: 3, name: /record what happened/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /see where you stand/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: /plan what comes next/i })).toBeInTheDocument();
-  });
-
-  it('makes OCR import and AI insights visible without overstating either feature', () => {
-    render(<SmartAutomation />);
-
-    expect(screen.getByRole('heading', { level: 2, name: /turn a result slip into fields you can review/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /acadegrade ai result import screen/i })).toBeInTheDocument();
-    const capture = screen.getByRole('list', { name: /ocr result capture workflow/i });
-    expect(capture.children).toHaveLength(3);
-    expect(capture).toHaveTextContent(/capture\..*review\..*save\./i);
-    expect(screen.getByRole('link', { name: /explore result scanner/i })).toHaveAttribute('href', '/features/result-scanner');
-    expect(screen.getByRole('heading', { level: 2, name: /ask better questions about what comes next/i })).toBeInTheDocument();
-    expect(screen.getByText(/ai-generated guidance/i)).toBeInTheDocument();
-  });
-
-  it('keeps production positioning free of school-project framing', () => {
-    const { container } = render(
-      <main>
-        <HomeHero />
-        <AcademicProof />
-        <ProductStory />
-        <SmartAutomation />
-        <HomeFAQ />
-      </main>
-    );
-
-    expect(container).not.toHaveTextContent(/final[- ]year|school project|course project|defen[cs]e|github|repository/i);
-  });
-});
-
-describe('live GPA and PI example', () => {
-  it('recalculates with the real engine: GPA holds inside a letter band while PI follows the score', () => {
-    render(<AcademicProof />);
-
-    const slider = screen.getByRole('slider', { name: /mth 321 total score/i });
-    const [gpa, pi] = screen.getAllByRole('status');
-    expect(slider).toHaveValue('71');
-    expect(gpa).toHaveTextContent('4.14');
-    expect(pi).toHaveTextContent('3.18');
-
-    fireEvent.change(slider, { target: { value: '95' } });
-    expect(gpa).toHaveTextContent('4.14');
-    expect(pi).toHaveTextContent('3.69');
-    expect(slider).toHaveAttribute('aria-valuetext', '95 out of 100, grade A');
-
-    fireEvent.change(slider, { target: { value: '65' } });
-    expect(gpa).toHaveTextContent('3.71');
-    expect(slider).toHaveAttribute('aria-valuetext', '65 out of 100, grade B');
-  });
-});
-
-describe('mobile app availability', () => {
-  it('keeps iOS non-interactive until an admin link is configured', () => {
-    render(<MobileAppDownload />);
-
-    expect(screen.getByRole('link', { name: /download for android/i })).toHaveAttribute('href', '/app/download/android');
-    expect(screen.getByText(/ios coming soon/i)).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /download for ios/i })).not.toBeInTheDocument();
-  });
-
-  it('reveals the stable iOS route when an admin link exists', () => {
-    subscribeToDocumentMock.mockImplementationOnce((_path, onData) => {
-      onData({ mobileAppLinks: { iosUrl: 'https://apps.apple.com/example' } });
-      return () => undefined;
-    });
-
-    render(<MobileAppDownload />);
-
-    expect(screen.getByRole('link', { name: /download for ios/i })).toHaveAttribute('href', '/app/download/ios');
-  });
-});
-
-describe('Features page capability coverage', () => {
-  it('identifies AcadeMind with its logo and explains transcript export and sharing', () => {
-    render(<FeaturesPage />);
-
-    expect(screen.getByRole('img', { name: 'AcadeMind' })).toHaveAttribute('src', expect.stringContaining('acadegradeailogo.png'));
-    expect(screen.getByRole('heading', { name: /transcripts ready to export and share/i })).toBeInTheDocument();
-    expect(screen.getByText(/pdf and html export/i)).toBeInTheDocument();
-  });
-});
-
-describe('HomeFAQ', () => {
-  it('reveals an answer from an accessible disclosure control', async () => {
+  it('counts a carry-over when a course is set to F', async () => {
     const user = userEvent.setup();
-    render(<HomeFAQ />);
+    await renderHome();
+    await user.click(gradeKey('MTH 301', 'F'));
+    expect(screen.getByText('Carry-overs')).toBeInTheDocument();
+  });
 
-    const trigger = screen.getByRole('button', { name: /is acadegrade an official university record/i });
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    await user.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/use your institution's official records for formal verification/i)).toBeInTheDocument();
+  it('offers Save this semester after a change and writes the existing calculator handoff', async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    expect(screen.queryByRole('link', { name: 'Save this semester' })).toBeNull();
+    await user.click(gradeKey('MTH 301', 'A'));
+    const save = screen.getByRole('link', { name: 'Save this semester' });
+    expect(save).toHaveAttribute('href', '/register');
+    await user.click(save);
+    const stored = sessionStorage.getItem(CALCULATOR_HANDOFF_KEY);
+    expect(stored).toBeTruthy();
+    expect(stored).toContain('MTH 301');
+  });
+
+  it('gives a signed-in student Open dashboard instead', async () => {
+    Object.assign(authState, { user: { uid: 'u1', getIdToken: async () => 't' }, uid: 'u1' });
+    const user = userEvent.setup();
+    await renderHome();
+    expect(screen.getByRole('link', { name: 'Open dashboard' })).toHaveAttribute('href', '/dashboard');
+    await user.click(gradeKey('MTH 301', 'A'));
+    expect(screen.queryByRole('link', { name: 'Save this semester' })).toBeNull();
+  });
+});
+
+describe('home page: sections', () => {
+  it('has a heading on every section, with #how-it-works kept for old links', async () => {
+    const { container } = await renderHome();
+    const titles = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(titles).toEqual([
+      'Built on the 5‑point scale your university uses.',
+      'Everything after results day, in one place.',
+      'Results day, sorted.',
+      "Reminders that work when the network doesn't.",
+      'Built by a student who has lived through results day.',
+      'Questions, answered.',
+      'Your next result is coming. Know what it means the moment it lands.',
+    ]);
+    expect(container.querySelector('#how-it-works')).not.toBeNull();
+  });
+
+  it('shows the five classes and six grade bands of the 5-point scale', async () => {
+    await renderHome();
+    for (const name of ['Pass', 'Third Class', 'Second Class Lower', 'Second Class Upper', 'First Class']) {
+      expect(screen.getAllByText(name).length).toBeGreaterThan(0);
+    }
+    for (const grade of ['70–100', '60–69', '50–59', '45–49', '40–44', '0–39']) expect(screen.getByText(grade, { exact: false })).toBeInTheDocument();
+  });
+
+  it('leaves out What students say without real approved quotes', async () => {
+    await renderHome();
+    expect(screen.queryByRole('heading', { name: 'What students say.' })).toBeNull();
+  });
+
+  it('shows What students say with real approved quotes', async () => {
+    proofState.value = {
+      testimonials: [
+        { id: 'a', quote: 'Real quote one.', firstName: 'Ada', level: '300L', department: 'Law', university: 'UNILAG' },
+        { id: 'b', quote: 'Real quote two.', firstName: 'Bayo', level: '200L', department: 'Physics', university: 'OAU' },
+        { id: 'c', quote: 'Real quote three.', firstName: 'Chi', level: '400L', department: 'Nursing', university: 'UNN' },
+      ],
+      count: null,
+      preview: false,
+    };
+    await renderHome();
+    expect(screen.getByRole('heading', { name: 'What students say.' })).toBeInTheDocument();
+    expect(screen.getByText(/Real quote two\./)).toBeInTheDocument();
+  });
+
+  it('introduces the founder without a portrait and links the story', async () => {
+    await renderHome();
+    expect(screen.getByText(/I studied Computer Science at ESUT/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Read our story' })).toHaveAttribute('href', '/about');
+  });
+
+  it('answers the FAQ in disclosures, matched word for word by the FAQPage JSON-LD', async () => {
+    const { container } = await renderHome();
+    expect(container.querySelectorAll('details.ag-faq')).toHaveLength(HOME_FAQ.length);
+    const json = container.querySelector('script[type="application/ld+json"]')?.textContent ?? '';
+    for (const item of HOME_FAQ) {
+      expect(screen.getByText(item.question)).toBeInTheDocument();
+      expect(json).toContain(item.question);
+    }
+  });
+
+  it('ends with the gold closing band and its two actions', async () => {
+    await renderHome();
+    const closing = screen.getByRole('heading', { name: /Your next result is coming/ }).closest('section') as HTMLElement;
+    expect(within(closing).getByRole('link', { name: 'Start your free record' })).toHaveAttribute('href', '/register');
+    expect(within(closing).getByRole('link', { name: 'Get the Android app' })).toHaveAttribute('href', '/app');
+  });
+
+  it('keeps production positioning: no development traces', async () => {
+    const { container } = await renderHome();
+    expect(container.textContent).not.toMatch(/coming soon|beta|lorem|final year project|school project/i);
+  });
+
+  it('sets the planned title, description and canonical', () => {
+    expect(metadata.title).toEqual({ absolute: 'AcadeGrade: CGPA, GPA and degree class for Nigerian universities' });
+    expect(String(metadata.description)).toMatch(/GPA, CGPA and degree class/);
+    expect(String(metadata.alternates?.canonical)).toMatch(/^https:\/\/[^/]+\/?$/);
   });
 });

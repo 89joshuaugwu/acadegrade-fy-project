@@ -1,49 +1,27 @@
 import type { Metadata } from 'next';
 import { absoluteUrl, NO_INDEX_METADATA } from '@/lib/seo/site';
 
-const GENERIC_TITLE = 'Shared transcript | AcadeGrade';
-const GENERIC_DESCRIPTION = 'A transcript shared through AcadeGrade. This link may have expired. Not issued or verified by any university.';
-
-function expiryMillis(value: unknown): number | null {
-  if (!value) return null;
-  const withToDate = value as { toDate?: () => Date };
-  const date = typeof withToDate.toDate === 'function' ? withToDate.toDate() : new Date(value as string | number | Date);
-  const time = date.getTime();
-  return Number.isFinite(time) ? time : null;
-}
+/** The root layout's template adds " | AcadeGrade" to the page title. */
+export const SHARE_TITLE = 'Shared transcript';
+const FULL_TITLE = `${SHARE_TITLE} | AcadeGrade`;
+const DESCRIPTION = 'An academic record shared through AcadeGrade. Not issued or verified by any university. This link may have expired.';
 
 /**
- * Link-preview metadata for a shared transcript. A missing or expired link shows no
- * student name, so an old link cannot be used to learn whose record it was. Neither does
- * a PIN-protected link.
+ * Link-preview metadata for a shared transcript. It is the same for every link (owner
+ * decision, 17 Nov 2026): no student name, no figures and no photograph, live or not,
+ * with or without a PIN, because chat apps cache previews long after a link ends.
+ * The Open Graph image is the generic slip in ./opengraph-image.tsx.
  */
-export function shareMetadataFor(data: unknown, now: number, shareId: string): Metadata {
-  const record = data && typeof data === 'object' ? (data as Record<string, unknown>) : null;
-  const expiresAt = record ? expiryMillis(record.expiresAt) : null;
-  // A PIN-protected link is treated like a missing one: a link preview must not name the
-  // student to someone who does not have the PIN.
-  const pinProtected = typeof record?.pinHash === 'string' && record.pinHash.length > 0;
-  const live = record !== null && !pinProtected && (expiresAt === null || expiresAt >= now);
-  const rawName = live && typeof record?.studentName === 'string' ? record.studentName.trim() : '';
-  const name = rawName || null;
-
-  const title = live
-    ? `${name ?? 'Student'}'s unofficial academic record | AcadeGrade`
-    : GENERIC_TITLE;
-  const description = live
-    ? `${name ?? 'Student'}'s self-reported academic record, CGPA, and Performance Index, shared via AcadeGrade. Not issued or verified by any university.`
-    : GENERIC_DESCRIPTION;
-
+export function shareMetadataFor(shareId: string): Metadata {
   return {
-    title,
-    description,
+    title: SHARE_TITLE,
+    description: DESCRIPTION,
     robots: NO_INDEX_METADATA.robots,
     openGraph: {
-      title,
-      description,
-      url: absoluteUrl(`/share/${shareId}`),
-      images: [{ url: '/logo.png', width: 800, height: 600, alt: live ? `${name ?? 'Student'}'s transcript` : 'Shared transcript' }],
+      title: FULL_TITLE,
+      description: DESCRIPTION,
+      url: absoluteUrl(`/share/${encodeURIComponent(shareId)}`),
     },
-    twitter: { card: 'summary_large_image', title, description, images: ['/logo.png'] },
+    twitter: { card: 'summary_large_image', title: FULL_TITLE, description: DESCRIPTION },
   };
 }

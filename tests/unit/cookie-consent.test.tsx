@@ -66,7 +66,7 @@ describe('CookieConsentBanner', () => {
     const allow = screen.getByRole('button', { name: 'Allow ads & analytics' });
     expect(necessary.className).toBe(allow.className);
     expect(screen.queryByRole('button', { name: /close|dismiss/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /privacy policy/i })).toHaveAttribute('href', '/privacy');
+    expect(screen.getByRole("link", { name: /privacy notice/i })).toHaveAttribute('href', '/privacy');
     expect(panel).toBeInTheDocument();
   });
 

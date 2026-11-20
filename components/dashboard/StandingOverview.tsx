@@ -6,7 +6,17 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
 import { cn } from '@/lib/utils/cn';
-import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { formatCgpa, resolveDegreeClass, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+
+/** Class pill: the class's text tone on a tint of its fill (degree class follows CGPA). */
+const CLASS_TONES: Record<DegreeClassShortLabel, { text: string; fill: string }> = {
+  '1st': { text: 'var(--class-first)', fill: 'var(--class-first-fill, #FFB23F)' },
+  '2:1': { text: 'var(--class-2upper)', fill: 'var(--class-2upper-fill, #6B4EFF)' },
+  '2:2': { text: 'var(--class-2lower)', fill: 'var(--class-2lower-fill, #12A4B0)' },
+  '3rd': { text: 'var(--class-third)', fill: 'var(--class-third-fill, #F2762E)' },
+  Pass: { text: 'var(--class-pass)', fill: 'var(--class-pass-fill, #E0457B)' },
+  Fail: { text: 'var(--class-fail)', fill: 'var(--class-fail-fill, #E5484D)' },
+};
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 
 interface StandingOverviewProps {
@@ -38,6 +48,7 @@ export function StandingOverview({
   atRiskCount,
   unknownCount,
 }: StandingOverviewProps) {
+  const classTone = CLASS_TONES[resolveDegreeClass(cgpa).shortLabel];
   const stats = [
     { label: 'Credits', value: hasAcademicData ? String(totalCredits) : '—', icon: GraduationCap },
     { label: 'Courses', value: hasAcademicData ? String(coursesDone) : '—', icon: BookOpen },
@@ -47,26 +58,20 @@ export function StandingOverview({
 
   return (
     <DiscreetScope>
-    <Card padding="none" className="relative h-full overflow-hidden">
+    <Card padding="none" className="app-night relative h-full overflow-hidden rounded-[24px] border-white/[0.06]">
       <div
-        className="absolute inset-x-0 top-0 h-px"
+        className="pointer-events-none absolute -right-24 -top-28 size-80 rounded-full bg-[radial-gradient(circle,rgba(255,178,63,0.16),transparent_65%)]"
         aria-hidden="true"
-        style={{
-          background:
-            'linear-gradient(90deg, var(--acade-primary), var(--acade-gold), var(--acade-primary), transparent)',
-          backgroundSize: '200% auto',
-          animation: 'dashboard-standing-shimmer 10s linear infinite',
-        }}
       />
 
-      <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
+      <div className="relative flex items-start justify-between gap-4 px-5 pt-5 sm:px-7 sm:pt-6">
         <div className="min-w-0">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">
+          <h2 className="truncate font-[family-name:var(--font-bricolage)] text-[1.25rem] font-semibold tracking-[-0.02em] text-white">
             Current standing
-          </p>
-          <h2 className="mt-1 truncate font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)]">
-            {latestSemesterLabel || 'Academic record'}
           </h2>
+          <p className="mt-0.5 truncate text-sm text-[var(--acade-text-muted)]">
+            {latestSemesterLabel || 'Academic record'}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
         <DiscreetRevealButton label="Standing" />
@@ -82,28 +87,34 @@ export function StandingOverview({
         </div>
       </div>
 
-      <div className="grid items-center gap-5 px-5 py-6 sm:grid-cols-[minmax(0,1fr)_190px] sm:px-6">
+      <div className="relative grid items-center gap-5 px-5 py-6 sm:grid-cols-[minmax(0,1fr)_190px] sm:px-7">
         <div className="order-2 sm:order-1">
           {hasAcademicData ? (
             <>
               <p className="text-sm font-medium text-[var(--acade-text-muted)]">
                 {isPIMode ? 'Performance Index' : 'Cumulative GPA'}
               </p>
-              <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-[clamp(2.5rem,8vw,4.75rem)] font-semibold leading-none tracking-[-0.055em] text-[var(--acade-text)] tabular-nums">
+              <p className="app-num mt-1 text-[clamp(3rem,8vw,5rem)] font-bold leading-none text-white">
                 <DiscreetValue label={isPIMode ? 'Performance Index' : 'Cumulative GPA'}>{formatCgpa(isPIMode ? pi : cgpa)}</DiscreetValue>
               </p>
-              <p className="mt-3 text-sm text-[var(--acade-text-muted)]">
-                <DiscreetValue label="Degree class">{degreeClassLabel}</DiscreetValue> <span className="px-1.5 text-[var(--acade-text-faint)]">·</span> Degree class follows CGPA
+              <p className="mt-4 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-[var(--acade-text-muted)]">
+                <span
+                  className="inline-flex items-center rounded-full px-3 py-1 text-[0.8125rem] font-semibold"
+                  style={{ color: classTone.text, backgroundColor: `color-mix(in srgb, ${classTone.fill} 18%, transparent)` }}
+                >
+                  <DiscreetValue label="Degree class">{degreeClassLabel}</DiscreetValue>
+                </span>
+                <span>Degree class follows CGPA</span>
               </p>
               {unknownCount > 0 && (
-                <p className="mt-4 inline-flex rounded-full bg-[var(--acade-info)]/10 px-3 py-1 text-xs font-medium text-[var(--acade-info)]">
+                <p className="mt-4 inline-flex rounded-full bg-[var(--acade-info)]/10 px-3 py-1 text-[0.8125rem] font-medium text-[var(--acade-info)]">
                   {unknownCount} incomplete {unknownCount === 1 ? 'record' : 'records'} excluded from risk
                 </p>
               )}
             </>
           ) : (
             <>
-              <p className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-semibold text-[var(--acade-text)]">
+              <p className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-semibold text-white">
                 No result yet
               </p>
               <p className="mt-2 max-w-sm text-sm leading-6 text-[var(--acade-text-muted)]">
@@ -119,14 +130,14 @@ export function StandingOverview({
               <CGPAArc cgpa={cgpa} pi={pi} size="md" animateOnMount showParticles={false} primaryMetric={isPIMode ? 'pi' : 'cgpa'} />
             </DiscreetValue>
           ) : (
-            <div className="flex size-[180px] items-center justify-center rounded-full border border-dashed border-[var(--acade-border)] bg-[var(--acade-surface)] text-center">
-              <span className="font-[family-name:var(--font-geist-mono)] text-4xl text-[var(--acade-text-faint)]">—</span>
+            <div className="flex size-[180px] items-center justify-center rounded-full border border-dashed border-[var(--acade-border)] bg-white/[0.03] text-center">
+              <span className="app-num text-4xl text-[var(--acade-text-faint)]">—</span>
             </div>
           )}
         </div>
       </div>
 
-      <dl id="tour-quick-stats" className="grid grid-cols-2 border-t border-[var(--acade-border-subtle)] sm:grid-cols-4">
+      <dl id="tour-quick-stats" className="relative grid grid-cols-2 border-t border-[var(--acade-border-subtle)] bg-white/[0.03] sm:grid-cols-4">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -139,11 +150,11 @@ export function StandingOverview({
                 index > 0 && 'sm:border-l sm:border-[var(--acade-border-subtle)]'
               )}
             >
-              <dt className="flex items-center gap-1.5 truncate text-xs text-[var(--acade-text-muted)]">
+              <dt className="flex items-center gap-1.5 truncate text-[0.8125rem] text-[var(--acade-text-muted)]">
                 <Icon className="size-3.5 shrink-0" aria-hidden="true" />
                 {stat.label}
               </dt>
-              <dd className={cn('mt-2 font-[family-name:var(--font-geist-mono)] text-xl font-semibold tabular-nums', stat.warning ? 'text-[var(--acade-warning)]' : 'text-[var(--acade-text)]')}>
+              <dd className={cn('app-num mt-1.5 text-[1.5rem] font-bold leading-none', stat.warning ? 'text-[var(--acade-warning)]' : 'text-white')}>
                 {stat.discreet && hasAcademicData ? <DiscreetValue label={`${stat.label} GPA`}>{stat.value}</DiscreetValue> : stat.value}
               </dd>
             </div>

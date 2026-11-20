@@ -40,8 +40,8 @@ export function ChartFrame({
     >
       <figcaption className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 id={`${id}-title`} className="text-lg font-semibold text-[var(--acade-text)]">{title}</h2>
-          {period && <p className="mt-1 text-xs text-[var(--acade-text-faint)]">{period}</p>}
+          <h2 id={`${id}-title`} className="app-display text-lg font-semibold text-[var(--acade-text)]">{title}</h2>
+          {period && <p className="mt-1 text-[0.8125rem] text-[var(--acade-text-faint)]">{period}</p>}
         </div>
         {controls}
       </figcaption>
@@ -49,7 +49,7 @@ export function ChartFrame({
       {legend.length > 0 && (
         <ul aria-label="Chart legend" className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
           {legend.map((item) => (
-            <li key={item.label} className="flex items-center gap-2 text-xs font-medium text-[var(--acade-text-muted)]">
+            <li key={item.label} className="flex items-center gap-2 text-[0.8125rem] font-medium text-[var(--acade-text-muted)]">
               <span
                 aria-hidden="true"
                 className="w-7 border-t-2"

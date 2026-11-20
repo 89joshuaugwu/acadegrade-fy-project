@@ -49,6 +49,20 @@ describe('finalize: direct entry and spill-over (A5)', () => {
     expect(user).not.toHaveProperty('spilloverSemesters');
   });
 
+  it('stores the graduation session from the programme years for direct entry', async () => {
+    expect((await send(body())).status).toBe(201);
+    expect(store.docs.get('users/alice')).toMatchObject({ entrySession: '2024/2025', graduationSession: '2027/2028' });
+    store = queryTestDb();
+    state.db = store.db;
+    expect((await send(body({ entryLevel: 200, currentLevel: 200 }))).status).toBe(201);
+    // A 4-year course from 200 level is 3 years: 2024/2025, 2025/2026, 2026/2027.
+    expect(store.docs.get('users/alice')).toMatchObject({ entryLevel: 200, graduationSession: '2026/2027' });
+    store = queryTestDb();
+    state.db = store.db;
+    expect((await send(body({ courseDuration: 5, entryLevel: 300, currentLevel: 300 }))).status).toBe(201);
+    expect(store.docs.get('users/alice')).toMatchObject({ entryLevel: 300, graduationSession: '2026/2027' });
+  });
+
   it('rejects a current level below the entry level', async () => {
     const response = await send(body({ entryLevel: 200, currentLevel: 100 }));
     expect(response.status).toBe(400);

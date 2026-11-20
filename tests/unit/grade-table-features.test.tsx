@@ -55,9 +55,9 @@ describe('awaiting-result rows', () => {
     fireEvent.click(toggle);
     screen.getAllByLabelText('Course 1 exam score out of 70').forEach((input) => {
       expect(input).toBeDisabled();
-      expect(input).toHaveValue(null);
+      expect(input).toHaveValue('');
     });
-    expect(screen.getAllByLabelText('Course 1 CA score out of 30')[0]).toHaveValue(20);
+    expect(screen.getAllByLabelText('Course 1 CA score out of 30')[0]).toHaveValue('20');
     expect(screen.getAllByRole('region', { name: 'CSC 401: exam score needed' }).length).toBeGreaterThan(0);
   });
 
@@ -94,24 +94,24 @@ describe('course-code autocomplete (A10)', () => {
     fireEvent.change(code, { target: { value: 'gst401' } });
     expect(screen.getAllByLabelText('Course 1 code')[0]).toHaveValue('GST 401');
     expect(screen.getAllByLabelText('Course 1 title')[0]).toHaveValue('Entrepreneurship');
-    expect(screen.getAllByLabelText('Course 1 units')[0]).toHaveValue(2);
-    expect(screen.getAllByLabelText('Course 1 CA score out of 30')[0]).toHaveValue(null);
-    expect(screen.getAllByLabelText('Course 1 exam score out of 70')[0]).toHaveValue(null);
+    expect(screen.getAllByLabelText('Course 1 units')[0]).toHaveValue('2');
+    expect(screen.getAllByLabelText('Course 1 CA score out of 30')[0]).toHaveValue('');
+    expect(screen.getAllByLabelText('Course 1 exam score out of 70')[0]).toHaveValue('');
   });
 
   it('does not overwrite a title the student already typed', () => {
     render(<GradeTable editable initialCourses={[{ code: '', title: 'My own title', units: 4, caScore: 10, examScore: 40 }]} catalog={catalog} />);
     fireEvent.change(screen.getAllByLabelText('Course 1 code')[0], { target: { value: 'CSC 401' } });
     expect(screen.getAllByLabelText('Course 1 title')[0]).toHaveValue('My own title');
-    expect(screen.getAllByLabelText('Course 1 units')[0]).toHaveValue(4);
-    expect(screen.getAllByLabelText('Course 1 CA score out of 30')[0]).toHaveValue(10);
+    expect(screen.getAllByLabelText('Course 1 units')[0]).toHaveValue('4');
+    expect(screen.getAllByLabelText('Course 1 CA score out of 30')[0]).toHaveValue('10');
   });
 
   it('fills code and units from a chosen catalogue title', () => {
     render(<GradeTable editable initialCourses={[{ code: '', title: '', units: 3, caScore: null, examScore: null }]} catalog={catalog} />);
     fireEvent.change(screen.getAllByLabelText('Course 1 title')[0], { target: { value: 'entrepreneurship' } });
     expect(screen.getAllByLabelText('Course 1 code')[0]).toHaveValue('GST 401');
-    expect(screen.getAllByLabelText('Course 1 units')[0]).toHaveValue(2);
+    expect(screen.getAllByLabelText('Course 1 units')[0]).toHaveValue('2');
   });
 });
 

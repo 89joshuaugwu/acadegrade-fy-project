@@ -93,8 +93,8 @@ These terms are governed by the laws of the Federal Republic of Nigeria, without
 Questions about these terms: {{contact:Terms of use question}}, or the [support page](/support).`,
   },
   privacy: {
-    version: '2026-11-13',
-    effectiveDate: '2026-11-13',
+    version: '2026-11-17',
+    effectiveDate: '2026-11-17',
     title: 'Privacy notice',
     summary: 'How AcadeGrade handles your information on the website, in the Android app and in the services behind them, and the choices and rights you have.',
     body: `## Who runs AcadeGrade {#who-we-are}
@@ -113,7 +113,9 @@ This notice covers the AcadeGrade website, the Android app and the services behi
 - Academic records: courses, scores, grades, credit units, semesters and sessions you enter or confirm.
 - Your answers: your age group (18 or older, or under 18), the versions of these documents you accepted, your AI-processing choice and your product-news choice.
 - Result slips you choose to scan (an image or PDF), and the course rows you confirm from them.
-- Messages you send us and reports you make about AI answers.
+- Timetables you build: lectures, reading and exams, and their reminders.
+- Suggestions you send for the university and course lists.
+- Help and support requests you send us (from your account, or from the Support page without signing in), and reports you make about AI answers.
 
 **Created as you use AcadeGrade:**
 
@@ -140,7 +142,9 @@ Your calculations and forecasts are automated estimates about your own results. 
 
 ## AI processing and result scanning {#ai-and-scanning}
 
-Written Analysis, AI forecast labels, What-if notes and result scanning only run if you are 18 or older and have allowed AI processing. You can allow or withdraw it at any time in Settings → Privacy & AI choices. Withdrawing is as easy as allowing, and your records, calculations and the mathematical forecast keep working without it.
+AcadeGrade's AI features are shown in the app as **AcadeMind**: Written Analysis, AI forecast labels, What-if notes and result scanning. They only run if you are 18 or older and have allowed AI processing. You can allow or withdraw it at any time in Settings → Privacy & AI choices. Withdrawing is as easy as allowing, and your records, calculations and the mathematical forecast keep working without it.
+
+**Build with AcadeMind**, the timetable builder, works by fixed rules inside AcadeGrade. It does not send your data to AI providers and does not need AI processing to be allowed.
 
 When you use one of these features, we send the data needed for that request to these AI providers, who process it on our behalf:
 
@@ -164,7 +168,7 @@ We do not sell your personal information. We share it only with service provider
 - Groq and OpenRouter: AI processing, with your consent.
 - Partner ad networks shown on the website after you allow ads, currently Google AdSense and Adsterra.
 
-If you create a share link, anyone with the link can see the record it contains until the link expires (30 days) or you delete your account. Shared records are labelled as self-reported and unofficial.
+If you create a share link, anyone with the link can see the record it contains until the link expires after the period you choose (1, 7 or 30 days), you revoke it, or you delete your account. You can protect a link with a PIN, which the viewer must enter, and you can share a summary only (your results without course rows). Shared records are labelled as self-reported and unofficial.
 
 We may disclose information when the law requires it, to protect users or the service, or as part of a reorganisation of the operator with equivalent protection.
 
@@ -178,8 +182,10 @@ We rely on: our contracts with these providers, including their data-processing 
 
 | Information | How long |
 | --- | --- |
-| Account, profile and academic records, saved AI analysis, notifications | While your account is open. Deleted when you delete your account. Copies in backups: up to 30 days. |
-| Share-link snapshots | The link stops working 30 days after it is created. An expired snapshot can no longer be viewed, and it is deleted when you revoke the link or delete your account. |
+| Account, profile and academic records, timetables, saved AI analysis, notifications | While your account is open. Deleted when you delete your account. Copies in backups: up to 30 days. |
+| Share-link snapshots | The link stops working after the period you choose (1, 7 or 30 days). An expired snapshot can no longer be viewed and is deleted by our daily clean-up. It is also deleted when you revoke the link or delete your account. |
+| Help and support requests | Until 180 days after the request is closed. Requests sent from your account are deleted when you delete your account. |
+| Suggestions for the university and course lists | While your account is open. Deleted when you delete your account. A name we add to the lists stays there, without your details. |
 | Verification codes | Expire after 5 minutes. |
 | Rewarded-ad sessions (Android) | Expire after 30 minutes and are marked for deletion a day later. |
 | Coin balance and coin history (stored under a one-way hash of your user ID) | While your account is open. Deleted when you delete your account. |
@@ -188,6 +194,7 @@ We rely on: our contracts with these providers, including their data-processing 
 | Profile photo | Until you replace it or delete your account. Cached copies on the image network: up to 30 days. |
 | Emails we have sent, and logs held by our hosting and AI providers | Our own server logs: up to 90 days. Our hosting, email and AI providers keep their own logs under their own policies. |
 | Your cookie choice | Up to 180 days on your device. |
+| A note of an account deletion in progress (your user ID and email) | Until the deletion is complete, within 21 days of your request. |
 
 See the [account deletion page](/account-deletion) for what happens when you delete your account.
 

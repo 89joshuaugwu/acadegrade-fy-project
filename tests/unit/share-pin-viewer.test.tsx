@@ -3,9 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({ useParams: () => ({ shareId: 'abc123abc123' }) }));
-vi.mock('@/components/layout/Navbar', () => ({ Navbar: () => <header /> }));
-vi.mock('@/components/layout/PublicShell', () => ({ PublicFooter: () => <footer /> }));
-vi.mock('@/components/cgpa/CGPAArc', () => ({ CGPAArc: () => <div data-testid="cgpa-arc" /> }));
 vi.mock('jspdf-autotable', () => ({ default: vi.fn() }));
 vi.mock('jspdf', () => ({ default: class {} }));
 
@@ -90,7 +87,7 @@ describe('PIN-protected share page', () => {
     expect(input).toHaveAttribute('type', 'password');
     expect(input).not.toHaveAttribute('name');
     await user.type(input, '4821');
-    await user.click(screen.getByRole('button', { name: /view transcript/i }));
+    await user.click(screen.getByRole('button', { name: /view record/i }));
 
     expect(await screen.findByText('Communication in English')).toBeInTheDocument();
     for (const [url] of fetchMock.mock.calls) expect(String(url)).not.toContain('4821');
@@ -105,9 +102,9 @@ describe('PIN-protected share page', () => {
 
     const input = await screen.findByLabelText(/^pin$/i);
     await user.type(input, '9137');
-    await user.click(screen.getByRole('button', { name: /view transcript/i }));
+    await user.click(screen.getByRole('button', { name: /view record/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/not right/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/isn.t right/i);
     expect(screen.getByLabelText(/^pin$/i)).toHaveValue('');
     expect(document.body.innerHTML).not.toContain('9137');
   });
@@ -118,7 +115,7 @@ describe('PIN-protected share page', () => {
     render(<ShareTranscriptPage />);
 
     await user.type(await screen.findByLabelText(/^pin$/i), '12');
-    await user.click(screen.getByRole('button', { name: /view transcript/i }));
+    await user.click(screen.getByRole('button', { name: /view record/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/4 to 6 digits/i);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -129,16 +126,26 @@ describe('PIN-protected share page', () => {
     render(<ShareTranscriptPage />);
 
     await user.type(await screen.findByLabelText(/^pin$/i), '1111');
-    await user.click(screen.getByRole('button', { name: /view transcript/i }));
+    await user.click(screen.getByRole('button', { name: /view record/i }));
     expect(await screen.findByRole('alert')).toHaveTextContent(/too many wrong pins/i);
     expect(screen.getByRole('alert')).toHaveTextContent(/60 minutes/i);
-    expect(screen.getByRole('button', { name: /view transcript/i })).toBeDisabled();
+    // The field is disabled; the button stays focusable and explains itself (aria-disabled).
+    expect(screen.getByLabelText(/^pin$/i)).toBeDisabled();
+    expect(screen.getByRole('button', { name: /view record/i })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByText(/locked for now to protect the student/i)).toBeInTheDocument();
   });
 
   it('shows the expired screen for an expired or unknown link, as before', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => respond({ status: 404, body: { error: 'Transcript not found or expired' } })));
     render(<ShareTranscriptPage />);
-    expect(await screen.findByRole('heading', { name: /link expired/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /link has expired/i })).toBeInTheDocument();
+  });
+
+  it('shows the same expired screen for a 410 as for a 404', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => respond({ status: 410, body: { error: 'This shared transcript has expired' } })));
+    render(<ShareTranscriptPage />);
+    expect(await screen.findByRole('heading', { name: /link has expired/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to AcadeGrade' })).toHaveAttribute('href', '/');
   });
 });
 

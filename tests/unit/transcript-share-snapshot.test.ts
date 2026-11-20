@@ -60,20 +60,13 @@ it('GET never returns uid', async () => {
   expect(body.transcript.university).toBe('Enugu State University');
 });
 
-const NOW = Date.parse('2026-11-14T12:00:00Z');
 
-it('metadata for an expired or missing link is generic and names no student', () => {
-  const expired = shareMetadataFor({ studentName: 'Alice Okafor', expiresAt: new Date(NOW - 1000) }, NOW, 'abc');
-  const missing = shareMetadataFor(undefined, NOW, 'abc');
-  for (const meta of [expired, missing]) {
-    expect(meta.title).toBe('Shared transcript | AcadeGrade');
-    expect(JSON.stringify(meta)).not.toContain('Alice');
-  }
-});
-
-it('metadata for a live link names the student, and handles Firestore timestamps', () => {
-  const live = shareMetadataFor({ studentName: 'Alice Okafor', expiresAt: { toDate: () => new Date(NOW + 86_400_000) } }, NOW, 'abc');
-  expect(String(live.title)).toContain('Alice Okafor');
-  const expiredTimestamp = shareMetadataFor({ studentName: 'Alice Okafor', expiresAt: { toDate: () => new Date(NOW - 5) } }, NOW, 'abc');
-  expect(expiredTimestamp.title).toBe('Shared transcript | AcadeGrade');
+it('metadata is generic for every link and names no student, live or not', () => {
+  // Owner decision (17 Nov 2026): previews never show the student's name, because chat
+  // apps cache them after a link ends; the metadata does not read the record.
+  const meta = shareMetadataFor('abc');
+  expect(meta.title).toBe('Shared transcript');
+  expect(JSON.stringify(meta)).not.toContain('Alice');
+  expect(JSON.stringify(meta)).not.toContain('logo.png');
+  expect(meta.robots).toMatchObject({ index: false, follow: false });
 });

@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { postAdminSettings } from '@/components/admin/settings/api';
+import { androidSizeError, appLinksValue, type AppLinks } from '@/components/admin/settings/PublicSiteSettings';
 
-interface PublicLinks { androidUrl: string; iosUrl: string }
+type PublicLinks = AppLinks;
 
 /**
  * Android release → Download links. The update notice link
@@ -17,6 +18,8 @@ interface PublicLinks { androidUrl: string; iosUrl: string }
 export function DownloadLinks({ updateUrl, getToken }: { updateUrl: string; getToken: () => Promise<string> }) {
   const [saved, setSaved] = useState<PublicLinks | null>(null);
   const [androidUrl, setAndroidUrl] = useState('');
+  const [androidSizeMb, setAndroidSizeMb] = useState('');
+  const [playUrl, setPlayUrl] = useState('');
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,10 +31,18 @@ export function DownloadLinks({ updateUrl, getToken }: { updateUrl: string; getT
       const token = await getToken();
       const response = await fetch('/api/admin/settings', { headers: { Authorization: `Bearer ${token}` } });
       if (!response.ok) throw new Error('Settings request failed.');
-      const data = await response.json() as { settings?: { mobileAppLinks?: Partial<PublicLinks> } };
-      const links = { androidUrl: data.settings?.mobileAppLinks?.androidUrl ?? '', iosUrl: data.settings?.mobileAppLinks?.iosUrl ?? '' };
+      const data = await response.json() as { settings?: { mobileAppLinks?: { androidUrl?: string; iosUrl?: string; androidSizeMb?: number | null; playUrl?: string } } };
+      const stored = data.settings?.mobileAppLinks;
+      const links: PublicLinks = {
+        androidUrl: stored?.androidUrl ?? '',
+        iosUrl: stored?.iosUrl ?? '',
+        androidSizeMb: typeof stored?.androidSizeMb === 'number' ? String(stored.androidSizeMb) : '',
+        playUrl: stored?.playUrl ?? '',
+      };
       setSaved(links);
       setAndroidUrl(links.androidUrl);
+      setAndroidSizeMb(links.androidSizeMb);
+      setPlayUrl(links.playUrl);
       setState('ready');
     } catch {
       setState('error');
@@ -41,15 +52,20 @@ export function DownloadLinks({ updateUrl, getToken }: { updateUrl: string; getT
   useEffect(() => { void load(); }, [load]);
 
   const trimmedUpdate = updateUrl.trim();
-  const dirty = saved !== null && androidUrl.trim() !== saved.androidUrl;
+  const sizeError = androidSizeError(androidSizeMb);
+  const dirty = saved !== null && (
+    androidUrl.trim() !== saved.androidUrl
+    || androidSizeMb.trim() !== saved.androidSizeMb.trim()
+    || playUrl.trim() !== saved.playUrl.trim()
+  );
   const mismatch = saved !== null && Boolean(trimmedUpdate) && saved.androidUrl !== trimmedUpdate;
 
   async function save() {
     if (!saved) return;
     setSaving(true); setError(null); setNotice(null);
-    const next = { androidUrl: androidUrl.trim(), iosUrl: saved.iosUrl };
+    const next: PublicLinks = { androidUrl: androidUrl.trim(), iosUrl: saved.iosUrl, androidSizeMb: androidSizeMb.trim(), playUrl: playUrl.trim() };
     try {
-      await postAdminSettings(await getToken(), { field: 'mobileAppLinks', value: next });
+      await postAdminSettings(await getToken(), { field: 'mobileAppLinks', value: appLinksValue(next) });
       setSaved(next);
       setNotice('Public site link saved.');
     } catch (cause) {
@@ -86,6 +102,25 @@ export function DownloadLinks({ updateUrl, getToken }: { updateUrl: string; getT
               onChange={(event) => { setAndroidUrl(event.target.value); setNotice(null); setError(null); }}
               hint="Shown on the home, sign-in and sign-up pages. Also editable in Settings → Public site."
             />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label="APK size (MB)"
+                inputMode="numeric"
+                value={androidSizeMb}
+                onChange={(event) => { setAndroidSizeMb(event.target.value); setNotice(null); setError(null); }}
+                placeholder="For example 45"
+                hint="Update it with each release; blank hides it."
+                error={sizeError ?? undefined}
+              />
+              <Input
+                label="Google Play link"
+                type="url"
+                value={playUrl}
+                onChange={(event) => { setPlayUrl(event.target.value); setNotice(null); setError(null); }}
+                placeholder="https://play.google.com/store/apps/details?id=…"
+                hint="Blank until the app is listed on Google Play."
+              />
+            </div>
             {mismatch && (
               <p className="rounded-lg bg-[var(--acade-warning)]/10 px-3 py-2 text-sm text-[var(--acade-text)]">
                 The saved links do not match, so the public site and the update notice may offer different APKs.
@@ -95,7 +130,7 @@ export function DownloadLinks({ updateUrl, getToken }: { updateUrl: string; getT
               <Button variant="outline" size="sm" disabled={!trimmedUpdate || androidUrl.trim() === trimmedUpdate} onClick={() => { setAndroidUrl(trimmedUpdate); setNotice(null); }}>
                 Use the update link for the public site
               </Button>
-              <Button size="sm" disabled={!dirty} loading={saving} loadingLabel="Saving…" onClick={() => { void save(); }}>Save public link</Button>
+              <Button size="sm" disabled={!dirty || Boolean(sizeError)} loading={saving} loadingLabel="Saving…" onClick={() => { void save(); }}>Save public link</Button>
             </div>
             {error && <p role="alert" className="text-sm text-[var(--acade-danger)]">{error}</p>}
             {notice && <p role="status" className="text-sm text-[var(--acade-text)]">{notice}</p>}

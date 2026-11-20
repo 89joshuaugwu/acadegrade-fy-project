@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useId, useMemo, useRef } from 'react';
+import { useState, useEffect, useId, useMemo, useRef, type InputHTMLAttributes } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Trash2, CheckCircle2, History, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, History, AlertTriangle, Check } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 import { MAX_CA_SCORE, MAX_EXAM_SCORE } from '@/lib/utils/constants';
@@ -93,8 +93,52 @@ function draftTimeLabel(savedAt: number) {
   return date.toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
-const inputBase = 'min-h-11 rounded-md border border-[var(--acade-border)] bg-[var(--acade-deep)] text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-50';
-const headerCell = 'text-xs font-semibold text-[var(--acade-text-muted)]';
+const inputBase = 'min-h-11 rounded-[var(--radius-control)] border border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text)] transition-[border-color,box-shadow] duration-150 placeholder:text-[var(--acade-text-faint)] hover:border-[var(--acade-control-border)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20 disabled:cursor-not-allowed disabled:bg-[var(--acade-overlay)] disabled:opacity-60';
+const headerCell = 'text-[0.8125rem] font-medium text-[var(--acade-text-muted)]';
+const GRADE_COLOURS: Record<Grade, string> = { A: 'var(--grade-a)', B: 'var(--grade-b)', C: 'var(--grade-c)', D: 'var(--grade-d)', E: 'var(--grade-e)', F: 'var(--grade-f)' };
+
+/** Keeps only digits (and one decimal point when allowed) from what the student typed. */
+function cleanNumber(raw: string, decimals: boolean) {
+  if (!decimals) return raw.replace(/\D/g, '');
+  const [whole, ...rest] = raw.replace(/[^0-9.]/g, '').split('.');
+  return rest.length ? `${whole}.${rest.join('')}` : whole;
+}
+
+interface NumericFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange' | 'inputMode'> {
+  value: number | null;
+  onValueChange: (value: number | null) => void;
+  decimals?: boolean;
+}
+
+/**
+ * A plain text field for numbers (no browser spinner). It keeps what the student is typing
+ * ("12." on the way to "12.5") and follows the value when it changes from outside
+ * (clamping, imports, a restored draft, an awaiting-result toggle).
+ */
+function NumericField({ value, onValueChange, decimals = true, ...props }: NumericFieldProps) {
+  const [text, setText] = useState(() => (value === null || value === undefined ? '' : String(value)));
+  useEffect(() => {
+    setText((current) => {
+      const shown = current === '' || current === '.' ? null : Number(current);
+      if (shown === (value ?? null)) return current;
+      return value === null || value === undefined ? '' : String(value);
+    });
+  }, [value]);
+  return (
+    <input
+      {...props}
+      type="text"
+      inputMode={decimals ? 'decimal' : 'numeric'}
+      autoComplete="off"
+      value={text}
+      onChange={(event) => {
+        const next = cleanNumber(event.target.value, decimals);
+        setText(next);
+        onValueChange(next === '' || next === '.' ? null : Number(next));
+      }}
+    />
+  );
+}
 
 export function GradeTable({ initialCourses = [], editable = false, onSave, isSaving = false, catalog, draft, restoreDraftOnMount = false, importRequest, onImportResult, creditLoadRange }: GradeTableProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -290,19 +334,13 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
   const showGuidance = (course: LocalCourse) => !!course.isAR && typeof course.caScore === 'number';
 
   const scoreInput = (course: LocalCourse, index: number, field: 'caScore' | 'examScore', className: string) => {
-    const max = field === 'caScore' ? MAX_CA_SCORE : MAX_EXAM_SCORE;
     const label = field === 'caScore' ? `Course ${index + 1} CA score out of 30` : `Course ${index + 1} exam score out of 70`;
     const value = course[field];
     return (
-      <input
+      <NumericField
         aria-label={label}
-        type="number"
-        value={value === null ? '' : value}
-        onChange={(event) => updateCourse(course.localId, field, event.target.value ? Number(event.target.value) : null)}
-        min="0"
-        max={max}
-        step="any"
-        inputMode="decimal"
+        value={value ?? null}
+        onValueChange={(next) => updateCourse(course.localId, field, next)}
         placeholder="–"
         disabled={field === 'examScore' && course.isAR}
         title={field === 'examScore' && course.isAR ? 'Awaiting result: add the exam score when it is released' : undefined}
@@ -311,15 +349,31 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     );
   };
 
+  const unitsInput = (course: LocalCourse, index: number, className: string) => (
+    <NumericField
+      aria-label={`Course ${index + 1} units`}
+      decimals={false}
+      value={course.units || null}
+      onValueChange={(next) => updateCourse(course.localId, 'units', next ?? 0)}
+      className={className}
+    />
+  );
+
   const awaitingToggle = (course: LocalCourse, index: number, className?: string) => (
-    <label className={`flex min-h-11 cursor-pointer items-center gap-2 text-xs font-medium text-[var(--acade-text-muted)] ${className ?? ''}`}>
+    <label className={`flex min-h-11 cursor-pointer select-none items-center gap-2.5 text-[0.8125rem] font-medium text-[var(--acade-text-muted)] hover:text-[var(--acade-text)] ${className ?? ''}`}>
       <input
         type="checkbox"
         aria-label={`Course ${index + 1} awaiting result`}
         checked={!!course.isAR}
         onChange={() => toggleAwaitingResult(course.localId)}
-        className="size-4 shrink-0 accent-[var(--acade-primary)]"
+        className="peer sr-only"
       />
+      <span
+        aria-hidden="true"
+        className="flex size-5 shrink-0 items-center justify-center rounded-md border border-[var(--acade-control-border)] bg-[var(--acade-surface)] text-transparent transition-colors peer-checked:border-[var(--acade-primary)] peer-checked:bg-[var(--acade-primary)] peer-checked:text-[var(--acade-on-primary)] peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--acade-primary)]"
+      >
+        <Check className="size-3.5" strokeWidth={3} />
+      </span>
       Awaiting result
     </label>
   );
@@ -337,7 +391,17 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
     if (!grade) return <span className="text-[var(--acade-text-faint)]">—</span>;
     return (
       <DiscreetValue label="Grade">
-        {compact ? <span className="text-sm font-bold text-[var(--acade-text)]">{grade}</span> : <Badge variant={getGradeBadgeVariant(grade)}>{grade}</Badge>}
+        {compact ? (
+          <span
+            className="app-num inline-flex size-8 items-center justify-center rounded-full text-sm font-bold"
+            style={{
+              color: GRADE_COLOURS[grade as Grade] ?? 'var(--acade-text)',
+              backgroundColor: `color-mix(in srgb, ${GRADE_COLOURS[grade as Grade] ?? 'var(--acade-text)'} 14%, transparent)`,
+            }}
+          >
+            {grade}
+          </span>
+        ) : <Badge variant={getGradeBadgeVariant(grade)}>{grade}</Badge>}
       </DiscreetValue>
     );
   };
@@ -355,12 +419,14 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
         <section
           role="region"
           aria-label="Restore unsaved changes?"
-          className="flex flex-col gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-gold)]/35 bg-[var(--acade-gold-dim)] p-4 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-2xl border border-[var(--acade-gold)]/30 bg-[var(--acade-gold-dim)] p-4 sm:flex-row sm:items-center sm:justify-between"
         >
           <div className="flex min-w-0 items-start gap-3">
-            <History className="mt-0.5 size-5 shrink-0 text-[var(--acade-gold)]" aria-hidden="true" />
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ag-gold/25 text-[var(--acade-gold)]">
+              <History className="size-[18px]" aria-hidden="true" />
+            </span>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-[var(--acade-text)]">Restore unsaved changes?</h2>
+              <h2 className="text-[0.9375rem] font-semibold text-[var(--acade-text)]">Restore unsaved changes?</h2>
               <p className="mt-0.5 text-sm leading-6 text-[var(--acade-text-muted)]">
                 {pendingDraft.courses.length} {pendingDraft.courses.length === 1 ? 'course' : 'courses'} from {draftTimeLabel(pendingDraft.savedAt)} were not saved. They are kept on this device only.
               </p>
@@ -374,8 +440,8 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       )}
 
       {discreet && (
-        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] bg-[var(--acade-deep)] px-3 py-1">
-          <p className="text-xs text-[var(--acade-text-muted)]">Discreet mode is on. Grades and GPA are hidden.</p>
+        <div className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] bg-[var(--acade-overlay)] px-3.5 py-1.5">
+          <p className="text-[0.8125rem] text-[var(--acade-text-muted)]">Discreet mode is on. Grades and GPA are hidden.</p>
           <DiscreetRevealButton label="Grades" />
         </div>
       )}
@@ -383,10 +449,10 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       {hasCatalog && (
         <>
           <datalist id={listId}>
-            {catalog!.map((course) => <option key={course.code} value={course.code} label={`${course.title} · ${course.units} units`} />)}
+            {catalog!.map((course) => <option key={course.code} value={course.code} label={`${course.title}, ${course.units} units`} />)}
           </datalist>
           <datalist id={titleListId}>
-            {catalog!.map((course) => <option key={course.code} value={course.title} label={`${course.code} · ${course.units} units`} />)}
+            {catalog!.map((course) => <option key={course.code} value={course.title} label={`${course.code}, ${course.units} units`} />)}
           </datalist>
         </>
       )}
@@ -396,9 +462,9 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
         aria-label="Mobile course editor"
         aria-describedby="mobile-course-editor-help"
         tabIndex={0}
-        className="w-full overflow-x-auto overscroll-x-contain rounded-xl border border-[var(--acade-border)] custom-scrollbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] md:hidden"
+        className="w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] custom-scrollbar focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] md:hidden"
       >
-        <p id="mobile-course-editor-help" className="sticky left-0 z-30 w-[9.25rem] border-b border-r border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-2 text-xs leading-5 text-[var(--acade-text-muted)] shadow-[8px_0_16px_-14px_rgba(0,0,0,0.9)]">
+        <p id="mobile-course-editor-help" className="sticky left-0 z-30 w-[9.25rem] border-b border-r border-[var(--acade-border-subtle)] bg-[var(--acade-void)] px-3 py-2 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)] shadow-[6px_0_12px_-10px_rgba(23,19,58,0.35)]">
           Swipe sideways to edit every result field.
         </p>
         <table aria-label={editable ? 'Editable course results' : 'Course results'} className="w-[690px] table-fixed border-collapse text-left">
@@ -413,8 +479,8 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
             <col className="w-[4.25rem]" />
           </colgroup>
           <thead>
-            <tr className={`border-b border-[var(--acade-border)] bg-[var(--acade-deep)] ${headerCell}`}>
-              <th scope="col" className="sticky left-0 z-30 border-r border-[var(--acade-border)] bg-[var(--acade-deep)] px-3 py-2 shadow-[8px_0_16px_-14px_rgba(0,0,0,0.9)]">Course</th>
+            <tr className={`border-b border-[var(--acade-border-subtle)] bg-[var(--acade-void)] ${headerCell}`}>
+              <th scope="col" className="sticky left-0 z-30 border-r border-[var(--acade-border-subtle)] bg-[var(--acade-void)] px-3 py-2.5 shadow-[6px_0_12px_-10px_rgba(23,19,58,0.35)]">Course</th>
               <th scope="col" className="px-2 py-2 text-center">Units</th>
               <th scope="col" className="px-2 py-2 text-center">CA /30</th>
               <th scope="col" className="px-2 py-2 text-center">Exam /70</th>
@@ -437,7 +503,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
                     className={showGuidance(course) ? '' : 'border-b border-[var(--acade-border-subtle)] last:border-b-0'}
                   >
-                    <td aria-label={`Course ${idx + 1}: ${course.code || `course ${idx + 1}`}`} className="sticky left-0 z-20 overflow-hidden border-r border-[var(--acade-border)] bg-[var(--acade-surface)] p-2 align-top shadow-[8px_0_16px_-14px_rgba(0,0,0,0.9)]">
+                    <td aria-label={`Course ${idx + 1}: ${course.code || `course ${idx + 1}`}`} className="sticky left-0 z-20 overflow-hidden border-r border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-2 align-top shadow-[6px_0_12px_-10px_rgba(23,19,58,0.35)]">
                       {editable ? (
                         <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_40px] gap-1.5">
                           <input
@@ -450,7 +516,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                             placeholder="CSC 401"
                             className={`${inputBase} min-w-0 max-w-full px-2 text-base font-bold uppercase`}
                           />
-                          <button type="button" onClick={() => handleRemoveRow(course.localId)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-[var(--acade-danger)]/25 text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]" aria-label={`Remove ${course.code || `course ${idx + 1}`}`}>
+                          <button type="button" onClick={() => handleRemoveRow(course.localId)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] border border-[var(--acade-border)] text-[var(--acade-text-muted)] transition-colors hover:border-[var(--acade-danger)]/40 hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]" aria-label={`Remove ${course.code || `course ${idx + 1}`}`}>
                             <Trash2 size={17} aria-hidden="true" />
                           </button>
                           <input
@@ -467,28 +533,28 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                         </div>
                       ) : (
                         <div className="min-w-0 py-1">
-                          <p className="truncate text-sm font-bold text-[var(--acade-text)]">{course.code || 'Untitled course'}</p>
-                          <p className="mt-1 line-clamp-2 text-xs leading-4 text-[var(--acade-text-muted)]">{course.title}</p>
+                          <p className="truncate text-sm font-semibold text-[var(--acade-text)]">{course.code || 'Untitled course'}</p>
+                          <p className="mt-1 line-clamp-2 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">{course.title}</p>
                         </div>
                       )}
                     </td>
                     <td className="p-2 text-center align-middle">
-                      {editable ? <input aria-label={`Course ${idx + 1} units`} type="number" value={course.units || ''} onChange={(event) => updateCourse(course.localId, 'units', parseInt(event.target.value) || 0)} min="1" max="6" inputMode="numeric" className={`${inputBase} w-full px-1 text-center font-[family-name:var(--font-geist-mono)] text-base`} /> : <span className="text-sm text-[var(--acade-text)]">{course.units}</span>}
+                      {editable ? unitsInput(course, idx, `${inputBase} w-full px-1 text-center tabular-nums text-base`) : <span className="text-sm tabular-nums text-[var(--acade-text)]">{course.units}</span>}
                     </td>
                     <td className="p-2 text-center align-middle">
-                      {editable ? scoreInput(course, idx, 'caScore', `${inputBase} w-full px-1 text-center font-[family-name:var(--font-geist-mono)] text-base`) : readOnlyScore(course.caScore)}
+                      {editable ? scoreInput(course, idx, 'caScore', `${inputBase} w-full px-1 text-center tabular-nums text-base`) : readOnlyScore(course.caScore)}
                     </td>
                     <td className="p-2 text-center align-middle">
-                      {editable ? scoreInput(course, idx, 'examScore', `${inputBase} w-full px-1 text-center font-[family-name:var(--font-geist-mono)] text-base`) : readOnlyScore(course.examScore)}
+                      {editable ? scoreInput(course, idx, 'examScore', `${inputBase} w-full px-1 text-center tabular-nums text-base`) : readOnlyScore(course.examScore)}
                     </td>
-                    <td className="px-2 py-3 text-center align-middle font-[family-name:var(--font-geist-mono)] text-sm font-bold text-[var(--acade-text)]">
+                    <td className="app-num px-2 py-3 text-center align-middle text-[0.9375rem] font-bold text-[var(--acade-text)]">
                       {totalScore === null ? '—' : <DiscreetValue label="Total">{totalScore}</DiscreetValue>}
                     </td>
                     <td className="p-2 text-center align-middle">{gradeDisplay(course, grade, true)}</td>
-                    <td className="px-2 py-3 text-center align-middle font-[family-name:var(--font-geist-mono)] text-sm font-bold text-[var(--acade-text-muted)]">
+                    <td className="app-num px-2 py-3 text-center align-middle text-sm font-semibold text-[var(--acade-text-muted)]">
                       {!grade || grade === 'AR' ? '—' : <DiscreetValue label="Grade point">{gradePoint.toFixed(1)}</DiscreetValue>}
                     </td>
-                    <td className="px-2 py-3 text-center align-middle font-[family-name:var(--font-geist-mono)] text-sm font-bold text-[var(--acade-gold)]">
+                    <td className="app-num px-2 py-3 text-center align-middle text-sm font-semibold text-[var(--acade-gold)]">
                       {!grade || grade === 'AR' ? '—' : <DiscreetValue label="PI">{piPoint.toFixed(2)}</DiscreetValue>}
                     </td>
                   </motion.tr>,
@@ -514,22 +580,22 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       <div
         role="region"
         aria-label="Desktop course editor"
-        className="hidden w-full overflow-x-auto pb-4 custom-scrollbar md:block"
+        className="hidden w-full overflow-x-auto custom-scrollbar md:block"
       >
-        <table className="w-full min-w-[800px] border-collapse text-left">
+        <table className="w-full min-w-[800px] border-separate border-spacing-0 text-left">
           <thead>
-            <tr className={`border-b border-[var(--acade-border)] ${headerCell}`}>
-              <th className="w-10 p-3">#</th>
-              <th className="w-32 p-3">Code</th>
-              <th className="p-3">Title</th>
-              <th className="w-20 p-3 text-center">Units</th>
-              <th className="w-24 p-3 text-center">CA /30</th>
-              <th className="w-24 p-3 text-center">Exam /70</th>
-              <th className="w-20 p-3 text-center">Total</th>
-              <th className="w-20 p-3 text-center">Grade</th>
-              <th className="w-16 p-3 text-center">GP</th>
-              <th className="w-16 p-3 text-center">PI</th>
-              {editable && <th className="w-16 p-3"><span className="sr-only">Actions</span></th>}
+            <tr className={headerCell}>
+              <th className="w-10 rounded-l-xl bg-[var(--acade-void)] px-3 py-2.5">#</th>
+              <th className="w-32 bg-[var(--acade-void)] px-3 py-2.5">Code</th>
+              <th className="bg-[var(--acade-void)] px-3 py-2.5">Title</th>
+              <th className="w-20 bg-[var(--acade-void)] px-3 py-2.5 text-center">Units</th>
+              <th className="w-24 bg-[var(--acade-void)] px-3 py-2.5 text-center">CA /30</th>
+              <th className="w-24 bg-[var(--acade-void)] px-3 py-2.5 text-center">Exam /70</th>
+              <th className="w-20 bg-[var(--acade-void)] px-3 py-2.5 text-center">Total</th>
+              <th className="w-20 bg-[var(--acade-void)] px-3 py-2.5 text-center">Grade</th>
+              <th className="w-16 bg-[var(--acade-void)] px-3 py-2.5 text-center">GP</th>
+              <th className={`w-16 bg-[var(--acade-void)] px-3 py-2.5 text-center ${editable ? '' : 'rounded-r-xl'}`}>PI</th>
+              {editable && <th className="w-16 rounded-r-xl bg-[var(--acade-void)] px-3 py-2.5"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -545,9 +611,9 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     animate={isShaking ? { x: [-5, 5, -5, 5, 0], transition: { duration: 0.4 } } : { opacity: 1, y: 0, x: 0 }}
                     exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.2 }}
-                    className={`group transition-colors duration-200 hover:bg-[var(--acade-primary)]/5 ${showGuidance(course) ? '' : 'border-b border-[var(--acade-border-subtle)]'}`}
+                    className={`group transition-colors duration-200 hover:bg-[var(--acade-primary)]/[0.04] ${showGuidance(course) ? '' : '[&>td]:border-b [&>td]:border-[var(--acade-border-subtle)]'}`}
                   >
-                    <td className="p-3 align-top font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)] text-[var(--acade-text-faint)]">
+                    <td className="p-3 align-top text-[length:var(--text-sm)] tabular-nums text-[var(--acade-text-faint)]">
                       <span className="inline-flex min-h-11 items-center">{idx + 1}</span>
                     </td>
 
@@ -561,10 +627,10 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                           value={course.code}
                           onChange={(event) => updateCourse(course.localId, 'code', event.target.value.toUpperCase())}
                           placeholder="CSC 401"
-                          className={`${inputBase} w-full px-2 py-1.5 font-[family-name:var(--font-dm-sans)] text-[length:var(--text-sm)] font-bold uppercase`}
+                          className={`${inputBase} w-full px-3 py-1.5 text-[length:var(--text-sm)] font-semibold uppercase`}
                         />
                       ) : (
-                        <span className="font-[family-name:var(--font-dm-sans)] font-bold text-[var(--acade-text)]">{course.code}</span>
+                        <span className="inline-flex min-h-11 items-center text-[0.9375rem] font-semibold text-[var(--acade-text)]">{course.code}</span>
                       )}
                     </td>
 
@@ -579,41 +645,33 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                             value={course.title}
                             onChange={(event) => updateCourse(course.localId, 'title', event.target.value)}
                             placeholder="Software Engineering"
-                            className={`${inputBase} w-full px-2 py-1.5 font-[family-name:var(--font-dm-sans)] text-[length:var(--text-sm)]`}
+                            className={`${inputBase} w-full px-3 py-1.5 text-[length:var(--text-sm)]`}
                           />
                           {awaitingToggle(course, idx)}
                         </>
                       ) : (
-                        <span className="line-clamp-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">{course.title}</span>
+                        <span className="inline-flex min-h-11 items-center text-[length:var(--text-sm)] text-[var(--acade-text-muted)]"><span className="line-clamp-1">{course.title}</span></span>
                       )}
                     </td>
 
                     <td className="p-2 text-center align-top">
                       {editable ? (
-                        <input
-                          aria-label={`Course ${idx + 1} units`}
-                          type="number"
-                          value={course.units || ''}
-                          onChange={(event) => updateCourse(course.localId, 'units', parseInt(event.target.value) || 0)}
-                          min="1"
-                          max="6"
-                          className={`${inputBase} w-full px-2 py-1.5 text-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)]`}
-                        />
+                        unitsInput(course, idx, `${inputBase} w-full px-2 py-1.5 text-center tabular-nums text-[length:var(--text-sm)]`)
                       ) : (
-                        <span className="font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)] text-[var(--acade-text)]">{course.units}</span>
+                        <span className="inline-flex min-h-11 items-center text-[length:var(--text-sm)] tabular-nums text-[var(--acade-text)]">{course.units}</span>
                       )}
                     </td>
 
                     <td className="p-2 text-center align-top">
-                      {editable ? scoreInput(course, idx, 'caScore', `${inputBase} w-full px-2 py-1.5 text-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)]`) : readOnlyScore(course.caScore)}
+                      {editable ? scoreInput(course, idx, 'caScore', `${inputBase} w-full px-2 py-1.5 text-center tabular-nums text-[length:var(--text-sm)]`) : <span className="inline-flex min-h-11 items-center">{readOnlyScore(course.caScore)}</span>}
                     </td>
 
                     <td className="p-2 text-center align-top">
-                      {editable ? scoreInput(course, idx, 'examScore', `${inputBase} w-full px-2 py-1.5 text-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)]`) : readOnlyScore(course.examScore)}
+                      {editable ? scoreInput(course, idx, 'examScore', `${inputBase} w-full px-2 py-1.5 text-center tabular-nums text-[length:var(--text-sm)]`) : <span className="inline-flex min-h-11 items-center">{readOnlyScore(course.examScore)}</span>}
                     </td>
 
                     <td className="p-3 text-center align-top">
-                      <span className="inline-flex min-h-11 items-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-base)] font-bold text-[var(--acade-text)]">
+                      <span className="app-num inline-flex min-h-11 items-center text-[1.0625rem] font-bold text-[var(--acade-text)]">
                         {totalScore === null ? '—' : <DiscreetValue label="Total">{totalScore}</DiscreetValue>}
                       </span>
                     </td>
@@ -623,13 +681,13 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                     </td>
 
                     <td className="p-3 text-center align-top">
-                      <span className="inline-flex min-h-11 items-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)] font-bold text-[var(--acade-text-muted)]">
+                      <span className="app-num inline-flex min-h-11 items-center text-[length:var(--text-sm)] font-semibold text-[var(--acade-text-muted)]">
                         {!grade || grade === 'AR' ? '—' : <DiscreetValue label="Grade point">{gradePoint.toFixed(1)}</DiscreetValue>}
                       </span>
                     </td>
 
                     <td className="p-3 text-center align-top">
-                      <span className="inline-flex min-h-11 items-center font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)] font-bold text-[var(--acade-gold)]">
+                      <span className="app-num inline-flex min-h-11 items-center text-[length:var(--text-sm)] font-semibold text-[var(--acade-gold)]">
                         {!grade || grade === 'AR' ? '—' : <DiscreetValue label="PI">{piPoint.toFixed(2)}</DiscreetValue>}
                       </span>
                     </td>
@@ -639,7 +697,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                         <button
                           type="button"
                           onClick={() => handleRemoveRow(course.localId)}
-                          className="inline-flex size-11 items-center justify-center rounded-lg text-[var(--acade-danger)] opacity-0 transition-all hover:bg-[var(--acade-danger-dim)] focus:opacity-100 group-hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
+                          className="inline-flex size-11 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] opacity-0 transition-all hover:bg-[var(--acade-danger-dim)] hover:text-[var(--acade-danger)] focus:opacity-100 group-hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
                           aria-label={`Remove ${course.code || `course ${idx + 1}`}`}
                         >
                           <Trash2 size={16} aria-hidden="true" />
@@ -650,7 +708,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
                 ];
                 if (showGuidance(course)) {
                   rows.push(
-                    <motion.tr key={`${course.localId}-guidance`} initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="border-b border-[var(--acade-border-subtle)]">
+                    <motion.tr key={`${course.localId}-guidance`} initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="[&>td]:border-b [&>td]:border-[var(--acade-border-subtle)]">
                       <td />
                       <td colSpan={editable ? 10 : 9} className="px-2 pb-3">
                         <ExamGuidance courseName={name} caScore={course.caScore as number} />
@@ -666,11 +724,11 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       </div>
 
       {editable && (
-        <div className="flex justify-center">
+        <div className="flex">
           <button
             type="button"
             onClick={handleAddRow}
-            className="flex min-h-11 items-center gap-2 rounded-xl border border-dashed border-[var(--acade-border)] px-4 py-2 text-[length:var(--text-sm)] font-medium text-[var(--acade-text-muted)] transition-colors hover:border-[var(--acade-primary)] hover:text-[var(--acade-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed border-[var(--acade-primary)]/35 px-4 py-2 text-[length:var(--text-sm)] font-semibold text-[var(--acade-primary)] transition-colors hover:border-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] sm:w-auto"
           >
             <Plus size={16} aria-hidden="true" /> Add Course
           </button>
@@ -678,46 +736,52 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       )}
 
       {/* SUMMARY ROW */}
-      <div className="flex flex-col items-stretch justify-between gap-6 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 md:flex-row md:items-center md:p-6">
-        <dl className="flex w-full gap-8 md:w-auto">
-          <div className="flex flex-col">
-            <dt className="mb-1 text-xs font-medium text-[var(--acade-text-muted)]">GPA</dt>
-            <dd data-testid="grade-table-gpa" className="font-[family-name:var(--font-geist-mono)] text-[length:var(--text-2xl)] font-bold tabular-nums text-[var(--acade-primary)]">
+      <div className="grid min-w-0 gap-5 rounded-[var(--radius-surface)] border border-[var(--acade-border-subtle)] bg-[var(--acade-void)] p-4 sm:p-5 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center lg:gap-8">
+        <dl className="grid grid-cols-3 gap-4 sm:flex sm:gap-10">
+          <div className="flex min-w-0 flex-col">
+            <dt className="text-[0.8125rem] font-medium text-[var(--acade-text-muted)]">GPA</dt>
+            <dd data-testid="grade-table-gpa" className="app-num mt-1 text-[clamp(1.75rem,3vw,2.25rem)] font-bold leading-none text-[var(--acade-primary)]">
               <DiscreetValue label="GPA">{formatCgpa(summary.gpa)}</DiscreetValue>
             </dd>
           </div>
-          <div className="flex flex-col">
-            <dt className="mb-1 text-xs font-medium text-[var(--acade-text-muted)]">PI</dt>
-            <dd className="font-[family-name:var(--font-geist-mono)] text-[length:var(--text-2xl)] font-bold tabular-nums text-[var(--acade-gold)]">
+          <div className="flex min-w-0 flex-col">
+            <dt className="text-[0.8125rem] font-medium text-[var(--acade-text-muted)]">PI</dt>
+            <dd className="app-num mt-1 text-[clamp(1.75rem,3vw,2.25rem)] font-bold leading-none text-[var(--acade-gold)]">
               <DiscreetValue label="PI">{summary.pi.toFixed(2)}</DiscreetValue>
             </dd>
           </div>
-          <div className="flex flex-col">
-            <dt className="mb-1 text-xs font-medium text-[var(--acade-text-muted)]">Graded units</dt>
-            <dd data-testid="grade-table-units" className="font-[family-name:var(--font-geist-mono)] text-[length:var(--text-2xl)] font-bold tabular-nums text-[var(--acade-text)]">
+          <div className="flex min-w-0 flex-col">
+            <dt className="text-[0.8125rem] font-medium text-[var(--acade-text-muted)]">Graded units</dt>
+            <dd data-testid="grade-table-units" className="app-num mt-1 text-[clamp(1.75rem,3vw,2.25rem)] font-bold leading-none text-[var(--acade-text)]">
               {summary.totalUnits}
             </dd>
           </div>
         </dl>
 
         {/* Mini Grade Distribution Bar */}
-        <DiscreetValue label="Grade distribution" block className="flex w-full max-w-sm flex-1 flex-col gap-2">
-          <div className="flex flex-col gap-2">
-            <div className="flex justify-between text-xs font-medium text-[var(--acade-text-muted)]">
-              {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((letter) => <span key={letter}>{letter}: {summary.gradeCount[letter]}</span>)}
-            </div>
-            <div className="flex h-2 w-full overflow-hidden rounded-full bg-[var(--acade-surface)]" aria-hidden="true">
+        <DiscreetValue label="Grade distribution" block className="flex w-full min-w-0 flex-col gap-2 lg:max-w-md">
+          <div className="flex flex-col gap-2.5">
+            <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-[var(--acade-border-subtle)]" aria-hidden="true">
               {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((letter) => {
                 const gradedCount = Object.values(summary.gradeCount).reduce((total, count) => total + count, 0);
-                const colors: Record<Grade, string> = { A: 'var(--acade-success)', B: 'var(--acade-primary)', C: 'var(--acade-warning)', D: 'var(--grade-d)', E: 'var(--grade-e)', F: 'var(--acade-danger)' };
-                return <div key={letter} style={{ width: `${(summary.gradeCount[letter] / Math.max(1, gradedCount)) * 100}%`, backgroundColor: colors[letter] }} className="h-full transition-all duration-500" />;
+                const share = (summary.gradeCount[letter] / Math.max(1, gradedCount)) * 100;
+                return <div key={letter} style={{ width: `${share}%`, backgroundColor: GRADE_COLOURS[letter], display: share > 0 ? undefined : 'none' }} className="h-full rounded-full transition-all duration-500" />;
               })}
+            </div>
+            <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-[0.8125rem] text-[var(--acade-text-muted)]">
+              {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((letter) => (
+                <span key={letter} className="inline-flex items-center gap-1.5">
+                  <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: GRADE_COLOURS[letter] }} />
+                  <span className="font-semibold text-[var(--acade-text)]">{letter}</span>
+                  <span className="tabular-nums">{summary.gradeCount[letter]}</span>
+                </span>
+              ))}
             </div>
           </div>
         </DiscreetValue>
 
         {editable && onSave && (
-          <Button variant="primary" size="md" className="w-full md:w-auto" onClick={handleSaveClick} disabled={isSaving}>
+          <Button variant="primary" size="md" className="w-full lg:w-auto" onClick={handleSaveClick} disabled={isSaving}>
             {isSaving ? (
               <div className="size-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : (
@@ -733,7 +797,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
       {loadWarnings.length > 0 && (
         <ul
           aria-label="Credit-load warnings"
-          className="flex flex-col gap-1.5 rounded-xl border border-[var(--acade-warning)]/30 bg-[var(--acade-warning)]/10 px-4 py-3"
+          className="flex flex-col gap-1.5 rounded-2xl border border-[var(--acade-gold)]/30 bg-[var(--acade-gold-dim)] px-4 py-3"
         >
           {loadWarnings.map((message) => (
             <li key={message} className="flex items-start gap-2 text-[length:var(--text-sm)] leading-6 text-[var(--acade-text)]">

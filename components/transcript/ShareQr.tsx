@@ -18,7 +18,7 @@ export function ShareQr({ url, size = 180 }: Readonly<ShareQrProps>) {
     let cancelled = false;
     setSrc(null);
     setFailed(false);
-    QRCode.toString(url, { type: 'svg', margin: 1, width: size, color: { dark: '#4f46e5', light: '#ffffff' } })
+    QRCode.toString(url, { type: 'svg', margin: 1, width: size, color: { dark: '#17133A', light: '#ffffff' } })
       .then((svg) => {
         if (!cancelled) setSrc(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
       })

@@ -1,10 +1,8 @@
-import { NextResponse } from 'next/server';
-import { getMobileAppLinks } from '@/lib/mobile-app-links';
+import { androidDownloadResponse } from '@/lib/mobile-app-links';
 
 export const dynamic = 'force-dynamic';
 
-/** Stable public Android URL; the admin-managed APK destination can change freely. */
+/** Stable public Android URL: a 307 to the admin-set APK (default APK if Firestore is down), no-store. */
 export async function GET() {
-  const { androidUrl } = await getMobileAppLinks();
-  return NextResponse.redirect(androidUrl, { status: 307 });
+  return androidDownloadResponse();
 }

@@ -33,7 +33,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     const shouldReduceMotion = useReducedMotion();
 
     const baseStyles = cn(
-      'min-w-0 max-w-full rounded-2xl border border-[var(--acade-border)]',
+      'min-w-0 max-w-full rounded-[var(--radius-surface)] border border-[var(--acade-border)]',
       paddingStyles[padding],
       variant === 'glass'
         ? 'bg-[var(--acade-deep)]/60 backdrop-blur-md border-[var(--acade-border-subtle)]'
@@ -47,7 +47,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
           ref={ref}
           whileHover={{
             y: -4,
-            boxShadow: '0 24px 48px rgba(99,102,241,0.18)',
+            boxShadow: 'var(--shadow-popover)',
             transition: { duration: 0.2 },
           }}
           className={cn(baseStyles, 'transition-shadow cursor-pointer')}

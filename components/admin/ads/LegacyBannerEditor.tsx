@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, Save, Trash2 } from 'lucide-react';
-import { Button, Card, Input, Switch } from '@/components/ui';
+import { Button, Input, Switch } from '@/components/ui';
+import { FilePicker } from '@/components/admin/ui/FilePicker';
 import { legacyBannersToAdsConfig } from '@/lib/ads/config';
 import { PreviewDisclosure } from './PlacementPreview';
 
@@ -63,10 +64,10 @@ export function LegacyBannerEditor({ initialBanners, onSave }: {
   };
 
   return (
-    <Card padding="lg">
+    <section className="min-w-0 rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-5 sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-[var(--acade-text)]">Legacy banners (fallback)</h3>
+          <h3 className="ag-admin-h2">Legacy banners (fallback)</h3>
           <p className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)]">Shown on the web Dashboard when no campaign fits, even if website promotions are off. Turn a banner&apos;s Active switch off to stop it.</p>
         </div>
         <Button size="sm" variant="outline" className="shrink-0" onClick={() => setBanners((current) => [...current, { id: Date.now().toString(), imageUrl: '', linkUrl: '', isActive: true }])}>
@@ -75,9 +76,9 @@ export function LegacyBannerEditor({ initialBanners, onSave }: {
       </div>
       <div className="mt-6 space-y-4">
         {banners.map((banner, index) => (
-          <div key={banner.id} className="space-y-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4">
+          <div key={banner.id} className="space-y-4 rounded-[16px] border border-[var(--acade-border-subtle)] bg-[color-mix(in_srgb,var(--acade-overlay)_45%,transparent)] p-4">
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Advert #{index + 1}</span>
+              <span className="font-semibold text-[var(--acade-text)]">Advert {index + 1}</span>
               <div className="flex items-center gap-3">
                 <Switch checked={banner.isActive} onCheckedChange={(isActive) => update(index, { isActive })} aria-label={`Activate advert ${index + 1}`} />
                 <Button variant="ghost" size="sm" className="text-[var(--acade-danger)]" onClick={() => setBanners((current) => current.filter((_, i) => i !== index))} aria-label={`Delete advert ${index + 1}`}><Trash2 size={16} /></Button>
@@ -86,8 +87,14 @@ export function LegacyBannerEditor({ initialBanners, onSave }: {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <Input label={`Image URL for advert ${index + 1}`} value={banner.imageUrl} onChange={(event) => update(index, { imageUrl: event.target.value })} placeholder="https://..." />
-                <label className="mt-2 inline-flex min-h-11 cursor-pointer items-center rounded-xl border border-[var(--acade-border)] px-4 text-sm focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--acade-primary)]">Upload<input type="file" className="sr-only" accept="image/*" onChange={(event) => void upload(event, index)} /></label>
-                {banner.imageUrl && <div className="mt-2 h-20 rounded-lg border border-[var(--acade-border)] bg-cover bg-center" style={{ backgroundImage: `url(${banner.imageUrl})` }} />}
+                <FilePicker
+                  className="mt-2"
+                  buttonLabel="Upload"
+                  hint="Or drop an image here. Uploads replace the URL above."
+                  accept="image/*"
+                  onChange={(event) => void upload(event, index)}
+                />
+                {banner.imageUrl && <div className="mt-2 h-20 rounded-[12px] border border-[var(--acade-border-subtle)] bg-cover bg-center" style={{ backgroundImage: `url(${banner.imageUrl})` }} />}
               </div>
               <Input label={`Target link for advert ${index + 1}`} value={banner.linkUrl} onChange={(event) => update(index, { linkUrl: event.target.value })} placeholder="https://sponsor.com" />
             </div>
@@ -107,6 +114,6 @@ export function LegacyBannerEditor({ initialBanners, onSave }: {
           <Button size="sm" loading={saving} disabled={!dirty} onClick={() => void save()}><Save size={16} aria-hidden="true" /> Save legacy banners</Button>
         </div>
       </div>
-    </Card>
+    </section>
   );
 }

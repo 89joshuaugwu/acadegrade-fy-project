@@ -1,10 +1,16 @@
 'use client';
 
 import { Copy, Trash2 } from 'lucide-react';
-import { Button, Card, Input, Switch, Textarea } from '@/components/ui';
+import { Button, Input, Switch, Textarea } from '@/components/ui';
+import { DateTimeField } from '@/components/ui/DateTimeFields';
+import { Checkbox } from '@/components/admin/ui/Checkbox';
 import { describeCampaignUrlProblem } from '@/lib/ads/config';
 import type { AdCampaign, AdPlacementConfig } from '@/lib/ads/types';
+import { cn } from '@/lib/utils/cn';
 import { PreviewDisclosure } from './PlacementPreview';
+
+/** Digits only, as a number: what the old number field produced for whole numbers ('' gives 0). */
+const wholeNumber = (value: string) => Number(value.replace(/[^0-9]/g, ''));
 
 interface CampaignEditorProps {
   campaign: AdCampaign;
@@ -40,20 +46,21 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
   };
 
   return (
-    <Card padding="lg" className="space-y-6">
+    <section className="min-w-0 space-y-6 rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-5 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="font-[family-name:var(--font-bricolage)] text-xl font-semibold text-[var(--acade-text)]">
+            <h2 className="ag-admin-h2 text-[1.25rem] leading-7">
               {campaign.name}
             </h2>
             <span className={status.tone === 'success'
-              ? 'rounded-full border border-[var(--acade-success)]/30 bg-[var(--acade-success-dim)] px-2.5 py-1 text-xs font-medium text-[var(--acade-success)]'
-              : 'rounded-full border border-[var(--acade-border)] px-2.5 py-1 text-xs font-medium text-[var(--acade-text-muted)]'}>
+              ? 'inline-flex items-center gap-1.5 rounded-full bg-[var(--acade-success-dim)] px-2.5 py-1 text-xs font-medium text-[var(--acade-success)]'
+              : 'inline-flex items-center gap-1.5 rounded-full bg-[var(--acade-overlay)] px-2.5 py-1 text-xs font-medium text-[var(--acade-text-muted)]'}>
+              <span aria-hidden="true" className={status.tone === 'success' ? 'size-1.5 rounded-full bg-[var(--acade-success)]' : 'size-1.5 rounded-full bg-[var(--acade-text-faint)]'} />
               {status.label === 'Live' ? 'Eligible' : status.label}{unsaved ? ' (unsaved)' : ''}
             </span>
           </div>
-          <p className="mt-1 font-[family-name:var(--font-geist-mono)] text-xs text-[var(--acade-text-faint)]">
+          <p className="mt-1 break-all text-xs text-[var(--acade-text-faint)]">
             {campaign.id}
           </p>
         </div>
@@ -97,24 +104,22 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
               const checked = campaign.placementIds.includes(placement.id);
               const hintId = placement.id === 'dashboard.overview' ? `${campaign.id}-android-hint` : undefined;
               return (
-                <label
+                <Checkbox
                   key={placement.id}
-                  className="flex min-h-12 items-center gap-3 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3 text-sm text-[var(--acade-text)]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    aria-describedby={hintId}
-                    onChange={(event) => update(
-                      'placementIds',
-                      event.target.checked
-                        ? [...campaign.placementIds, placement.id]
-                        : campaign.placementIds.filter((id) => id !== placement.id)
-                    )}
-                    className="size-4 accent-[var(--acade-primary)]"
-                  />
-                  <span>{placementLabel(placement)}</span>
-                </label>
+                  checked={checked}
+                  aria-describedby={hintId}
+                  onChange={(event) => update(
+                    'placementIds',
+                    event.target.checked
+                      ? [...campaign.placementIds, placement.id]
+                      : campaign.placementIds.filter((id) => id !== placement.id)
+                  )}
+                  label={placementLabel(placement)}
+                  className={cn(
+                    'flex min-h-12 items-center rounded-[12px] border px-4 py-2.5 transition-colors',
+                    checked ? 'border-[var(--acade-primary)] bg-[var(--acade-primary-dim)]' : 'border-[var(--acade-border)] bg-[var(--acade-surface)]',
+                  )}
+                />
               );
             })}
           </div>
@@ -179,58 +184,62 @@ export function CampaignEditor({ campaign, placements, onChange, onRemove, onDup
         className="rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-4 py-3"
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Input
+      <div className="grid gap-4 rounded-[16px] border border-[var(--acade-border-subtle)] bg-[color-mix(in_srgb,var(--acade-overlay)_45%,transparent)] p-4 sm:grid-cols-2">
+        <DateTimeField
           label="Starts at"
-          type="datetime-local"
           value={toLocalDateTime(campaign.schedule.startsAt)}
-          onChange={(event) => update('schedule', {
+          onChange={(value) => update('schedule', {
             ...campaign.schedule,
-            startsAt: fromLocalDateTime(event.target.value),
+            startsAt: fromLocalDateTime(value),
           })}
         />
-        <Input
+        <DateTimeField
           label="Ends at"
-          type="datetime-local"
           value={toLocalDateTime(campaign.schedule.endsAt)}
-          onChange={(event) => update('schedule', {
+          onChange={(value) => update('schedule', {
             ...campaign.schedule,
-            endsAt: fromLocalDateTime(event.target.value),
+            endsAt: fromLocalDateTime(value),
           })}
         />
         <Input
           label="Delivery weight"
-          type="number"
-          min={1}
-          max={100}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          hint="1 to 100"
+          className="tabular-nums"
           value={campaign.weight}
-          onChange={(event) => update('weight', Number(event.target.value))}
+          onChange={(event) => update('weight', wholeNumber(event.target.value))}
         />
         <div className="grid grid-cols-2 gap-2">
           <Input
             label="Max views"
-            type="number"
-            min={1}
-            max={100}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            hint="1 to 100"
+            className="tabular-nums"
             value={campaign.frequencyCap.maxImpressions}
             onChange={(event) => update('frequencyCap', {
               ...campaign.frequencyCap,
-              maxImpressions: Number(event.target.value),
+              maxImpressions: wholeNumber(event.target.value),
             })}
           />
           <Input
             label="Hours"
-            type="number"
-            min={1}
-            max={720}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            hint="1 to 720"
+            className="tabular-nums"
             value={campaign.frequencyCap.windowHours}
             onChange={(event) => update('frequencyCap', {
               ...campaign.frequencyCap,
-              windowHours: Number(event.target.value),
+              windowHours: wholeNumber(event.target.value),
             })}
           />
         </div>
       </div>
-    </Card>
+    </section>
   );
 }

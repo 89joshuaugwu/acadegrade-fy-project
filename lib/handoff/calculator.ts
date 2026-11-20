@@ -44,7 +44,8 @@ function cleanCourse(value: unknown, mode: HandoffMode): HandoffCourse | null {
   if (!value || typeof value !== 'object') return null;
   const source = value as Record<string, unknown>;
   const units = Number(source.units);
-  if (!Number.isInteger(units) || units < 1 || units > 12) return null;
+  // 1 to 6 units, the same range as the calculator and the student course form (owner decision).
+  if (!Number.isInteger(units) || units < 1 || units > 6) return null;
   const code = typeof source.code === 'string' ? source.code.trim().toUpperCase().slice(0, 24) : '';
 
   if (mode === 'grade') {

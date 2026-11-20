@@ -7,6 +7,7 @@ import { formatCgpa, type AcademicGrade } from '@/lib/cgpa/academicRules';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { previewSemester, type PreviewFigures } from '@/lib/planning/semesterPreview';
 import { loadExpectedGrades, saveExpectedGrades } from '@/lib/planning/semesterPreviewStore';
+import { Select } from '@/components/ui/Select';
 
 export interface SemesterPreviewCourse {
   id?: string;
@@ -77,81 +78,89 @@ export function SemesterPreview({ uid, semesterId, courses, semesters }: Semeste
     <DiscreetScope>
       <section
         aria-labelledby={headingId}
-        className="rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 md:p-6"
+        className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-4 sm:p-5 lg:p-6"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 id={headingId} className="flex items-center gap-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">
-              <Telescope className="size-5 text-[var(--acade-primary)]" aria-hidden="true" />
-              Preview expected grades
-            </h2>
-            <p className="mt-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-              Preview only: never saved to your record
-            </p>
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
+              <Telescope className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 id={headingId} className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">
+                Preview expected grades
+              </h2>
+              <p className="mt-0.5 text-sm text-[var(--acade-text-muted)]">
+                Preview only: never saved to your record
+              </p>
+            </div>
           </div>
           <DiscreetRevealButton label="Preview values" className="border border-[var(--acade-border)]" />
         </div>
 
-        <ul className="mt-4 divide-y divide-[var(--acade-border-subtle)] rounded-xl border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)]">
-          {awaiting.map((course) => {
-            const name = course.code.trim() || course.title?.trim() || 'Untitled course';
-            return (
-              <li key={course.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-2">
-                <div className="min-w-0">
-                  <p className="truncate font-[family-name:var(--font-geist-mono)] text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">{name}</p>
-                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
-                    {course.units} {course.units === 1 ? 'unit' : 'units'} · {course.pending ? 'Score not entered' : 'Awaiting result'}
-                  </p>
-                </div>
-                <select
-                  aria-label={`Expected grade for ${name}`}
-                  value={expected[course.id] ?? ''}
-                  onChange={(event) => choose(course.id, event.target.value)}
-                  className="min-h-11 shrink-0 rounded-lg border border-[var(--acade-border)] bg-[var(--acade-surface)] px-3 text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30"
-                >
-                  <option value="">Not sure</option>
-                  {GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
-                </select>
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
+          <ul className="min-w-0 divide-y divide-[var(--acade-border-subtle)] rounded-2xl border border-[var(--acade-border-subtle)]">
+            {awaiting.map((course) => {
+              const name = course.code.trim() || course.title?.trim() || 'Untitled course';
+              return (
+                <li key={course.id} className="flex min-h-16 items-center justify-between gap-3 px-4 py-2.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-[0.9375rem] font-semibold text-[var(--acade-text)]">{name}</p>
+                    <p className="text-[0.8125rem] text-[var(--acade-text-muted)]">
+                      {course.units} {course.units === 1 ? 'unit' : 'units'}, {course.pending ? 'score not entered' : 'awaiting result'}
+                    </p>
+                  </div>
+                  <Select
+                    label={`Expected grade for ${name}`}
+                    value={expected[course.id] ?? ''}
+                    onChange={(value) => choose(course.id, value)}
+                    options={GRADE_OPTIONS}
+                    className="w-[8.5rem] shrink-0 [&>label]:sr-only"
+                  />
+                </li>
+              );
+            })}
+          </ul>
 
-        <table className="mt-4 w-full text-left text-[length:var(--text-sm)]">
-          <caption className="sr-only">Official figures compared with your expected grades</caption>
-          <thead>
-            <tr className="text-xs font-semibold uppercase tracking-wide">
-              <th scope="col" className="py-1 pr-4 text-[var(--acade-text-muted)]"><span className="sr-only">Figure</span></th>
-              <th scope="col" className="py-1 pr-4 text-[var(--acade-text-muted)]">Official</th>
-              <th scope="col" className="py-1 text-[var(--acade-primary)]">With your guesses</th>
-            </tr>
-          </thead>
-          <tbody>
-            <FigureRow label="GPA" testId="gpa" official={formatCgpa(result.official.gpa)} scenario={formatCgpa(result.scenario.gpa)} />
-            <FigureRow label="CGPA" testId="cgpa" official={formatCgpa(result.official.cgpa)} scenario={formatCgpa(result.scenario.cgpa)} />
-            <FigureRow label="Class" testId="class" official={classLabel(result.official)} scenario={classLabel(result.scenario)} />
-          </tbody>
-        </table>
-        {result.previewedCount === 0 && (
-          <p className="mt-3 text-[length:var(--text-xs)] text-[var(--acade-text-muted)]">
-            Pick a grade for a course above to see how it could change your figures.
-          </p>
-        )}
+          <div className="min-w-0 rounded-2xl bg-[var(--acade-void)] p-4">
+            <table className="w-full text-left text-[length:var(--text-sm)]">
+              <caption className="sr-only">Official figures compared with your expected grades</caption>
+              <thead>
+                <tr className="text-[0.8125rem] font-medium">
+                  <th scope="col" className="pb-2 pr-4 text-[var(--acade-text-muted)]"><span className="sr-only">Figure</span></th>
+                  <th scope="col" className="pb-2 pr-4 text-[var(--acade-text-muted)]">Official</th>
+                  <th scope="col" className="pb-2 text-[var(--acade-primary)]">With your guesses</th>
+                </tr>
+              </thead>
+              <tbody>
+                <FigureRow label="GPA" testId="gpa" official={formatCgpa(result.official.gpa)} scenario={formatCgpa(result.scenario.gpa)} />
+                <FigureRow label="CGPA" testId="cgpa" official={formatCgpa(result.official.cgpa)} scenario={formatCgpa(result.scenario.cgpa)} />
+                <FigureRow label="Class" testId="class" official={classLabel(result.official)} scenario={classLabel(result.scenario)} />
+              </tbody>
+            </table>
+            {result.previewedCount === 0 && (
+              <p className="mt-3 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">
+                Pick a grade for a course above to see how it could change your figures.
+              </p>
+            )}
+          </div>
+        </div>
       </section>
     </DiscreetScope>
   );
 }
+
+const GRADE_OPTIONS = [{ value: '', label: 'Not sure' }, ...GRADES.map((grade) => ({ value: grade, label: grade }))];
 
 const classLabel = (figures: PreviewFigures) => figures.band.shortLabel;
 
 function FigureRow({ label, testId, official, scenario }: { label: string; testId: string; official: string; scenario: string }) {
   return (
     <tr className="border-t border-[var(--acade-border-subtle)]">
-      <th scope="row" className="py-2 pr-4 font-medium text-[var(--acade-text-muted)]">{label}</th>
-      <td data-testid={`preview-official-${testId}`} className="py-2 pr-4 font-[family-name:var(--font-geist-mono)] tabular-nums text-[var(--acade-text)]">
+      <th scope="row" className="py-2.5 pr-4 font-medium text-[var(--acade-text-muted)]">{label}</th>
+      <td data-testid={`preview-official-${testId}`} className="app-num py-2.5 pr-4 text-[1.0625rem] font-semibold text-[var(--acade-text)]">
         <DiscreetValue label={`Official ${label}`}>{official}</DiscreetValue>
       </td>
-      <td data-testid={`preview-scenario-${testId}`} className="py-2 font-[family-name:var(--font-geist-mono)] font-bold tabular-nums text-[var(--acade-primary)]">
+      <td data-testid={`preview-scenario-${testId}`} className="app-num py-2.5 text-[1.0625rem] font-bold text-[var(--acade-primary)]">
         <DiscreetValue label={`Preview ${label}`}>{scenario}</DiscreetValue>
       </td>
     </tr>

@@ -1,80 +1,41 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useParams } from 'next/navigation';
-import { motion } from 'motion/react';
-import { FileText, Download, AlertCircle, Clock, Lock } from 'lucide-react';
-import { Navbar } from '@/components/layout/Navbar';
-import { PublicFooter } from '@/components/layout/PublicShell';
-import { Logo } from '@/components/ui/Logo';
-import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { CGPAArc } from '@/components/cgpa/CGPAArc';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { formatCgpa, resolveDegreeClass, roundCgpa } from '@/lib/cgpa/academicRules';
-import {
-  SELF_REPORTED_NOTICE,
-  UNOFFICIAL_RECORD_HEADING,
-  resolveUniversityName,
-} from './record-labels';
-import { resolveSharedStanding } from './shared-standing';
-import { fetchSharedTranscript } from '@/lib/share/viewer';
+import { MinimalShell } from '@/components/public/shells/MinimalShell';
+import { AuthButton, AuthLinkButton, InlineLink, TextField } from '@/components/site/auth/controls';
+import { useShake } from '@/components/site/auth/hooks';
+import { AuthMessage } from '@/components/site/auth/messages';
+import { NoticeActions, NoticeCard, SystemStage } from '@/components/site/system/NoticeCard';
 import { isValidPin } from '@/lib/share/options';
-
-interface SharedCourse {
-  id: string;
-  code: string;
-  title: string;
-  units: number;
-  caScore?: number | null;
-  examScore?: number | null;
-  totalScore?: number | null;
-  grade?: string;
-  gradePoint?: number;
-}
-
-interface SharedSemester {
-  id: string;
-  label: string;
-  session: string;
-  level: number;
-  semester: number;
-  gpa: number;
-  pi: number;
-  creditLoaded: number;
-  /** Empty on a summary link; may be missing on malformed records. */
-  courses?: SharedCourse[];
-}
-
-interface SharedTranscript {
-  studentName: string;
-  matric: string;
-  department: string;
-  programme: string;
-  currentLevel: string;
-  /** Present only when the share snapshot carries the student's own profile value. */
-  university?: string | null;
-  institution?: string | null;
-  avatarUrl?: string | null;
-  showPhoto?: boolean;
-  /** Server-computed with the shared academic rules; absent on old snapshots. */
-  cgpa?: number;
-  pi?: number;
-  totalCredits?: number;
-  semesters: SharedSemester[];
-  /** 'summary' links carry semester totals only. Absent on older links (full). */
-  shareLevel?: 'full' | 'summary';
-  createdAt: any;
-}
+import { fetchSharedTranscript } from '@/lib/share/viewer';
+import { expiryLine, formatExpiryDate } from './record-labels';
+import { RecordCard, RecordSkeleton } from './RecordCard';
+import { VisitorStub } from './VisitorStub';
+import type { SharedTranscript } from './types';
 
 type ViewState = 'loading' | 'ready' | 'pin' | 'unavailable' | 'error';
+
+const PIN_TITLE_ID = 'share-pin-title';
+const PIN_ERROR_ID = 'share-pin-error';
+
+const PIN_MESSAGES = {
+  format: 'Enter the 4 to 6 digits the student gave you.',
+  incorrect: "That PIN isn't right. Check it with the student and try again.",
+} as const;
 
 function lockedMessage(seconds: number): string {
   const minutes = Math.max(1, Math.ceil(seconds / 60));
   return `Too many wrong PINs. This link is locked for about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}. Try again later.`;
 }
 
+/**
+ * The shared transcript (share-transcript.md). The fetch, PIN rules and states
+ * are unchanged: the PIN travels only in the X-Share-Pin header; 401
+ * PIN_REQUIRED / PIN_INCORRECT ask again; 429 PIN_LOCKED locks the form;
+ * 404 and 410 read the same; anything else is a network or server error with
+ * Try again. The PDF builder is loaded only when Download PDF is pressed.
+ */
 export default function ShareTranscriptPage() {
   const params = useParams();
   const shareId = params.shareId as string;
@@ -86,7 +47,10 @@ export default function ShareTranscriptPage() {
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinLocked, setPinLocked] = useState(false);
   const [checkingPin, setCheckingPin] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfFailed, setPdfFailed] = useState(false);
   const pinField = useRef<HTMLInputElement>(null);
+  const { shake, props: shakeProps } = useShake();
 
   /** Loads the record; the PIN, when given, goes only in the request header. */
   const load = useCallback(async (pin?: string) => {
@@ -99,7 +63,8 @@ export default function ShareTranscriptPage() {
     } else if (result.status === 'pin-required') {
       setView('pin');
     } else if (result.status === 'pin-incorrect') {
-      setPinError('That PIN is not right. Check it with the student and try again.');
+      setPinError(PIN_MESSAGES.incorrect);
+      shake();
       setView('pin');
     } else if (result.status === 'locked') {
       setPinLocked(true);
@@ -108,7 +73,7 @@ export default function ShareTranscriptPage() {
     } else {
       setView(result.status);
     }
-  }, [shareId]);
+  }, [shareId, shake]);
 
   useEffect(() => {
     if (!shareId) return;
@@ -122,7 +87,7 @@ export default function ShareTranscriptPage() {
     // The PIN leaves component state as soon as it is sent.
     setPinInput('');
     if (!isValidPin(pin)) {
-      setPinError('Enter the 4 to 6 digits the student gave you.');
+      setPinError(PIN_MESSAGES.format);
       pinField.current?.focus();
       return;
     }
@@ -135,731 +100,152 @@ export default function ShareTranscriptPage() {
     }
   };
 
-  const isSummary = transcript?.shareLevel === 'summary';
-  const expiryLabel = (() => {
-    if (!expiresAt) return null;
-    const date = new Date(expiresAt);
-    return Number.isFinite(date.getTime()) ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : null;
-  })();
+  const retry = () => {
+    setView('loading');
+    void load();
+  };
 
+  const expiry = formatExpiryDate(expiresAt);
 
-
-  // The server snapshot's CGPA (shared academic rules) is authoritative; old snapshots are recomputed.
-  const standing = resolveSharedStanding(transcript);
-  const totalCredits = standing.totalCredits;
-  const rawCgpa = standing.cgpa;
-  const rawPI = standing.pi;
-  const cgpa = formatCgpa(rawCgpa);
-  const cumulativePI = formatCgpa(rawPI);
-  const cgpaNum = roundCgpa(rawCgpa);
-  const piNum = roundCgpa(rawPI);
-  const degreeClass = resolveDegreeClass(rawCgpa).transcriptLabel;
-
-  const universityName = resolveUniversityName(transcript);
-
-  const handlePrint = () => window.print();
-
-  const handleDownloadPDF = async () => {
-    if (!transcript) return;
-    
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-
-    // Load logo as base64
-    let logoBase64: string | null = null;
+  const handleDownloadPdf = async () => {
+    if (!transcript || pdfBusy) return;
+    setPdfBusy(true);
+    setPdfFailed(false);
     try {
-      const logoRes = await fetch('/logo.png');
-      if (logoRes.ok) {
-        const blob = await logoRes.blob();
-        logoBase64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-      }
-    } catch { /* skip logo */ }
-
-    // Load student photo as base64
-    let photoBase64: string | null = null;
-    if (transcript.showPhoto && transcript.avatarUrl) {
-      try {
-        const photoRes = await fetch(transcript.avatarUrl);
-        if (photoRes.ok) {
-          const blob = await photoRes.blob();
-          photoBase64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        }
-      } catch { /* skip photo */ }
+      const { downloadTranscriptPdf } = await import('./transcript-pdf');
+      await downloadTranscriptPdf(transcript, { expiry });
+    } catch {
+      setPdfFailed(true);
+    } finally {
+      setPdfBusy(false);
     }
-
-    // -- LOGO --
-    if (logoBase64) {
-      try {
-        doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 7, 8, 14, 14);
-      } catch { /* skip */ }
-    }
-
-    // -- HEADER --
-    // A self-reported record: never print an institution as if it issued the document.
-    const headerY = logoBase64 ? 26 : 20;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text(UNOFFICIAL_RECORD_HEADING, pageWidth / 2, headerY, { align: 'center' });
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`University (as entered by the student): ${universityName}`, pageWidth / 2, headerY + 7, { align: 'center' });
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(150, 30, 30);
-    doc.text(SELF_REPORTED_NOTICE, pageWidth / 2, headerY + 13, { align: 'center' });
-    doc.setTextColor(0);
-    doc.setFont('helvetica', 'normal');
-
-    // -- STUDENT DETAILS BOX --
-    const boxY = headerY + 25;
-    const boxHeight = 30;
-    doc.setDrawColor(0);
-    doc.setFillColor(245, 245, 245);
-    doc.rect(14, boxY, pageWidth - 28, boxHeight, 'F');
-
-    let infoLeftX = 18;
-
-    // Embed photo
-    if (photoBase64) {
-      try {
-        doc.setDrawColor(150);
-        doc.rect(16, boxY + 3, 18, 24);
-        doc.addImage(photoBase64, 'JPEG', 16, boxY + 3, 18, 24);
-        infoLeftX = 38;
-      } catch { /* skip */ }
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Name:', infoLeftX, boxY + 8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(transcript.studentName, infoLeftX + 27, boxY + 8);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Matric No:', infoLeftX, boxY + 16);
-    doc.setFont('helvetica', 'normal');
-    doc.text(transcript.matric || 'N/A', infoLeftX + 27, boxY + 16);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Level:', infoLeftX, boxY + 24);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${transcript.currentLevel || 'N/A'}L`, infoLeftX + 27, boxY + 24);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Department:', pageWidth / 2 + 10, boxY + 8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(transcript.department || 'N/A', pageWidth / 2 + 40, boxY + 8);
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Programme:', pageWidth / 2 + 10, boxY + 16);
-    doc.setFont('helvetica', 'normal');
-    doc.text(transcript.programme || 'N/A', pageWidth / 2 + 40, boxY + 16);
-
-    // -- SEMESTER DATA --
-    let currentY = boxY + boxHeight + 10;
-
-    if (isSummary) {
-      // A summary link carries semester totals only: one table, no course rows.
-      autoTable(doc, {
-        startY: currentY,
-        head: [['Semester', 'Session', 'Credits', 'GPA', 'PI']],
-        body: transcript.semesters.map((sem) => [
-          sem.label,
-          sem.session,
-          String(sem.creditLoaded ?? '-'),
-          formatCgpa(sem.gpa),
-          typeof sem.pi === 'number' ? formatCgpa(sem.pi) : '-',
-        ]),
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-        styles: { fontSize: 9, cellPadding: 2 },
-        margin: { left: 14, right: 14, bottom: 26 },
-      });
-      currentY = ((doc as any).lastAutoTable?.finalY ?? currentY) + 4;
-      doc.setFontSize(8);
-      doc.text('Summary only: the student chose not to share course-by-course results.', 14, currentY + 2);
-      currentY += 10;
-    }
-
-    (isSummary ? [] : transcript.semesters).forEach((sem) => {
-       const body: Array<Array<string | object>> = (sem.courses ?? []).map(c => [
-          c.code,
-          (c.title || '').substring(0, 40),
-          c.units.toString(),
-          c.caScore?.toString() ?? '-',
-          c.examScore?.toString() ?? '-',
-          c.totalScore?.toString() ?? '-',
-          c.grade ?? '-',
-          c.gradePoint?.toString() ?? '-',
-          ((c.units || 0) * (c.gradePoint || 0)).toString()
-       ]);
-
-       // Summary row
-       body.push([
-          { content: 'SEMESTER SUMMARY', colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-          { content: sem.creditLoaded.toString(), styles: { fontStyle: 'bold' } },
-          { content: `GPA: ${formatCgpa(sem.gpa)}`, colSpan: 3, styles: { fontStyle: 'bold' } },
-          { content: '', colSpan: 2 },
-          { content: `PI: ${formatCgpa(sem.pi)}`, styles: { fontStyle: 'bold' } }
-       ]);
-
-       autoTable(doc, {
-          startY: currentY,
-          head: [[
-            { content: `${sem.label} (${sem.session})`, colSpan: 9, styles: { halign: 'left', fillColor: [230, 230, 230], textColor: 0, fontStyle: 'bold' } }
-          ], [
-            'Code', 'Title', 'Units', 'CA', 'Exam', 'Total', 'Grade', 'GP', 'PI'
-          ]],
-          body: body,
-          theme: 'grid',
-          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-          styles: { fontSize: 8, cellPadding: 2 },
-          columnStyles: {
-            0: { cellWidth: 20 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 12, halign: 'center' },
-            3: { cellWidth: 12, halign: 'center' },
-            4: { cellWidth: 12, halign: 'center' },
-            5: { cellWidth: 12, halign: 'center' },
-            6: { cellWidth: 12, halign: 'center' },
-            7: { cellWidth: 12, halign: 'center' },
-            8: { cellWidth: 12, halign: 'center' },
-          },
-          margin: { left: 14, right: 14, bottom: 26 },
-       });
-
-       currentY = (doc as any).lastAutoTable.finalY + 10;
-    });
-
-    // -- CUMULATIVE SUMMARY --
-    if (currentY > pageHeight - 76) {
-        doc.addPage();
-        currentY = 20;
-    }
-
-    // -- CGPA GAUGE ARC in PDF --
-    const gaugeBoxH = 50;
-    doc.setDrawColor(0);
-    doc.rect(14, currentY, pageWidth - 28, gaugeBoxH);
-
-    // Draw the arc gauge
-    const gaugeCX = 38;
-    const gaugeCY = currentY + gaugeBoxH / 2 + 2;
-    const gaugeR = 14;
-    // Background arc (gray)
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(2.5);
-    const arcSteps = 60;
-    const startAngle = Math.PI * 0.75;
-    const endAngle = Math.PI * 2.25;
-    for (let i = 0; i < arcSteps; i++) {
-      const a1 = startAngle + (endAngle - startAngle) * (i / arcSteps);
-      const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / arcSteps);
-      doc.line(
-        gaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
-        gaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
-      );
-    }
-    // Foreground arc (indigo fill based on CGPA)
-    const fillRatio = Math.min(cgpaNum / 5, 1);
-    const fillEnd = startAngle + (endAngle - startAngle) * fillRatio;
-    doc.setDrawColor(79, 70, 229);
-    doc.setLineWidth(3);
-    const fillSteps = Math.floor(arcSteps * fillRatio);
-    for (let i = 0; i < fillSteps; i++) {
-      const a1 = startAngle + (fillEnd - startAngle) * (i / fillSteps);
-      const a2 = startAngle + (fillEnd - startAngle) * ((i + 1) / fillSteps);
-      doc.line(
-        gaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
-        gaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
-      );
-    }
-    // CGPA number in center
-    doc.setTextColor(0);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text(cgpa, gaugeCX, gaugeCY + 1, { align: 'center' });
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('CGPA', gaugeCX, gaugeCY + 5, { align: 'center' });
-
-    // -- PI GAUGE ARC --
-    const piGaugeCX = gaugeCX + gaugeR * 2 + 12;
-    // Background arc (gray)
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(2.5);
-    for (let i = 0; i < arcSteps; i++) {
-      const a1 = startAngle + (endAngle - startAngle) * (i / arcSteps);
-      const a2 = startAngle + (endAngle - startAngle) * ((i + 1) / arcSteps);
-      doc.line(
-        piGaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
-        piGaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
-      );
-    }
-    // Foreground arc (gold #f59e0b for PI)
-    const piFillRatio = Math.min(piNum / 5, 1);
-    const piFillEnd = startAngle + (endAngle - startAngle) * piFillRatio;
-    doc.setDrawColor(245, 158, 11);
-    doc.setLineWidth(3);
-    const piFillSteps = Math.floor(arcSteps * piFillRatio);
-    for (let i = 0; i < piFillSteps; i++) {
-      const a1 = startAngle + (piFillEnd - startAngle) * (i / piFillSteps);
-      const a2 = startAngle + (piFillEnd - startAngle) * ((i + 1) / piFillSteps);
-      doc.line(
-        piGaugeCX + Math.cos(a1) * gaugeR, gaugeCY + Math.sin(a1) * gaugeR,
-        piGaugeCX + Math.cos(a2) * gaugeR, gaugeCY + Math.sin(a2) * gaugeR
-      );
-    }
-    // PI number in center
-    doc.setTextColor(0);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text(cumulativePI, piGaugeCX, gaugeCY + 1, { align: 'center' });
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('PI', piGaugeCX, gaugeCY + 5, { align: 'center' });
-
-    // Text info to the right of both gauges
-    const infoX = piGaugeCX + gaugeR + 10;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('CUMULATIVE SUMMARY', infoX, currentY + 8);
-
-    doc.setFontSize(10);
-    doc.text(`Cumulative CGPA: ${cgpa} / 5.00`, infoX, currentY + 16);
-    doc.text(`Cumulative PI: ${cumulativePI} / 5.00`, infoX, currentY + 22);
-    doc.text(`Total Credits Earned: ${totalCredits}`, infoX, currentY + 28);
-
-    doc.text('Projected Degree Class:', infoX, currentY + 36);
-    doc.setFont('helvetica', 'normal');
-    doc.text(degreeClass, infoX, currentY + 42);
-
-    doc.setLineWidth(0.2);
-
-    // -- FOOTER & PAGE NUMBERS --
-    const pageCount = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-
-      if (logoBase64) {
-        try {
-          doc.addImage(logoBase64, 'PNG', pageWidth / 2 - 20, pageHeight - 16, 4, 4);
-        } catch { /* skip */ }
-      }
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(150, 30, 30);
-      doc.text(SELF_REPORTED_NOTICE, pageWidth / 2, pageHeight - 18, { align: 'center' });
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(150);
-      doc.text(
-        'Generated by AcadeGrade \u00b7 Not an official university document',
-        pageWidth / 2 - 14,
-        pageHeight - 12,
-        { align: 'center' }
-      );
-      doc.text(`Page ${i} of ${pageCount}`, pageWidth - 20, pageHeight - 10);
-    }
-
-    // Save
-    doc.save(`${transcript.studentName.replace(/\s+/g, '_')}_Transcript.pdf`);
   };
 
   if (view === 'loading') {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen px-4 pb-20 pt-10 sm:pt-14">
-          <div className="max-w-4xl mx-auto space-y-6">
-            <Skeleton className="h-12 w-64" />
-            <Skeleton className="h-6 w-96" />
-            <Skeleton className="h-[600px] rounded-xl" />
-          </div>
+      <MinimalShell mainLabel="Shared record">
+        <div className="ag-record-wrap mx-auto w-full max-w-[1000px] px-4 py-8 sm:px-8 sm:py-12">
+          <div className="mb-6 h-12" aria-hidden="true" />
+          <p role="status" className="sr-only">
+            Loading the record…
+          </p>
+          <RecordSkeleton />
         </div>
-        <PublicFooter />
-      </>
+      </MinimalShell>
     );
   }
 
   if (view === 'pin') {
-    const describedBy = pinError ? 'share-pin-hint share-pin-error' : 'share-pin-hint';
     return (
-      <>
-        <Navbar />
-        <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-10 sm:pt-14">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm space-y-5 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-6 text-center"
-          >
-            <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-[var(--acade-primary)]/10">
-              <Lock size={26} className="text-[var(--acade-primary)]" aria-hidden="true" />
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-[length:var(--text-xl)] font-bold font-[family-name:var(--font-bricolage)] text-[var(--acade-text)]">
-                This transcript needs a PIN
-              </h1>
-              <p id="share-pin-hint" className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-                The student set a PIN for this link. Ask them for it, then enter it below.
-              </p>
-            </div>
-            {/* No `name` and no action: the PIN can never be submitted into a URL. */}
-            <form onSubmit={(event) => void handlePinSubmit(event)} className="space-y-3 text-left" noValidate>
-              <label htmlFor="share-pin" className="block text-[length:var(--text-sm)] font-semibold text-[var(--acade-text)]">
-                PIN
-              </label>
-              <input
-                ref={pinField}
-                id="share-pin"
-                type="password"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={6}
-                value={pinInput}
-                onChange={(event) => setPinInput(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                disabled={pinLocked}
-                aria-invalid={pinError ? true : undefined}
-                aria-describedby={describedBy}
-                className="h-12 w-full rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] px-4 text-center font-mono text-lg tracking-[0.4em] text-[var(--acade-text)] outline-none focus-visible:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/30 disabled:opacity-60"
-              />
-              {pinError && (
-                <p id="share-pin-error" role="alert" className="text-[length:var(--text-sm)] text-[var(--acade-danger)]">
-                  {pinError}
-                </p>
-              )}
-              <Button type="submit" variant="primary" className="h-12 w-full" disabled={pinLocked || checkingPin}>
-                {checkingPin ? 'Checking...' : 'View transcript'}
-              </Button>
-            </form>
-          </motion.div>
-        </div>
-        <PublicFooter />
-      </>
+      <MinimalShell>
+        <SystemStage>
+          <div {...shakeProps} className={`w-full max-w-[480px] ${shakeProps.className}`}>
+            <NoticeCard
+              icon="lock"
+              titleId={PIN_TITLE_ID}
+              title="This record needs a PIN"
+              sentence="The student protected this link with a PIN. Ask them for it, then enter it here."
+            >
+              {/* No `name` and no action: the PIN can never be submitted into a URL. */}
+              <form onSubmit={(event) => void handlePinSubmit(event)} className="flex flex-col gap-5" noValidate aria-labelledby={PIN_TITLE_ID}>
+                <TextField
+                  ref={pinField}
+                  id="share-pin"
+                  label="PIN"
+                  hint="4 to 6 digits."
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={6}
+                  value={pinInput}
+                  onChange={(event) => setPinInput(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  disabled={pinLocked}
+                  inputClassName="ag-num text-center text-[1.375rem] font-semibold tracking-[0.4em]"
+                  aria-invalid={pinError ? true : undefined}
+                  aria-describedby={pinError ? PIN_ERROR_ID : undefined}
+                />
+                {pinError ? (
+                  <AuthMessage tone="error" id={PIN_ERROR_ID}>
+                    {pinError}
+                  </AuthMessage>
+                ) : null}
+                <AuthButton type="submit" block busy={checkingPin} disabled={pinLocked}>
+                  {checkingPin ? 'Checking…' : 'View record'}
+                </AuthButton>
+                {pinLocked ? <p className="text-[0.875rem] text-ag-mist">Locked for now to protect the student&apos;s record.</p> : null}
+              </form>
+            </NoticeCard>
+          </div>
+        </SystemStage>
+      </MinimalShell>
     );
   }
 
-  if (view === 'unavailable' || view === 'error') {
-    // Same screens as before: expired and unknown links both read as expired.
-    const expired = view === 'unavailable';
+  if (view === 'unavailable') {
+    // Expired and unknown links read the same on purpose: an old link must not reveal whether a record existed.
     return (
-      <>
-        <Navbar />
-        <div className="flex min-h-screen items-center justify-center px-4 pb-20 pt-10 sm:pt-14">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center space-y-4 max-w-md"
+      <MinimalShell>
+        <SystemStage>
+          <NoticeCard
+            icon="clock"
+            title="This link has expired"
+            sentence="Shared records stop opening after the date the student chose, or when they turn the link off. Ask them to send a new one. If you typed the address, check it."
           >
-            <div className="w-16 h-16 rounded-full bg-[var(--acade-danger)]/10 flex items-center justify-center mx-auto">
-              {expired ? (
-                <Clock size={32} className="text-[var(--acade-gold)]" />
-              ) : (
-                <AlertCircle size={32} className="text-[var(--acade-danger)]" />
-              )}
-            </div>
-            <h1 className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-bricolage)]">
-              {expired ? 'Link Expired' : 'Transcript Not Found'}
-            </h1>
-            <p className="text-[var(--acade-text-muted)]">
-              {expired
-                ? 'This shared transcript link has expired. Ask the student to generate a new one.'
-                : 'This transcript link is invalid or has been removed.'}
-            </p>
-            <Button variant="primary" onClick={() => (window.location.href = '/')}>
-              Go to AcadeGrade
-            </Button>
-          </motion.div>
-        </div>
-        <PublicFooter />
-      </>
+            <NoticeActions>
+              <AuthLinkButton href="/">Go to AcadeGrade</AuthLinkButton>
+            </NoticeActions>
+          </NoticeCard>
+        </SystemStage>
+      </MinimalShell>
+    );
+  }
+
+  if (view === 'error') {
+    return (
+      <MinimalShell>
+        <SystemStage>
+          <NoticeCard icon="signal" title="We couldn't open this record" sentence="Check your connection and try again.">
+            <NoticeActions>
+              <AuthButton onClick={retry}>Try again</AuthButton>
+              <InlineLink href="/" className="inline-flex min-h-11 items-center justify-center">
+                Go to AcadeGrade
+              </InlineLink>
+            </NoticeActions>
+          </NoticeCard>
+        </SystemStage>
+      </MinimalShell>
     );
   }
 
   if (!transcript) return null;
 
   return (
-    <>
-      <Navbar />
-
-      <div className="min-h-screen px-4 pb-20 pt-10 sm:pt-14">
-        <div className="max-w-4xl mx-auto">
-          {/* Actions bar */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4 print:hidden"
-          >
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <FileText size={20} className="text-[var(--acade-primary)]" />
-                <h1 className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)]">
-                  Shared Transcript
-                </h1>
-              </div>
-              <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-                {transcript.studentName}&apos;s self-reported academic results — shared via AcadeGrade
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <FileText size={16} className="mr-2" /> Print
-              </Button>
-              <Button variant="primary" size="sm" onClick={handleDownloadPDF}>
-                <Download size={16} className="mr-2" /> Download PDF
-              </Button>
-            </div>
-          </motion.div>
-
-          {/* Transcript Paper */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="bg-white text-black p-4 sm:p-8 md:p-12 rounded-xl shadow-xl border border-[var(--acade-border-subtle)] mx-auto max-w-full lg:max-w-[210mm] min-h-[297mm] print:shadow-none print:border-none print:m-0 print:p-0 print:max-w-full overflow-hidden relative"
-          >
-            {/* Header with Logo */}
-            <div className="text-center mb-6 sm:mb-8 border-b-2 border-black pb-4 relative z-10">
-              {/* AcadeGrade Logo */}
-              <div className="flex justify-center mb-3">
-                <img
-                  src="/logo.png"
-                  alt="AcadeGrade Logo"
-                  className="w-10 h-10 object-contain"
-                />
-              </div>
-              <h2 className="text-lg sm:text-2xl font-bold mb-2 tracking-tight">
-                {UNOFFICIAL_RECORD_HEADING}
-              </h2>
-              <p className="text-sm text-gray-700">
-                University (as entered by the student): <span className="font-semibold">{universityName}</span>
-              </p>
-              <p role="note" className="mt-4 inline-block rounded-md border-2 border-red-700 bg-red-50 px-4 py-2 text-sm font-bold text-red-800">
-                {SELF_REPORTED_NOTICE}
-              </p>
-            </div>
-
-            {/* Student Info */}
-            <div className="border-2 border-black p-4 mb-8 flex flex-col sm:flex-row gap-4 text-sm font-serif relative z-10 bg-white/60 backdrop-blur-sm print:bg-transparent">
-              {/* Photo column */}
-              {transcript.showPhoto && transcript.avatarUrl && (
-                <div className="shrink-0">
-                  <img
-                    src={transcript.avatarUrl}
-                    alt={transcript.studentName}
-                    className="w-20 h-24 object-cover border-2 border-gray-400 bg-gray-100"
-                    crossOrigin="anonymous"
-                  />
-                </div>
-              )}
-              {/* Info columns */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p>
-                    <span className="font-bold inline-block w-24">Name:</span>{' '}
-                    {transcript.studentName}
-                  </p>
-                  <p className="mt-2">
-                    <span className="font-bold inline-block w-24">Matric No:</span>{' '}
-                    {transcript.matric || 'N/A'}
-                  </p>
-                  <p className="mt-2">
-                    <span className="font-bold inline-block w-24">Level:</span>{' '}
-                    {transcript.currentLevel || 'N/A'}L
-                  </p>
-                </div>
-                <div>
-                  <p>
-                    <span className="font-bold inline-block w-28">Department:</span>{' '}
-                    {transcript.department || 'N/A'}
-                  </p>
-                  <p className="mt-2">
-                    <span className="font-bold inline-block w-28">Programme:</span>{' '}
-                    {transcript.programme || 'N/A'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Semesters */}
-            {isSummary ? (
-              <div className="space-y-3 font-serif relative z-10">
-                <p className="text-xs text-gray-700">
-                  <span className="font-bold">Summary only:</span> the student chose not to share course-by-course results.
-                </p>
-                <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
-                  <table className="w-full min-w-[480px] text-xs text-left border-collapse border border-gray-400">
-                    <thead className="bg-gray-100">
-                      <tr>
-                        <th className="border border-gray-400 p-1.5">Semester</th>
-                        <th className="border border-gray-400 p-1.5 w-28">Session</th>
-                        <th className="border border-gray-400 p-1.5 w-16 text-center">Credits</th>
-                        <th className="border border-gray-400 p-1.5 w-16 text-center">GPA</th>
-                        <th className="border border-gray-400 p-1.5 w-16 text-center">PI</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transcript.semesters.map((sem) => (
-                        <tr key={sem.id}>
-                          <td className="border border-gray-400 p-1.5 font-semibold">{sem.label}</td>
-                          <td className="border border-gray-400 p-1.5">{sem.session}</td>
-                          <td className="border border-gray-400 p-1.5 text-center">{sem.creditLoaded}</td>
-                          <td className="border border-gray-400 p-1.5 text-center font-bold">{formatCgpa(sem.gpa)}</td>
-                          <td className="border border-gray-400 p-1.5 text-center">{typeof sem.pi === 'number' ? formatCgpa(sem.pi) : '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-            <div className="space-y-8 font-serif relative z-10">
-              {transcript.semesters.map(sem => (
-                <div key={sem.id} className="break-inside-avoid">
-                  <h3 className="font-bold text-sm bg-gray-200 px-2 py-1 mb-2 border border-gray-400">
-                    {sem.label} ({sem.session})
-                  </h3>
-                  <div className="overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 custom-scrollbar">
-                    <table className="w-full min-w-[600px] text-xs text-left border-collapse border border-gray-400">
-                      <thead className="bg-gray-100">
-                        <tr>
-                          <th className="border border-gray-400 p-1.5 w-24">Code</th>
-                          <th className="border border-gray-400 p-1.5">Title</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">Units</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">CA</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">Exam</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">Total</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">Grade</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">GP</th>
-                          <th className="border border-gray-400 p-1.5 w-12 text-center">PI</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(sem.courses ?? []).map(course => (
-                          <tr key={course.id}>
-                            <td className="border border-gray-400 p-1.5 font-semibold">
-                              {course.code}
-                            </td>
-                            <td className="border border-gray-400 p-1.5">{course.title}</td>
-                            <td className="border border-gray-400 p-1.5 text-center">
-                              {course.units}
-                            </td>
-                            <td className="border border-gray-400 p-1.5 text-center">
-                              {course.caScore ?? '-'}
-                            </td>
-                            <td className="border border-gray-400 p-1.5 text-center">
-                              {course.examScore ?? '-'}
-                            </td>
-                            <td className="border border-gray-400 p-1.5 text-center font-semibold">
-                              {course.totalScore ?? '-'}
-                            </td>
-                            <td className="border border-gray-400 p-1.5 text-center font-bold">
-                              {course.grade ?? '-'}
-                            </td>
-                            <td className="border border-gray-400 p-1.5 text-center">
-                              {course.gradePoint ?? '-'}
-                            </td>
-                            <td className="border border-gray-400 p-1.5 text-center">
-                              {((course.units || 0) * (course.gradePoint || 0))}
-                            </td>
-                          </tr>
-                        ))}
-                        <tr className="bg-gray-50 font-bold">
-                          <td colSpan={2} className="border border-gray-400 p-1.5 text-right">
-                            SEMESTER SUMMARY
-                          </td>
-                          <td className="border border-gray-400 p-1.5 text-center">
-                            {sem.creditLoaded}
-                          </td>
-                          <td colSpan={5} className="border border-gray-400 p-1.5">
-                            GPA: {formatCgpa(sem.gpa)}
-                          </td>
-                          <td className="border border-gray-400 p-1.5 text-center">
-                            {typeof sem.pi === 'number' ? formatCgpa(sem.pi) : '-'}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
-            )}
-
-            {/* Cumulative */}
-            <div className="mt-8 border-2 border-black p-4 text-sm font-serif break-inside-avoid relative z-10 bg-white/70 backdrop-blur-md print:bg-transparent">
-              <h3 className="font-bold text-base mb-3 border-b border-gray-400 pb-1">
-                CUMULATIVE SUMMARY
-              </h3>
-              <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="shrink-0 scale-90 sm:scale-100 print:hidden">
-                   {/* Dramatic CGPA Reveal! */}
-                   <CGPAArc cgpa={cgpaNum} pi={piNum} size="sm" animateOnMount />
-                </div>
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                  <div>
-                    <p>
-                      <span className="font-bold inline-block w-40">Cumulative CGPA:</span>{' '}
-                      <span className="font-bold text-lg">{cgpa}</span> / 5.00
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-bold inline-block w-40">Cumulative PI:</span>{' '}
-                      <span className="font-bold text-lg">{cumulativePI}</span> / 5.00
-                    </p>
-                    <p className="mt-1">
-                      <span className="font-bold inline-block w-40">Total Credits Earned:</span>{' '}
-                      {totalCredits}
-                    </p>
-                  </div>
-                  <div>
-                    <p>
-                      <span className="font-bold inline-block w-44">Projected Degree Class:</span>{' '}
-                      <span className="font-bold text-[var(--acade-primary)] print:text-black">{degreeClass}</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-12 text-center text-xs text-gray-500 font-serif border-t border-gray-300 pt-4 flex flex-col items-center gap-1">
-              <div className="flex items-center gap-1.5">
-                <img src="/logo.png" alt="AcadeGrade" className="w-4 h-4 object-contain" />
-                <span className="font-semibold text-gray-600">AcadeGrade</span>
-              </div>
-              <span className="font-semibold text-gray-700">{SELF_REPORTED_NOTICE}</span>
-              <span>
-                Generated by AcadeGrade · Not an official university document
-                {expiryLabel ? ` · Shared link expires ${expiryLabel}` : ''}
-              </span>
-            </div>
-          </motion.div>
+    <MinimalShell className="ag-print-record">
+      <div className="ag-record-wrap mx-auto flex w-full max-w-[1000px] flex-col gap-6 px-4 py-8 sm:px-8 sm:py-12">
+        <div className="ag-print-hide flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[1rem] font-semibold text-ag-ink">Shared with you through AcadeGrade</p>
+            {expiry ? <p className="mt-0.5 text-[0.875rem] text-ag-mist">{expiryLine(expiry)}</p> : null}
+          </div>
+          <div className="flex items-center gap-3">
+            <AuthButton variant="ghostOnLight" size="md" onClick={() => window.print()} className="flex-1 sm:flex-none">
+              Print
+            </AuthButton>
+            <AuthButton size="md" busy={pdfBusy} onClick={() => void handleDownloadPdf()} className="flex-1 sm:flex-none">
+              {pdfBusy ? 'Preparing PDF…' : 'Download PDF'}
+            </AuthButton>
+          </div>
         </div>
+        {pdfFailed ? (
+          <p role="alert" className="ag-print-hide rounded-xl bg-[#C2361F]/[0.07] px-4 py-3 text-[0.9375rem] text-[#9F2B17]">
+            We couldn&apos;t make the PDF. Use Print and choose Save as PDF instead.
+          </p>
+        ) : null}
+
+        <RecordCard transcript={transcript} expiry={expiry} />
+
+        <VisitorStub />
       </div>
-
-      {/* Print styles */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        @media print {
-          body * { visibility: hidden; }
-          .print\\:hidden { display: none !important; }
-          .bg-white.text-black, .bg-white.text-black * { visibility: visible; }
-          .bg-white.text-black { position: absolute; left: 0; top: 0; width: 100%; }
-        }
-      `,
-        }}
-      />
-
-      <PublicFooter />
-    </>
+    </MinimalShell>
   );
 }

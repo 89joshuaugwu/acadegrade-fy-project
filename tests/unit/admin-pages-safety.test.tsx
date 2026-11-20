@@ -113,7 +113,7 @@ describe('admin users', () => {
     expect(await screen.findByRole('searchbox', { name: 'Search users' })).toBeInTheDocument();
     const row = screen.getByRole('button', { name: /Ada Obi/ });
     expect(row).toHaveAttribute('aria-expanded', 'false');
-    expect(within(row).getByText(/Computer Science · 300L · CGPA 4\.20/)).toBeInTheDocument();
+    expect(within(row).getByText(/Computer Science, 300L, CGPA 4\.20/)).toBeInTheDocument();
     await user.click(row);
     expect(row).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('heading', { level: 1, name: 'Users' })).toBeInTheDocument();
@@ -152,7 +152,7 @@ describe('admin course catalog', () => {
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    expect(screen.getByText(/Computer Science · 300L · 3 units/)).toBeInTheDocument();
+    expect(screen.getByText(/Computer Science, 300L, 3 units/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Delete CSC301' }));
     const confirm = screen.getByRole('dialog', { name: /delete CSC301/i });
     expect(writes(fetchSpy)).toHaveLength(0);

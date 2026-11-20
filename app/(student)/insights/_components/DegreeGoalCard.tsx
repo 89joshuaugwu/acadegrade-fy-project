@@ -5,6 +5,7 @@ import { Calculator } from 'lucide-react';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { bandFor, planDegreeGoal, TARGET_CLASS_OPTIONS, type ClassRequirement, type TargetClass } from '@/lib/planning/degreeGoal';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { cn } from '@/lib/utils/cn';
 import { DiscreetValue } from '@/lib/discreet';
 
@@ -31,7 +32,6 @@ const toneClass = { ink: 'text-[var(--acade-text)]', good: 'text-[var(--acade-su
 /** A6: a saved degree-class goal with the GPA it needs. Pure maths, no AI call. */
 export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits = 0, targetClass, onTargetChange, saving = false }: DegreeGoalCardProps) {
   const headingId = useId();
-  const selectId = useId();
   const plan = planDegreeGoal({ currentCgpa, completedUnits: gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits, targetClass: targetClass ?? '2:1' });
   const target = targetClass && plan.kind === 'plan' ? plan.target : null;
   const semesters = `${remainingSemesters} remaining ${remainingSemesters === 1 ? 'semester' : 'semesters'}`;
@@ -70,39 +70,41 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
   ] : [];
 
   return (
-    <section aria-labelledby={headingId} className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 md:p-6">
+    <section aria-labelledby={headingId} className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 sm:p-7">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 id={headingId} className="font-[family-name:var(--font-bricolage)] text-lg font-bold text-[var(--acade-text)]">Degree-class goal</h2>
+        <div className="min-w-0">
+          <h2 id={headingId} className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">Degree-class goal</h2>
           <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--acade-text-muted)]">
             <Calculator className="size-4 shrink-0" aria-hidden="true" />
             Worked out from your results. No AI involved.
           </p>
         </div>
         {plan.kind === 'plan' && (
-          <div className="flex flex-col gap-1.5 sm:w-64">
-            <label htmlFor={selectId} className="text-sm font-medium text-[var(--acade-text-muted)]">Aim for</label>
-            <select
-              id={selectId}
+          <div className="w-full sm:w-72" aria-busy={saving || undefined}>
+            <Select
+              label="Aim for"
+              placeholder="Choose a class"
               value={targetClass ?? ''}
               disabled={saving}
-              aria-busy={saving || undefined}
-              onChange={event => { if (event.target.value) onTargetChange(event.target.value as TargetClass); }}
-              className="min-h-12 w-full rounded-[var(--radius-control)] border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-3 text-base text-[var(--acade-text)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20 disabled:opacity-60"
-            >
-              {!targetClass && <option value="" disabled>Choose a class</option>}
-              {TARGET_CLASS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </select>
+              options={TARGET_CLASS_OPTIONS.map(option => ({ value: option.value, label: option.label }))}
+              onChange={value => { if (value) onTargetChange(value as TargetClass); }}
+            />
           </div>
         )}
       </div>
 
       {figures.length > 0 && (
-        <dl className="mt-5 grid grid-cols-1 divide-y divide-[var(--acade-border-subtle)] rounded-[var(--radius-control)] border border-[var(--acade-border-subtle)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {figures.map(figure => (
-            <div key={figure.key} className="flex items-baseline justify-between gap-4 px-4 py-3 sm:block">
-              <dt className="text-sm text-[var(--acade-text-muted)]">{figure.label}</dt>
-              <dd className={cn('font-[family-name:var(--font-geist-mono)] text-xl font-bold tabular-nums sm:mt-1 sm:text-2xl', toneClass[figure.value.tone])}>
+        <dl className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {figures.map((figure, index) => (
+            <div
+              key={figure.key}
+              className={cn(
+                'flex min-w-0 items-baseline justify-between gap-4 rounded-2xl px-4 py-4 sm:block sm:px-5',
+                index === 0 ? 'bg-[var(--acade-primary-dim)]' : 'bg-[var(--acade-overlay)]'
+              )}
+            >
+              <dt className="text-sm leading-5 text-[var(--acade-text-muted)]">{figure.label}</dt>
+              <dd className={cn('app-num shrink-0 text-2xl font-bold sm:mt-2 sm:text-[2rem] sm:leading-none', toneClass[figure.value.tone])}>
                 <DiscreetValue label={figure.key}>{figure.value.text}</DiscreetValue>
               </dd>
             </div>
@@ -110,7 +112,7 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
         </dl>
       )}
 
-      <div className="mt-4 text-sm leading-6 text-[var(--acade-text)] text-pretty" aria-live="polite">
+      <div className="mt-5 text-pretty text-[0.9375rem] leading-7 text-[var(--acade-text)]" aria-live="polite">
         <DiscreetValue label="Goal summary" block><p>{message}</p></DiscreetValue>
       </div>
       {plan.kind === 'plan' && target?.state === 'unreachable' && plan.suggestion && plan.suggestion.shortLabel !== 'Fail' && (
@@ -125,7 +127,7 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
         </Button>
       )}
       {plan.kind === 'plan' && (
-        <p className="mt-4 text-xs leading-5 text-[var(--acade-text-muted)]">
+        <p className="mt-5 border-t border-[var(--acade-border-subtle)] pt-4 text-sm leading-6 text-[var(--acade-text-muted)]">
           Assumes {semesters} of {unitsPerSemester} units at the same GPA, less units already graded in your current semester. Uses every graded course so far; courses awaiting results are left out. Each class starts at its lowest CGPA ({formatCgpa(bandFor(targetClass ?? '2:1').minCGPA)} for {targetClass ?? '2:1'}).
         </p>
       )}

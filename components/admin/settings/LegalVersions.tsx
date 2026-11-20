@@ -15,8 +15,8 @@ type LoadState =
   | { status: 'ready'; versions: Versions };
 
 const DOCUMENTS: Array<{ id: LegalDocument; name: string; short: string; key: keyof Versions }> = [
-  { id: 'terms', name: 'Terms of Service', short: 'Terms', key: 'termsVersion' },
-  { id: 'privacy', name: 'Privacy Policy', short: 'Privacy', key: 'privacyVersion' },
+  { id: 'terms', name: 'Terms of use', short: 'Terms', key: 'termsVersion' },
+  { id: 'privacy', name: 'Privacy notice', short: 'Privacy', key: 'privacyVersion' },
 ];
 
 function readVersions(body: unknown): Versions {

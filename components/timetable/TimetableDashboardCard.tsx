@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowRight, CalendarDays } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { useTimetableEnabled } from '@/hooks/useTimetableEnabled';
 import { useTimetables } from '@/hooks/useTimetables';
@@ -42,23 +42,25 @@ export function TimetableDashboardCard() {
       body = 'Nothing scheduled in the next 7 days.';
     }
   }
+  const hasNext = !loading && !error && Boolean(summary.upcoming);
 
   return (
-    <Card aria-label="Timetable" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
+    <Card aria-label="Timetable" className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3.5">
+        <span className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]">
           <CalendarDays className="size-5" aria-hidden="true" />
+          {hasNext && <span aria-hidden="true" className="absolute -right-0.5 -top-0.5 size-2.5 rounded-full border-2 border-[var(--acade-surface)] bg-ag-gold" />}
         </span>
         <div className="min-w-0">
-          <h2 className="font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">Timetable</h2>
-          <p className="text-sm leading-6 text-[var(--acade-text-muted)]">{body}</p>
+          <h2 className="app-display text-[1.125rem] font-semibold text-[var(--acade-text)]">Timetable</h2>
+          <p className="mt-0.5 text-sm leading-6 text-[var(--acade-text-muted)]">{body}</p>
         </div>
       </div>
       <Link
         href="/timetable"
-        className="inline-flex min-h-12 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--acade-border)] px-4 text-sm font-semibold text-[var(--acade-text)] transition-colors hover:border-[var(--acade-primary)] hover:text-[var(--acade-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
       >
-        Open timetable <ArrowRight className="size-4" aria-hidden="true" />
+        Open timetable
       </Link>
     </Card>
   );

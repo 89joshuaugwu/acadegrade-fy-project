@@ -14,6 +14,8 @@ import { SUPPORT_CATEGORY_LABELS, SUPPORT_REPLY_MAX, type SupportCategory, type 
 export interface AdminTicket {
   id: string;
   uid: string | null;
+  /** 'public': sent from the public Support form without signing in. Older rows may omit it. */
+  source?: 'account' | 'public';
   email: string | null;
   name: string | null;
   category: SupportCategory;
@@ -34,6 +36,10 @@ const STATUS_OPTIONS: { value: SupportStatus; label: string }[] = [
   { value: 'waiting', label: 'Waiting' },
   { value: 'closed', label: 'Closed' },
 ];
+
+const isPublic = (ticket: AdminTicket) => ticket.source === 'public';
+/** Where the request came from, for the list and the detail line. */
+const origin = (ticket: AdminTicket) => (isPublic(ticket) ? 'Not signed in' : ticket.platform === 'android' ? 'Android' : 'Web');
 
 const when = (iso: string | null) => (iso
   ? new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -96,7 +102,8 @@ export function SupportInbox() {
       const updated = body.ticket as AdminTicket | undefined;
       if (action === 'reply') {
         setReply('');
-        toast.success(body.emailSent ? 'Reply sent to their inbox and email.' : 'Reply sent to their inbox. The email could not be sent.');
+        if (isPublic(selected)) toast[body.emailSent ? 'success' : 'error'](body.emailSent ? 'Reply sent by email.' : 'The reply was saved, but the email could not be sent.');
+        else toast.success(body.emailSent ? 'Reply sent to their inbox and email.' : 'Reply sent to their inbox. The email could not be sent.');
       } else {
         toast.success(action === 'close' ? 'Request closed.' : 'Request reopened.');
       }
@@ -120,7 +127,7 @@ export function SupportInbox() {
     <div className="space-y-6">
       <AdminPageHeader
         title="Support inbox"
-        description="Requests students send from Settings, Help and support on the website and the Android app. Closed requests are deleted 180 days after closing."
+        description="Requests students send from Settings, Help and support on the website and the Android app, and from the public Support page by people who cannot sign in. Closed requests are deleted 180 days after closing."
         helpId="admin.support"
       />
 
@@ -139,9 +146,9 @@ export function SupportInbox() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <div className="space-y-3">
-            <ul className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)]">
+            <ul className="space-y-2">
               {tickets.map((ticket) => (
-                <li key={ticket.id} className="border-b border-[var(--acade-border-subtle)] last:border-0">
+                <li key={ticket.id} className="overflow-hidden rounded-[var(--radius-surface)] bg-[var(--acade-surface)]">
                   <button
                     type="button"
                     aria-pressed={ticket.id === selectedId}
@@ -149,11 +156,11 @@ export function SupportInbox() {
                     className="w-full px-4 py-3 text-left transition-colors hover:bg-[var(--acade-overlay)]/20 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--acade-primary)] aria-pressed:bg-[var(--acade-primary-dim)]"
                   >
                     <span className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="truncate font-semibold text-[var(--acade-text)]">{ticket.name || ticket.email || 'Student'}</span>
+                      <span className="truncate font-semibold text-[var(--acade-text)]">{ticket.name || ticket.email || (isPublic(ticket) ? 'Not signed in' : 'Student')}</span>
                       <span className="shrink-0 text-xs text-[var(--acade-text-muted)]">{when(ticket.createdAt)}</span>
                     </span>
                     <span className="mt-0.5 block text-xs text-[var(--acade-text-muted)]">
-                      {SUPPORT_CATEGORY_LABELS[ticket.category] ?? ticket.category} · {ticket.platform === 'android' ? 'Android' : 'Web'}
+                      {SUPPORT_CATEGORY_LABELS[ticket.category] ?? ticket.category} · {origin(ticket)}
                       {ticket.replies.length ? ` · ${ticket.replies.length} repl${ticket.replies.length === 1 ? 'y' : 'ies'}` : ''}
                     </span>
                     <span className="mt-1 line-clamp-2 block text-sm text-[var(--acade-text)]">{ticket.message}</span>
@@ -174,10 +181,15 @@ export function SupportInbox() {
                 <div>
                   <h2 className="text-base font-semibold text-[var(--acade-text)]">{SUPPORT_CATEGORY_LABELS[selected.category] ?? selected.category}</h2>
                   <p className="mt-1 break-words text-[var(--acade-text-muted)]">
-                    {selected.name || 'Student'} · {selected.email || 'no email'} · {selected.platform === 'android' ? 'Android' : 'Web'}
+                    {selected.name || (isPublic(selected) ? 'No name given' : 'Student')} · {selected.email || 'no email'} · {origin(selected)}
                     {selected.appVersion ? ` ${selected.appVersion}` : ''}{selected.route ? ` · on ${selected.route}` : ''} · {when(selected.createdAt)}
                   </p>
                 </div>
+                {isPublic(selected) ? (
+                  <p role="note" className="rounded-lg bg-[var(--acade-warning)]/10 px-3 py-2 text-[var(--acade-text)]">
+                    Sent without signing in, so the email address is not verified. Before changing or deleting an account, check that this address matches the account&apos;s email.
+                  </p>
+                ) : null}
                 <p className="whitespace-pre-wrap break-words rounded-xl bg-[var(--acade-deep)] p-4 text-[var(--acade-text)]">{selected.message}</p>
 
                 {selected.replies.length > 0 ? (
@@ -199,7 +211,9 @@ export function SupportInbox() {
                       maxLength={SUPPORT_REPLY_MAX}
                       value={reply}
                       onChange={(event) => setReply(event.target.value)}
-                      hint="Plain text. The student gets it in their AcadeGrade inbox and by email. Never ask for a password or code."
+                      hint={isPublic(selected)
+                        ? 'Plain text, sent by email only (they are not signed in). Never ask for a password or code.'
+                        : 'Plain text. The student gets it in their AcadeGrade inbox and by email. Never ask for a password or code.'}
                     />
                     <div className="flex flex-wrap justify-end gap-2">
                       <Button type="button" variant="ghost" loading={busy === 'close'} loadingLabel="Closing…" onClick={() => { void act('close'); }}>Close request</Button>

@@ -20,6 +20,22 @@ export function androidImportLink(code: string): string {
   return `acadegrade://import-code?code=${encodeURIComponent(code)}`;
 }
 
+export interface NavigatorLike {
+  userAgent?: string;
+  userAgentData?: { platform?: string } | null;
+}
+
+/**
+ * True on Android phones and tablets (client hints first, then the user agent).
+ * The deep link only works there, so the page offers it only on Android.
+ */
+export function isAndroidDevice(nav: NavigatorLike | null | undefined): boolean {
+  if (!nav) return false;
+  const platform = nav.userAgentData?.platform;
+  if (typeof platform === 'string' && platform.trim().toLowerCase() === 'android') return true;
+  return typeof nav.userAgent === 'string' && /Android/i.test(nav.userAgent);
+}
+
 /** Web import path. The student area asks for sign-in first. */
 export function webImportPath(code: string): string {
   return `/results?importCode=${encodeURIComponent(code)}`;

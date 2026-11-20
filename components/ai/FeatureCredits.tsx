@@ -55,8 +55,10 @@ export function FeatureCredits({ feature, refreshKey = '' }: { feature: CreditFe
   const wallet = current?.summary?.coins;
   const coin = usage?.coin;
   const showCoins = Boolean(wallet && coin?.enabled && count(wallet.balance) && count(coin.price) && count(coin.usesToday) && count(coin.dailyUseCap));
-  return <section aria-label="Feature credits" className="mb-5 flex flex-wrap items-start gap-3 rounded-xl border border-[var(--acade-border)] px-4 py-3">
-    <Coins className="mt-0.5 size-5 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
+  return <section aria-label="Feature credits" className="mb-5 flex items-start gap-3 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-surface)] py-3 pl-4 pr-2 sm:pl-5">
+    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-[var(--acade-gold-dim)]" aria-hidden="true">
+      <Coins className="size-[18px] text-[var(--acade-gold)]" />
+    </span>
     <div className="min-w-0 flex-1 text-sm leading-6" role="status">
       <p className="font-semibold text-[var(--acade-text)]">{usage ? `${usage.freeRemaining} of ${usage.freeDailyLimit} free credits remaining` : current?.failed ? 'Credit balance unavailable. Your academic records remain available.' : 'Checking feature credits…'}</p>
       {usage && <p className="text-[var(--acade-text-muted)]">{usage.label} only. {usage.availableNow === 0 && usage.freeRemaining > 0 ? 'Short-window limit is active; remaining credits are not available yet.' : `${usage.availableNow} available now.`} {usage.freeResetAt ? `Daily window resets ${new Date(usage.freeResetAt).toLocaleString()}.` : 'The daily window starts with your first new request.'}</p>}
@@ -65,7 +67,7 @@ export function FeatureCredits({ feature, refreshKey = '' }: { feature: CreditFe
       {showCoins && <CoinHistory />}
       {rewards && <p className="text-[var(--acade-text-muted)]">Ad rewards today: {rewards.earnedToday} verified, {rewards.usedToday} used. {rewards.earnRemaining} more can be earned. Use a confirmed reward in the Android app.</p>}
     </div>
-    <button type="button" onClick={() => { setResult(null); setRevision(value => value + 1); }} aria-label="Refresh credit balance" className="flex size-11 shrink-0 items-center justify-center rounded-lg text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"><RefreshCw className="size-4" aria-hidden="true" /></button>
+    <button type="button" onClick={() => { setResult(null); setRevision(value => value + 1); }} aria-label="Refresh credit balance" className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]"><RefreshCw className="size-4" aria-hidden="true" /></button>
   </section>;
 }
 
@@ -99,7 +101,7 @@ function CoinHistory() {
       {state.status === 'ready' && state.entries.length === 0 && <p className="text-[var(--acade-text-muted)]">No coin activity yet.</p>}
       {state.status === 'ready' && state.entries.length > 0 && <ul className="divide-y divide-[var(--acade-border)]">
         {state.entries.map((entry, index) => <li key={`${entry.at}-${index}`} className="flex flex-wrap justify-between gap-2 py-1.5 text-[var(--acade-text-muted)]">
-          <span>{COIN_TYPE[entry.type] ?? entry.type}{entry.feature ? `, ${entry.feature}` : ''} <span className="text-xs">{new Date(entry.at).toLocaleString()}</span></span>
+          <span>{COIN_TYPE[entry.type] ?? entry.type}{entry.feature ? `, ${entry.feature}` : ''} <span className="text-[0.8125rem]">{new Date(entry.at).toLocaleString()}</span></span>
           <span className="font-medium text-[var(--acade-text)]">{entry.type === 'spend' ? '-' : '+'}{entry.amount} (balance {entry.balanceAfter})</span>
         </li>)}
       </ul>}

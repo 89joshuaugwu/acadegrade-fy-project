@@ -85,6 +85,28 @@ function requireHttpsUrl(value: unknown, field: string) {
   }
 }
 
+/** APK size shown on the Android page: a whole number of MB from 1 to 500, or null (unknown). */
+function parseAndroidSizeMb(value: unknown): number | null {
+  if (value === null || value === '') return null;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 500) {
+    throw new SettingsValidationError('androidSizeMb must be a whole number from 1 to 500');
+  }
+  return value;
+}
+
+/** Google Play listing link, or '' when not listed yet. */
+function requirePlayUrl(value: unknown): string {
+  const normalized = requireString(value ?? '', 'playUrl', 2048);
+  if (!normalized) return '';
+  try {
+    const url = new URL(normalized);
+    if (url.protocol !== 'https:' || url.hostname !== 'play.google.com') throw new Error('not play');
+    return url.toString();
+  } catch {
+    throw new SettingsValidationError('playUrl must be an HTTPS link on play.google.com');
+  }
+}
+
 function parseGradeScale(value: unknown) {
   if (!Array.isArray(value) || value.length === 0 || value.length > 12) {
     throw new SettingsValidationError('gradeScale must contain between 1 and 12 rows');
@@ -142,11 +164,16 @@ function parseSettingValue(field: AdminSettingField, value: unknown) {
       return parseGradeScale(value);
     case 'mobileAppLinks': {
       const links = requireRecord(value, 'mobileAppLinks must be an object');
-      assertExactKeys(links, ['androidUrl', 'iosUrl'], 'mobile-app link');
-      return {
+      assertExactKeys(links, ['androidUrl', 'iosUrl', 'androidSizeMb', 'playUrl'], 'mobile-app link');
+      const parsed: Record<string, unknown> = {
         androidUrl: requireHttpsUrl(links.androidUrl ?? '', 'androidUrl'),
         iosUrl: requireHttpsUrl(links.iosUrl ?? '', 'iosUrl'),
       };
+      // Optional (android-app.md): included only when sent, so the merge write keeps
+      // stored values when an older panel saves just the two links.
+      if ('androidSizeMb' in links) parsed.androidSizeMb = parseAndroidSizeMb(links.androidSizeMb);
+      if ('playUrl' in links) parsed.playUrl = requirePlayUrl(links.playUrl);
+      return parsed;
     }
     case 'advertBanners': {
       if (!Array.isArray(value) || value.length > 12) {

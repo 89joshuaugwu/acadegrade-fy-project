@@ -134,20 +134,20 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
       {/* Real-time Magnetic Odometer Headers */}
       <div className="flex items-end justify-between px-2">
         <div className="flex flex-col">
-          <span className="text-[length:var(--text-xs)] font-bold text-[var(--acade-text-muted)] uppercase tracking-widest mb-1 transition-colors">
-            {activeData?.name} {isHoverProjected ? <span className="text-[var(--acade-gold)] ml-1">(Projected)</span> : <span className="text-[var(--acade-primary)] ml-1">(Historical)</span>}
+          <span className="mb-1 text-sm font-medium text-[var(--acade-text-muted)] transition-colors">
+            {activeData?.name} {isHoverProjected ? <span className="ml-1 text-[var(--acade-gold)]">(Projected)</span> : <span className="ml-1 text-[var(--acade-primary)]">(Historical)</span>}
           </span>
           <div className="flex items-baseline gap-6">
             <div className="flex flex-col">
-              <span className="text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums transition-all">
+              <span className="app-num text-[2rem] font-bold leading-tight text-[var(--acade-text)] transition-all">
                 {formatCgpa(activeData?.val)}
               </span>
               <div className="flex items-center gap-2 mt-1">
                 <div className={cn(
                   "w-2 h-2 rounded-full",
-                  isHoverProjected ? "bg-[var(--acade-gold)] shadow-[0_0_8px_var(--acade-gold)]" : "bg-[var(--acade-primary)] shadow-[0_0_8px_var(--acade-primary)]"
+                  isHoverProjected ? "bg-[var(--chart-pi)]" : "bg-[var(--chart-cgpa)]"
                 )} />
-                <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] font-medium">{metricName}</span>
+                <span className="text-[0.8125rem] font-medium text-[var(--acade-text-muted)]">{metricName}</span>
               </div>
             </div>
           </div>
@@ -161,7 +161,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
           {[0, 1, 2, 3, 4, 5].map((val) => (
             <span
               key={`y-${val}`}
-              className="absolute right-1 -translate-y-1/2 text-xs tabular-nums text-[var(--acade-text-muted)]"
+              className="absolute right-1 -translate-y-1/2 text-[0.8125rem] tabular-nums text-[var(--acade-text-muted)]"
               style={{ top: `${(getY(val) / height) * 100}%` }}
             >
               {val.toFixed(1)}
@@ -171,7 +171,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
         {lastHistoryIndex >= 0 && (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute top-0 -translate-x-1/2 text-xs font-semibold text-[var(--acade-primary-glow)]"
+            className="pointer-events-none absolute top-0 -translate-x-1/2 text-[0.8125rem] font-semibold text-[var(--acade-primary)]"
             style={{ left: `calc(2rem + (100% - 2rem) * ${getX(lastHistoryIndex) / width})` }}
           >
             Today
@@ -188,19 +188,18 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
           <defs>
             {/* Viewport-Aware Dynamic Gradient */}
             <linearGradient id="viewportGradientForecast" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--acade-success)" />
-              <stop offset="50%" stopColor="var(--acade-primary)" />
-              <stop offset="100%" stopColor="var(--acade-danger)" />
+              <stop offset="0%" stopColor="var(--chart-cgpa)" />
+              <stop offset="100%" stopColor="var(--chart-cgpa)" />
             </linearGradient>
 
             <linearGradient id="areaGradientForecast" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.4} />
-              <stop offset="100%" stopColor="var(--acade-primary)" stopOpacity={0.0} />
+              <stop offset="0%" stopColor="var(--chart-cgpa)" stopOpacity={0.22} />
+              <stop offset="100%" stopColor="var(--chart-cgpa)" stopOpacity={0.0} />
             </linearGradient>
-            
+
             <linearGradient id="lineGradientProj" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="var(--acade-gold)" />
-              <stop offset="100%" stopColor="#fbbf24" />
+              <stop offset="0%" stopColor="var(--chart-cgpa)" />
+              <stop offset="100%" stopColor="var(--chart-pi)" />
             </linearGradient>
           </defs>
 
@@ -260,7 +259,6 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
             strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ filter: "drop-shadow(0px 4px 6px rgba(99,102,241,0.6))" }}
             initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
             animate={{ pathLength: 1 }}
             transition={{ duration: 2, ease: "easeInOut" }}
@@ -276,7 +274,6 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeDasharray="8 8"
-              style={{ filter: "drop-shadow(0px 4px 6px rgba(245,158,11,0.6))" }}
               initial={{ pathLength: shouldReduceMotion ? 1 : 0 }}
               animate={{ pathLength: 1 }}
               transition={{ duration: 2, ease: "easeInOut", delay: 1 }}
@@ -379,7 +376,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
           return (
             <span
               key={`x-${d.idx}`}
-              className={cn('absolute top-0 max-w-[6rem] truncate text-xs text-[var(--acade-text-muted)]', edge, d.isProjected && 'text-[var(--acade-gold)]')}
+              className={cn('absolute top-0 max-w-[6rem] truncate text-[0.8125rem] text-[var(--acade-text-muted)]', edge, d.isProjected && 'text-[var(--acade-gold)]')}
               style={{ left: `${ratio * 100}%` }}
             >
               <span>{d.name}</span>

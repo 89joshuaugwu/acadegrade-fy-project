@@ -196,10 +196,10 @@ The template for every other page plan. It inherits `01`–`04`; anything not st
   - A round portrait (44px; the owner's real photo, supplied by the owner) top-left.
   - The heading at lead: "Why I built AcadeGrade".
   - Four short paragraphs in the first person, at body size.
-  - The sign-off "Joshua" at lead, and "Founder, AcadeGrade · Enugu" at small.
+  - The sign-off "Joshua" at lead, and "Founder, AcadeGrade · Computer Science, ESUT" at small.
   - The tear-off strip carries the support email and a "Write to us" link.
 - **Draft letter** (OWNER TO CONFIRM; wording must be true):
-  > Every results day, I watched friends add up grade points on the back of a page, then do it again because they weren't sure.
+  > I studied Computer Science at ESUT. Every results day, I watched friends add up grade points on the back of a page, then do it again because they weren't sure.
   >
   > I built AcadeGrade so the arithmetic is never the hard part. You enter your results once, or scan the slip, and the numbers are always right and always explained.
   >

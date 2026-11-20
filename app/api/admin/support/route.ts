@@ -19,6 +19,8 @@ function adminTicketView(id: string, data: Record<string, unknown>) {
   return {
     id,
     uid: data.uid ?? null,
+    // 'public': sent from the public Support form without signing in (no uid; email reply only).
+    source: data.source === 'public' ? 'public' : 'account',
     email: data.email ?? null,
     name: data.name ?? null,
     category: data.category,
@@ -130,7 +132,7 @@ export async function POST(request: Request) {
     if (email) {
       try {
         const { sendEmail, supportReplyEmail } = await import('@/lib/email/mailer');
-        await sendEmail(email, REPLY_TITLE, supportReplyEmail(typeof ticket.name === 'string' ? ticket.name : '', message));
+        await sendEmail(email, REPLY_TITLE, supportReplyEmail(typeof ticket.name === 'string' ? ticket.name : '', message, { publicRequest: ticket.source === 'public' }));
         emailSent = true;
       } catch {
         console.warn('[support] reply email failed');

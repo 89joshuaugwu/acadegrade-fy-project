@@ -126,8 +126,11 @@ export function NeedsAttention({ getToken }: { getToken: () => Promise<string> }
   }, [getToken]);
 
   return (
-    <section aria-labelledby="needs-attention-title" className="flex h-full flex-col rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5">
-      <h2 id="needs-attention-title" className="text-base font-semibold text-[var(--acade-text)]">Needs attention</h2>
+    <section aria-labelledby="needs-attention-title" className="flex h-full min-w-0 flex-col rounded-[20px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-5 sm:p-6">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="needs-attention-title" className="ag-admin-h2">Needs attention</h2>
+        {items && items.length > 0 ? <span className="rounded-full bg-[var(--acade-gold-dim)] px-2.5 py-0.5 text-[0.8125rem] font-semibold tabular-nums text-[var(--acade-warning)]">{items.length} to check</span> : null}
+      </div>
       {items === null ? (
         <p role="status" className="mt-3 text-sm text-[var(--acade-text-muted)]">Checking settings…</p>
       ) : items.length === 0 ? (
@@ -141,7 +144,7 @@ export function NeedsAttention({ getToken }: { getToken: () => Promise<string> }
             <li key={item.id}>
               <Link
                 href={item.href}
-                className="group flex min-h-11 items-start gap-3 rounded-xl bg-[var(--acade-overlay)] px-3 py-2.5 text-sm text-[var(--acade-text)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
+                className="group flex min-h-11 items-start gap-3 rounded-[14px] border border-[var(--acade-border-subtle)] bg-[var(--acade-overlay)] px-3.5 py-3 text-sm leading-5 text-[var(--acade-text)] transition-colors hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]"
               >
                 <span className="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--acade-warning)]" aria-hidden="true" />
                 <span className="min-w-0 flex-1">{item.text}</span>

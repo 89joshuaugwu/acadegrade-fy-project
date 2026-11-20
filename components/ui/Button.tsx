@@ -37,15 +37,15 @@ const variantStyles: Record<ButtonVariant, string> = {
     'hover:bg-[var(--acade-danger)]/90',
   ].join(' '),
   gold: [
-    'bg-[var(--acade-gold)] text-[var(--acade-text-inverse)]',
-    'hover:bg-[var(--acade-gold-hover)]',
+    'bg-ag-gold text-ag-night',
+    'hover:bg-[#FFC266]',
   ].join(' '),
 };
 
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: 'h-12 px-4 text-[length:var(--text-sm)] rounded-lg gap-1.5',
-  md: 'h-12 px-6 text-[length:var(--text-base)] rounded-xl gap-2',
-  lg: 'h-14 px-8 text-[length:var(--text-lg)] rounded-xl gap-2.5',
+  sm: 'h-12 px-4 text-[length:var(--text-sm)] rounded-[var(--radius-control)] gap-1.5',
+  md: 'h-12 px-6 text-[0.9375rem] rounded-[var(--radius-control)] gap-2',
+  lg: 'h-14 px-8 text-[length:var(--text-lg)] rounded-[var(--radius-control)] gap-2.5',
 };
 
 /**

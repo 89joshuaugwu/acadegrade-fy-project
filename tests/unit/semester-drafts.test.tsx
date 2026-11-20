@@ -71,7 +71,7 @@ describe('GradeTable drafts', () => {
     expect(screen.getByRole('region', { name: 'Restore unsaved changes?' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Restore' }));
-    expect(screen.getAllByLabelText('Course 1 exam score out of 70')[0]).toHaveValue(66);
+    expect(screen.getAllByLabelText('Course 1 exam score out of 70')[0]).toHaveValue('66');
     expect(screen.queryByRole('region', { name: 'Restore unsaved changes?' })).not.toBeInTheDocument();
   });
 
@@ -80,7 +80,7 @@ describe('GradeTable drafts', () => {
     render(<GradeTable editable initialCourses={[saved]} draft={{ uid: 'u1', semesterId: 's1' }} />);
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
     expect(loadDraft('u1', 's1')).toBeNull();
-    expect(screen.getAllByLabelText('Course 1 exam score out of 70')[0]).toHaveValue(50);
+    expect(screen.getAllByLabelText('Course 1 exam score out of 70')[0]).toHaveValue('50');
   });
 
   it('drops a draft that matches what is already saved', () => {

@@ -17,12 +17,12 @@ export function AdminPageHeader({ title, description, helpId, actions, children 
   children?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <header className="flex flex-col gap-4 border-b border-[var(--acade-border-subtle)] pb-6 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        <h1 tabIndex={-1} className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-3xl)] font-bold text-[var(--acade-text)] text-balance">
+        <h1 tabIndex={-1} className="ag-admin-display text-[1.875rem] font-bold leading-[1.1] text-[var(--acade-text)] text-balance outline-none sm:text-[2.25rem]">
           {title}
         </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--acade-text-muted)] text-pretty">{description}</p>
+        <p className="mt-2 max-w-2xl text-[0.9375rem] leading-6 text-[var(--acade-text-muted)] text-pretty">{description}</p>
         {children}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">

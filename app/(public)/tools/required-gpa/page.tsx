@@ -1,5 +1,5 @@
 import { ToolPage, toolMetadata } from '../ToolPage';
-import { RequiredGpaCalculator } from '../calculators';
+import { RequiredGpaCalculator } from '../RequiredGpaCalculator';
 
 export const metadata = toolMetadata('required-gpa');
 

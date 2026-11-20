@@ -165,8 +165,17 @@ function AiReportDialog({ open, onClose, onSubmit }: {
                   value={option.value}
                   checked={reason === option.value}
                   onChange={() => setReason(option.value)}
-                  className="size-4 accent-[var(--acade-primary)]"
+                  className="peer sr-only"
                 />
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'flex size-[18px] shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                    reason === option.value ? 'border-[var(--acade-primary)]' : 'border-[var(--acade-control-border)]'
+                  )}
+                >
+                  <span className={cn('size-2 rounded-full bg-[var(--acade-primary)] transition-transform', reason === option.value ? 'scale-100' : 'scale-0')} />
+                </span>
                 {option.label}
               </label>
             ))}

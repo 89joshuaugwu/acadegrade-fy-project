@@ -58,6 +58,11 @@ import { addDays, localNowISO, localToday } from '@/lib/timetable/format';
 import { validityEnd } from '@/lib/timetable/engine';
 
 const today = localToday();
+/** The accessible name of a day in the custom date picker (components/ui/DateTimeFields). */
+function longDate(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(y, m - 1, d));
+}
 const lecture = {
   id: 'ev1',
   title: 'MTH 101',
@@ -169,7 +174,9 @@ describe('create timetable', () => {
     render(<NewTimetablePage />);
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Exam week' } });
     fireEvent.change(screen.getByLabelText('Valid for (amount)'), { target: { value: '2' } });
-    fireEvent.change(screen.getByLabelText('Valid for (unit)'), { target: { value: 'months' } });
+    // The unit is a custom dropdown (kit Select), not a native <select>.
+    fireEvent.click(screen.getByRole('combobox', { name: 'Valid for (unit)' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Months' }));
     fireEvent.click(screen.getByRole('button', { name: 'Create timetable' }));
     await waitFor(() => expect(h.setDocument).toHaveBeenCalled());
     const [docPath, data, options] = h.setDocument.mock.calls[0] as unknown as [string, Record<string, any>, { merge: boolean }];
@@ -211,9 +218,11 @@ describe('timetable detail', () => {
     render(<TimetableDetailPage />);
     fireEvent.click(screen.getByRole('button', { name: /Add event/ }));
     fireEvent.change(screen.getByLabelText('Event title'), { target: { value: 'MTH 101 exam' } });
-    fireEvent.change(screen.getByLabelText('Event type'), { target: { value: 'exam' } });
-    fireEvent.change(screen.getByLabelText('Repeats'), { target: { value: 'once' } });
-    fireEvent.change(screen.getByLabelText('Date'), { target: { value: addDays(today, 5) } });
+    // Event type and Repeats are styled radio groups; the date is the custom date picker.
+    fireEvent.click(screen.getByLabelText('Exam'));
+    fireEvent.click(screen.getByLabelText('One date only'));
+    fireEvent.click(screen.getByLabelText('Date'));
+    fireEvent.click(screen.getByRole('button', { name: longDate(addDays(today, 5)) }));
     fireEvent.click(screen.getByLabelText('Use different reminders for this event'));
     fireEvent.click(screen.getByLabelText('60 minutes before'));
     fireEvent.click(screen.getByRole('button', { name: 'Save event' }));
@@ -222,7 +231,7 @@ describe('timetable detail', () => {
     expect(patch.events).toHaveLength(2);
     expect(patch.events[1]).toMatchObject({ title: 'MTH 101 exam', type: 'exam', recurrence: { kind: 'once', date: addDays(today, 5) } });
     expect(patch.events[1].reminderOffsetsMin).toEqual([60, 10]);
-  });
+  }, 15_000); // Many clicks through the custom date picker: slow when the full suite loads the PC.
 
   it('deletes an event after confirmation', async () => {
     render(<TimetableDetailPage />);
@@ -296,7 +305,7 @@ describe('Build with AcadeMind wizard', () => {
     fireEvent.change(screen.getByLabelText('Subject 1 name'), { target: { value: 'Calculus' } });
     fireEvent.click(screen.getByRole('button', { name: /Add subject/ }));
     fireEvent.change(screen.getByLabelText('Subject 2 name'), { target: { value: 'Physics' } });
-    fireEvent.change(screen.getByLabelText('Subject 2 priority'), { target: { value: '3' } });
+    fireEvent.click(within(screen.getByRole('group', { name: 'Subject 2 priority' })).getByLabelText('High'));
     for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     fireEvent.click(screen.getByRole('button', { name: 'Preview plan' }));
 

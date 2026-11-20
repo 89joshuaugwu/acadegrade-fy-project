@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Textarea } from '@/components/ui/Textarea';
+import { DateTimeField } from '@/components/ui/DateTimeFields';
+import { Checkbox } from '@/components/admin/ui/Checkbox';
 import { ANNOUNCEMENT_AUDIENCE_MAX, ANNOUNCEMENT_BODY_MAX, ANNOUNCEMENT_TITLE_MAX } from '@/lib/announcements/shared';
 
 export interface AdminAnnouncement {
@@ -169,10 +171,13 @@ export function AnnouncementsManager({ getToken, onBackfillState }: Readonly<{
             <legend id={`${levelsId}-legend`} className="mb-2 text-sm font-medium text-[var(--acade-text)]">Levels (optional)</legend>
             <div className="flex flex-wrap gap-2">
               {LEVELS.map((level) => (
-                <label key={level} className="flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border border-[var(--acade-border)] px-3 text-sm has-[:checked]:border-[var(--acade-primary)] has-[:checked]:bg-[var(--acade-primary-dim)]">
-                  <input type="checkbox" checked={draft.levels.includes(level)} onChange={() => toggleLevel(level)} className="size-4 accent-[var(--acade-primary)]" />
-                  {level}L
-                </label>
+                <Checkbox
+                  key={level}
+                  checked={draft.levels.includes(level)}
+                  onChange={() => toggleLevel(level)}
+                  label={`${level}L`}
+                  className="min-h-12 rounded-[12px] border border-[var(--acade-border)] px-3 has-[:checked]:border-[var(--acade-primary)] has-[:checked]:bg-[var(--acade-primary-dim)]"
+                />
               ))}
             </div>
             <p className={audienceCount > ANNOUNCEMENT_AUDIENCE_MAX ? 'mt-2 text-sm text-[var(--acade-danger)]' : 'mt-2 text-sm text-[var(--acade-text-muted)]'}>
@@ -180,12 +185,12 @@ export function AnnouncementsManager({ getToken, onBackfillState }: Readonly<{
             </p>
           </fieldset>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Start (for scheduling)" type="datetime-local" value={draft.startsAt} onChange={(event) => setDraft({ ...draft, startsAt: event.target.value })} hint="Scheduled items go out in the daily run, 03:00 to 03:59 UTC." />
-            <Input label="End (optional)" type="datetime-local" value={draft.endsAt} onChange={(event) => setDraft({ ...draft, endsAt: event.target.value })} hint="After this it disappears from inboxes and the banner." />
+            <DateTimeField label="Start (for scheduling)" value={draft.startsAt} onChange={(value) => setDraft({ ...draft, startsAt: value })} hint="Scheduled items go out in the daily run, 03:00 to 03:59 UTC." />
+            <DateTimeField label="End (optional)" value={draft.endsAt} onChange={(value) => setDraft({ ...draft, endsAt: value })} hint="After this it disappears from inboxes and the banner." />
           </div>
-          <div className="flex flex-wrap gap-4 text-sm text-[var(--acade-text)]">
-            <label className="flex min-h-12 items-center gap-2"><input type="checkbox" checked={draft.showAsBanner} onChange={(event) => setDraft({ ...draft, showAsBanner: event.target.checked })} className="size-4 accent-[var(--acade-primary)]" />Show as the website banner</label>
-            <label className="flex min-h-12 items-center gap-2"><input type="checkbox" checked={draft.push} onChange={(event) => setDraft({ ...draft, push: event.target.checked })} className="size-4 accent-[var(--acade-primary)]" />Also send a push notification</label>
+          <div className="flex flex-wrap gap-x-6 gap-y-1">
+            <Checkbox checked={draft.showAsBanner} onChange={(event) => setDraft({ ...draft, showAsBanner: event.target.checked })} label="Show as the website banner" />
+            <Checkbox checked={draft.push} onChange={(event) => setDraft({ ...draft, push: event.target.checked })} label="Also send a push notification" />
           </div>
 
           {error ? <p role="alert" className="text-sm text-[var(--acade-danger)]">{error}</p> : null}

@@ -4,7 +4,7 @@ import { envContactEmail, normalizeContactEmail } from '@/lib/site/contact-email
 export const SITE_NAME = 'AcadeGrade';
 export const DEFAULT_SITE_URL = 'https://acadegrade.vercel.app';
 export const SITE_DESCRIPTION =
-  'Track university results, calculate CGPA and Performance Index, scan result slips, and turn your academic record into practical insights.';
+  'Work out your GPA, CGPA and degree class from your result slip. Scan results, plan your next semester and share your transcript safely. Free on web and Android.';
 
 type SiteEnvironment = {
   [key: string]: string | undefined;
@@ -91,7 +91,10 @@ export const PUBLIC_SITEMAP_ROUTES = [
   '/features',
   '/features/result-scanner',
   '/features/ai-insights',
+  '/features/timetable',
+  '/app',
   '/calculator',
+  '/tools',
   '/tools/degree-class-checker',
   '/tools/required-gpa',
   '/tools/carry-over-impact',
@@ -134,10 +137,11 @@ export function getSiteJsonLd(contactEmail: string | null = envContactEmail()) {
       isAccessibleForFree: true,
       publisher: { '@id': `${url}/#organization` },
       featureList: [
-        'CGPA and Performance Index tracking',
+        'GPA, CGPA and Performance Index from your result slip',
         'Result slip scanning with review before save',
-        'Academic trends and AI-assisted insights',
-        'Shareable academic transcripts',
+        'AcadeMind written analysis, forecast and what-if guidance',
+        'Timetable with reminders',
+        'Shareable transcripts with expiry and PIN',
       ],
     },
   ];

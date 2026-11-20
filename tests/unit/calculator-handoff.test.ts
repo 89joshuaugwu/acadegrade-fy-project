@@ -36,6 +36,12 @@ describe('calculator → account handoff', () => {
     });
   });
 
+  it('accepts 1 to 6 units per course and drops anything outside', () => {
+    expect(saveCalculatorHandoff({ mode: 'grade', courses: [{ code: 'A', units: 6, grade: 'A' }, { code: 'B', units: 7, grade: 'B' }, { code: 'C', units: 12, grade: 'C' }] })).toBe(true);
+    expect(readCalculatorHandoff()?.courses).toEqual([{ code: 'A', units: 6, grade: 'A' }]);
+    expect(saveCalculatorHandoff({ mode: 'grade', courses: [{ code: 'D', units: 7, grade: 'A' }] })).toBe(false);
+  });
+
   it('drops incomplete rows and saves nothing when no row is usable', () => {
     expect(saveCalculatorHandoff({ mode: 'score', courses: [{ code: 'X', units: 3 }, { code: 'Y', units: 0, score: 50 }] })).toBe(false);
     expect(readCalculatorHandoff()).toBeNull();

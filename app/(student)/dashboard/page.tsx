@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAnalytics } from '@/hooks/useAnalytics';
@@ -218,7 +218,7 @@ export default function DashboardPage() {
     <div className="flex w-full min-w-0 max-w-full flex-col gap-6 pb-10 sm:gap-7">
       <header data-landing-motion="section" id="tour-welcome" className="flex flex-col gap-4 py-1 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-2xl">
-        <h1 className="font-[family-name:var(--font-bricolage)] text-[clamp(1.6rem,3.4vw,2.5rem)] font-semibold leading-tight tracking-[-0.03em] text-[var(--acade-text)]">
+        <h1 className="app-display text-[clamp(1.75rem,3.4vw,2.5rem)] font-bold leading-tight text-[var(--acade-text)]">
           {greeting}, {firstName}.
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--acade-text-muted)] sm:text-base">
@@ -276,8 +276,7 @@ export default function DashboardPage() {
         <Card>
           <div className="mb-5 flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-primary)]">Trajectory</p>
-              <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold text-[var(--acade-text)]">Semester GPA and PI</h2>
+              <h2 className="font-[family-name:var(--font-bricolage)] text-[1.25rem] font-semibold tracking-[-0.02em] text-[var(--acade-text)]">Semester GPA and PI</h2>
               <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Compare your official semester GPA with score-sensitive performance.</p>
             </div>
             {hasAcademicData && <DiscreetRevealButton label="GPA trend" />}
@@ -295,18 +294,17 @@ export default function DashboardPage() {
         </DiscreetScope>
 
         <Card className="relative overflow-hidden">
-          <div className="absolute inset-x-0 top-0 h-px dashboard-ai-sweep" aria-hidden="true" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="dashboard-ai-icon-glow flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-primary-dim)]">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-ag-night">
                 <Image src="/acadegradeailogo.png" alt="" width={26} height={26} className="object-contain" />
               </span>
               <div className="min-w-0">
-                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--acade-gold)]">AcadeMind</p>
-                <h2 className="truncate font-[family-name:var(--font-bricolage)] text-lg font-semibold text-[var(--acade-text)]">AI insight</h2>
+                <h2 className="truncate font-[family-name:var(--font-bricolage)] text-[1.25rem] font-semibold tracking-[-0.02em] text-[var(--acade-text)]">AI insight</h2>
+                <p className="text-[0.8125rem] font-medium text-[var(--acade-gold)]">AcadeMind</p>
               </div>
             </div>
-            {insightsStale && <span className="rounded-full bg-[var(--acade-warning)]/10 px-2.5 py-1 text-xs font-semibold text-[var(--acade-warning)]">Update ready</span>}
+            {insightsStale && <span className="rounded-full bg-[var(--acade-gold-dim)] px-2.5 py-1 text-[0.8125rem] font-semibold text-[var(--acade-warning)]">Update ready</span>}
           </div>
 
           <div className="mt-6 min-h-28" aria-live="polite">
@@ -329,11 +327,11 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-5 flex items-center justify-between gap-3 border-t border-[var(--acade-border-subtle)] pt-4">
-            <span className="inline-flex items-center gap-1.5 text-xs text-[var(--acade-text-faint)]">
-              <Image src="/acadegradeailogo.png" alt="" width={14} height={14} className="size-3.5 object-contain opacity-75" /> Personalized to your record
+            <span className="inline-flex items-center gap-1.5 text-[0.8125rem] text-[var(--acade-text-faint)]">
+              Personalized to your record
             </span>
-            <Link href="/insights" className="inline-flex min-h-12 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]">
-              Open insights <ArrowRight className="size-4" aria-hidden="true" />
+            <Link href="/insights" className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-3 text-sm font-semibold text-[var(--acade-primary)] hover:bg-[var(--acade-primary-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]">
+              Open insights
             </Link>
           </div>
         </Card>

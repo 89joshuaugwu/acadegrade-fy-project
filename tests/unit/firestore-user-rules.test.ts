@@ -89,6 +89,13 @@ describe('new server-only collections and config/legal', () => {
     }
   });
 
+  it('denies every client read and write to the deletion queue and testimonials (public redesign)', () => {
+    for (const collection of ['_account_deletion_queue', 'public_testimonials']) {
+      expect(rules()).toContain(`match /${collection}/{document=**} {\n      allow read, write: if false;\n    }`);
+    }
+    expect(rules()).toContain('match /config/proof {\n      allow read, write: if false;\n    }');
+  });
+
   it('lets signed-in students read published announcements only, and never write them', () => {
     expect(rules()).toContain("match /announcements/{announcementId} {\n      allow get, list: if isAuthenticated() && resource.data.status == 'published';\n      allow write: if false;\n    }");
   });

@@ -11,8 +11,17 @@ import { AdminShell } from '@/components/layout/AdminShell';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { Skeleton } from '@/components/ui/Skeleton';
+import '@/components/admin/admin.css';
 
 const INITIAL_ACCESS: AdminAccessState = { status: 'idle', uid: null };
+
+/** Dialogs and sheets portal to <body>; this gives them the console's type while an admin page is open. */
+function useAdminBodyClass() {
+  useEffect(() => {
+    document.body.classList.add('ag-admin-body');
+    return () => document.body.classList.remove('ag-admin-body');
+  }, []);
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -21,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoginRoute = pathname === '/admin/login';
   const [access, setAccess] = useState<AdminAccessState>(INITIAL_ACCESS);
   const [verificationAttempt, setVerificationAttempt] = useState(0);
+  useAdminBodyClass();
 
   useEffect(() => {
     if (loading || isLoginRoute) return;
@@ -119,10 +129,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function AdminVerificationSkeleton() {
   return (
-    <main className="min-h-screen bg-[var(--acade-void)] px-5 py-10" aria-busy="true">
+    <main className="ag-admin min-h-screen bg-[var(--acade-void)] px-5 py-10" aria-busy="true">
       <div className="mx-auto flex min-h-[75vh] max-w-md flex-col items-center justify-center gap-7 text-center">
         <Logo href="/" size="md" />
-        <div className="w-full rounded-[2rem] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-7 shadow-[var(--shadow-popover)]">
+        <div className="w-full rounded-[24px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-7">
           <Skeleton shape="circle" width={52} height={52} className="mx-auto mb-6" />
           <Skeleton className="mx-auto mb-3 h-7 w-48 rounded-lg" />
           <Skeleton className="mx-auto h-4 w-64 max-w-full rounded-md" />
@@ -155,14 +165,14 @@ function AdminAccessMessage({
   onSecondary,
 }: AdminAccessMessageProps) {
   return (
-    <main className="min-h-screen bg-[var(--acade-void)] px-5 py-10">
+    <main className="ag-admin min-h-screen bg-[var(--acade-void)] px-5 py-10">
       <div className="mx-auto flex min-h-[75vh] max-w-lg flex-col items-center justify-center">
-        <section className="w-full rounded-[2rem] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-7 text-center shadow-[var(--shadow-popover)] sm:p-10">
+        <section className="w-full rounded-[24px] border border-[var(--acade-border-subtle)] bg-[var(--acade-surface)] p-7 text-center sm:p-10">
           <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]">
             <Icon size={26} aria-hidden="true" />
           </div>
-          <p className="mb-2 text-xs font-bold uppercase tracking-[0.16em] text-[var(--acade-primary)]">{eyebrow}</p>
-          <h1 className="font-[family-name:var(--font-bricolage)] text-3xl font-bold text-[var(--acade-text)]">{title}</h1>
+          <p className="mb-2 text-sm font-medium text-[var(--acade-text-muted)]">{eyebrow}</p>
+          <h1 className="ag-admin-display text-3xl font-bold text-[var(--acade-text)]">{title}</h1>
           <p className="mx-auto mt-4 max-w-sm leading-7 text-[var(--acade-text-muted)]">{description}</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button onClick={onPrimary}>{primaryLabel}</Button>

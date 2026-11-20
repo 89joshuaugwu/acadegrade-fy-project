@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, adminRtdb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
-import { deleteUserData } from '@/lib/user/account-deletion';
+import { deleteUserData, queueAccountDeletion, settleAccountDeletion } from '@/lib/user/account-deletion';
 
 /**
  * POST /api/user/delete-account
@@ -17,11 +17,15 @@ import { deleteUserData } from '@/lib/user/account-deletion';
  *   2. removes the RTDB unread-notification counter;
  *   3. deletes the Firebase Auth user.
  *
+ * The request is queued first (`_account_deletion_queue`), so if it stops part-way
+ * or leaves documents behind, the daily cron job finishes it within 21 days.
+ *
  * Maintenance mode does not block deletion (a data-subject right).
  * The response shape `{ success: true }` is unchanged for installed apps.
  */
 export async function POST(request: NextRequest) {
   const timer = apiTimer();
+  let queued = false;
 
   try {
     const authHeader = request.headers.get('authorization');
@@ -35,15 +39,19 @@ export async function POST(request: NextRequest) {
     const decoded = await adminAuth.verifyIdToken(token, true);
     const uid = decoded.uid;
 
-    const report = await deleteUserData(adminDb, uid);
+    const identity = await queueAccountDeletion(adminDb, uid, 'self');
+    queued = true;
+    const report = await deleteUserData(adminDb, uid, { identity });
     if (report.truncated.length) {
-      // Collection names only: never the uid.
-      console.warn('[account deletion] page bound reached; documents remain in', report.truncated);
+      // Collection names only: never the uid. The daily follow-up job finishes these.
+      console.warn('[account deletion] page bound reached; queued for the daily follow-up:', report.truncated);
     }
-    if (report.avatar === 'failed') console.warn('[account deletion] Cloudinary avatar delete failed');
+    if (report.avatar === 'failed') console.warn('[account deletion] Cloudinary avatar delete failed; queued for the daily follow-up');
 
     await adminRtdb.ref(`notif_counts/${uid}`).remove().catch(() => {});
     await adminAuth.deleteUser(uid);
+    // A failure here only leaves the entry for the daily job, which then clears it.
+    await settleAccountDeletion(adminDb, uid, report).catch(() => console.warn('[account deletion] could not settle the queue entry'));
 
     // Logged without the uid: this record must not re-create personal data.
     logApiCall({ endpoint: '/api/user/delete-account', category: 'auth', uid: null, status: 200, durationMs: timer() });
@@ -62,7 +70,11 @@ export async function POST(request: NextRequest) {
       error: error?.message || 'Unknown error',
     });
     return NextResponse.json(
-      { error: 'Failed to delete account. Please try again or contact support.' },
+      {
+        error: queued
+          ? 'Your account could not be fully deleted just now. Please try again. If it keeps failing, we will finish deleting it automatically within 21 days.'
+          : 'Failed to delete account. Please try again or contact support.',
+      },
       { status: 500 }
     );
   }

@@ -91,6 +91,8 @@ The decisions every public page inherits. Page plans in `pages/` apply these; th
 
 ## 6. Imagery
 
+> **Owner decision, 20 Nov 2026 (overrides this section):** no photograph may show a recognisable university (no gates, signs, named or landmark buildings). AcadeGrade is for every Nigerian university, and a single campus makes it look like it belongs to that school. The home hero shows the app beside the live slip. Other slots use neutral close-ups of a student's world (notes, calculator, exam desks, library shelves, a timetable) through `lib/public/page-photos.ts`. The footer stamp is drawn. The campus picture set below is withdrawn and kept only as history. See `HANDOFFS.md`.
+
 **Order of preference:**
 
 1. **The product's own interface**, cropped large. Real screens rebuilt in HTML from the real components (preferred: crisp, light, translatable), or current screenshots exported at 2x and compressed. Always with realistic sample data, never the owner's real profile.

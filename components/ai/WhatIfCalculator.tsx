@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useId, useRef } from 'react';
+import { useState, useEffect, useId, useRef, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, Minus, Plus } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,7 @@ import { formatCgpa, MAX_GRADE_POINT, requiredAverageForTarget } from '@/lib/cgp
 import toast from 'react-hot-toast';
 import { classifyAiResponse, type AiBlock } from './aiAccess';
 import { AiDisclosure } from './AiDisclosure';
+import { RangeSlider } from './RangeSlider';
 import { DiscreetValue } from '@/lib/discreet';
 
 interface WhatIfCalculatorProps {
@@ -28,7 +29,62 @@ interface WhatIfCalculatorProps {
   onAiBlocked?: (block: AiBlock) => void;
 }
 
-const fieldClass = 'w-full min-h-12 bg-[var(--acade-surface)] border border-[var(--acade-control-border)] rounded-[var(--radius-control)] px-4 py-3 text-base text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums focus:outline-none focus:border-[var(--acade-primary)] focus:ring-2 focus:ring-[var(--acade-primary)]/20 transition-colors';
+interface StepperFieldProps {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  disabled?: boolean;
+  /** Typed text, handled exactly like the old number field. */
+  onType: (raw: string) => void;
+  /** Buttons and arrow keys: the next whole number, already clamped. */
+  onStep: (next: number) => void;
+}
+
+/** A whole-number field with − and + buttons (no native number spinner). Arrow keys step too. */
+function StepperField({ id, label, value, min, max, disabled = false, onType, onStep }: StepperFieldProps) {
+  const step = (delta: number) => onStep(Math.min(max, Math.max(min, value + delta)));
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowUp') { event.preventDefault(); step(1); }
+    if (event.key === 'ArrowDown') { event.preventDefault(); step(-1); }
+  };
+  const buttonClass = 'flex size-12 shrink-0 items-center justify-center text-[var(--acade-text-muted)] transition-colors hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--acade-primary)] disabled:cursor-not-allowed disabled:opacity-40';
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="text-sm font-medium text-[var(--acade-text-muted)]">{label}</label>
+      <div
+        className={cn(
+          'flex h-12 items-stretch overflow-hidden rounded-[var(--radius-control)] border border-[var(--acade-control-border)] bg-[var(--acade-deep)] transition-colors',
+          'focus-within:border-[var(--acade-primary)] focus-within:ring-2 focus-within:ring-[var(--acade-primary)]/20',
+          disabled && 'opacity-50'
+        )}
+      >
+        <button type="button" aria-label={`Decrease ${label.toLowerCase()}`} disabled={disabled || value <= min} onClick={() => step(-1)} className={buttonClass}>
+          <Minus className="size-4" aria-hidden="true" />
+        </button>
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          role="spinbutton"
+          aria-valuemin={min}
+          aria-valuemax={max}
+          aria-valuenow={value}
+          autoComplete="off"
+          value={value}
+          onChange={(event) => onType(event.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={disabled}
+          className="app-num min-w-0 flex-1 border-x border-[var(--acade-border-subtle)] bg-transparent text-center text-lg font-semibold text-[var(--acade-text)] focus:outline-none disabled:cursor-not-allowed"
+        />
+        <button type="button" aria-label={`Increase ${label.toLowerCase()}`} disabled={disabled || value >= max} onClick={() => step(1)} className={buttonClass}>
+          <Plus className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function WhatIfCalculator({
   currentCGPA,
@@ -159,158 +215,146 @@ export function WhatIfCalculator({
   }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, user, aiAllowed, nothingLeft, gradedInProgress]);
 
   const locked = aiAllowed && (cooldown > 0 || loading);
-  const span = Math.max(0.01, MAX_GRADE_POINT - currentCGPA);
-  const position = Math.min(100, Math.max(0, ((targetCGPA - currentCGPA) / span) * 100));
   const outOfReach = requiredGPA > MAX_GRADE_POINT;
+  const targetLabelId = `${ids}-target-label`;
+  const sliderMin = Math.min(MAX_GRADE_POINT, Math.max(0, currentCGPA));
 
   return (
-    <div className="bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-[var(--radius-surface)] overflow-hidden">
-      {/* Top Section - Controls */}
-      <div className="p-5 md:p-8 border-b border-[var(--acade-border-subtle)] space-y-8">
+    <section aria-labelledby={`${ids}-heading`} className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        {/* Controls */}
+        <div className="space-y-7 p-5 sm:p-7">
+          <div>
+            <h2 id={`${ids}-heading`} className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">What-if planner</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)]">Drag the target and adjust your remaining load. The numbers update straight away.</p>
+          </div>
 
-        {/* Slider Area */}
-        <div className="space-y-4">
-          <div className="flex flex-wrap justify-between items-end gap-3">
-            <div>
-              <label htmlFor={`${ids}-target`} className="text-sm font-medium text-[var(--acade-text-muted)]">Target CGPA</label>
-              <div className="flex items-baseline gap-2 mt-1">
-                <span className="text-[length:var(--text-4xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums">
-                  {formatCgpa(targetCGPA)}
-                </span>
-                <span className="text-sm text-[var(--acade-text-muted)]">/ 5.00</span>
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <span id={targetLabelId} className="text-sm font-medium text-[var(--acade-text-muted)]">Target CGPA</span>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="app-num text-[2.75rem] font-bold leading-none text-[var(--acade-text)]">
+                    {formatCgpa(targetCGPA)}
+                  </span>
+                  <span className="app-num text-base font-medium text-[var(--acade-text-muted)]">/ 5.00</span>
+                </div>
+              </div>
+              <div className="rounded-full bg-[var(--acade-overlay)] px-3.5 py-1.5">
+                <span className="text-sm font-medium tabular-nums text-[var(--acade-text-muted)]">Current: <DiscreetValue label="Current CGPA">{formatCgpa(currentCGPA)}</DiscreetValue></span>
               </div>
             </div>
-            <div className="bg-[var(--acade-surface)] px-3 py-1.5 rounded-lg border border-[var(--acade-border)]">
-              <span className="text-sm text-[var(--acade-text-muted)] font-medium tabular-nums">Current: <DiscreetValue label="Current CGPA">{formatCgpa(currentCGPA)}</DiscreetValue></span>
-            </div>
-          </div>
 
-          <div className="relative w-full h-12 flex items-center">
-            <input
+            <RangeSlider
               id={`${ids}-target`}
-              type="range"
-              min={currentCGPA}
-              max={5.0}
+              aria-labelledby={targetLabelId}
+              min={sliderMin}
+              max={MAX_GRADE_POINT}
               step={0.01}
+              pageStep={0.1}
               value={targetCGPA}
-              aria-valuetext={`${formatCgpa(targetCGPA)} out of 5.00`}
-              onChange={(e) => setTargetCGPA(parseFloat(e.target.value))}
+              valueText={(value) => `${formatCgpa(value)} out of 5.00`}
+              onChange={setTargetCGPA}
               disabled={locked}
-              className={cn("peer absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10", locked && "cursor-not-allowed")}
             />
-            {/* Custom Track */}
-            <div className="absolute inset-x-0 h-2 bg-[var(--acade-surface)] rounded-full overflow-hidden border border-[var(--acade-border-subtle)] pointer-events-none">
-              <div className="h-full bg-[var(--acade-primary)]" style={{ width: `${position}%` }} />
+            <div className="flex justify-between text-sm tabular-nums text-[var(--acade-text-faint)]" aria-hidden="true">
+              <span>{formatCgpa(sliderMin)}</span>
+              <span>5.00</span>
             </div>
-            {/* Custom Thumb */}
-            <motion.div
-              className="absolute h-6 w-6 -ml-3 bg-white rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.3)] border-2 border-[var(--acade-primary)] pointer-events-none flex items-center justify-center peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--acade-primary)]"
-              style={{ left: `${position}%` }}
-              animate={{ scale: loading && !shouldReduceMotion ? 0.9 : 1 }}
-            >
-              <div className="w-1.5 h-1.5 bg-[var(--acade-primary)] rounded-full" />
-            </motion.div>
+            {aiAllowed && cooldown > 0 && (
+              <p className="text-center text-sm font-medium tabular-nums text-[var(--acade-text-muted)]" role="status">
+                Next AI guidance in {cooldown}s. The numbers above update straight away.
+              </p>
+            )}
           </div>
-          {aiAllowed && cooldown > 0 && (
-            <p className="text-center text-xs font-semibold text-[var(--acade-text-muted)] tabular-nums" role="status">
-              Next AI guidance in {cooldown}s. The numbers above update straight away.
-            </p>
-          )}
-        </div>
 
-        {/* Number Inputs */}
-        <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label htmlFor={`${ids}-semesters`} className="text-sm font-medium text-[var(--acade-text-muted)]">Remaining semesters</label>
-            <input
+          <div className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2">
+            <StepperField
               id={`${ids}-semesters`}
-              type="number"
-              inputMode="numeric"
+              label="Remaining semesters"
+              value={remainingSemesters}
               min={1}
               max={20}
-              value={remainingSemesters}
-              onChange={(e) => setRemainingSemesters(Math.min(20, parseInt(e.target.value) || 1))}
               disabled={locked}
-              className={cn(fieldClass, locked && "opacity-50 cursor-not-allowed")}
+              onType={(raw) => setRemainingSemesters(Math.min(20, parseInt(raw) || 1))}
+              onStep={setRemainingSemesters}
             />
-          </div>
-          <div className="space-y-2">
-            <label htmlFor={`${ids}-units`} className="text-sm font-medium text-[var(--acade-text-muted)]">Units per semester</label>
-            <input
+            <StepperField
               id={`${ids}-units`}
-              type="number"
-              inputMode="numeric"
+              label="Units per semester"
+              value={creditLoad}
               min={1}
               max={30}
-              value={creditLoad}
-              onChange={(e) => setCreditLoad(parseInt(e.target.value) || 18)}
               disabled={locked}
-              className={cn(fieldClass, locked && "opacity-50 cursor-not-allowed")}
+              onType={(raw) => setCreditLoad(parseInt(raw) || 18)}
+              onStep={setCreditLoad}
             />
           </div>
         </div>
-      </div>
 
-      {/* Bottom Section - Results */}
-      <div className="p-5 md:p-8 bg-[var(--acade-surface)]/50 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6 w-full md:w-auto" aria-live="polite">
-            <div className="flex flex-col">
-              <span className="text-sm text-[var(--acade-text-muted)] font-medium mb-1">Required GPA</span>
+        {/* Results: a night panel, like the arc card on the home page */}
+        <div className="flex flex-col gap-5 bg-ag-night p-5 text-white sm:p-7">
+          <div className="grid grid-cols-2 gap-4" aria-live="polite">
+            <div className="flex min-w-0 flex-col">
+              <span className="mb-1 text-sm font-medium text-ag-mist-night">Required GPA</span>
               <AnimatePresence mode="popLayout">
                 <motion.span
                   key={outOfReach ? 'impossible' : formatCgpa(requiredGPA)}
                   initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={cn(
-                    "text-[length:var(--text-3xl)] font-bold font-[family-name:var(--font-geist-mono)] tabular-nums",
-                    outOfReach ? "text-[var(--acade-danger)]" : "text-[var(--acade-primary)]"
+                    'app-num text-[2.5rem] font-bold leading-none sm:text-[2.75rem]',
+                    outOfReach ? 'text-[#FF8A7A]' : 'text-ag-gold'
                   )}
                 >
                   <DiscreetValue label="Required GPA">{outOfReach ? '>5.00' : formatCgpa(Math.max(0, requiredGPA))}</DiscreetValue>
                 </motion.span>
               </AnimatePresence>
+              <span className="mt-2 text-sm text-ag-mist-night">each remaining semester</span>
             </div>
 
-            <div className="w-px h-12 bg-[var(--acade-border)]" aria-hidden="true" />
-
-            <div className="flex flex-col">
-              <span className="text-sm text-[var(--acade-text-muted)] font-medium mb-1">Target avg score</span>
-              <span className="text-[length:var(--text-2xl)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] tabular-nums">
+            <div className="flex min-w-0 flex-col border-l border-white/10 pl-4">
+              <span className="mb-1 text-sm font-medium text-ag-mist-night">Target avg score</span>
+              <span className="app-num text-[2rem] font-bold leading-none text-white sm:text-[2.25rem]">
                 <DiscreetValue label="Target average score">{outOfReach ? 'Impossible' : `~${Math.max(0, requiredAvgScore).toFixed(0)}%`}</DiscreetValue>
               </span>
             </div>
           </div>
 
-          <div className="flex-1 bg-[var(--acade-overlay)] rounded-[var(--radius-control)] p-4 border border-[var(--acade-border-subtle)] min-h-[80px] flex items-start gap-3 w-full">
-            <Sparkles size={16} className="mt-1 shrink-0 text-[var(--acade-gold)]" aria-hidden="true" />
+          <div className="flex min-h-[88px] flex-1 items-start gap-3 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-inset ring-white/10">
+            <Sparkles size={16} className="mt-1 shrink-0 text-ag-gold" aria-hidden="true" />
             <div className="min-w-0 flex-1" aria-live="polite">
+              <p className="mb-1 text-sm font-semibold text-white">AcadeMind</p>
               {nothingLeft ? (
-                <p className="text-sm text-[var(--acade-text)] leading-relaxed text-pretty">
+                <p className="text-pretty text-sm leading-relaxed text-white/90">
                   Nothing left to plan: every remaining unit is already graded, so your CGPA can no longer change. Add a future semester to explore a target.
                 </p>
               ) : block ? (
-                <p className="text-sm text-[var(--acade-text-muted)] leading-relaxed">{block.message}</p>
+                <p className="text-sm leading-relaxed text-ag-mist-night">{block.message}</p>
               ) : loading ? (
-                <div className="flex items-center gap-2 text-[var(--acade-text-muted)] text-sm">
-                  <Image src="/acadegradeailogo.png" alt="" width={18} height={18} className={cn("size-[18px] shrink-0 object-contain", !shouldReduceMotion && "animate-pulse")} />
+                <div className="flex items-center gap-2 text-sm text-ag-mist-night">
+                  <Image src="/acadegradeailogo.png" alt="" width={18} height={18} className={cn('size-[18px] shrink-0 object-contain', !shouldReduceMotion && 'animate-pulse')} />
                   <span>AcadeMind is checking how realistic this is…</span>
                 </div>
               ) : countdown !== null && countdown > 0 ? (
-                <div className="flex items-center gap-2 text-[var(--acade-text-muted)] text-sm">
-                  <Loader2 size={16} className={cn(!shouldReduceMotion && "animate-spin")} aria-hidden="true" />
+                <div className="flex items-center gap-2 text-sm text-ag-mist-night">
+                  <Loader2 size={16} className={cn(!shouldReduceMotion && 'animate-spin')} aria-hidden="true" />
                   <span>AI guidance in {countdown}s</span>
                 </div>
               ) : (
-                <p className="text-sm text-[var(--acade-text)] leading-relaxed text-pretty">
+                <p className="text-pretty text-sm leading-relaxed text-white/90">
                   {feasibilityNote || 'Move the target to get AI guidance on how realistic it is.'}
                 </p>
               )}
             </div>
           </div>
         </div>
-        {!block && feasibilityNote && !loading && <AiDisclosure feature="whatif" />}
       </div>
-    </div>
+      {!block && feasibilityNote && !loading && (
+        <div className="border-t border-[var(--acade-border-subtle)] px-5 py-3 sm:px-7">
+          <AiDisclosure feature="whatif" />
+        </div>
+      )}
+    </section>
   );
 }

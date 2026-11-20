@@ -6,6 +6,19 @@
    ═══════════════════════════════════════════════════ */
 
 @theme inline {
+  /* Brand v2 "Gold hour" (docs/brand-v2/DESIGN.md) */
+  --color-ag-night: #0E0B2B;
+  --color-ag-night-2: #17133F;
+  --color-ag-violet: #6B4EFF;
+  --color-ag-violet-soft: #A898FF;
+  --color-ag-gold: #FFB23F;
+  --color-ag-haze: #F4F1FF;
+  --color-ag-ink: #17133A;
+  --color-ag-mist: #6E6A8E;
+  --color-ag-mist-night: #B8B3D9;
+  --font-ag-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-ag-text: var(--font-geist-sans), system-ui, sans-serif;
+
   /* ── Backgrounds — layer stack ── */
   --color-acade-void: var(--acade-void);
   --color-acade-deep: var(--acade-deep);
@@ -66,63 +79,77 @@
 
 :root {
   color-scheme: light;
-  /* ── Backgrounds ── */
-  --acade-void: #F5F7FC;
+  /* ── Backgrounds (brand v2 "Gold hour": Haze ground, white surfaces) ── */
+  --acade-void: #F4F1FF;
   --acade-deep: #FFFFFF;
   --acade-surface: #FFFFFF;
-  --acade-overlay: #EEF1F8;
-  --acade-border: #CDD3E0;
-  --acade-border-subtle: #E5E8F0;
-  --acade-control-border: #788399;
+  --acade-overlay: #EFEBFF;
+  --acade-border: #DCD6F3;
+  --acade-border-subtle: #E9E5F8;
+  --acade-control-border: #8A85AB;
 
-  /* ── Primary ── */
-  --acade-primary: #5148DD;
-  --acade-primary-hover: #453CC5;
-  --acade-primary-glow: #5148DD;
-  --acade-primary-dim: #EEECFF;
+  /* ── Primary (Violet) ── */
+  --acade-primary: #6B4EFF;
+  --acade-primary-hover: #5A3CF0;
+  --acade-primary-glow: #6B4EFF;
+  --acade-primary-dim: #EEEAFF;
   --acade-on-primary: #FFFFFF;
 
-  /* ── Gold ── */
+  /* ── Gold (text-safe on light; the brand fill is --color-ag-gold) ── */
   --acade-gold: #9A5A00;
   --acade-gold-hover: #804900;
-  --acade-gold-dim: #FFF3DD;
+  --acade-gold-dim: #FFF1D9;
 
   /* ── Semantic ── */
   --acade-success: #067647;
-  --acade-success-dim: #E9F7EF;
-  --acade-danger: #C83232;
-  --acade-danger-dim: #FDECEC;
+  --acade-success-dim: #E6F5EC;
+  --acade-danger: #C2361F;
+  --acade-danger-dim: #FDECE8;
   --acade-on-danger: #FFFFFF;
   --acade-warning: #9A5A00;
   --acade-info: #0B6B9E;
-  --acade-info-dim: #E8F4FC;
+  --acade-info-dim: #E7F3FB;
 
-  /* ── Text ── */
-  --acade-text: #141827;
-  --acade-text-muted: #5C6577;
-  --acade-text-faint: #636D80;
+  /* ── Text (Ink, deep Mist, Mist) ── */
+  --acade-text: #17133A;
+  --acade-text-muted: #5F5B82;
+  --acade-text-faint: #6E6A8E;
   --acade-text-inverse: #FFFFFF;
-  --acade-scrim: rgba(8, 11, 22, 0.46);
+  --acade-scrim: rgba(14, 11, 43, 0.5);
 
-  /* ── Grade Colors ── */
-  --grade-a: #067647;
-  --grade-b: #5148DD;
-  --grade-c: #9A5A00;
-  --grade-d: #A9430D;
-  --grade-e: #A63256;
-  --grade-f: #5C6577;
+  /* ── Grade Colors (text tones, AA on white/haze) ── */
+  --grade-a: #8A5800;
+  --grade-b: #5B3FF0;
+  --grade-c: #0B6E78;
+  --grade-d: #B04A0A;
+  --grade-e: #B0245A;
+  --grade-f: #C2361F;
 
-  /* ── Degree Class ── */
-  --class-first: #067647;
-  --class-2upper: #5148DD;
-  --class-2lower: #9A5A00;
-  --class-third: #A9430D;
-  --class-pass: #A63256;
-  --class-fail: #5C6577;
+  /* ── Degree Class (text tones) ── */
+  --class-first: #8A5800;
+  --class-2upper: #5B3FF0;
+  --class-2lower: #0B6E78;
+  --class-third: #B04A0A;
+  --class-pass: #B0245A;
+  --class-fail: #C2361F;
 
-  --chart-cgpa: #5148DD;
-  --chart-pi: #9A5A00;
-  --chart-grid: #E5E8F0;
+  /* ── Grade / class fills (arcs, bars, dots, tints); gold only for A / First ── */
+  --grade-a-fill: #FFB23F;
+  --grade-b-fill: #6B4EFF;
+  --grade-c-fill: #12A4B0;
+  --grade-d-fill: #F2762E;
+  --grade-e-fill: #E0457B;
+  --grade-f-fill: #E5484D;
+  --class-first-fill: #FFB23F;
+  --class-2upper-fill: #6B4EFF;
+  --class-2lower-fill: #12A4B0;
+  --class-third-fill: #F2762E;
+  --class-pass-fill: #E0457B;
+  --class-fail-fill: #E5484D;
+
+  --chart-cgpa: #6B4EFF;
+  --chart-pi: #C27C0E;
+  --chart-grid: #E9E5F8;
 
   /* ── Type Scale — clamp() responsive ── */
   --text-xs: 0.75rem;
@@ -160,55 +187,58 @@
 /* ── Light Mode ── */
 .light {
   color-scheme: light;
-  --acade-void: #F5F7FC;
+  --acade-void: #F4F1FF;
   --acade-deep: #FFFFFF;
 }
 
 .dark {
   color-scheme: dark;
-  --acade-void: #080B16;
-  --acade-deep: #0C1120;
-  --acade-surface: #101626;
-  --acade-overlay: #171E31;
-  --acade-border: #293249;
-  --acade-border-subtle: #1C2539;
-  --acade-control-border: #758198;
-  --acade-primary: #7C74FF;
-  --acade-primary-hover: #918BFF;
-  --acade-primary-glow: #B0AAFF;
-  --acade-primary-dim: #211E40;
-  --acade-on-primary: #080B16;
-  --acade-gold: #F4B544;
-  --acade-gold-hover: #FFCB70;
-  --acade-gold-dim: #302617;
-  --acade-success: #46C98B;
-  --acade-success-dim: #102C22;
-  --acade-danger: #FF6B6B;
-  --acade-danger-dim: #361E28;
-  --acade-on-danger: #080B16;
-  --acade-warning: #F4B544;
-  --acade-info: #55BDEB;
-  --acade-info-dim: #112A39;
-  --acade-text: #F7F8FC;
-  --acade-text-muted: #A7B0C4;
-  --acade-text-faint: #7E899F;
-  --acade-text-inverse: #080B16;
-  --acade-scrim: rgba(0, 0, 0, 0.64);
-  --grade-a: #46C98B;
-  --grade-b: #A09AFF;
-  --grade-c: #F4B544;
-  --grade-d: #FFAA70;
-  --grade-e: #F59AB7;
-  --grade-f: #A7B0C4;
-  --class-first: #46C98B;
-  --class-2upper: #A09AFF;
-  --class-2lower: #F4B544;
-  --class-third: #FFAA70;
-  --class-pass: #F59AB7;
-  --class-fail: #A7B0C4;
-  --chart-cgpa: #A09AFF;
-  --chart-pi: #F4B544;
-  --chart-grid: #293249;
+  /* Night grounds, Night-2 cards, Violet-soft primary, Gold accent */
+  --acade-void: #0E0B2B;
+  --acade-deep: #120F35;
+  --acade-surface: #17133F;
+  --acade-overlay: #211C4E;
+  --acade-border: #2F2961;
+  --acade-border-subtle: #241F52;
+  --acade-control-border: #7E78B0;
+  --acade-primary: #A898FF;
+  --acade-primary-hover: #BDB1FF;
+  --acade-primary-glow: #C4B9FF;
+  --acade-primary-dim: #2A2265;
+  --acade-on-primary: #0E0B2B;
+  --acade-gold: #FFB23F;
+  --acade-gold-hover: #FFC66B;
+  --acade-gold-dim: #38293F;
+  --acade-success: #4FD195;
+  --acade-success-dim: #12302E;
+  --acade-danger: #FF8A7A;
+  --acade-danger-dim: #3B1D36;
+  --acade-on-danger: #0E0B2B;
+  --acade-warning: #FFB23F;
+  --acade-info: #6CC7F0;
+  --acade-info-dim: #132B4A;
+  --acade-text: #F7F5FF;
+  --acade-text-muted: #B8B3D9;
+  --acade-text-faint: #9A94C4;
+  --acade-text-inverse: #0E0B2B;
+  --acade-scrim: rgba(5, 3, 20, 0.66);
+  --grade-a: #FFC266;
+  --grade-b: #B3A6FF;
+  --grade-c: #5FD0D8;
+  --grade-d: #FFA066;
+  --grade-e: #F58BB0;
+  --grade-f: #FF8A7A;
+  --class-first: #FFC266;
+  --class-2upper: #B3A6FF;
+  --class-2lower: #5FD0D8;
+  --class-third: #FFA066;
+  --class-pass: #F58BB0;
+  --class-fail: #FF8A7A;
+  --grade-b-fill: #8B78FF;
+  --class-2upper-fill: #8B78FF;
+  --chart-cgpa: #A898FF;
+  --chart-pi: #FFB23F;
+  --chart-grid: #2F2961;
   --shadow-card: none;
   --shadow-popover: 0 16px 48px rgba(0, 0, 0, 0.36);
 }
@@ -707,95 +737,6 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   padding-top: env(safe-area-inset-top, 0px);
 }
 
-/* Public navigation capsule and mobile menu */
-@keyframes public-nav-capsule-border {
-  to {
-    background-position: 0 0, 200% 0;
-  }
-}
-
-.public-nav-shell {
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--acade-void) 92%, transparent), transparent);
-}
-
-.public-nav-capsule {
-  min-height: var(--shell-header-height);
-  position: relative;
-  isolation: isolate;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background:
-    linear-gradient(var(--acade-deep), var(--acade-deep)) padding-box,
-    linear-gradient(100deg, var(--acade-primary), color-mix(in srgb, var(--acade-primary) 50%, var(--acade-gold)), var(--acade-gold), var(--acade-primary)) border-box;
-  background-size: 100% 100%, 200% 100%;
-  background-position: 0 0, 0 0;
-  box-shadow: var(--shadow-card);
-  animation: public-nav-capsule-border 12s linear infinite;
-}
-
-.public-nav-shell--scrolled .public-nav-capsule {
-  box-shadow: var(--shadow-popover);
-}
-
-/* Public marketing atmosphere uses the supplied theme-matched violet / gold artwork. */
-.public-atmosphere {
-  position: relative;
-  isolation: isolate;
-  background-color: transparent;
-}
-
-.public-atmosphere::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--acade-void) 18%, transparent), color-mix(in srgb, var(--acade-void) 18%, transparent)),
-    url('/light-background.png');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  transform: translateZ(0);
-}
-
-.dark .public-atmosphere::before {
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--acade-void) 24%, transparent), color-mix(in srgb, var(--acade-void) 24%, transparent)),
-    url('/dark-background.png');
-}
-
-.public-atmosphere-section {
-  background-color: color-mix(in srgb, var(--acade-void) 48%, transparent);
-  backdrop-filter: blur(1px);
-}
-
-.dark .public-atmosphere-section {
-  background-color: color-mix(in srgb, var(--acade-void) 58%, transparent);
-}
-
-.public-mobile-menu-link:focus-visible {
-  outline: 2px solid var(--acade-primary);
-  outline-offset: 2px;
-}
-
-.public-mobile-menu-link {
-  display: flex;
-  min-height: 3rem;
-  align-items: center;
-  border-radius: var(--radius-control);
-  padding: 0 0.75rem;
-  color: var(--acade-text);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.public-mobile-menu-link:hover {
-  background: var(--acade-overlay);
-  color: var(--acade-primary);
-}
-
 /* ── Marquee for landing page ── */
 .marquee-container {
   mask-image: linear-gradient(
@@ -847,10 +788,6 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .public-nav-capsule {
-    animation: none;
   }
 
   .academic-proof-card {
@@ -921,5 +858,108 @@ textarea,
   );
   background-size: 200% auto;
   animation: dashboard-ai-sweep 6s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   Student app, brand v2 "Gold hour" (docs/brand-v2/DESIGN.md)
+   Scoped to pages that mount the student shell (.ag-app), including
+   their portals (modals, sheets, toasts) which render under <body>.
+   ═══════════════════════════════════════════════════ */
+
+body:has(.ag-app) {
+  /* Geist for all text; numbers that used the mono face get Bricolage. */
+  --font-dm-sans: var(--font-geist-sans);
+  --font-geist-mono: var(--font-bricolage);
+  --radius-surface: 20px;
+  --radius-dialog: 24px;
+  --shadow-card: 0 1px 2px rgba(23, 19, 58, 0.04);
+  --shadow-popover: 0 18px 44px -14px rgba(23, 19, 58, 0.24);
+}
+
+.dark body:has(.ag-app) {
+  --shadow-card: none;
+  --shadow-popover: 0 22px 52px -14px rgba(0, 0, 0, 0.6);
+}
+
+body:has(.ag-app) :is(.font-mono, [class*='font-geist-mono']) {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Big numbers (CGPA, GPA, counts): Bricolage with tabular figures. */
+.app-num {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.app-display {
+  font-family: var(--font-bricolage), system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.ag-app ::selection,
+body:has(.ag-app) ::selection {
+  background-color: color-mix(in srgb, var(--acade-primary) 28%, transparent);
+  color: inherit;
+}
+
+/* A Night panel in both themes (sidebar, standing hero): children that read
+   the --acade-* tokens render with the dark values. */
+.app-night {
+  --acade-deep: #0E0B2B;
+  --acade-surface: #17133F;
+  --acade-overlay: rgba(255, 255, 255, 0.07);
+  --acade-border: rgba(255, 255, 255, 0.12);
+  --acade-border-subtle: rgba(255, 255, 255, 0.08);
+  --acade-control-border: #7E78B0;
+  --acade-primary: #A898FF;
+  --acade-primary-hover: #BDB1FF;
+  --acade-primary-glow: #C4B9FF;
+  --acade-primary-dim: rgba(168, 152, 255, 0.16);
+  --acade-on-primary: #0E0B2B;
+  --acade-gold: #FFB23F;
+  --acade-gold-dim: rgba(255, 178, 63, 0.14);
+  --acade-warning: #FFB23F;
+  --acade-danger: #FF8A7A;
+  --acade-danger-dim: rgba(255, 138, 122, 0.14);
+  --acade-info: #6CC7F0;
+  --acade-success: #4FD195;
+  --acade-text: #FFFFFF;
+  --acade-text-muted: #B8B3D9;
+  --acade-text-faint: #9A94C4;
+  --acade-text-inverse: #0E0B2B;
+  --grade-a: #FFC266;
+  --grade-b: #B3A6FF;
+  --grade-c: #5FD0D8;
+  --grade-d: #FFA066;
+  --grade-e: #F58BB0;
+  --grade-f: #FF8A7A;
+  --class-first: #FFC266;
+  --class-2upper: #B3A6FF;
+  --class-2lower: #5FD0D8;
+  --class-third: #FFA066;
+  --class-pass: #F58BB0;
+  --class-fail: #FF8A7A;
+  --grade-b-fill: #8B78FF;
+  --class-2upper-fill: #8B78FF;
+  color-scheme: dark;
+  background-color: #0E0B2B;
+  color: #FFFFFF;
+}
+
+.dark .app-night {
+  background-color: #120F38;
+}
+
+/* The brand arc (components/cgpa/CGPAArc.tsx) eases when the value changes. */
+.app-arc-progress {
+  transition: stroke-dashoffset 900ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-arc-progress {
+    transition: none;
+  }
 }
 

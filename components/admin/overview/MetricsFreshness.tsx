@@ -30,7 +30,7 @@ export function MetricsFreshness({ generatedAt, stale, refreshing, onRefresh }: 
     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--acade-text-muted)]">
       <span>
         {metricsAgeText(generatedAt)}
-        {stale ? <span className="text-[var(--acade-warning)]"> · older than a day and a half; the daily job may have stopped</span> : null}
+        {stale ? <span className="text-[var(--acade-warning)]">. Older than a day and a half; the daily job may have stopped</span> : null}
       </span>
       <Button variant="ghost" size="sm" onClick={onRefresh} loading={refreshing} loadingLabel="Refreshing numbers">
         <RefreshCw className="size-4" aria-hidden="true" />Refresh now

@@ -45,6 +45,32 @@ describe('parseAdminSettingsMutation', () => {
     })).toThrow('androidUrl must be an HTTPS URL');
   });
 
+  it('accepts the Android size and Google Play link (android-app.md), and leaves them out when not sent', () => {
+    expect(parseAdminSettingsMutation({
+      field: 'mobileAppLinks',
+      value: { androidUrl: 'https://example.com/a.apk', iosUrl: '', androidSizeMb: 45, playUrl: 'https://play.google.com/store/apps/details?id=com.acadegrade.app' },
+    })).toEqual({
+      target: 'settings',
+      data: { mobileAppLinks: { androidUrl: 'https://example.com/a.apk', iosUrl: '', androidSizeMb: 45, playUrl: 'https://play.google.com/store/apps/details?id=com.acadegrade.app' } },
+    });
+    expect(parseAdminSettingsMutation({ field: 'mobileAppLinks', value: { androidUrl: '', iosUrl: '', androidSizeMb: null, playUrl: '' } }))
+      .toEqual({ target: 'settings', data: { mobileAppLinks: { androidUrl: '', iosUrl: '', androidSizeMb: null, playUrl: '' } } });
+    // Older panels send only the two links; the merge write then keeps the stored size and Play link.
+    expect(parseAdminSettingsMutation({ field: 'mobileAppLinks', value: { androidUrl: '', iosUrl: '' } }))
+      .toEqual({ target: 'settings', data: { mobileAppLinks: { androidUrl: '', iosUrl: '' } } });
+  });
+
+  it('rejects a bad Android size or a non-Play store link', () => {
+    for (const androidSizeMb of [0, 501, 4.5, '45', -1]) {
+      expect(() => parseAdminSettingsMutation({ field: 'mobileAppLinks', value: { androidUrl: '', iosUrl: '', androidSizeMb } }))
+        .toThrow('androidSizeMb must be a whole number from 1 to 500');
+    }
+    for (const playUrl of ['https://example.com/app', 'http://play.google.com/store/apps/details?id=x', 'javascript:alert(1)']) {
+      expect(() => parseAdminSettingsMutation({ field: 'mobileAppLinks', value: { androidUrl: '', iosUrl: '', playUrl } }))
+        .toThrow('playUrl must be an HTTPS link on play.google.com');
+    }
+  });
+
   it('accepts the dedicated about-page target and rejects extra fields', () => {
     const about = {
       headline: 'Academic progress, made clear.',

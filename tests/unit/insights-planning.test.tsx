@@ -125,7 +125,7 @@ describe('carry-over tracker (A4)', () => {
     await user.click(await screen.findByRole('tab', { name: 'Risk Analysis' }));
 
     const carry = screen.getByRole('region', { name: /carry-overs/i });
-    expect(within(carry).getByText('1 outstanding · 3 units')).toBeInTheDocument();
+    expect(within(carry).getByText('1 outstanding, 3 units')).toBeInTheDocument();
     expect(within(carry).getByText('MTH101')).toBeInTheDocument();
     expect(within(carry).queryByText('CSC101')).not.toBeInTheDocument();
     expect(within(carry).queryByText('PHY101')).not.toBeInTheDocument();
@@ -162,7 +162,9 @@ describe('degree-class goal (A6)', () => {
     withSemesters([semester('s1', 100, 1, 3.2, 20)]);
     render(<InsightsPage />);
     await user.click(await screen.findByRole('tab', { name: 'What-If' }));
-    await user.selectOptions(screen.getByLabelText(/aim for/i), '2:1');
+    // The goal picker is the kit Select (a custom listbox, not a native select).
+    await user.click(screen.getByRole('combobox', { name: /aim for/i }));
+    await user.click(await screen.findByRole('option', { name: /second class upper/i }));
     await waitFor(() => expect(mocks.updateDocument).toHaveBeenCalledWith('users/student-1', { targetClass: '2:1' }));
   });
 });

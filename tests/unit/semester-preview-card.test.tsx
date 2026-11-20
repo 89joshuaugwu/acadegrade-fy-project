@@ -40,8 +40,10 @@ describe('SemesterPreview card (A3.3)', () => {
     expect(within(card).getByText('Preview only: never saved to your record')).toBeInTheDocument();
 
     const picker = within(card).getByRole('combobox', { name: 'Expected grade for CSC 499' });
-    expect(picker).toHaveValue('');
-    await user.selectOptions(picker, 'A');
+    expect(picker).toHaveTextContent('Not sure');
+    await user.click(picker);
+    await user.click(within(card).getByRole('option', { name: 'A' }));
+    expect(picker).toHaveTextContent('A');
 
     // (4*3 + 5*3) / 6 = 4.50 scenario GPA; official stays 4.00.
     expect(within(card).getByTestId('preview-official-gpa')).toHaveTextContent('4.00');
@@ -57,7 +59,7 @@ describe('SemesterPreview card (A3.3)', () => {
   it('restores stored guesses and clears them on sign-out', () => {
     window.localStorage.setItem(previewStorageKey('u1', 'sem-2'), JSON.stringify({ c2: 'B', junk: 'Z' }));
     render(<SemesterPreview uid="u1" semesterId="sem-2" courses={[graded, awaiting]} semesters={semesters} />);
-    expect(screen.getByRole('combobox', { name: 'Expected grade for CSC 499' })).toHaveValue('B');
+    expect(screen.getByRole('combobox', { name: 'Expected grade for CSC 499' })).toHaveTextContent('B');
 
     const { rerender } = renderHook(({ uid }) => useClearDraftsOnSignOut(uid), { initialProps: { uid: 'u1' as string | null } });
     rerender({ uid: null });

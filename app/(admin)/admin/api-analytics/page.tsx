@@ -1,25 +1,21 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { motion } from 'motion/react';
-import {
-  Activity, Zap, AlertTriangle, Clock, TrendingUp, Users,
-  RefreshCw, ChevronDown, Shield, ExternalLink
-} from 'lucide-react';
-import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
-} from 'recharts';
+import { RefreshCw, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
-import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { Panel } from '@/components/admin/ui/Panel';
+import { StatGrid, StatTile } from '@/components/admin/ui/StatTile';
+import { TableFrame, tableClass } from '@/components/admin/ui/TableFrame';
+import { AdminSelect } from '@/components/admin/ui/AdminSelect';
+import { Notice } from '@/components/admin/ui/Notice';
 import { ErrorState } from '@/components/shared';
 import { cn } from '@/lib/utils/cn';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 /* ─── Types ─── */
 interface CategoryData {
@@ -60,39 +56,49 @@ interface AnalyticsResponse {
 }
 
 /* ─── Constants ─── */
-const CATEGORY_COLORS: Record<string, string> = {
-  ai: '#8B5CF6',
-  email: '#3B82F6',
-  otp: '#F59E0B',
-  notification: '#10B981',
-  transcript: '#6366F1',
-  extract: '#EC4899',
-  auth: '#14B8A6',
-  admin: '#EF4444',
-  unknown: '#6B7280',
+const CATEGORY_LABELS: Record<string, string> = {
+  ai: 'AI features',
+  email: 'Email',
+  otp: 'Sign-in codes (OTP)',
+  notification: 'Push notifications',
+  transcript: 'Transcripts',
+  extract: 'Result scanning',
+  auth: 'Sign-up and sign-in',
+  admin: 'Admin',
+  unknown: 'Other',
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  ai: 'AI Models',
-  email: 'Email / SMTP',
-  otp: 'OTP Verification',
-  notification: 'Push Notifications',
-  transcript: 'Transcript',
-  extract: 'Result Extraction',
-  auth: 'Authentication',
-  admin: 'Admin',
+const PROVIDER_LABELS: Record<string, string> = {
+  gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', openai: 'OpenAI', mistral: 'Mistral', anthropic: 'Anthropic', deepseek: 'DeepSeek',
 };
+
+/** Chart series from the app tokens, so both themes stay readable. */
+const SERIES = ['var(--acade-primary)', 'var(--acade-gold)', 'var(--acade-info)', 'var(--acade-success)', 'var(--grade-e)', 'var(--grade-d)', 'var(--acade-text-faint)'];
 
 const RANGE_OPTIONS = [
-  { value: 'day', label: 'Last 24h' },
-  { value: 'week', label: 'Last 7 Days' },
-  { value: 'month', label: 'Last 30 Days' },
+  { value: 'day', label: 'Last 24 hours' },
+  { value: 'week', label: 'Last 7 days' },
+  { value: 'month', label: 'Last 30 days' },
 ];
+
+const TOOLTIP_STYLE = {
+  backgroundColor: 'var(--acade-surface)',
+  border: '1px solid var(--acade-border)',
+  borderRadius: '12px',
+  color: 'var(--acade-text)',
+  fontSize: '13px',
+  boxShadow: 'none',
+};
+
+const AXIS_TICK = { fill: 'var(--acade-text-muted)', fontSize: 12 };
+
+const formatCount = (value: number) => value.toLocaleString('en-GB');
+
+const pillClass = 'inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold leading-5';
 
 /* ─── Page ─── */
 export default function ApiAnalyticsPage() {
   const { user } = useAuth();
-  const shouldReduceMotion = useReducedMotion();
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -147,22 +153,24 @@ export default function ApiAnalyticsPage() {
   }, [autoRefresh, user, range]);
 
   /* ─── Derived Data ─── */
-  const categoryChartData = useMemo(() => {
+  const categoryRows = useMemo(() => {
     if (!data?.byCategory) return [];
     return Object.entries(data.byCategory)
       .map(([key, val]) => ({
+        key,
         name: CATEGORY_LABELS[key] || key,
         calls: val.count,
         errors: val.errors,
         avgMs: val.avgMs,
-        fill: CATEGORY_COLORS[key] || CATEGORY_COLORS.unknown,
       }))
       .sort((a, b) => b.calls - a.calls);
   }, [data]);
 
-  const providerPieData = useMemo(() => {
+  const providerRows = useMemo(() => {
     if (!data?.byProvider) return [];
-    return Object.entries(data.byProvider).map(([name, value]) => ({ name, value }));
+    const rows = Object.entries(data.byProvider).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const total = rows.reduce((sum, row) => sum + row.value, 0);
+    return rows.map((row, idx) => ({ ...row, label: PROVIDER_LABELS[row.name] ?? row.name, share: total > 0 ? row.value / total : 0, color: SERIES[idx % SERIES.length] }));
   }, [data]);
 
   const endpointTableData = useMemo(() => {
@@ -173,13 +181,23 @@ export default function ApiAnalyticsPage() {
       .slice(0, 12);
   }, [data]);
 
-  const PROVIDER_COLORS = ['#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#EC4899', '#EF4444', '#14B8A6', '#6366F1'];
+  const rangeLabel = RANGE_OPTIONS.find(r => r.value === range)?.label ?? 'Last 7 days';
+  const header = (extras?: { actions?: React.ReactNode; children?: React.ReactNode }) => (
+    <AdminPageHeader
+      title="API health"
+      description="API traffic, errors and response times from server logs."
+      helpId="admin.api-health"
+      actions={extras?.actions}
+    >
+      {extras?.children}
+    </AdminPageHeader>
+  );
 
   /* ─── Error State (nothing loaded yet) ─── */
   if (!data && loadError && !loading) {
     return (
       <div className="space-y-6">
-        <AdminPageHeader title="API health" description="API traffic, errors and response times from server logs." helpId="admin.api-health" />
+        {header()}
         <ErrorState title="API health is unavailable" description={loadError} onRetry={() => { void fetchData(); }} />
       </div>
     );
@@ -189,370 +207,277 @@ export default function ApiAnalyticsPage() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-80" />)}
+        {header()}
+        <div role="status" aria-label="Loading API health" aria-busy="true" className="space-y-6">
+          <Skeleton className="h-28 rounded-[20px]" />
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Skeleton className="h-80 rounded-[20px] lg:col-span-3" />
+            <Skeleton className="h-80 rounded-[20px] lg:col-span-2" />
+          </div>
         </div>
       </div>
     );
   }
 
+  const errorRate = parseFloat(data?.errorRate || '0');
+  const avgDuration = data?.avgDuration || 0;
+  const maxCategoryCalls = Math.max(1, ...categoryRows.map(row => row.calls));
+  const timeline = data?.timelineData ?? [];
+  const topUsers = data?.topUsers ?? [];
+  const recentErrors = data?.recentErrors ?? [];
+
   return (
-    <div className="space-y-8">
-      <AdminPageHeader
-        title="API health"
-        description="API traffic, errors and response times from server logs."
-        helpId="admin.api-health"
-        actions={(
-          <div className="flex flex-wrap items-center gap-3">
-          {/* Auto-refresh toggle */}
-          <button
-            type="button"
-            aria-pressed={autoRefresh}
-            aria-label="Auto-refresh every 30 seconds"
-            onClick={() => setAutoRefresh(prev => !prev)}
-            className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[length:var(--text-xs)] font-medium transition-all",
-              autoRefresh
-                ? "border-[var(--acade-success)] bg-[var(--acade-success)]/10 text-[var(--acade-success)]"
-                : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)]"
-            )}
-            title={autoRefresh ? "Auto-refresh is ON (every 30s)" : "Auto-refresh is OFF"}
-          >
-            <RefreshCw size={12} aria-hidden="true" className={autoRefresh ? 'motion-safe:animate-spin' : ''} style={autoRefresh ? { animationDuration: '3s' } : {}} />
-            {autoRefresh ? 'Auto' : 'Paused'}
-          </button>
-          {/* Range Selector */}
-          <div className="relative">
-            <label htmlFor="api-analytics-range" className="sr-only">Time range</label>
-            <select
-              id="api-analytics-range"
-              value={range}
-              onChange={(e) => setRange(e.target.value)}
-              className="appearance-none bg-[var(--acade-surface)] border border-[var(--acade-border)] rounded-xl px-4 py-2 pr-8 text-[length:var(--text-sm)] text-[var(--acade-text)] focus:outline-none focus:border-[var(--acade-primary)] cursor-pointer"
+    <div className="space-y-6">
+      {header({
+        actions: (
+          <div className="contents">
+            {/* `contents`: these controls wrap together with the header's Help button. */}
+            {/* Auto-refresh toggle */}
+            <button
+              type="button"
+              aria-pressed={autoRefresh}
+              aria-label="Auto-refresh every 30 seconds"
+              onClick={() => setAutoRefresh(prev => !prev)}
+              className={cn(
+                'inline-flex h-12 items-center gap-2 rounded-[12px] border px-4 text-sm font-semibold transition-colors',
+                'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)]',
+                autoRefresh
+                  ? 'border-[color-mix(in_srgb,var(--acade-success)_40%,transparent)] bg-[var(--acade-success-dim)] text-[var(--acade-success)]'
+                  : 'border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]'
+              )}
+              title={autoRefresh ? 'Auto-refresh is on (every 30 seconds)' : 'Auto-refresh is off'}
             >
-              {RANGE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--acade-text-muted)] pointer-events-none" />
-          </div>
-          <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
-            <RefreshCw size={14} className={cn("mr-1.5", refreshing && "animate-spin")} />
-            Refresh
-          </Button>
-        </div>
-        )}
-      >
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--text-xs)]">
-          {autoRefresh && (
-            <span className="flex items-center gap-1.5 font-medium text-[var(--acade-success)]">
               <span className="relative flex size-2" aria-hidden="true">
-                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--acade-success)] opacity-75" />
-                <span className="relative inline-flex size-2 rounded-full bg-[var(--acade-success)]" />
+                {autoRefresh ? <span className="absolute inline-flex size-full rounded-full bg-[var(--acade-success)] opacity-60 motion-safe:animate-ping" /> : null}
+                <span className={cn('relative inline-flex size-2 rounded-full', autoRefresh ? 'bg-[var(--acade-success)]' : 'bg-[var(--acade-text-faint)]')} />
               </span>
-              Live
-            </span>
-          )}
-          {lastUpdated && <span className="text-[var(--acade-text-muted)]">Last updated {lastUpdated.toLocaleTimeString()}</span>}
-        </div>
-      </AdminPageHeader>
+              {autoRefresh ? 'Live' : 'Paused'}
+            </button>
+            {/* Range selector (custom listbox) */}
+            <div className="w-[11.5rem]">
+              <AdminSelect label="Time range" hideLabel options={RANGE_OPTIONS} value={range} onChange={setRange} />
+            </div>
+            <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
+              <RefreshCw size={16} aria-hidden="true" className={cn(refreshing && 'motion-safe:animate-spin')} />
+              Refresh
+            </Button>
+          </div>
+        ),
+        children: lastUpdated ? (
+          <p className="mt-2 text-sm tabular-nums text-[var(--acade-text-muted)]">
+            Updated {lastUpdated.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            {autoRefresh ? ', refreshing every 30 seconds' : ', auto-refresh paused'}
+          </p>
+        ) : null,
+      })}
 
       {loadError && (
-        <p role="status" className="rounded-xl border border-[var(--acade-warning)]/35 bg-[var(--acade-warning)]/10 px-4 py-3 text-sm text-[var(--acade-text)]">{loadError}</p>
+        <Notice tone="warning" role="status">{loadError}</Notice>
       )}
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          {
-            label: 'Total API Calls',
-            value: data?.totalCalls?.toLocaleString() || '0',
-            icon: Activity,
-            color: 'var(--acade-primary)',
-            bg: 'var(--acade-primary)',
-          },
-          {
-            label: 'Error Rate',
-            value: `${data?.errorRate || '0'}%`,
-            icon: AlertTriangle,
-            color: parseFloat(data?.errorRate || '0') > 5 ? 'var(--acade-danger)' : 'var(--acade-success)',
-            bg: parseFloat(data?.errorRate || '0') > 5 ? 'var(--acade-danger)' : 'var(--acade-success)',
-          },
-          {
-            label: 'Avg Response Time',
-            value: `${data?.avgDuration || 0}ms`,
-            icon: Clock,
-            color: (data?.avgDuration || 0) > 3000 ? 'var(--acade-gold)' : 'var(--acade-success)',
-            bg: (data?.avgDuration || 0) > 3000 ? 'var(--acade-gold)' : 'var(--acade-success)',
-          },
-          {
-            label: 'Failed Calls',
-            value: data?.errorCalls?.toLocaleString() || '0',
-            icon: Zap,
-            color: (data?.errorCalls || 0) > 0 ? 'var(--acade-danger)' : 'var(--acade-text-muted)',
-            bg: (data?.errorCalls || 0) > 0 ? 'var(--acade-danger)' : 'var(--acade-text-muted)',
-          },
-        ].map((kpi, idx) => (
-          <motion.div
-            key={kpi.label}
-            initial={shouldReduceMotion ? {} : { opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05 }}
-          >
-            <Card variant="glass" padding="md">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-1">{kpi.label}</p>
-                  <p className="text-[length:var(--text-2xl)] font-bold font-[family-name:var(--font-geist-mono)]" style={{ color: kpi.color }}>
-                    {kpi.value}
+      {/* Key numbers */}
+      <StatGrid aria-label={`API health, ${rangeLabel.toLowerCase()}`}>
+        <StatTile label="Total calls" value={formatCount(data?.totalCalls || 0)} detail={rangeLabel} />
+        <StatTile
+          label="Error rate"
+          value={`${data?.errorRate || '0'}%`}
+          tone={errorRate > 5 ? 'bad' : 'good'}
+          detail={errorRate > 5 ? 'Above the 5% alert line' : 'Under the 5% alert line'}
+        />
+        <StatTile
+          label="Average response"
+          value={<>{formatCount(avgDuration)}<span className="ml-1 text-base font-semibold text-[var(--acade-text-muted)]">ms</span></>}
+          tone={avgDuration > 3000 ? 'warn' : 'good'}
+          detail={avgDuration > 3000 ? 'Slower than 3 seconds' : 'Under 3 seconds'}
+        />
+        <StatTile label="Failed calls" value={formatCount(data?.errorCalls || 0)} detail="Status 400 and above" />
+      </StatGrid>
+
+      {/* Traffic over time + by type */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Panel
+          className="flex flex-col lg:col-span-3"
+          bodyClassName="flex flex-1 flex-col"
+          title="Calls over time"
+          description={range === 'day' ? `Calls per hour, ${rangeLabel.toLowerCase()}` : `Calls per day, ${rangeLabel.toLowerCase()}`}
+        >
+          {/* Grows with the "Calls by type" panel beside it on wide screens, so the card has no empty floor. */}
+          <div className="h-[260px] lg:h-auto lg:min-h-[260px] lg:flex-1">
+            {timeline.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={timeline} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="api-calls-fill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="var(--acade-primary)" stopOpacity={0.28} />
+                      <stop offset="100%" stopColor="var(--acade-primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} stroke="var(--acade-border-subtle)" />
+                  <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} interval="preserveStartEnd" minTickGap={16} />
+                  <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} allowDecimals={false} width={44} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: 'var(--acade-border)' }} formatter={(value) => [`${formatCount(Number(value))} calls`, 'Traffic']} />
+                  <Area type="monotone" dataKey="calls" stroke="var(--acade-primary)" strokeWidth={2.5} fill="url(#api-calls-fill)" dot={false} activeDot={{ r: 4 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-[var(--acade-text-muted)]">No data in this range.</div>
+            )}
+          </div>
+        </Panel>
+
+        <Panel className="lg:col-span-2" title="Calls by type" description="Grouped by what the call was for">
+          {categoryRows.length > 0 ? (
+            <ul className="space-y-4">
+              {categoryRows.map(row => (
+                <li key={row.key}>
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate font-medium text-[var(--acade-text)]">{row.name}</span>
+                    <span className="shrink-0 tabular-nums text-[var(--acade-text-muted)]"><span className="font-semibold text-[var(--acade-text)]">{formatCount(row.calls)}</span> calls</span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-[var(--acade-overlay)]" aria-hidden="true">
+                    <div className="h-full rounded-full bg-[var(--acade-primary)]" style={{ width: `${Math.max(2, (row.calls / maxCategoryCalls) * 100)}%` }} />
+                  </div>
+                  <p className="mt-1 text-[0.8125rem] tabular-nums text-[var(--acade-text-muted)]">
+                    <span className={row.errors > 0 ? 'text-[var(--acade-danger)]' : undefined}>{formatCount(row.errors)} failed</span>, {formatCount(row.avgMs)} ms on average
                   </p>
-                </div>
-                <div className="size-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `color-mix(in srgb, ${kpi.bg} 10%, transparent)` }}>
-                  <kpi.icon size={20} style={{ color: kpi.color }} />
-                </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="py-10 text-center text-sm text-[var(--acade-text-muted)]">No data yet.</p>
+          )}
+        </Panel>
+      </div>
+
+      {/* Endpoints + providers */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Panel className="lg:col-span-3" title="Busiest endpoints" description="The 12 routes with the most calls in this range">
+          {endpointTableData.length > 0 ? (
+            <TableFrame label="Busiest endpoints" minWidth="30rem">
+              <table className={tableClass}>
+                <thead>
+                  <tr>
+                    <th scope="col" className="w-10">#</th>
+                    <th scope="col">Endpoint</th>
+                    <th scope="col" className="ag-right">Calls</th>
+                    <th scope="col" className="ag-right">Failed</th>
+                    <th scope="col" className="ag-right">Failure rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {endpointTableData.map((ep, idx) => {
+                    const rate = ep.count > 0 ? (ep.errors / ep.count) * 100 : 0;
+                    return (
+                      <tr key={ep.endpoint}>
+                        <td className="text-[var(--acade-text-faint)]">{idx + 1}</td>
+                        <td className="max-w-[16rem] break-all font-medium">{ep.endpoint}</td>
+                        <td className="ag-right font-semibold">{formatCount(ep.count)}</td>
+                        <td className={cn('ag-right', ep.errors > 0 ? 'text-[var(--acade-danger)]' : 'text-[var(--acade-text-muted)]')}>{formatCount(ep.errors)}</td>
+                        <td className={cn('ag-right', rate > 5 ? 'font-semibold text-[var(--acade-danger)]' : 'text-[var(--acade-text-muted)]')}>{rate.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </TableFrame>
+          ) : (
+            <p className="py-10 text-center text-sm text-[var(--acade-text-muted)]">No endpoint data yet.</p>
+          )}
+        </Panel>
+
+        <Panel className="lg:col-span-2" title="AI providers used" description="Which provider answered each AI call">
+          {providerRows.length > 0 ? (
+            <div className="space-y-5">
+              <div className="flex h-3 w-full overflow-hidden rounded-full bg-[var(--acade-overlay)]" aria-hidden="true">
+                {providerRows.map(row => (
+                  <div key={row.name} className="h-full first:rounded-l-full last:rounded-r-full" style={{ width: `${row.share * 100}%`, backgroundColor: row.color }} />
+                ))}
               </div>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Timeline Chart */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">
-              <TrendingUp size={18} className="inline mr-2 text-[var(--acade-primary)]" />
-              Usage Timeline
-            </h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">
-              API calls over {RANGE_OPTIONS.find(r => r.value === range)?.label.toLowerCase()}
-            </p>
-            <div className="h-[280px] text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)]">
-              {(data?.timelineData?.length || 0) > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data!.timelineData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--acade-border-subtle)" />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '12px', color: 'var(--acade-text)', fontSize: '12px' }} />
-                    <Line type="monotone" dataKey="calls" stroke="var(--acade-primary)" strokeWidth={2.5} dot={{ r: 3, fill: 'var(--acade-primary)' }} activeDot={{ r: 5 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-[var(--acade-text-muted)]">No data in this range.</div>
-              )}
+              <ul className="divide-y divide-[var(--acade-border-subtle)]">
+                {providerRows.map(row => (
+                  <li key={row.name} className="flex items-center gap-3 py-2.5 text-sm">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: row.color }} aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate font-medium text-[var(--acade-text)]">{row.label}</span>
+                    <span className="tabular-nums text-[var(--acade-text-muted)]">{formatCount(row.value)} calls</span>
+                    <span className="w-12 text-right font-semibold tabular-nums text-[var(--acade-text)]">{Math.round(row.share * 100)}%</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </Card>
-        </motion.div>
-
-        {/* Category Breakdown */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">
-              <Activity size={18} className="inline mr-2 text-[var(--acade-primary)]" />
-              By Category
-            </h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">Calls grouped by API type</p>
-            <div className="h-[280px] text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)]">
-              {categoryChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--acade-border-subtle)" />
-                    <XAxis type="number" tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fill: 'var(--acade-text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={110} />
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '12px', color: 'var(--acade-text)', fontSize: '12px' }} />
-                    <Bar dataKey="calls" radius={[0, 6, 6, 0]}>
-                      {categoryChartData.map((entry, idx) => (
-                        <Cell key={idx} fill={entry.fill} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-[var(--acade-text-muted)]">No data yet.</div>
-              )}
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Provider Pie */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">
-              <Zap size={18} className="inline mr-2 text-[var(--acade-gold)]" />
-              AI Provider Distribution
-            </h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">Which AI providers are being used</p>
-            <div className="h-[280px]">
-              {providerPieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={providerPieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={95}
-                      paddingAngle={3}
-                      dataKey="value"
-                      nameKey="name"
-                      label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
-                      labelLine={{ stroke: 'var(--acade-text-muted)', strokeWidth: 1 }}
-                    >
-                      {providerPieData.map((_, idx) => (
-                        <Cell key={idx} fill={PROVIDER_COLORS[idx % PROVIDER_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip contentStyle={{ backgroundColor: 'var(--acade-surface)', borderColor: 'var(--acade-border)', borderRadius: '12px', color: 'var(--acade-text)', fontSize: '12px' }} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex items-center justify-center text-[var(--acade-text-muted)]">No provider data yet.</div>
-              )}
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Endpoint Breakdown Table */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-4">
-              <ExternalLink size={18} className="inline mr-2 text-[var(--acade-primary)]" />
-              Top Endpoints
-            </h2>
-            <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
-              {endpointTableData.length > 0 ? endpointTableData.map((ep, idx) => (
-                <div key={ep.endpoint} className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--acade-overlay)]/10 hover:bg-[var(--acade-overlay)]/20 transition-colors">
-                  <span className="text-[length:var(--text-xs)] font-bold text-[var(--acade-text-faint)] w-6 text-center font-[family-name:var(--font-geist-mono)]">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)] text-[var(--acade-text)] block truncate">
-                      {ep.endpoint}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-[length:var(--text-xs)] font-bold text-[var(--acade-primary)] font-[family-name:var(--font-geist-mono)]">
-                      {ep.count}
-                    </span>
-                    {ep.errors > 0 && (
-                      <span className="text-[length:var(--text-xs)] font-bold text-[var(--acade-danger)] font-[family-name:var(--font-geist-mono)]">
-                        {ep.errors} err
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )) : (
-                <p className="text-center text-[var(--acade-text-muted)] py-8">No endpoint data yet.</p>
-              )}
-            </div>
-          </Card>
-        </motion.div>
+          ) : (
+            <p className="py-10 text-center text-sm text-[var(--acade-text-muted)]">No provider data yet.</p>
+          )}
+        </Panel>
       </div>
 
       {/* Bottom Row: Top Users + Recent Errors */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Users */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">
-              <Users size={18} className="inline mr-2 text-[var(--acade-gold)]" />
-              Top API consumers
-            </h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">The accounts making the most calls. This shows names and emails; keep it out of public channels.</p>
-            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
-              {(data?.topUsers?.length || 0) > 0 ? data!.topUsers.map((u, idx) => {
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel
+          title="Top API consumers"
+          description="The accounts making the most calls. This shows names and emails; keep it out of public channels."
+        >
+          {topUsers.length > 0 ? (
+            <ol className="divide-y divide-[var(--acade-border-subtle)]">
+              {topUsers.map((u, idx) => {
                 const isAbusive = u.count > 50;
                 return (
-                  <div
-                    key={u.uid}
-                    className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl transition-colors",
-                      isAbusive
-                        ? "bg-[var(--acade-danger)]/5 border border-[var(--acade-danger)]/20"
-                        : "bg-[var(--acade-overlay)]/10 hover:bg-[var(--acade-overlay)]/20"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-[length:var(--text-lg)] font-bold w-8 text-center font-[family-name:var(--font-geist-mono)]",
-                      idx === 0 ? "text-[var(--acade-gold)]" : "text-[var(--acade-text-faint)]"
-                    )}>
-                      {idx + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[length:var(--text-sm)] font-bold text-[var(--acade-text)] truncate">{u.name}</span>
+                  <li key={u.uid} className="flex items-center gap-3 py-3">
+                    <span className={cn('w-6 shrink-0 text-right text-sm font-semibold tabular-nums', idx === 0 ? 'text-[var(--acade-gold)]' : 'text-[var(--acade-text-faint)]')}>{idx + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="min-w-0 truncate text-sm font-semibold text-[var(--acade-text)]">{u.name}</span>
                         {isAbusive && (
-                          <span className="text-[length:var(--text-xs)] px-2 py-0.5 rounded-full bg-[var(--acade-danger)]/10 text-[var(--acade-danger)] font-bold shrink-0">
-                            ⚠ High Usage
+                          <span className={cn(pillClass, 'bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]')}>
+                            <TriangleAlert className="size-3" aria-hidden="true" />
+                            High usage
                           </span>
                         )}
                       </div>
-                      <span className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] block truncate">
-                        {u.email || u.uid}
-                      </span>
+                      <span className="block truncate text-[0.8125rem] text-[var(--acade-text-muted)]">{u.email || u.uid}</span>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-[length:var(--text-base)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-geist-mono)] block">
-                        {u.count}
-                      </span>
+                    <div className="shrink-0 text-right">
+                      <span className="ag-admin-display block text-lg font-bold leading-6 text-[var(--acade-text)]">{formatCount(u.count)}</span>
                       {u.errors > 0 && (
-                        <span className="text-[length:var(--text-xs)] text-[var(--acade-danger)]">{u.errors} errors</span>
+                        <span className="block text-[0.8125rem] tabular-nums text-[var(--acade-danger)]">{formatCount(u.errors)} {u.errors === 1 ? 'error' : 'errors'}</span>
                       )}
                     </div>
-                  </div>
+                  </li>
                 );
-              }) : (
-                <p className="text-center text-[var(--acade-text-muted)] py-8">No user data yet.</p>
-              )}
-            </div>
-          </Card>
-        </motion.div>
+              })}
+            </ol>
+          ) : (
+            <p className="py-10 text-center text-sm text-[var(--acade-text-muted)]">No user data yet.</p>
+          )}
+        </Panel>
 
-        {/* Recent Errors */}
-        <motion.div initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card variant="glass" padding="lg">
-            <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] font-[family-name:var(--font-bricolage)] mb-1">
-              <AlertTriangle size={18} className="inline mr-2 text-[var(--acade-danger)]" />
-              Recent Errors
-            </h2>
-            <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mb-4">Latest failed API calls</p>
-            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
-              {(data?.recentErrors?.length || 0) > 0 ? data!.recentErrors.map((err, idx) => (
-                <div key={idx} className="p-3 rounded-xl bg-[var(--acade-danger)]/5 border border-[var(--acade-danger)]/10">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[length:var(--text-xs)] font-[family-name:var(--font-geist-mono)] text-[var(--acade-text)] font-bold truncate max-w-[60%]">
-                      {err.endpoint}
-                    </span>
-                    <span className={cn(
-                      "text-[length:var(--text-xs)] font-bold font-[family-name:var(--font-geist-mono)] px-2 py-0.5 rounded-full",
-                      err.status >= 500 ? "bg-[var(--acade-danger)]/15 text-[var(--acade-danger)]" : "bg-[var(--acade-gold)]/15 text-[var(--acade-gold)]"
-                    )}>
-                      {err.status}
-                    </span>
+        <Panel title="Recent errors" description="The latest failed API calls">
+          {recentErrors.length > 0 ? (
+            <ul aria-label="Recent errors" tabIndex={0} className="divide-y divide-[var(--acade-border-subtle)] pr-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] lg:max-h-[34rem] lg:overflow-y-auto">
+              {recentErrors.map((err, idx) => (
+                <li key={idx} className="flex items-start gap-3 py-3">
+                  <span
+                    className={cn(pillClass, 'mt-0.5 tabular-nums', err.status >= 500 ? 'bg-[var(--acade-danger-dim)] text-[var(--acade-danger)]' : 'bg-[var(--acade-gold-dim)] text-[var(--acade-warning)]')}
+                    title={err.status >= 500 ? 'Server error' : 'Request error'}
+                  >
+                    <span className="sr-only">Status </span>{err.status}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="break-all text-sm font-medium text-[var(--acade-text)]">{err.endpoint}</p>
+                    <p className="mt-0.5 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">{err.error}</p>
+                    <p className="mt-1 text-[0.8125rem] tabular-nums text-[var(--acade-text-faint)]">
+                      {new Date(err.timestamp).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
-                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] truncate">{err.error}</p>
-                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-faint)] mt-1">
-                    {new Date(err.timestamp).toLocaleString()}
-                  </p>
-                </div>
-              )) : (
-                <div className="text-center py-8">
-                  <Shield size={32} className="mx-auto text-[var(--acade-success)] mb-2" />
-                  <p className="text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">No errors in this period 🎉</p>
-                </div>
-              )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center py-10 text-center">
+              <ShieldCheck size={28} className="mb-2 text-[var(--acade-success)]" aria-hidden="true" />
+              <p className="text-sm text-[var(--acade-text-muted)]">No failed calls in this period.</p>
             </div>
-          </Card>
-        </motion.div>
+          )}
+        </Panel>
       </div>
     </div>
   );

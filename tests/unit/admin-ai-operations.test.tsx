@@ -78,7 +78,8 @@ describe('Admin AI providers page', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'AI providers' })).toBeInTheDocument();
     expect(await screen.findByText('gemini-3.1-flash-lite')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Written Analysis mode' })).toHaveValue('disabled');
+    // Custom listbox (no native select): the trigger shows the chosen mode's label.
+    expect(screen.getByRole('combobox', { name: 'Written Analysis mode' })).toHaveTextContent('Off');
     expect(screen.getByRole('button', { name: 'Save routing' })).toBeEnabled();
     expect(screen.getByRole('heading', { name: 'Provider keys and models' })).toBeInTheDocument();
 
@@ -110,10 +111,17 @@ describe('Admin AI providers page', () => {
   it('names features and modes the way students see them', async () => {
     const user = userEvent.setup();
     render(<AdminAiOperationsPage />);
+    // The mode pickers are custom listboxes: open one to read its options.
+    const optionsOf = async (combobox: HTMLElement) => {
+      await user.click(combobox);
+      const labels = within(combobox.parentElement as HTMLElement).getAllByRole('option').map((option) => option.textContent);
+      await user.keyboard('{Escape}');
+      return labels;
+    };
     const scanning = await screen.findByRole('combobox', { name: 'Result scanning mode' });
-    expect(within(scanning).getAllByRole('option').map((option) => option.textContent)).toEqual(['Off', 'One provider', 'Provider with backups']);
+    expect(await optionsOf(scanning)).toEqual(['Off', 'One provider', 'Provider with backups']);
     const whatIf = screen.getByRole('combobox', { name: 'What-If guidance mode' });
-    expect(within(whatIf).getAllByRole('option').map((option) => option.textContent)).toEqual(['Off', 'Calculator only (no AI)', 'One provider', 'Provider with backups']);
+    expect(await optionsOf(whatIf)).toEqual(['Off', 'Calculator only (no AI)', 'One provider', 'Provider with backups']);
     expect(screen.getByRole('combobox', { name: 'Forecast mode' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Written Analysis: fill from saved keys' })).toHaveTextContent('Fill from saved keys');
 

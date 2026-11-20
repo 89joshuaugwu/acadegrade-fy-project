@@ -1,82 +1,103 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
-import { PublicHeader, PublicFooter } from '@/components/layout/PublicShell';
-import { LinkButton } from '@/components/ui/LinkButton';
-import { createPageMetadata } from '@/lib/seo/site';
-import { TOOL_CONFIGS, faqJsonLd, getTool, type ToolConfig } from './tools-config';
+import type { ReactNode } from 'react';
+import { faqPageJsonLd } from '@/components/public/Accordion';
+import { JsonLd, breadcrumbJsonLd, toolsMetadata, webApplicationJsonLd } from '@/components/public/tools/seo';
+import { Container, Heading, TextLinkV2, Trail } from '@/components/site/ui';
+import { ToolFaqSection, ToolHero } from '@/components/site/tools/frame';
+import { OpenCue, ToolCard } from '@/components/site/tools/ToolCards';
+import { ToolClosing } from '@/components/site/tools/ToolClosing';
+import { DEFAULT_SCALE } from '@/lib/public/scales';
+import '@/components/site/site.css';
+import '@/components/site/tools/tools-v2.css';
+import { TOOL_CONFIGS, getTool, type ToolSlug } from './tools-config';
 
-export function toolMetadata(slug: ToolConfig['slug']): Metadata {
+export function toolMetadata(slug: ToolSlug): Metadata {
   const tool = getTool(slug);
-  return createPageMetadata({
-    title: tool.title,
-    description: tool.description,
-    path: `/tools/${tool.slug}`,
-    keywords: tool.keywords,
-  });
+  return toolsMetadata({ title: tool.title, description: tool.description, path: `/tools/${tool.slug}`, keywords: tool.keywords });
 }
 
-/** Shared frame for the free tool pages: heading, the calculator, an honest note, FAQ, FAQ JSON-LD. */
-export function ToolPage({ slug, children }: { slug: ToolConfig['slug']; children: React.ReactNode }) {
+interface ToolPageProps {
+  slug: ToolSlug;
+  /** The tool island: the panel (inputs and the night result card) and its live "how it works" section. */
+  children: ReactNode;
+  /** Static reference sections after the island (the weighted average's comparison). */
+  extra?: ReactNode;
+  /** Tone of the last section before "More free tools", so the tones keep alternating. */
+  lastTone?: 'white' | 'haze';
+}
+
+/** Every link from a tool page: the calculator and the other tools. */
+export function moreToolLinks(current: string): { name: string; href: string; question: string }[] {
+  const tools = TOOL_CONFIGS.map((tool) => ({ name: tool.menuName, href: `/tools/${tool.slug}`, question: tool.question }));
+  return [{ name: 'CGPA calculator', href: '/calculator', question: "Work out a semester's GPA, PI and CGPA from your courses." }, ...tools].filter(
+    (link) => link.href !== current,
+  );
+}
+
+/**
+ * The frame all four tools share, brand v2: a compact night hero with the
+ * trail, the tool island (panel and "how it works"), any reference section,
+ * More free tools, the FAQ (with FAQPage JSON-LD) and the gold close, plus
+ * WebApplication and BreadcrumbList JSON-LD. The layout provides header,
+ * main and footer.
+ */
+export function ToolPage({ slug, children, extra, lastTone = 'white' }: ToolPageProps) {
   const tool = getTool(slug);
-  const others = TOOL_CONFIGS.filter((entry) => entry.slug !== slug);
+  const path = `/tools/${tool.slug}`;
+  const moreTone = lastTone === 'white' ? 'haze' : 'white';
   return (
-    <div className="public-atmosphere min-h-screen text-[var(--acade-text)]">
-      <PublicHeader />
-      <main className="mx-auto max-w-[44rem] px-4 pb-20 pt-[calc(var(--shell-header-height)+2.5rem)] sm:px-6">
-        <h1 className="font-[family-name:var(--font-bricolage)] text-[clamp(1.875rem,4.5vw,3rem)] font-bold leading-[1.08] tracking-[-0.03em]">
-          {tool.heading}
-        </h1>
-        <p className="mt-4 text-[1.0625rem] leading-8 text-[var(--acade-text-muted)]">{tool.description}</p>
-
-        <section aria-label={`${tool.title}`} className="mt-8 rounded-[var(--radius-surface)] bg-[var(--acade-surface)] p-5 ring-1 ring-[var(--acade-border)] sm:p-6">
-          {children}
-        </section>
-
-        <p className="mt-4 text-sm leading-6 text-[var(--acade-text-muted)]">
-          This is a quick estimate for planning, not an official result. Your school&apos;s published grading rules and records decide your actual CGPA and class. Nothing you type here is saved or sent anywhere.
-        </p>
-
-        <section aria-labelledby="tool-faq" className="mt-12">
-          <h2 id="tool-faq" className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-2xl)] font-bold">
-            Common questions
-          </h2>
-          <dl className="mt-4 divide-y divide-[var(--acade-border-subtle)]">
-            {tool.faqs.map((faq) => (
-              <div key={faq.question} className="py-4">
-                <dt className="font-semibold">{faq.question}</dt>
-                <dd className="mt-1 leading-7 text-[var(--acade-text-muted)]">{faq.answer}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <nav aria-label="More free tools" className="mt-12">
-          <h2 className="font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-bold">More free tools</h2>
-          <ul className="mt-3 grid gap-1">
-            {others.map((entry) => (
-              <li key={entry.slug}>
-                <Link href={`/tools/${entry.slug}`} className="inline-flex min-h-11 items-center font-semibold text-[var(--acade-primary)] underline-offset-4 hover:underline">
-                  {entry.title}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link href="/calculator" className="inline-flex min-h-11 items-center font-semibold text-[var(--acade-primary)] underline-offset-4 hover:underline">
-                Full CGPA calculator
-              </Link>
-            </li>
-          </ul>
-          <div className="mt-6">
-            <LinkButton href="/register" variant="outline" size="md">Track your results for free</LinkButton>
+    <div className="ag-site">
+      <ToolHero
+        trail={<Trail items={[{ label: 'Free tools', href: '/tools' }, { label: tool.menuName }]} />}
+        title={tool.heading}
+        sentence={tool.sentence}
+        facts={['No account needed', 'Nothing you type is saved', DEFAULT_SCALE.line]}
+      />
+      {children}
+      {extra}
+      <section aria-labelledby="more-tools" className={`${moreTone === 'haze' ? 'bg-ag-haze' : 'bg-white'} py-20 sm:py-28`}>
+        <Container>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <Heading id="more-tools" title="More free tools, same scale" lead="Each one works on the Nigerian university 5-point scale and saves nothing." />
+            <TextLinkV2 href="/tools" className="shrink-0 text-[1rem]">
+              All free tools
+            </TextLinkV2>
           </div>
-        </nav>
-
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd(tool.faqs)).replace(/</g, '\\u003c') }}
-        />
-      </main>
-      <PublicFooter />
+          <ul className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {moreToolLinks(path).map((link) => (
+              <ToolCard key={link.href} name={link.name} href={link.href} tone={moreTone === 'haze' ? 'white' : 'haze'} footer={<OpenCue />}>
+                <p className="mt-3 text-[0.9375rem] leading-relaxed text-ag-mist">{link.question}</p>
+              </ToolCard>
+            ))}
+          </ul>
+        </Container>
+      </section>
+      <ToolFaqSection id="tool-questions" title={faqTitle(slug)} faqs={tool.faqs} tone={moreTone === 'haze' ? 'white' : 'haze'} />
+      <ToolClosing title={tool.close} secondary={{ href: '/tools', label: 'All free tools' }} />
+      <JsonLd
+        data={[
+          webApplicationJsonLd({ name: tool.title, path, description: tool.description }),
+          faqPageJsonLd(tool.faqs),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Free tools', path: '/tools' },
+            { name: tool.title, path },
+          ]),
+        ]}
+      />
     </div>
   );
+}
+
+function faqTitle(slug: ToolSlug): string {
+  switch (slug) {
+    case 'degree-class-checker':
+      return 'Degree class questions';
+    case 'required-gpa':
+      return 'Planning questions';
+    case 'carry-over-impact':
+      return 'Carry-over questions';
+    default:
+      return 'Average score questions';
+  }
 }

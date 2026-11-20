@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { AlertTriangle, ArrowRight, CircleCheck, Info } from 'lucide-react';
+import { AlertTriangle, CircleCheck, Info } from 'lucide-react';
 
 import type { DashboardNextAction } from '@/lib/dashboard/next-action';
 import { cn } from '@/lib/utils/cn';
@@ -45,10 +45,10 @@ export function NextActionCard({ action }: { action: DashboardNextAction }) {
         <div className={cn('flex size-11 items-center justify-center rounded-[var(--radius-control)]', tone.iconClass)}>
           <Icon className="size-5" aria-hidden="true" />
         </div>
-        <p className={cn('mt-5 text-[0.68rem] font-semibold uppercase tracking-[0.16em]', tone.eyebrowClass)}>
+        <p className={cn('mt-5 text-sm font-medium', tone.eyebrowClass)}>
           {action.eyebrow}
         </p>
-        <h2 className="mt-2 font-[family-name:var(--font-bricolage)] text-[length:var(--text-xl)] font-semibold leading-tight text-[var(--acade-text)]">
+        <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--acade-text)]">
           {action.title}
         </h2>
         <p className="mt-3 text-sm leading-6 text-[var(--acade-text-muted)]">
@@ -56,10 +56,9 @@ export function NextActionCard({ action }: { action: DashboardNextAction }) {
         </p>
         <Link
           href={action.href}
-          className="mt-6 inline-flex min-h-12 w-fit items-center gap-2 rounded-[var(--radius-control)] border border-[var(--acade-border)] px-4 text-sm font-semibold text-[var(--acade-text)] transition-colors hover:border-[var(--acade-primary)]/45 hover:bg-[var(--acade-primary-dim)] hover:text-[var(--acade-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] lg:mt-auto"
+          className="mt-6 inline-flex min-h-11 w-fit items-center gap-2 rounded-[var(--radius-control)] bg-[var(--acade-primary)] px-4 text-sm font-semibold text-[var(--acade-on-primary)] transition-colors hover:bg-[var(--acade-primary-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] lg:mt-auto"
         >
           {action.label}
-          <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
     </Card>

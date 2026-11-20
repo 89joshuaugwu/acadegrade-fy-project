@@ -198,7 +198,7 @@ describe('settings: access', () => {
     }));
     await renderOn();
     const legal = await screen.findByRole('region', { name: 'Legal versions' });
-    expect(await within(legal).findByText('Terms of Service')).toBeInTheDocument();
+    expect(await within(legal).findByText('Terms of use')).toBeInTheDocument();
     expect(within(legal).getByText('2026-11-13')).toBeInTheDocument();
     expect(within(legal).getByText('2026-12-01')).toBeInTheDocument();
     expect(within(legal).getByRole('link', { name: 'Edit Terms text and publish' })).toHaveAttribute('href', '/admin/legal?doc=terms');
@@ -270,8 +270,30 @@ describe('settings: public site', () => {
     await user.click(screen.getByRole('button', { name: 'Save public site' }));
     await waitFor(() => expect(posts(spy, '/api/admin/settings')).toHaveLength(2));
     const [links, about] = posts(spy, '/api/admin/settings');
-    expect(links).toEqual({ field: 'mobileAppLinks', value: { androidUrl: 'https://example.com/a.apk', iosUrl: 'https://example.com/ios' } });
+    expect(links).toEqual({ field: 'mobileAppLinks', value: { androidUrl: 'https://example.com/a.apk', iosUrl: 'https://example.com/ios', androidSizeMb: null, playUrl: '' } });
     expect(about).toMatchObject({ target: 'about', data: { headline: 'New headline' } });
+  });
+});
+
+describe('settings: public site, Android page fields', () => {
+  it('saves the APK size and the Google Play link, and refuses a bad size', async () => {
+    const spy = mockFetch(settingsRoute({ mobileAppLinks: { androidUrl: 'https://example.com/a.apk', iosUrl: '', androidSizeMb: 40, playUrl: '' } }));
+    const user = await renderOn('public-site');
+    const size = screen.getByRole('textbox', { name: 'APK size (MB)' });
+    expect(size).toHaveValue('40');
+    await user.clear(size);
+    await user.type(size, '4.5');
+    await user.click(screen.getByRole('button', { name: 'Save public site' }));
+    expect(await screen.findByText('Nothing was saved. Fix the APK size first.')).toBeInTheDocument();
+    expect(posts(spy, '/api/admin/settings')).toHaveLength(0);
+
+    await user.clear(size);
+    await user.type(size, '45');
+    await user.type(screen.getByRole('textbox', { name: 'Google Play link' }), 'https://play.google.com/store/apps/details?id=com.acadegrade.app');
+    await user.click(screen.getByRole('button', { name: 'Save public site' }));
+    await waitFor(() => expect(posts(spy, '/api/admin/settings')).toEqual([{ field: 'mobileAppLinks', value: {
+      androidUrl: 'https://example.com/a.apk', iosUrl: '', androidSizeMb: 45, playUrl: 'https://play.google.com/store/apps/details?id=com.acadegrade.app',
+    } }]));
   });
 });
 

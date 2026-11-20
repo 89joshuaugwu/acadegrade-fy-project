@@ -36,17 +36,18 @@ describe('Free uses & coins editor', () => {
     const fetcher = mockApi({ usage: () => ok(envelope()) });
     render(<UsagePage />);
     expect(await screen.findByRole('heading', { level: 1, name: 'Free uses & coins' })).toBeInTheDocument();
-    expect(await screen.findByRole('spinbutton', { name: 'Written Analysis: free uses per 24 hours' })).toHaveValue(3);
-    expect(screen.getByRole('spinbutton', { name: 'What-If guidance: free uses per 24 hours' })).toHaveValue(20);
+    // Numeric text fields (no native number spinners): values read back as strings.
+    expect(await screen.findByRole('textbox', { name: 'Written Analysis: free uses per 24 hours' })).toHaveValue('3');
+    expect(screen.getByRole('textbox', { name: 'What-If guidance: free uses per 24 hours' })).toHaveValue('20');
     expect(screen.getAllByText(/Also limited to 2 per hour/)).toHaveLength(2);
     expect(screen.getByText(/once every 12 hours/)).toBeInTheDocument();
     expect(screen.getByText(/reused for up to 1 hour/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Free uses per 24 hours' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Coins (Android)' })).toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Let Android users earn and spend coins' })).toHaveAttribute('aria-checked', 'false');
-    expect(screen.getByRole('spinbutton', { name: 'Result scanning coin price' })).toHaveValue(3);
+    expect(screen.getByRole('textbox', { name: 'Result scanning coin price' })).toHaveValue('3');
     expect(screen.getByRole('switch', { name: 'Coins allowed for Result scanning' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('spinbutton', { name: 'What-If guidance coin uses per day' })).toHaveValue(10);
+    expect(screen.getByRole('textbox', { name: 'What-If guidance coin uses per day' })).toHaveValue('10');
     expect(screen.getByLabelText('Saved free uses')).toHaveTextContent(/Written Analysis: 3/);
     expect(screen.queryByText(/\bpending\b/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Requires the Android rewarded switch/)).not.toBeInTheDocument();
@@ -97,17 +98,17 @@ describe('Free uses & coins editor', () => {
       ? new Promise<Response>(resolve => { finish = resolve; })
       : ok(envelope()) });
     render(<UsagePage />);
-    const insights = await screen.findByRole('spinbutton', { name: 'Written Analysis: free uses per 24 hours' });
+    const insights = await screen.findByRole('textbox', { name: 'Written Analysis: free uses per 24 hours' });
     fireEvent.change(insights, { target: { value: '6' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save free uses and coins' }));
     await waitFor(() => expect(finish).toBeDefined());
     fireEvent.change(insights, { target: { value: '7' } });
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Forecast: free uses per 24 hours' }), { target: { value: '9' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Forecast: free uses per 24 hours' }), { target: { value: '9' } });
     fireEvent.click(screen.getByRole('switch', { name: 'Let Android users earn and spend coins' }));
     const persisted = { ...defaults, dailyLimits: { ...defaults.dailyLimits, insights: 6 } };
     await act(async () => finish(ok(envelope(persisted))));
-    expect(insights).toHaveValue(7);
-    expect(screen.getByRole('spinbutton', { name: 'Forecast: free uses per 24 hours' })).toHaveValue(9);
+    expect(insights).toHaveValue('7');
+    expect(screen.getByRole('textbox', { name: 'Forecast: free uses per 24 hours' })).toHaveValue('9');
     expect(screen.getByRole('switch', { name: 'Let Android users earn and spend coins' })).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByLabelText('Saved free uses')).toHaveTextContent(/Written Analysis: 6/);
     expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent(/unsaved draft/i);
@@ -121,10 +122,10 @@ describe('Free uses & coins editor', () => {
       : ok(envelope()) });
     render(<UsagePage />);
     fireEvent.click(await screen.findByRole('switch', { name: 'Let Android users earn and spend coins' }));
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Coins per ad' }), { target: { value: '3' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Coins per ad' }), { target: { value: '3' } });
     fireEvent.click(screen.getByRole('switch', { name: 'Coins allowed for What-If guidance' }));
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Result scanning coin price' }), { target: { value: '4' } });
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Forecast coin uses per day' }), { target: { value: '0' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Result scanning coin price' }), { target: { value: '4' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Forecast coin uses per day' }), { target: { value: '0' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save free uses and coins' }));
     const dialog = await screen.findByRole('dialog', { name: /turn coins on/i });
     expect(dialog).toHaveTextContent('Students on Android will see coin prices and can watch ads to earn. Check Rewarded readiness first.');
@@ -145,7 +146,7 @@ describe('Free uses & coins editor', () => {
       ? ok(envelope(JSON.parse(String(options.body))))
       : ok(envelope(coinsOn)) });
     render(<UsagePage />);
-    fireEvent.change(await screen.findByRole('spinbutton', { name: 'Balance cap' }), { target: { value: '40' } });
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Balance cap' }), { target: { value: '40' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save free uses and coins' }));
     await waitFor(() => expect(usageCalls(fetcher, 'PUT')).toHaveLength(1));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -154,12 +155,12 @@ describe('Free uses & coins editor', () => {
   it('discards the draft back to the saved policy', async () => {
     mockApi({ usage: () => ok(envelope()) });
     render(<UsagePage />);
-    const balance = await screen.findByRole('spinbutton', { name: 'Balance cap' });
+    const balance = await screen.findByRole('textbox', { name: 'Balance cap' });
     fireEvent.change(balance, { target: { value: '99' } });
     fireEvent.click(screen.getByRole('switch', { name: 'Let Android users earn and spend coins' }));
     expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent(/unsaved draft/i);
     fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }));
-    expect(balance).toHaveValue(30);
+    expect(balance).toHaveValue('30');
     expect(screen.getByRole('switch', { name: 'Let Android users earn and spend coins' })).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent(/No unsaved changes/);
   });
@@ -175,7 +176,7 @@ describe('Free uses & coins editor', () => {
   ])('blocks invalid %s draft %s without a save request', async (name, value, message) => {
     const fetcher = mockApi({ usage: () => ok(envelope()) });
     render(<UsagePage />);
-    const input = await screen.findByRole('spinbutton', { name });
+    const input = await screen.findByRole('textbox', { name });
     fireEvent.change(input, { target: { value } });
     fireEvent.click(screen.getByRole('button', { name: 'Save free uses and coins' }));
     expect(screen.getByRole('alert')).toHaveTextContent(message);
@@ -186,11 +187,11 @@ describe('Free uses & coins editor', () => {
   it('keeps the draft and saved values distinct after a failed save', async () => {
     mockApi({ usage: (_url, options) => options?.method === 'PUT' ? failed({ error: 'Unable to save.' }) : ok(envelope()) });
     render(<UsagePage />);
-    const input = await screen.findByRole('spinbutton', { name: 'Forecast: free uses per 24 hours' });
+    const input = await screen.findByRole('textbox', { name: 'Forecast: free uses per 24 hours' });
     fireEvent.change(input, { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save free uses and coins' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Unable to save.');
-    expect(input).toHaveValue(10);
+    expect(input).toHaveValue('10');
     expect(screen.getByLabelText('Saved free uses')).toHaveTextContent(/Forecast: 8/);
   });
 
@@ -198,7 +199,7 @@ describe('Free uses & coins editor', () => {
     mockApi({ usage: () => failed({ error: 'Forbidden' }) });
     render(<UsagePage />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Forbidden');
-    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
   });
 

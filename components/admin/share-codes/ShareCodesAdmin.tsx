@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/shared';
+import { AdminSelect, optionsFrom } from '@/components/admin/ui/AdminSelect';
 
 export interface AdminShareCode {
   code: string;
@@ -26,7 +27,6 @@ export interface AdminShareCode {
 type Dialog = { kind: 'disable' | 'enable' | 'promote'; row: AdminShareCode } | null;
 
 const when = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'unknown');
-const selectClass = 'mt-1 min-h-11 w-full rounded-xl border border-[var(--acade-border)] bg-[var(--acade-surface)] px-3 text-sm text-[var(--acade-text)] focus-visible:outline-2 focus-visible:outline-[var(--acade-primary)]';
 
 /** Admin > Share codes: the most used course-list codes, with disable, enable and promote to the catalogue (G7). */
 export function ShareCodesAdmin() {
@@ -174,17 +174,8 @@ export function ShareCodesAdmin() {
             <>
               <p className="text-sm text-[var(--acade-text)]">Check the course codes, titles and units first. Each row is added once for the department, level and semester you choose; rows already there are skipped.</p>
               <Input id="share-promote-department" label="Department" value={department} maxLength={80} onChange={(event) => setDepartment(event.target.value)} />
-              <label className="block text-sm text-[var(--acade-text)]">Level
-                <select className={selectClass} value={level} onChange={(event) => setLevel(event.target.value)}>
-                  {[100, 200, 300, 400, 500, 600].map((value) => <option key={value} value={value}>{value}</option>)}
-                </select>
-              </label>
-              <label className="block text-sm text-[var(--acade-text)]">Semester
-                <select className={selectClass} value={semester} onChange={(event) => setSemester(event.target.value)}>
-                  <option value="1">First</option>
-                  <option value="2">Second</option>
-                </select>
-              </label>
+              <AdminSelect label="Level" value={String(level)} onChange={(value) => setLevel(value)} options={optionsFrom([100, 200, 300, 400, 500, 600])} />
+              <AdminSelect label="Semester" value={String(semester)} onChange={(value) => setSemester(value)} options={[{ value: '1', label: 'First' }, { value: '2', label: 'Second' }]} />
             </>
           )}
           <Input id="share-reason" label="Reason (saved in the audit log)" value={reason} maxLength={200} onChange={(event) => setReason(event.target.value)} />

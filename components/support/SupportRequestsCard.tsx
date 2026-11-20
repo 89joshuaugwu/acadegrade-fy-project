@@ -85,7 +85,7 @@ export function SupportRequestsCard() {
   }
 
   return (
-    <section aria-labelledby="support-title" className="rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5">
+    <section id="help" aria-labelledby="support-title" className="scroll-mt-24 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5">
       <h2 id="support-title" className="flex items-center gap-2 text-base font-semibold text-[var(--acade-text)]">
         <LifeBuoy className="size-4" aria-hidden="true" />Help and support
       </h2>

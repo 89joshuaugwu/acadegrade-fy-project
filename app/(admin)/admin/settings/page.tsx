@@ -20,7 +20,7 @@ interface StoredSettings {
   disableSignups?: boolean;
   disabledFeatures?: string[];
   ageGate?: { enforceUnknown?: boolean };
-  mobileAppLinks?: { androidUrl?: string; iosUrl?: string };
+  mobileAppLinks?: { androidUrl?: string; iosUrl?: string; androidSizeMb?: number | null; playUrl?: string };
   admobAndroidAppId?: string;
 }
 
@@ -108,6 +108,8 @@ function SettingsScreen() {
   const links: AppLinks = {
     androidUrl: settings.mobileAppLinks?.androidUrl || DEFAULT_ANDROID_DOWNLOAD_URL,
     iosUrl: settings.mobileAppLinks?.iosUrl || '',
+    androidSizeMb: typeof settings.mobileAppLinks?.androidSizeMb === 'number' ? String(settings.mobileAppLinks.androidSizeMb) : '',
+    playUrl: settings.mobileAppLinks?.playUrl || '',
   };
 
   const content: Record<SettingsTab, React.ReactNode> = {
