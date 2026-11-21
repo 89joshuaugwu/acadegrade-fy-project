@@ -54,21 +54,31 @@ describe('transactional email templates', () => {
     process.env = { ...originalEnvironment };
   });
 
-  it('semester email colour follows resolveDegreeClass', () => {
-    const GOLD = '#F4B544';
-    const SUCCESS = '#46C98B';
-    const PRIMARY_SOFT = '#B0AAFF';
-    const DANGER = '#FF6B6B';
+  it('semester email colour follows resolveDegreeClass (brand v2 class colours)', () => {
+    const FIRST_GOLD = '#FFC266';
+    const UPPER_VIOLET = '#B3A6FF';
+    const LOWER_TEAL = '#5FD0D8';
+    const THIRD_ORANGE = '#FFA066';
+    const PASS_ROSE = '#F58BB0';
+    const FAIL_RED = '#FF8A7A';
     const colourOf = (gpa: number) => {
       const html = semesterSavedEmail('Ada', gpa, 'First Semester');
-      const match = /Semester GPA<\/p><p style="[^"]*?color:(#[0-9A-Fa-f]{6})/.exec(html);
-      return [SUCCESS, PRIMARY_SOFT, GOLD, DANGER].find((colour) => colour === match?.[1]);
+      return /Semester GPA<\/p><p style="[^"]*?color:(#[0-9A-Fa-f]{6})/.exec(html)?.[1];
     };
-    expect(colourOf(2.45)).toBe(GOLD);      // 2:2 starts at 2.40, not 2.50
-    expect(colourOf(2.4)).toBe(GOLD);
-    expect(colourOf(4.495)).toBe(SUCCESS);  // rounds to 4.50: First Class
-    expect(colourOf(3.5)).toBe(PRIMARY_SOFT);
-    expect(colourOf(2.39)).toBe(DANGER);    // Third Class and below stay red
+    expect(colourOf(2.45)).toBe(LOWER_TEAL);   // 2:2 starts at 2.40, not 2.50
+    expect(colourOf(2.4)).toBe(LOWER_TEAL);
+    expect(colourOf(4.495)).toBe(FIRST_GOLD);  // rounds to 4.50: First Class, the only gold
+    expect(colourOf(3.5)).toBe(UPPER_VIOLET);
+    expect(colourOf(2.39)).toBe(THIRD_ORANGE);
+    expect(colourOf(1.2)).toBe(PASS_ROSE);
+    expect(colourOf(0.5)).toBe(FAIL_RED);
+  });
+
+  it('colours the degree-class email by class, with gold kept for First Class', () => {
+    const colourOf = (label: string) => /Projected degree class<\/p><p class="em-class" style="[^"]*?color:(#[0-9A-Fa-f]{6})/.exec(degreeClassEmail('Ada', label))?.[1];
+    expect(colourOf('First Class')).toBe('#FFC266');
+    expect(colourOf('Second Class Upper')).toBe('#B3A6FF');
+    expect(colourOf('Third Class')).toBe('#FFA066');
   });
   it('renders every existing template through the responsive branded shell', () => {
     const templates = [
@@ -86,8 +96,11 @@ describe('transactional email templates', () => {
       expect(html).toContain('<meta name="color-scheme" content="light dark">');
       expect(html).toContain('data-email-preheader');
       expect(html).toContain('role="presentation"');
-      expect(html).toContain('alt="AcadeGrade"');
-      expect(html).toContain('Acade<span');
+      // The mark is an inline attachment (cid:), decorative beside the AcadeGrade wordmark.
+      expect(html).toContain('src="cid:acadegrade-mark@acadegrade"');
+      expect(html).toContain('alt=""');
+      expect(html).toMatch(/>AcadeGrade<\/a>/);
+      expect(html).not.toContain('&middot;');
       expect(html).toContain('@media only screen and (max-width: 620px)');
       expect(html).toContain('You received this because');
       expect(html).not.toMatch(/\u00e2|\u00c2|\u00f0\u0178|\ufffd/u);
@@ -178,7 +191,8 @@ describe('transactional email templates', () => {
     const html = welcomeEmail('Ada');
 
     expect(html).toContain('href="https://app.acadegrade.com/dashboard"');
-    expect(html).toContain('src="https://app.acadegrade.com/logo.png"');
+    // The logo never depends on the site URL (a local URL broke it in Gmail).
+    expect(html).not.toContain('/logo.png');
     expect(html).not.toContain('https://app.acadegrade.com//');
   });
 
@@ -258,6 +272,19 @@ describe('transactional email delivery contracts', () => {
       html: expect.stringContaining('Welcome, Ada'),
       text: expect.stringContaining('Welcome, Ada'),
     }));
+  });
+
+  it('attaches the logo inline (Content-ID) to general and OTP emails', async () => {
+    await sendEmail('student@example.test', 'Welcome', welcomeEmail('Ada'));
+    await sendOtpEmail('student@example.test', 'Verify', registrationOtpEmail('120934'));
+    for (const spy of [mailSpies.generalSend, mailSpies.otpSend]) {
+      const message = spy.mock.calls[0]?.[0] as { attachments: { cid: string; contentType: string; content: Buffer; contentDisposition: string }[] };
+      expect(message.attachments).toHaveLength(1);
+      expect(message.attachments[0]).toMatchObject({ cid: 'acadegrade-mark@acadegrade', contentType: 'image/png', contentDisposition: 'inline' });
+      // A real PNG (signature 89 50 4E 47), small enough for every inbox.
+      expect(message.attachments[0].content.subarray(0, 4).toString('hex')).toBe('89504e47');
+      expect(message.attachments[0].content.length).toBeLessThan(8_000);
+    }
   });
 
   it('keeps normal notification delivery non-fatal', async () => {

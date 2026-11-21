@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getEmailDeliveryCredential } from './managed-credentials';
+import { EMAIL_MARK_CID, EMAIL_MARK_PNG_BASE64 } from './brand-mark';
 
 import {
   adminNewUserEmail,
@@ -30,6 +31,21 @@ function transport(account: { user: string; pass: string }) {
 }
 
 /**
+ * The masthead logo travels with the message as an inline (Content-ID) image, so it shows
+ * even when the site URL is local or remote images are blocked. Only attached when used.
+ */
+export function inlineAssets(html: string) {
+  if (!html.includes(`cid:${EMAIL_MARK_CID}`)) return [];
+  return [{
+    filename: 'acadegrade.png',
+    content: Buffer.from(EMAIL_MARK_PNG_BASE64, 'base64'),
+    contentType: 'image/png',
+    cid: EMAIL_MARK_CID,
+    contentDisposition: 'inline' as const,
+  }];
+}
+
+/**
  * Send a general notification email.
  *
  * This remains non-fatal so an email outage never rolls back an otherwise
@@ -49,6 +65,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
       subject,
       html,
       text: htmlToPlainText(html),
+      attachments: inlineAssets(html),
     });
   } catch (error) {
     console.error('Failed to send general email:', error instanceof Error ? error.name : 'Delivery error');
@@ -73,5 +90,6 @@ export async function sendOtpEmail(to: string, subject: string, html: string) {
     subject,
     html,
     text: htmlToPlainText(html),
+    attachments: inlineAssets(html),
   });
 }

@@ -1,37 +1,48 @@
 import { formatCgpa, resolveDegreeClass } from '@/lib/cgpa/academicRules';
 import { SUPPORT_PAGE_PATH } from '@/lib/site/contact-email';
+import { EMAIL_MARK_CID } from './brand-mark';
 
 const FALLBACK_SITE_URL = 'https://acadegrade.vercel.app';
 
 /**
- * Light-first palette: a white letter on a cool tinted ground, with the
- * brand's navy reserved for the masthead and the academic "record" panels.
- * Light designs survive Gmail and Outlook auto-inversion far better than
+ * Brand v2 "Gold hour" (docs/brand-v2/DESIGN.md), light-first: a white letter on
+ * a haze ground, with Night reserved for the masthead and the academic "record"
+ * panels. Light designs survive Gmail and Outlook auto-inversion far better than
  * dark ones; Apple Mail gets a deliberate dark palette via the dark-mode block.
  */
 const COLORS = {
-  // Brand navy (masthead, record panels) and accents used on navy.
-  void: '#080B16', deep: '#0C1120', surface: '#101626', border: '#293249',
-  primary: '#7C74FF', primarySoft: '#B0AAFF', gold: '#F4B544',
-  success: '#46C98B', danger: '#FF6B6B', text: '#F7F8FC',
-  textMuted: '#A7B0C4', textFaint: '#8E99AE',
+  // Night (masthead, record panels) and the text and accents used on it.
+  night: '#0E0B2B', night2: '#17133F',
+  violet: '#6B4EFF', violetSoft: '#B3A6FF', gold: '#FFB23F',
+  text: '#FFFFFF', textMuted: '#B8B3D9',
   // Light letter.
-  ground: '#EEF0F6', paper: '#FFFFFF', tint: '#F4F5FA', otpTint: '#F1F0FF',
-  warnTint: '#FFF5E1', warnInk: '#5C3D06',
-  ink: '#12162B', body: '#3A4157', muted: '#5D6479',
-  action: '#5047DB', link: '#4A41D1',
+  ground: '#F4F1FF', paper: '#FFFFFF', tint: '#F7F5FF', otpTint: '#EFEBFF',
+  warnTint: '#FFF4E0', warnInk: '#5C3A00',
+  ink: '#17133A', body: '#3F3B63', muted: '#6E6A8E',
+  action: '#6B4EFF', link: '#5B3FF0',
 } as const;
+
+/**
+ * Degree-class colours on the Night record panel (the app's dark-theme class tones):
+ * gold is kept for First Class only; Fail is red because it means a carry-over.
+ */
+const CLASS_ON_NIGHT: Record<string, string> = {
+  '1st': '#FFC266', '2:1': '#B3A6FF', '2:2': '#5FD0D8', '3rd': '#FFA066', Pass: '#F58BB0', Fail: '#FF8A7A',
+};
+const CLASS_BY_LABEL: Record<string, string> = {
+  'first class': CLASS_ON_NIGHT['1st'], 'second class upper': CLASS_ON_NIGHT['2:1'], 'second class lower': CLASS_ON_NIGHT['2:2'],
+  'third class': CLASS_ON_NIGHT['3rd'], pass: CLASS_ON_NIGHT.Pass, fail: CLASS_ON_NIGHT.Fail,
+};
 
 /** Dark-mode values for clients that honour prefers-color-scheme (Apple Mail, iOS Mail). */
 const DARK = {
-  ground: '#080B16', mast: '#0C1120', paper: '#111729', tint: '#182039', record: '#080B16',
-  warnTint: '#2A2110', warnInk: '#F4D79B', ink: '#F2F4FA', body: '#C9CEDB', muted: '#A7B0C4', link: '#B0AAFF',
+  ground: '#0B0922', mast: '#0E0B2B', paper: '#17133F', tint: '#221D52', record: '#0E0B2B',
+  warnTint: '#2E2410', warnInk: '#F4D79B', ink: '#F4F1FF', body: '#D4D0EE', muted: '#B8B3D9', link: '#B3A6FF',
 } as const;
 
 const FONT = {
-  sans: `'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif`,
-  display: `'Bricolage Grotesque','DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif`,
-  mono: `ui-monospace,SFMono-Regular,Menlo,Consolas,'Roboto Mono','Liberation Mono','Courier New',monospace`, // taste-skill-ignore: only the OTP code (literal code) uses it
+  sans: `'Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif`,
+  display: `'Bricolage Grotesque','Geist',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif`,
 } as const;
 
 const OTP_EXPIRY_TEXT = 'This code expires in 5 minutes.';
@@ -105,7 +116,7 @@ const strong = (content: string) => `<strong class="em-ink" style="font-weight:6
 function button(label: string, href: string, options: { align?: 'left' | 'center'; plainText?: boolean } = {}): string {
   const align = options.align === 'center' ? ' align="center"' : '';
   const plain = options.plainText === false ? '' : ' data-plain-href';
-  return `<table ${TABLE_ATTRS}${align} class="em-btn-wrap"><tr><td align="center" bgcolor="${COLORS.action}" class="em-btn-cell" style="border-radius:999px;background-color:${COLORS.action};mso-padding-alt:14px 30px;"><a href="${href}"${plain} class="em-btn" style="display:inline-block;padding:14px 30px;font-family:${FONT.sans};font-size:16px;line-height:20px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:999px;">${label}</a></td></tr></table>`;
+  return `<table ${TABLE_ATTRS}${align} class="em-btn-wrap"><tr><td align="center" bgcolor="${COLORS.action}" class="em-btn-cell" style="border-radius:12px;background-color:${COLORS.action};mso-padding-alt:15px 28px;"><a href="${href}"${plain} class="em-btn" style="display:inline-block;padding:15px 28px;font-family:${FONT.sans};font-size:16px;line-height:20px;font-weight:600;color:#FFFFFF;text-decoration:none;border-radius:12px;">${label}</a></td></tr></table>`;
 }
 
 /** A quiet tinted panel for secondary information (no borders, no accent bars). */
@@ -114,15 +125,15 @@ function note(content: string, tone: 'neutral' | 'warning' = 'neutral'): string 
   const color = tone === 'warning' ? COLORS.warnInk : COLORS.body;
   const classes = tone === 'warning' ? 'em-warn' : 'em-tint';
   const textClass = tone === 'warning' ? 'em-warn-ink' : 'em-body';
-  return `<table ${TABLE_ATTRS} width="100%" bgcolor="${background}" class="${classes}" style="background-color:${background};border-radius:12px;"><tr><td class="${textClass}" style="padding:16px 20px;font-family:${FONT.sans};font-size:14px;line-height:22px;color:${color};">${content}</td></tr></table>`;
+  return `<table ${TABLE_ATTRS} width="100%" bgcolor="${background}" class="${classes}" style="background-color:${background};border-radius:16px;"><tr><td class="${textClass}" style="padding:16px 20px;font-family:${FONT.sans};font-size:14px;line-height:22px;color:${color};">${content}</td></tr></table>`;
 }
 
 const recordLabel = (label: string, align: 'left' | 'center' = 'left') =>
   `<p style="${text(14, 20, COLORS.textMuted, `margin:0 0 6px;text-align:${align};`)}">${label}</p>`;
 
-/** Navy panel that echoes the app's dashboard: the one place academic figures are shown. */
+/** Night panel that echoes the app's dashboard: the one place academic figures are shown. */
 function recordPanel(cells: string): string {
-  return `<table ${TABLE_ATTRS} width="100%" bgcolor="${COLORS.deep}" class="em-record" style="background-color:${COLORS.deep};border-radius:16px;"><tr>${cells}</tr></table>`;
+  return `<table ${TABLE_ATTRS} width="100%" bgcolor="${COLORS.night}" class="em-record" style="background-color:${COLORS.night};border-radius:20px;"><tr>${cells}</tr></table>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,13 +148,12 @@ function footerLink(label: string, href: string): string {
 
 function renderEmail(title: string, content: string, options: ShellOptions): string {
   const siteUrl = getEmailSiteUrl();
-  const logoUrl = `${siteUrl}/logo.png`;
   const footerText = (extra = '') => text(13, 20, COLORS.muted, `margin:0 0 10px;${extra}`);
   const links = [
     footerLink('Privacy', `${siteUrl}/privacy`),
     footerLink('Terms', `${siteUrl}/terms`),
     footerLink('Support', `${siteUrl}${SUPPORT_PAGE_PATH}`),
-  ].join('&nbsp;&nbsp;&middot;&nbsp;&nbsp;');
+  ].join('&nbsp;&nbsp;&nbsp;&nbsp;');
 
   return `<!doctype html>
 <html lang="en" dir="ltr" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -156,7 +166,7 @@ function renderEmail(title: string, content: string, options: ShellOptions): str
   <meta name="supported-color-schemes" content="light dark">
   <title>${escapeEmailHtml(title)}</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-  <!--[if !mso]><!--><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&amp;family=DM+Sans:wght@400;600&amp;display=swap" rel="stylesheet"><!--<![endif]-->
+  <!--[if !mso]><!--><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&amp;family=Geist:wght@400;600&amp;display=swap" rel="stylesheet"><!--<![endif]-->
   <style>
     :root{color-scheme:light dark;supported-color-schemes:light dark}
     html,body{margin:0!important;padding:0!important;width:100%!important}
@@ -191,25 +201,27 @@ function renderEmail(title: string, content: string, options: ShellOptions): str
       .em-link{color:${DARK.link}!important}
     }
   </style>
-  <!--[if mso]><style>body,table,td,a,h1,p,span,strong{font-family:'Segoe UI',Arial,Helvetica,sans-serif!important}.em-code,.em-code span{font-family:Consolas,'Courier New',monospace!important}</style><![endif]--><!-- taste-skill-ignore: Outlook fallback for the OTP code (literal code) -->
+  <!--[if mso]><style>body,table,td,a,h1,p,span,strong{font-family:'Segoe UI',Arial,Helvetica,sans-serif!important}</style><![endif]-->
 </head>
 <body class="em-ground" style="margin:0;padding:0;background-color:${COLORS.ground};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
   <div data-email-preheader style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;max-height:0;max-width:0;overflow:hidden;mso-hide:all;">${escapeEmailHtml(options.preheader)}${PREHEADER_FILLER}</div>
   <table ${TABLE_ATTRS} width="100%" bgcolor="${COLORS.ground}" class="em-ground" style="width:100%;background-color:${COLORS.ground};"><tr><td align="center" class="em-outer" style="padding:40px 16px 48px;">
     <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
     <table ${TABLE_ATTRS} width="100%" class="em-shell" style="width:100%;max-width:600px;">
-      <tr><td bgcolor="${COLORS.deep}" class="em-mast em-pad" style="padding:22px 40px;background-color:${COLORS.deep};border-radius:16px 16px 0 0;">
+      <tr><td bgcolor="${COLORS.night}" class="em-mast em-pad" style="padding:24px 40px 22px;background-color:${COLORS.night};border-radius:24px 24px 0 0;">
         <table ${TABLE_ATTRS}><tr>
-          <td width="40" valign="middle" style="width:40px;"><a href="${siteUrl}"><img src="${logoUrl}" width="36" height="36" alt="AcadeGrade" style="display:block;width:36px;height:36px;"></a></td>
-          <td valign="middle" style="padding-left:12px;font-family:${FONT.display};font-size:21px;line-height:26px;font-weight:700;letter-spacing:-0.4px;"><a href="${siteUrl}" style="color:${COLORS.text};text-decoration:none;">Acade<span style="color:${COLORS.gold};">Grade</span></a></td>
+          <td width="40" valign="middle" style="width:40px;"><a href="${siteUrl}"><img src="cid:${EMAIL_MARK_CID}" width="36" height="36" alt="" style="display:block;width:36px;height:36px;"></a></td>
+          <td valign="middle" style="padding-left:12px;font-family:${FONT.display};font-size:21px;line-height:26px;font-weight:700;letter-spacing:-0.5px;"><a href="${siteUrl}" style="color:${COLORS.text};text-decoration:none;">AcadeGrade</a></td>
         </tr></table>
       </td></tr>
-      <tr><td bgcolor="${COLORS.paper}" class="em-paper em-pad em-content" style="padding:40px 40px 44px;background-color:${COLORS.paper};border-radius:0 0 16px 16px;">${content}</td></tr>
+      <!-- The logo's arc as a hairline: violet into gold (Outlook shows the violet fill). -->
+      <tr><td bgcolor="${COLORS.violet}" height="3" style="height:3px;font-size:1px;line-height:1px;background-color:${COLORS.violet};background-image:linear-gradient(90deg,${COLORS.violet} 0%,#9C6BE8 45%,#F08C5A 75%,${COLORS.gold} 100%);">&nbsp;</td></tr>
+      <tr><td bgcolor="${COLORS.paper}" class="em-paper em-pad em-content" style="padding:40px 40px 44px;background-color:${COLORS.paper};border-radius:0 0 24px 24px;">${content}</td></tr>
       <tr><td class="em-pad" style="padding:28px 40px 0;">
         <p class="em-muted" style="${footerText('margin-bottom:14px;')}">${links}</p>
         <p class="em-muted" style="${footerText()}">${options.reason}</p>
         ${options.recordsNotice ? `<p class="em-muted" style="${footerText()}">AcadeGrade records are unofficial and self-reported. Your institution&#039;s result and transcript remain the official record.</p>` : ''}
-        <p class="em-muted" style="${footerText('margin-bottom:0;')}">Sent by AcadeGrade &middot; &copy; ${new Date().getFullYear()} AcadeGrade</p>
+        <p class="em-muted" style="${footerText('margin-bottom:0;')}">&copy; ${new Date().getFullYear()} AcadeGrade. Made in Enugu for Nigerian university students.</p>
       </td></tr>
     </table>
     <!--[if mso]></td></tr></table><![endif]-->
@@ -231,7 +243,7 @@ function otpPanel(code: string, variant: 'registration' | 'reset'): string {
   const background = variant === 'registration' ? COLORS.otpTint : COLORS.tint;
   return `<table ${TABLE_ATTRS} width="100%" bgcolor="${background}" class="em-otp" style="background-color:${background};border-radius:16px;"><tr><td align="center" style="padding:26px 20px 24px;">`
     + `<p class="em-muted" style="${text(14, 20, COLORS.muted, 'margin:0 0 10px;text-align:center;')}">${label}</p>`
-    + `<p data-otp-code class="em-code" style="margin:0;padding-left:6px;font-family:${FONT.mono};font-size:42px;line-height:50px;font-weight:700;letter-spacing:8px;color:${COLORS.ink};text-align:center;font-variant-numeric:tabular-nums;-webkit-user-select:all;user-select:all;">${escapeEmailHtml(code)}</p>`
+    + `<p data-otp-code class="em-code" style="margin:0;padding-left:10px;font-family:${FONT.display};font-size:44px;line-height:52px;font-weight:700;letter-spacing:10px;color:${COLORS.ink};text-align:center;font-variant-numeric:tabular-nums;-webkit-user-select:all;user-select:all;">${escapeEmailHtml(code)}</p>`
     + `<p class="em-muted" style="${text(14, 20, COLORS.muted, 'margin:10px 0 0;text-align:center;')}">${OTP_EXPIRY_TEXT}</p>`
     + `</td></tr></table>`
     + spacer(16)
@@ -297,9 +309,8 @@ export function semesterSavedEmail(name: string, gpa: number, semester: string):
   const semesterName = `${semester ?? ''}`.trim();
   const safeSemester = semesterName ? escapeEmailHtml(semesterName) : 'Latest semester';
   const formattedGpa = Number.isFinite(gpa) ? formatCgpa(gpa) : '0.00';
-  // Same bands and rounding as the app: 1st success, 2:1 primary, 2:2 gold, lower danger.
-  const classColors: Record<string, string> = { '1st': COLORS.success, '2:1': COLORS.primarySoft, '2:2': COLORS.gold };
-  const gpaColor = classColors[resolveDegreeClass(gpa).shortLabel] ?? COLORS.danger;
+  // Same bands, rounding and colours as the app: gold only for First Class, red for Fail.
+  const gpaColor = CLASS_ON_NIGHT[resolveDegreeClass(gpa).shortLabel] ?? COLORS.violetSoft;
 
   const panel = recordPanel(
     `<td class="em-stack" width="50%" valign="top" style="padding:24px 12px 24px 28px;">${recordLabel('Semester GPA')}<p style="margin:0;font-family:${FONT.display};font-size:44px;line-height:48px;font-weight:700;letter-spacing:-1px;color:${gpaColor};font-variant-numeric:tabular-nums;">${formattedGpa}</p></td>`
@@ -326,9 +337,10 @@ export function degreeClassEmail(name: string, degreeClass: string): string {
   const safeName = escapeEmailHtml(name);
   const className = `${degreeClass ?? ''}`.trim();
   const safeClass = className ? escapeEmailHtml(className) : 'Not available yet';
+  const classColor = CLASS_BY_LABEL[className.toLowerCase()] ?? COLORS.violetSoft;
 
   const panel = recordPanel(
-    `<td align="center" style="padding:28px 24px 30px;">${recordLabel('Projected degree class', 'center')}<p class="em-class" style="margin:0;font-family:${FONT.display};font-size:30px;line-height:36px;font-weight:700;letter-spacing:-0.5px;color:${COLORS.gold};text-align:center;">${safeClass}</p></td>`,
+    `<td align="center" style="padding:28px 24px 30px;">${recordLabel('Projected degree class', 'center')}<p class="em-class" style="margin:0;font-family:${FONT.display};font-size:30px;line-height:36px;font-weight:700;letter-spacing:-0.5px;color:${classColor};text-align:center;">${safeClass}</p></td>`,
   );
 
   const content = heading('Your degree-class outlook has changed')

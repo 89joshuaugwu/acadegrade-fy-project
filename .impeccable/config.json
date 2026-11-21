@@ -20,6 +20,12 @@
         ],
         "createdAt": "2026-11-20T19:15:48.647Z",
         "reason": "Agent: 4px leader line that continues the 4px CGPA marker on the 0-5 scale down to its label (positioned at the marker's x), not a card side border"
+      },
+      {
+        "rule": "overused-font",
+        "value": "geist",
+        "createdAt": "2026-11-21T06:05:51.951Z",
+        "reason": "Agent: Geist is the documented brand v2 text face (docs/brand-v2/DESIGN.md), paired with Bricolage Grotesque for display and used site-wide; emails match the site"
       }
     ]
   }
