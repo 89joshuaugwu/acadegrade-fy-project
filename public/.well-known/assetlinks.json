@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.acadegrade.app",
+      "sha256_cert_fingerprints": [
+        "FA:6F:A0:5E:1C:98:E3:FD:B4:5C:A0:D2:4E:61:84:5A:57:1E:DA:14:56:AE:9C:44:B2:8B:F6:C8:BA:98:54:5F"
+      ]
+    }
+  }
+]
