@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
 
 /**
  * Brand v2 "Gold hour" kit (docs/brand-v2/DESIGN.md, docs/brand-v2/BUILD_V2.md).
@@ -68,10 +70,10 @@ export function Heading({
   };
   return (
     <div className={`max-w-2xl ${className}`}>
-      <Tag id={id} className={`ag-display font-bold ${sizes[size]} ${onDark ? 'text-white' : 'text-ag-ink'}`}>
-        {title}
+      <Tag id={id} {...reveal(typeof title === 'string' ? 'words' : 'rise')} className={`ag-display font-bold ${sizes[size]} ${onDark ? 'text-white' : 'text-ag-ink'}`}>
+        <Words>{title}</Words>
       </Tag>
-      {lead ? <p className={`mt-5 text-[1.0625rem] leading-relaxed sm:text-[1.125rem] ${onDark ? 'text-ag-mist-night' : 'text-ag-mist'}`}>{lead}</p> : null}
+      {lead ? <p {...reveal('rise')} className={`mt-5 text-[1.0625rem] leading-relaxed sm:text-[1.125rem] ${onDark ? 'text-ag-mist-night' : 'text-ag-mist'}`}>{lead}</p> : null}
     </div>
   );
 }
@@ -128,7 +130,11 @@ export function TextLinkV2({ href, children, onDark = false, className = '' }: {
 
 /** A rounded panel. Radius by hierarchy: panels 32px (rounded-[32px]), cards inside 20px (rounded-[20px]). */
 export function Panel({ children, className = '', as: Tag = 'article' }: { children: ReactNode; className?: string; as?: 'article' | 'div' | 'section' | 'li' }) {
-  return <Tag className={`relative overflow-hidden rounded-[32px] ${className}`}>{children}</Tag>;
+  return (
+    <Tag {...reveal('pop')} className={`relative overflow-hidden rounded-[32px] ${className}`}>
+      {children}
+    </Tag>
+  );
 }
 
 export function CheckIcon({ className = '' }: { className?: string }) {
@@ -143,7 +149,7 @@ export function CheckIcon({ className = '' }: { className?: string }) {
 /** A list of short facts with gold (on dark) or violet (on light) check marks. */
 export function CheckList({ items, onDark = false, className = '' }: { items: readonly ReactNode[]; onDark?: boolean; className?: string }) {
   return (
-    <ul className={`space-y-3 text-[1rem] ${className}`}>
+    <ul {...reveal('stagger')} className={`space-y-3 text-[1rem] ${className}`}>
       {items.map((item, index) => (
         <li key={index} className={`flex items-start gap-3 ${onDark ? 'text-ag-gold' : 'text-ag-violet'}`}>
           <CheckIcon className="mt-0.5" />
@@ -208,13 +214,13 @@ export function PageHero({
       >
         <div className="max-w-2xl">
           {trail ? <div className="ag-rise mb-6">{trail}</div> : null}
-          <h1 id={titleId} className="ag-display ag-rise text-[2.5rem] font-bold leading-[1.03] sm:text-[3.5rem] lg:text-[4rem]">
-            {title}
+          <h1 id={titleId} className={`ag-display ${typeof title === 'string' ? 'mo-load-words' : 'ag-rise'} text-[2.5rem] font-bold leading-[1.03] sm:text-[3.5rem] lg:text-[4rem]`}>
+            <Words>{title}</Words>
           </h1>
           {sentence ? <p className="ag-rise ag-rise-2 mt-6 max-w-[36rem] text-[1.125rem] leading-relaxed text-ag-mist-night">{sentence}</p> : null}
           {actions ? <div className="ag-rise ag-rise-3 mt-9 flex flex-wrap items-center gap-x-6 gap-y-4">{actions}</div> : null}
         </div>
-        {aside ? <div className="ag-rise ag-rise-3 min-w-0">{aside}</div> : null}
+        {aside ? <div className="mo-load-visual min-w-0">{aside}</div> : null}
       </Container>
     </section>
   );
@@ -223,7 +229,7 @@ export function PageHero({
 /** FAQ list (native details). Pair it with faqPageJsonLd from components/public/Accordion for structured data. */
 export function FaqList({ items, onDark = false }: { items: readonly { id?: string; question: string; answer: ReactNode }[]; onDark?: boolean }) {
   return (
-    <div className={`divide-y border-y ${onDark ? 'divide-white/10 border-white/10' : 'divide-ag-ink/10 border-ag-ink/10'}`}>
+    <div {...reveal('stagger')} className={`divide-y border-y ${onDark ? 'divide-white/10 border-white/10' : 'divide-ag-ink/10 border-ag-ink/10'}`}>
       {items.map((item, index) => (
         <details key={item.id ?? index} className="ag-faq group">
           <summary className={`ag-focus flex items-center justify-between gap-6 rounded py-6 text-[1.0625rem] font-semibold sm:text-[1.125rem] ${onDark ? 'text-white' : 'text-ag-ink'}`}>
@@ -244,10 +250,10 @@ export function ClosingBand({ title, actions, id = 'closing-title' }: { title: R
   return (
     <section className="bg-ag-gold" aria-labelledby={id}>
       <Container className="flex flex-col items-start gap-8 py-20 sm:py-24 lg:flex-row lg:items-center lg:justify-between">
-        <h2 id={id} className="ag-display max-w-2xl text-[2.25rem] font-bold leading-[1.05] text-ag-night sm:text-[3rem]">
-          {title}
+        <h2 id={id} {...reveal(typeof title === 'string' ? 'words' : 'rise')} className="ag-display max-w-2xl text-[2.25rem] font-bold leading-[1.05] text-ag-night sm:text-[3rem]">
+          <Words>{title}</Words>
         </h2>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">{actions}</div>
+        <div {...reveal('rise', 220)} className="flex flex-wrap items-center gap-x-6 gap-y-4">{actions}</div>
       </Container>
     </section>
   );
@@ -268,7 +274,7 @@ export function Chip({ children, tone = 'haze' }: { children: ReactNode; tone?: 
 export function PhoneFrame({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div className={`relative mx-auto w-full max-w-[340px] ${className}`}>
-      <div className="relative rounded-[44px] bg-[#05040F] p-3 shadow-[0_40px_90px_-20px_rgba(0,0,0,0.6)] ring-1 ring-white/10">
+      <div {...reveal('pop')} className="relative rounded-[44px] bg-[#05040F] p-3 shadow-[0_40px_90px_-20px_rgba(0,0,0,0.6)] ring-1 ring-white/10">
         <div className="overflow-hidden rounded-[34px] bg-ag-haze text-ag-ink">{children}</div>
       </div>
     </div>

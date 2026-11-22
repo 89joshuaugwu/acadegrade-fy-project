@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeForecast, getTrendDirection } from '@/lib/ai/forecast';
+import { maxPointOf, readScaleContext, scalePromptLine } from '@/lib/ai/scaleContext';
 import { generateForecastResponseWithMetadata, getAiConfigRevision } from '@/lib/ai/manager';
 import { adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
@@ -46,8 +47,11 @@ export async function POST(request: NextRequest) {
     if (piHistory.length > 20 || cgpaHistory.length !== piHistory.length) {
       return NextResponse.json({ error: 'Academic histories are malformed or exceed 20 semesters.' }, { status: 400 });
     }
-    if ([...piHistory, ...cgpaHistory].some((value) => !Number.isFinite(value) || value < 0 || value > 5)) {
-      return NextResponse.json({ error: 'Academic history values must be numbers between 0 and 5.' }, { status: 400 });
+    // Additive: only sent for scales other than the default 5-point one.
+    const scaleContext = readScaleContext(body);
+    const maxPoint = maxPointOf(scaleContext);
+    if ([...piHistory, ...cgpaHistory].some((value) => !Number.isFinite(value) || value < 0 || value > maxPoint)) {
+      return NextResponse.json({ error: `Academic history values must be numbers between 0 and ${maxPoint}.` }, { status: 400 });
     }
 
     if (piHistory.length === 0) {
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
     // no provider call, no limiter use, no coins and nothing cached.
     const eligibility = await getAiEligibility(uid);
     if (!eligibility.aiAllowed) {
-      const { slope, projected, projectedPi, projectedCgpa, riskScore } = computeForecast(piHistory, cgpaHistory);
+      const { slope, projected, projectedPi, projectedCgpa, riskScore } = computeForecast(piHistory, cgpaHistory, maxPoint);
       const trendDirection = getTrendDirection(slope);
       return NextResponse.json({
         slope, projected, projectedPi, projectedCgpa, riskScore,
@@ -80,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     const analyticsRef = adminDb.collection('analytics').doc(uid);
     const configRevision = await getAiConfigRevision();
-    const inputSignature = JSON.stringify({ piHistory, cgpaHistory, configRevision, promptRevision: 1 });
+    const inputSignature = JSON.stringify({ piHistory, cgpaHistory, configRevision, promptRevision: 1, ...(scaleContext ? { scaleContext } : {}) });
     const analyticsSnapshot = await analyticsRef.get();
     const cachedForecast = analyticsSnapshot.data()?.forecast;
     const cachedAt = timestampMillis(cachedForecast?.lastUpdated);
@@ -101,13 +105,14 @@ export async function POST(request: NextRequest) {
       charged = true;
     }
 
-    const { slope, projected, projectedPi, projectedCgpa, riskScore } = computeForecast(piHistory, cgpaHistory);
+    const { slope, projected, projectedPi, projectedCgpa, riskScore } = computeForecast(piHistory, cgpaHistory, maxPoint);
     const trendDirection = getTrendDirection(slope);
     const prompt = `
       A student has an academic Performance Index (PI) trend.
       The recent slope of their performance is ${slope.toFixed(3)} (positive = improving, negative = declining).
       The direction is "${trendDirection}".
-      Their PI history (out of 5.0) is: ${piHistory.join(', ')}.
+      Their PI history (out of ${maxPoint.toFixed(1)}) is: ${piHistory.join(', ')}.
+      ${scalePromptLine(scaleContext)}
 
       Write EXACTLY ONE concise, insightful phrase (under 5 words) to label this trend.
       Examples: "Steady & Upward", "Warning: Slight Decline", "Plateaued Performance", "Needs Urgent Attention".

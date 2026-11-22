@@ -7,19 +7,22 @@ import { PillChoice, TField, textButtonClass, type PillOption } from '@/componen
 import { Announcer, useQueryOnce, useTween } from '@/components/site/tools/hooks';
 import { ReceiptCard, ReceiptRows } from '@/components/site/tools/Receipt';
 import { GaugeFigure, NightCard } from '@/components/site/tools/result';
-import { GRADE_POINTS, roundCgpa, type AcademicGrade } from '@/lib/cgpa/academicRules';
-import { DEFAULT_SCALE, publicClassFor } from '@/lib/public/scales';
+import { gradePointFor, roundCgpa } from '@/lib/cgpa/academicRules';
+import { DEFAULT_SCALE, publicClassFor, toolScaleById, type PublicScale } from '@/lib/public/scales';
+import { ToolScaleSelect } from '@/components/site/tools/ToolScaleSelect';
 import { NO_VALUE } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
 import { carryOverCeiling, carryOverImpact, carryOverTable, parseNumber } from './tool-math';
 
-const max = DEFAULT_SCALE.maxPoint;
-const GRADES: PillOption<AcademicGrade>[] = DEFAULT_SCALE.gradeBands.map((band) => ({
+/** Retake letters for a scale: the top grade gold, the fail grade marked. */
+const gradeOptions = (scale: PublicScale): PillOption<string>[] => scale.gradeBands.map((band) => ({
   value: band.grade,
   label: band.grade,
   accessibleName: `${band.grade}, ${band.gradePoint} point${band.gradePoint === 1 ? '' : 's'}`,
-  tone: band.gradePoint === max ? 'gold' : band.gradePoint === 0 ? 'mark' : undefined,
+  tone: band.gradePoint === scale.maxPoint ? 'gold' : band.gradePoint === 0 ? 'mark' : undefined,
 }));
+/** The middle passing grade: C on the 5-point scale. */
+const defaultGrade = (scale: PublicScale) => scale.gradeBands[Math.floor((scale.gradeBands.length - 1) / 2)]?.grade ?? 'C';
 const EXAMPLE = { current: 3, done: 60, failed: 3 };
 
 /** "+0.10", "−0.14" (a true minus sign) or "no change". */
@@ -36,9 +39,9 @@ function spoken(before: number, after: number): string {
 }
 
 /** "Moves you up to Second Class Upper", or null when the class stays the same. */
-export function classChangeLine(before: number, after: number): string | null {
-  const from = publicClassFor(before);
-  const to = publicClassFor(after);
+export function classChangeLine(before: number, after: number, scale: PublicScale = DEFAULT_SCALE): string | null {
+  const from = publicClassFor(before, scale);
+  const to = publicClassFor(after, scale);
   if (from === to) return null;
   return `Moves you ${to.min > from.min ? 'up' : 'down'} to ${to.label}`;
 }
@@ -47,27 +50,42 @@ type FieldKey = 'current' | 'done' | 'failed';
 
 export function CarryOverCalculator() {
   const [values, setValues] = useState<Record<FieldKey, string>>({ current: '', done: '', failed: '' });
-  const [grade, setGrade] = useState<AcademicGrade>('C');
+  const [grade, setGrade] = useState<string>('C');
   const [blurred, setBlurred] = useState<Partial<Record<FieldKey, boolean>>>({});
   const reported = useRef(false);
+  const [scaleId, setScaleId] = useState('ng5');
+  const scale = toolScaleById(scaleId);
+  const max = scale.maxPoint;
+  const GRADES = gradeOptions(scale);
+  const topGrade = scale.gradeBands[0]?.grade ?? 'A';
+  const failLetter = scale.gradeBands[scale.gradeBands.length - 1]?.grade ?? 'F';
+  const points = (letter: string) => gradePointFor(letter, scale.engine) ?? 0;
+  const changeScale = (id: string) => {
+    const next = toolScaleById(id);
+    setScaleId(next.engine.id);
+    if (!next.gradeBands.some((band) => band.grade === grade)) setGrade(defaultGrade(next));
+  };
 
   useQueryOnce((params) => {
+    const linked = toolScaleById(params.get('scale'));
+    setScaleId(linked.engine.id);
     const next: Partial<Record<FieldKey, string>> = {};
     for (const key of ['current', 'done', 'failed'] as FieldKey[]) {
       const raw = params.get(key);
       const value = raw === null ? null : parseNumber(raw);
-      if (raw !== null && value !== null && value >= 0 && (key !== 'current' || value <= max)) next[key] = raw.trim();
+      if (raw !== null && value !== null && value >= 0 && (key !== 'current' || value <= linked.maxPoint)) next[key] = raw.trim();
     }
     const g = params.get('grade');
-    if (g && GRADES.some((option) => option.value === g)) setGrade(g as AcademicGrade);
+    if (g && linked.gradeBands.some((band) => band.grade === g)) setGrade(g);
+    else setGrade(defaultGrade(linked));
     setValues((previous) => ({ ...previous, ...next }));
   });
 
   const current = parseNumber(values.current);
   const done = parseNumber(values.done);
   const failed = parseNumber(values.failed);
-  const impact = carryOverImpact({ currentCgpa: current, completedUnits: done, failedUnits: failed, retakeGrade: grade });
-  const ceiling = carryOverCeiling(done, failed);
+  const impact = carryOverImpact({ currentCgpa: current, completedUnits: done, failedUnits: failed, retakeGrade: grade }, scale.engine);
+  const ceiling = carryOverCeiling(done, failed, scale.engine);
   const impossible = current !== null && current >= 0 && current <= max && ceiling !== null && roundCgpa(current) > ceiling;
   const one = useTween(impact ? impact.bothAttemptsCount : null);
   const two = useTween(impact ? impact.replacesFailure : null);
@@ -99,8 +117,8 @@ export function CarryOverCalculator() {
 
   // The grade table uses the visitor's numbers when they work, otherwise the example.
   const tableInput = impact ? { currentCgpa: current, completedUnits: done, failedUnits: failed } : { currentCgpa: EXAMPLE.current, completedUnits: EXAMPLE.done, failedUnits: EXAMPLE.failed };
-  const table = carryOverTable(tableInput)!;
-  const chosen = impact ? grade : 'A';
+  const table = carryOverTable(tableInput, scale.engine)!;
+  const chosen = impact ? grade : topGrade;
   const tableNumbers = { current: tableInput.currentCgpa!, done: tableInput.completedUnits!, failed: tableInput.failedUnits! };
 
   const outcome = (label: string, value: number | null, after: number | null) => (
@@ -109,14 +127,16 @@ export function CarryOverCalculator() {
         value={after}
         figure={value === null ? NO_VALUE : value.toFixed(2)}
         size="sm"
-        label={after === null ? `${label}: no result yet` : `${label}: ${after.toFixed(2)} of ${max.toFixed(2)}, ${publicClassFor(after).label}`}
+        max={max}
+        ticks={scale.classBands.slice(0, -2).map((band) => band.min)}
+        label={after === null ? `${label}: no result yet` : `${label}: ${after.toFixed(2)} of ${max.toFixed(2)}, ${publicClassFor(after, scale).label}`}
       />
       <p className="mt-1 text-[0.8125rem] leading-snug text-ag-mist-night">{label}</p>
       {impact && after !== null ? (
         <>
           <p className={`ag-num mt-2 text-[1.0625rem] font-semibold ${roundCgpa(after - impact.before) < 0 ? 'text-[#FF8B7E]' : 'text-ag-gold'}`}>{changeText(impact.before, after)}</p>
-          <p className="text-[0.8125rem] text-white/85">{publicClassFor(after).label}</p>
-          {classChangeLine(impact.before, after) ? <p className="mt-1 text-[0.8125rem] font-semibold text-ag-gold">{classChangeLine(impact.before, after)}</p> : null}
+          <p className="text-[0.8125rem] text-white/85">{publicClassFor(after, scale).label}</p>
+          {classChangeLine(impact.before, after, scale) ? <p className="mt-1 text-[0.8125rem] font-semibold text-ag-gold">{classChangeLine(impact.before, after, scale)}</p> : null}
         </>
       ) : null}
     </div>
@@ -141,14 +161,15 @@ export function CarryOverCalculator() {
             <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
               <div>
                 <h2 className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">Your result and the retake</h2>
-                <p className="mt-1 text-[0.9375rem] text-ag-mist">Enter your CGPA as it is now, with the F inside it.</p>
+                <p className="mt-1 text-[0.9375rem] text-ag-mist">Enter your CGPA as it is now, with the {failLetter} inside it.</p>
+                <ToolScaleSelect scale={scale} onChange={changeScale} className="mt-4 w-full max-w-[20rem]" />
               </div>
               <button
                 type="button"
                 className={`${textButtonClass()} min-h-11 text-[0.9375rem]`}
                 onClick={() => {
                   setValues({ current: '3.00', done: '60', failed: '3' });
-                  setGrade('A');
+                  setGrade(topGrade);
                 }}
               >
                 Try an example
@@ -180,7 +201,7 @@ export function CarryOverCalculator() {
               <p id="retake-label" className="text-[0.875rem] font-medium text-ag-ink">
                 Grade you expect on the retake
               </p>
-              <PillChoice<AcademicGrade>
+              <PillChoice<string>
                 name="retake-grade"
                 labelledBy="retake-label"
                 options={GRADES}
@@ -202,7 +223,7 @@ export function CarryOverCalculator() {
                   <p className="text-[0.8125rem] text-ag-mist-night">Now</p>
                   <p className="ag-display ag-num text-[2rem] font-bold leading-none">{impact ? impact.before.toFixed(2) : NO_VALUE}</p>
                 </div>
-                {impact ? <p className="text-right text-[0.875rem] font-semibold text-white/85">{publicClassFor(impact.before).label}</p> : null}
+                {impact ? <p className="text-right text-[0.875rem] font-semibold text-white/85">{publicClassFor(impact.before, scale).label}</p> : null}
               </div>
               <div className="mt-5 grid grid-cols-2 gap-4">
                 {outcome('If the retake is added as extra units', one, impact ? impact.bothAttemptsCount : null)}
@@ -247,18 +268,18 @@ export function CarryOverCalculator() {
                     name: 'Added as extra units',
                     lines: [
                       { label: `Points now, ${current.toFixed(2)} × ${done}`, value: (current * done).toFixed(2) },
-                      { label: `Retake, ${grade} (${GRADE_POINTS[grade]}) × ${failed} units`, value: (GRADE_POINTS[grade] * failed).toFixed(2) },
+                      { label: `Retake, ${grade} (${points(grade)}) × ${failed} units`, value: (points(grade) * failed).toFixed(2) },
                       { label: `Units, ${done} + ${failed}`, value: String(done + failed) },
-                      { label: `${(current * done + GRADE_POINTS[grade] * failed).toFixed(2)} ÷ ${done + failed} = ${impact.bothAttemptsCount.toFixed(2)}`, value: '', inverted: true },
+                      { label: `${(current * done + points(grade) * failed).toFixed(2)} ÷ ${done + failed} = ${impact.bothAttemptsCount.toFixed(2)}`, value: '', inverted: true },
                     ],
                   },
                   {
                     name: 'Replaces the F',
                     lines: [
                       { label: 'Points now', value: (current * done).toFixed(2) },
-                      { label: "The F's 0 points become", value: (GRADE_POINTS[grade] * failed).toFixed(2) },
+                      { label: "The F's 0 points become", value: (points(grade) * failed).toFixed(2) },
                       { label: 'Units stay', value: String(done) },
-                      { label: `${(current * done + GRADE_POINTS[grade] * failed).toFixed(2)} ÷ ${done} = ${impact.replacesFailure.toFixed(2)}`, value: '', inverted: true },
+                      { label: `${(current * done + points(grade) * failed).toFixed(2)} ÷ ${done} = ${impact.replacesFailure.toFixed(2)}`, value: '', inverted: true },
                     ],
                   },
                 ]}
@@ -309,7 +330,7 @@ export function CarryOverCalculator() {
                         <span className="flex items-center gap-3">
                           <span
                             className={`ag-display grid h-8 w-8 shrink-0 place-items-center rounded-full text-[0.9375rem] font-bold ${
-                              row.grade === 'A' ? 'bg-ag-gold text-ag-night' : row.grade === 'F' ? 'bg-[#C2361F] text-white' : on ? 'bg-white text-ag-night' : 'bg-ag-haze text-ag-ink'
+                              row.grade === topGrade ? 'bg-ag-gold text-ag-night' : row.grade === failLetter ? 'bg-[#C2361F] text-white' : on ? 'bg-white text-ag-night' : 'bg-ag-haze text-ag-ink'
                             }`}
                             aria-hidden="true"
                           >

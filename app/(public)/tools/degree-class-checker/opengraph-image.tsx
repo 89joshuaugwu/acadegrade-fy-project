@@ -5,5 +5,5 @@ export const contentType = OG_CONTENT_TYPE;
 export const alt = 'Degree class checker';
 
 export default function Image() {
-  return renderOgImage({ headline: 'Degree class checker', meta: 'Free tools · Nigerian university 5-point scale, with PI', line: '4.43 is Second Class Upper, 0.07 short of First Class.' });
+  return renderOgImage({ headline: 'Degree class checker', meta: 'Free for Nigerian universities, 5-point scale with PI', line: '4.43 is Second Class Upper, 0.07 short of First Class.', figure: { value: 4.43, label: 'Second Class Upper' } });
 }

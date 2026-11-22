@@ -70,3 +70,11 @@ it('metadata is generic for every link and names no student, live or not', () =>
   expect(JSON.stringify(meta)).not.toContain('logo.png');
   expect(meta.robots).toMatchObject({ index: false, follow: false });
 });
+it("copies the student's grading scale so the public record names it (absent for the default)", async () => {
+  await share();
+  expect(snapshot().gradingScale).toBeUndefined();
+  store.docs.set('users/alice', { fullName: 'Alice', gradingScale: { id: 'nbte4' } });
+  await share();
+  const latest = store.paths('shared_transcripts/').map((path: string) => store.docs.get(path)).find((doc: { gradingScale?: unknown }) => doc.gradingScale);
+  expect(latest.gradingScale).toEqual({ id: 'nbte4' });
+});

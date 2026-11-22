@@ -9,12 +9,9 @@ import { absoluteUrl, createPageMetadata, resolveSiteUrl, serializeJsonLd } from
  */
 
 export function toolsMetadata(options: { title: string; description: string; path: string; keywords?: string[] }): Metadata {
-  const base = createPageMetadata(options);
-  const image = `${options.path}/opengraph-image`;
-  return {
-    ...base,
-    twitter: { ...base.twitter, images: [image] },
-  };
+  // og:image and twitter:image both come from the route's opengraph-image.tsx, whose real
+  // URL carries a generated suffix; a hand-written `${path}/opengraph-image` returned 404.
+  return createPageMetadata(options);
 }
 
 export function webApplicationJsonLd(options: { name: string; path: string; description: string }) {

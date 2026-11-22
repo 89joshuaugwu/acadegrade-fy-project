@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-13.5",
+  "version": "2026-11-22.1",
   "entries": {
     "student.dashboard": {
       "id": "student.dashboard",
@@ -620,7 +620,7 @@
       "id": "student.transcript",
       "audience": "student",
       "title": "Transcript",
-      "summary": "Builds an unofficial transcript from your completed semesters. You can download it as a PDF or share it by link.",
+      "summary": "Builds an unofficial transcript from your completed semesters. A summary at the top shows your CGPA, class, units and grading scale. Below it you can save a PDF, share a link, see your shared links and preview a transcript someone sent you.",
       "terms": [
         {
           "term": "Unofficial",
@@ -633,30 +633,44 @@
       ],
       "tasks": [
         {
-          "title": "Download",
+          "title": "Save or send a PDF",
           "steps": [
-            "Choose Download PDF (web; Print HTML is also available) or Generate & Share PDF (Android)."
+            "Choose Download PDF on the website, or Share PDF in the Android app.",
+            "Turn Include my photo on or off first if you want to change it.",
+            "On the website you can also choose Print."
           ]
         },
         {
-          "title": "Share",
+          "title": "Share a link",
           "steps": [
-            "Choose whether to include your photo (web: Photo On/Off).",
-            "Choose Share Link.",
-            "Copy it."
+            "Choose Share a link.",
+            "Pick how long it works: 1, 7 or 30 days.",
+            "Pick Full transcript or Summary only, and turn Include my photo on or off.",
+            "Add a PIN if you want one (optional), then create the link.",
+            "Copy the link or show its QR code."
           ]
         },
         {
-          "title": "Stop sharing",
+          "title": "Manage shared links",
           "steps": [
-            "In Active shared transcripts, choose Delete.",
-            "Confirm."
+            "Each link has a card under Shared links showing when it expires, what it shows, whether it has a PIN or photo, and how many views it has.",
+            "Use Copy, QR or Open on a card.",
+            "To stop a link working, choose Delete and confirm."
+          ]
+        },
+        {
+          "title": "Preview a transcript",
+          "steps": [
+            "Under Preview a transcript, paste a share link or the code at the end of it.",
+            "Enter the PIN if asked.",
+            "The transcript opens exactly as the person with the link sees it."
           ]
         }
       ],
       "cautions": [
-        "Anyone with the link can view it until it expires after 30 days or you delete it.",
+        "Anyone with the link can view it until it expires or you delete it.",
         "The link shows your record at the moment you created it; create a new one after adding results.",
+        "Opening a link, including in Preview a transcript, counts as a view.",
         "Transcript CGPA covers completed semesters only."
       ],
       "related": [
@@ -1171,26 +1185,26 @@
       "audience": "student",
       "id": "student.share-link-controls",
       "title": "Transcript link controls",
-      "summary": "Choose how long a transcript link lasts, whether it shows courses, and whether it needs a PIN.",
+      "summary": "Choose how long a transcript link lasts, whether it shows courses or just a summary, whether it shows your photo, and whether it needs a PIN.",
       "tasks": [
         {
           "title": "Choose how long a link lasts",
           "steps": [
-            "Open Transcript.",
-            "Pick 1, 7 or 30 days before you choose Share Link."
+            "Open Transcript and choose Share a link.",
+            "Pick 1, 7 or 30 days."
           ]
         },
         {
           "title": "Share a summary only",
           "steps": [
-            "Tick Summary only.",
+            "In Share a link, pick Summary only instead of Full transcript.",
             "The link shows semester totals and your CGPA, not course scores."
           ]
         },
         {
           "title": "Protect a link with a PIN",
           "steps": [
-            "Enter a 4 to 6 digit PIN.",
+            "In Share a link, enter a 4 to 6 digit PIN.",
             "Send the PIN separately from the link."
           ]
         }

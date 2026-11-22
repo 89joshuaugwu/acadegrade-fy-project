@@ -3,7 +3,8 @@
 import { useEffect, useId, useMemo, useState } from 'react';
 import { Telescope } from 'lucide-react';
 
-import { formatCgpa, type AcademicGrade } from '@/lib/cgpa/academicRules';
+import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { previewSemester, type PreviewFigures } from '@/lib/planning/semesterPreview';
 import { loadExpectedGrades, saveExpectedGrades } from '@/lib/planning/semesterPreviewStore';
@@ -16,7 +17,7 @@ export interface SemesterPreviewCourse {
   units: number;
   caScore: number | null;
   examScore: number | null;
-  grade?: AcademicGrade | null;
+  grade?: string | null;
   isAR?: boolean;
   pending?: boolean;
 }
@@ -30,7 +31,6 @@ interface SemesterPreviewProps {
   semesters: readonly { id: string; gpa: number; pi: number; creditLoaded: number }[];
 }
 
-const GRADES: AcademicGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 /**
  * A3: "Preview expected grades". Lets the student guess grades for courses
@@ -39,11 +39,14 @@ const GRADES: AcademicGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
  */
 export function SemesterPreview({ uid, semesterId, courses, semesters }: SemesterPreviewProps) {
   const headingId = useId();
+  const { scale } = useGradingScale();
+  const grades = useMemo(() => [...scale.bands].sort((a, b) => b.minScore - a.minScore).map((band) => band.grade), [scale]);
+  const gradeOptions = useMemo(() => [{ value: '', label: 'Not sure' }, ...grades.map((grade) => ({ value: grade, label: grade }))], [grades]);
   const awaiting = useMemo(
     () => courses.filter((course): course is SemesterPreviewCourse & { id: string } => Boolean(course.id) && (course.isAR === true || course.pending === true)),
     [courses],
   );
-  const [expected, setExpected] = useState<Record<string, AcademicGrade>>(() => (
+  const [expected, setExpected] = useState<Record<string, string>>(() => (
     typeof window === 'undefined' ? {} : loadExpectedGrades(uid, semesterId)
   ));
 
@@ -54,17 +57,19 @@ export function SemesterPreview({ uid, semesterId, courses, semesters }: Semeste
 
   const result = useMemo(() => previewSemester({
     courses: courses.flatMap((course) => (course.id ? [{ ...course, id: course.id }] : [])),
-    expected,
+    // Guesses made on another scale are ignored until picked again.
+    expected: Object.fromEntries(Object.entries(expected).filter(([, grade]) => grades.includes(grade))),
     semesters,
     semesterId,
-  }), [courses, expected, semesters, semesterId]);
+    scale,
+  }), [courses, expected, semesters, semesterId, scale, grades]);
 
   if (awaiting.length === 0) return null;
 
   const choose = (courseId: string, value: string) => {
     setExpected((previous) => {
       const next = { ...previous };
-      if (GRADES.includes(value as AcademicGrade)) next[courseId] = value as AcademicGrade;
+      if (grades.includes(value)) next[courseId] = value;
       else delete next[courseId];
       // Keep only rows that still exist and are still awaiting a result.
       const stillAwaiting = new Set(awaiting.map((course) => course.id));
@@ -111,9 +116,9 @@ export function SemesterPreview({ uid, semesterId, courses, semesters }: Semeste
                   </div>
                   <Select
                     label={`Expected grade for ${name}`}
-                    value={expected[course.id] ?? ''}
+                    value={grades.includes(expected[course.id] ?? '') ? expected[course.id] : ''}
                     onChange={(value) => choose(course.id, value)}
-                    options={GRADE_OPTIONS}
+                    options={gradeOptions}
                     className="w-[8.5rem] shrink-0 [&>label]:sr-only"
                   />
                 </li>
@@ -149,7 +154,6 @@ export function SemesterPreview({ uid, semesterId, courses, semesters }: Semeste
   );
 }
 
-const GRADE_OPTIONS = [{ value: '', label: 'Not sure' }, ...GRADES.map((grade) => ({ value: grade, label: grade }))];
 
 const classLabel = (figures: PreviewFigures) => figures.band.shortLabel;
 

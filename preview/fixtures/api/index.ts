@@ -6,8 +6,9 @@
 import { CORE_API } from './core';
 import { ADMIN_API } from './admin';
 import { STUDENT_API } from './student';
+import { SHARE_API } from './share';
 
 export type { ApiContext, ApiFixture, ApiReply } from './types';
 export { reply } from './types';
 
-export const API_FIXTURES = [...CORE_API, ...ADMIN_API, ...STUDENT_API];
+export const API_FIXTURES = [...CORE_API, ...ADMIN_API, ...STUDENT_API, ...SHARE_API];

@@ -18,6 +18,9 @@ import '@/components/site/tools/tools-v2.css';
 import { HUB_COPY, HUB_FAQS, hubExample } from './hub-content';
 import { carryOverImpact, checkDegreeClass, requiredGpa } from './tool-math';
 import { toolsByGroup, type ToolSlug } from './tools-config';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
+import { CountUpText } from '@/components/motion/CountUp';
 
 export const metadata = toolsMetadata({
   title: HUB_COPY.title,
@@ -43,8 +46,8 @@ function FeaturedCalculator() {
     <ToolStage label="CGPA calculator">
       <div className={`${PANEL_CLASS} grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-12`}>
         <div className="min-w-0 lg:pl-2">
-          <h2 id="hub-slip-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            CGPA calculator
+          <h2 {...reveal('words')} id="hub-slip-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{"CGPA calculator"}</Words>
           </h2>
           <p className="mt-4 max-w-md text-[1.0625rem] leading-relaxed text-ag-mist">
             Enter the courses on your result slip and see your semester GPA, PI and CGPA, with your class, as you type.
@@ -155,7 +158,7 @@ function ExampleTile({ slug }: { slug: ToolSlug }) {
       body = (
         <div>
           <p className="flex items-baseline gap-2">
-            <span className="ag-display ag-num text-[2.75rem] font-bold leading-none">{value}</span>
+            <span className="ag-display ag-num text-[2.75rem] font-bold leading-none"><CountUpText text={String(value)} /></span>
             <span className="text-[0.875rem] text-ag-mist-night">out of 100</span>
           </p>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
@@ -172,7 +175,7 @@ function ExampleTile({ slug }: { slug: ToolSlug }) {
       body = (
         <div>
           <p className="flex items-baseline gap-2">
-            <span className="ag-display ag-num text-[2.75rem] font-bold leading-none">{needed}</span>
+            <span className="ag-display ag-num text-[2.75rem] font-bold leading-none"><CountUpText text={needed} /></span>
             <span className="text-[0.875rem] text-ag-mist-night">needed</span>
           </p>
           <p className="mt-3 text-[0.8125rem] leading-snug text-ag-mist-night">From 3.38 after 90 units, with 60 left, to reach 3.50</p>
@@ -212,7 +215,7 @@ function FourQuickAnswers() {
     <section aria-labelledby="four-answers" className="bg-white py-20 sm:py-28">
       <Container>
         <Heading id="four-answers" title="Four quick answers" lead="Each figure is a worked example from the tool. Open one and put in your own numbers." />
-        <ul className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
+        <ul {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
           {toolsByGroup().flatMap((group) =>
             group.tools.map((tool) => (
               <ToolCard
@@ -244,7 +247,7 @@ function ScaleBehind() {
         <div className="mt-12 rounded-[28px] bg-white p-5 sm:p-8">
           <ScaleBar caption="Degree classes on the Nigerian university 5-point scale" />
         </div>
-        <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
+        <div {...reveal('stagger')} className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
           <div className="min-w-0 rounded-[24px] bg-white p-4 sm:p-7">
             <h3 className="ag-display px-4 pb-3 text-[1.375rem] font-bold text-ag-ink">Classes</h3>
             <ClassList />

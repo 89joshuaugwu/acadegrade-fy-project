@@ -5,8 +5,11 @@ import type { DashboardCourseRecord } from '@/lib/dashboard/summary';
 import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
+import { useGradingScale } from '@/hooks/useGradingScale';
+import { gradeTone } from '@/lib/cgpa/scale';
 
 export function RecentResults({ courses }: { courses: DashboardCourseRecord[] }) {
+  const { scale } = useGradingScale();
   return (
     <DiscreetScope>
     <Card padding="none" className="overflow-hidden">
@@ -66,7 +69,7 @@ export function RecentResults({ courses }: { courses: DashboardCourseRecord[] })
                   <span className="flex size-11 items-center justify-center">
                     {course.grade ? (
                       <DiscreetValue label="Grade">
-                        <Badge variant={getGradeBadgeVariant(course.grade)} className="min-w-10 justify-center px-2 py-1.5">
+                        <Badge variant={getGradeBadgeVariant(gradeTone(course.grade, scale))} className="min-w-10 justify-center px-2 py-1.5">
                           {course.grade}
                         </Badge>
                       </DiscreetValue>

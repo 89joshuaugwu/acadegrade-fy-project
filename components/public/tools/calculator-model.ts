@@ -16,10 +16,9 @@ import {
   roundCgpa,
   weightedAverageScore,
   type AcademicCourseMetrics,
-  type AcademicGrade,
 } from '@/lib/cgpa/academicRules';
 import { EXAMPLE_COURSES } from '@/lib/public/example-student';
-import { DEFAULT_SCALE, publicClassFor, type PublicClassBand } from '@/lib/public/scales';
+import { DEFAULT_SCALE, publicClassFor, toolScaleParam, type PublicClassBand, type PublicScale } from '@/lib/public/scales';
 import { encodeRows, type CalculatorMode, type EncodedRow } from './calculator-url';
 
 export type { CalculatorMode } from './calculator-url';
@@ -28,8 +27,8 @@ export interface CalcRow {
   id: string;
   code: string;
   units: number;
-  /** The letter, kept in memory in both modes. */
-  grade: AcademicGrade | null;
+  /** The letter (on the chosen scale), kept in memory in both modes. */
+  grade: string | null;
   /** The score as typed, kept in memory in both modes. */
   scoreText: string;
   /** A value from a shared link was reset: the row shows the error style. */
@@ -41,6 +40,9 @@ export const NO_VALUE = '—';
 
 export const SCORE_ERROR = 'Enter a score from 0 to 100.';
 export const PRIOR_CGPA_ERROR = `Enter a CGPA from 0.00 to ${DEFAULT_SCALE.maxPoint.toFixed(2)}.`;
+/** The prior-CGPA error for a scale ("... to 4.00." on the polytechnic scale). */
+export const priorCgpaErrorText = (scale: PublicScale = DEFAULT_SCALE) => `Enter a CGPA from 0.00 to ${scale.maxPoint.toFixed(2)}.`;
+const isDefault = (scale: PublicScale) => scale.engine.id === 'ng5';
 export const PRIOR_UNITS_ERROR = 'Enter whole units of 1 or more.';
 
 /** Reads a typed number; a comma counts as the decimal point. Null when empty or not a number. */
@@ -76,22 +78,28 @@ export function rowLabel(row: Pick<CalcRow, 'code'>, index: number): string {
 }
 
 /** The engine's metrics for a row, or null when the row is not counted. */
-export function rowMetrics(row: CalcRow, mode: CalculatorMode): AcademicCourseMetrics | null {
+export function rowMetrics(row: CalcRow, mode: CalculatorMode, scale: PublicScale = DEFAULT_SCALE): AcademicCourseMetrics<string> | null {
   const code = row.code.trim().toUpperCase() || 'VAR';
   if (mode === 'grade') {
     if (!row.grade) return null;
-    return computeCourseMetrics({ code, title: '', units: row.units, grade: row.grade, caScore: null, examScore: null });
+    // A letter that is not on the scale is not counted.
+    if (!scale.engine.bands.some((band) => band.grade === row.grade)) return null;
+    const course = { code, title: '', units: row.units, grade: row.grade, caScore: null, examScore: null };
+    return isDefault(scale)
+      ? computeCourseMetrics(course as Parameters<typeof computeCourseMetrics>[0])
+      : computeCourseMetrics(course, scale.engine);
   }
   const score = validScore(row.scoreText);
   if (score === null) return null;
   // The same split as always: 30% CA (max 30), 70% exam, total = the score.
-  return computeCourseMetrics({
+  const course = {
     code,
     title: '',
     units: row.units,
-    caScore: Math.min(DEFAULT_SCALE.scoreSplit.ca, score * 0.3),
+    caScore: Math.min(scale.scoreSplit.ca, score * 0.3),
     examScore: Math.max(0, score * 0.7),
-  });
+  };
+  return isDefault(scale) ? computeCourseMetrics(course) : computeCourseMetrics(course, scale.engine);
 }
 
 export interface PriorRecord {
@@ -100,18 +108,18 @@ export interface PriorRecord {
 }
 
 /** A valid "CGPA so far" pair, or null. */
-export function readPrior(cgpaText: string, unitsText: string): PriorRecord | null {
+export function readPrior(cgpaText: string, unitsText: string, scale: PublicScale = DEFAULT_SCALE): PriorRecord | null {
   const cgpa = parseDecimal(cgpaText);
   const units = parseDecimal(unitsText);
   if (cgpa === null || units === null) return null;
-  if (cgpa < 0 || cgpa > DEFAULT_SCALE.maxPoint || !Number.isInteger(units) || units < 1) return null;
+  if (cgpa < 0 || cgpa > scale.maxPoint || !Number.isInteger(units) || units < 1) return null;
   return { cgpa, units };
 }
 
-export function priorCgpaError(text: string): string | null {
+export function priorCgpaError(text: string, scale: PublicScale = DEFAULT_SCALE): string | null {
   if (!text.trim()) return null;
   const value = parseDecimal(text);
-  return value === null || value < 0 || value > DEFAULT_SCALE.maxPoint ? PRIOR_CGPA_ERROR : null;
+  return value === null || value < 0 || value > scale.maxPoint ? priorCgpaErrorText(scale) : null;
 }
 
 export function priorUnitsError(text: string): string | null {
@@ -128,7 +136,7 @@ export function clean(value: number): number {
 export interface CountedRow {
   row: CalcRow;
   index: number;
-  metrics: AcademicCourseMetrics;
+  metrics: AcademicCourseMetrics<string>;
   /** Score in score mode, else null. */
   score: number | null;
 }
@@ -152,6 +160,8 @@ export interface CalculationResult {
   duplicates: string[];
   /** Weighted average score out of 100 (score mode only). */
   average: number | null;
+  /** The scale every figure was worked out on. */
+  scale: PublicScale;
 }
 
 /** Everything the slip, receipt and aside print. */
@@ -160,22 +170,27 @@ export function computeCalculation(input: {
   rows: readonly CalcRow[];
   priorCgpa?: string;
   priorUnits?: string;
+  /** The grading scale (the 5-point scale when left out). */
+  scale?: PublicScale;
 }): CalculationResult {
   const { mode, rows } = input;
+  const scale = input.scale ?? DEFAULT_SCALE;
   const counted: CountedRow[] = [];
   rows.forEach((row, index) => {
-    const metrics = rowMetrics(row, mode);
+    const metrics = rowMetrics(row, mode, scale);
     if (metrics) counted.push({ row, index, metrics, score: mode === 'score' ? validScore(row.scoreText) : null });
   });
 
-  const totals = computeSemesterGPA(counted.map((entry) => entry.metrics));
+  const totals = isDefault(scale)
+    ? computeSemesterGPA(counted.map((entry) => entry.metrics) as Parameters<typeof computeSemesterGPA>[0])
+    : computeSemesterGPA(counted.map((entry) => entry.metrics), scale.engine);
   const points = counted.reduce((sum, entry) => sum + entry.metrics.gradePoint * entry.metrics.units, 0);
   const piSum = clean(counted.reduce((sum, entry) => sum + clean(entry.metrics.piPoint * entry.metrics.units), 0));
   const semester = counted.length
     ? { gpa: totals.gpa, pi: totals.pi, units: totals.creditLoaded, courses: counted.length, points, piSum }
     : null;
 
-  const prior = readPrior(input.priorCgpa ?? '', input.priorUnits ?? '');
+  const prior = readPrior(input.priorCgpa ?? '', input.priorUnits ?? '', scale);
   let cumulative: CalculationResult['cumulative'] = null;
   if (prior) {
     const result = computeCumulativeCGPA([
@@ -190,17 +205,19 @@ export function computeCalculation(input: {
     : semester
       ? { label: 'Semester GPA', value: semester.gpa }
       : null;
-  const classBand = headline ? publicClassFor(headline.value) : null;
+  const classBand = headline ? publicClassFor(headline.value, scale) : null;
   let next: CalculationResult['next'] = null;
   if (headline && classBand) {
-    const bands = DEFAULT_SCALE.classBands;
+    const bands = scale.classBands;
     const index = bands.indexOf(classBand);
     const above = index > 0 ? bands[index - 1] : null;
     if (above) next = { band: above, gap: roundCgpa(above.min - roundCgpa(headline.value)) };
   }
 
   const carryOvers = counted
-    .filter((entry) => isCarryOver(entry.metrics))
+    .filter((entry) => (isDefault(scale)
+      ? isCarryOver(entry.metrics as Parameters<typeof isCarryOver>[0])
+      : isCarryOver(entry.metrics, scale.engine)))
     .map((entry) => ({ label: rowLabel(entry.row, entry.index), units: entry.row.units }));
 
   const warning = creditLoadWarnings(rows.map((row) => ({ code: row.code, units: row.units })))[0];
@@ -230,6 +247,7 @@ export function computeCalculation(input: {
     carryOvers,
     duplicates,
     average,
+    scale,
   };
 }
 
@@ -280,11 +298,12 @@ export function toEncodedRows(rows: readonly CalcRow[], mode: CalculatorMode): E
 }
 
 /** Switching letters ↔ scores keeps what each row knew; nothing is invented. */
-export function switchMode(rows: readonly CalcRow[], to: CalculatorMode): CalcRow[] {
+export function switchMode(rows: readonly CalcRow[], to: CalculatorMode, scale: PublicScale = DEFAULT_SCALE): CalcRow[] {
   if (to === 'grade') {
     return rows.map((row) => {
       const score = validScore(row.scoreText);
-      return score === null ? row : { ...row, grade: gradeFromScore(score).grade };
+      if (score === null) return row;
+      return { ...row, grade: isDefault(scale) ? gradeFromScore(score).grade : gradeFromScore(score, scale.engine).grade };
     });
   }
   return rows.map((row) => ({ ...row }));
@@ -328,6 +347,8 @@ export function carryOverHref(result: CalculationResult): string {
   const done = result.cumulative?.units ?? result.semester?.units;
   if (done) params.set('done', String(done));
   if (result.carryOvers[0]) params.set('failed', String(result.carryOvers[0].units));
+  const scale = toolScaleParam(result.scale);
+  if (scale) params.set('scale', scale);
   const query = params.toString();
   return `/tools/carry-over-impact${query ? `?${query}` : ''}`;
 }
@@ -346,13 +367,17 @@ export function nextQuestions(result: CalculationResult, rows: readonly CalcRow[
   const requiredParams = new URLSearchParams();
   if (value) requiredParams.set('current', value);
   if (value && done) requiredParams.set('done', String(done));
+  // The tools open on the same grading scale (nothing added on the 5-point scale).
+  const scale = toolScaleParam(result.scale);
+  if (scale) requiredParams.set('scale', scale);
   const requiredQuery = requiredParams.toString();
+  const scaleSuffix = scale ? `${value ? '&' : '?'}scale=${scale}` : '';
 
-  let weightedHref = '/tools/weighted-average';
+  let weightedHref = `/tools/weighted-average${scale ? `?scale=${scale}` : ''}`;
   let weightedHint = 'My average score out of 100';
   if (result.mode === 'score' && result.average !== null) {
     weightedHint = `${result.average.toFixed(1)} from these scores`;
-    weightedHref = `/tools/weighted-average?${new URLSearchParams({ c: encodeRows(toEncodedRows(rows, 'score')) }).toString()}`;
+    weightedHref = `/tools/weighted-average?${new URLSearchParams({ c: encodeRows(toEncodedRows(rows, 'score')), ...(scale ? { scale } : {}) }).toString()}`;
   } else if (result.mode === 'grade' && result.semester) {
     weightedHint = 'Needs scores out of 100';
   }
@@ -361,11 +386,11 @@ export function nextQuestions(result: CalculationResult, rows: readonly CalcRow[
     {
       name: 'Degree class checker',
       hint: value && result.classBand ? `${value} is ${result.classBand.label}` : 'Which class is my CGPA?',
-      href: value ? `/tools/degree-class-checker?cgpa=${value}` : '/tools/degree-class-checker',
+      href: (value ? `/tools/degree-class-checker?cgpa=${value}` : '/tools/degree-class-checker') + scaleSuffix,
     },
     {
       name: 'Required GPA',
-      hint: value ? (result.next ? `What you need for ${target}` : 'What you need to stay in First Class') : 'What do I need for my target?',
+      hint: value ? (result.next ? `What you need for ${target}` : `What you need to stay in ${result.scale.classBands[0]?.label ?? 'First Class'}`) : 'What do I need for my target?',
       href: `/tools/required-gpa${requiredQuery ? `?${requiredQuery}` : ''}`,
     },
     {

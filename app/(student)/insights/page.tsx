@@ -12,6 +12,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { getDocument, queryCollection, setDocument, updateDocument } from '@/lib/firebase/firestore';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { useGradingScale } from '@/hooks/useGradingScale';
+import { scaleContextFor } from '@/lib/ai/scaleContext';
 import { buildAcademicSeries } from '@/lib/planning/academicSeries';
 import { buildCarryOverReport, type CarryOverReport, type PlanningCourse } from '@/lib/planning/carryOvers';
 import { planDegreeClassAlert } from '@/lib/planning/degreeClassAlert';
@@ -90,6 +92,7 @@ export default function InsightsPage() {
   const [rateLimitCooldown, setRateLimitCooldown] = useState(0);
 
   const [analytics, setAnalytics] = useState<AnalyticsDoc | null>(null);
+  const { scale } = useGradingScale();
   const [currentCGPA, setCurrentCGPA] = useState(0);
   const [gradedCredits, setGradedCredits] = useState(0);
   // Graded units in unfinished semesters: already in the CGPA, so not "remaining" (R3).
@@ -109,7 +112,7 @@ export default function InsightsPage() {
   const [aiBlock, setAiBlock] = useState<AiBlock | null>(null);
   /** One AI feature switched off on the server. */
   const [featureBlocks, setFeatureBlocks] = useState<Partial<Record<AiFeature, AiBlock>>>({});
-  const savedTarget = parseTargetClass((profile as { targetClass?: unknown } | null | undefined)?.targetClass);
+  const savedTarget = parseTargetClass((profile as { targetClass?: unknown } | null | undefined)?.targetClass, scale);
   /** A goal picked on this page; until then the saved one is shown. */
   const [targetOverride, setTargetOverride] = useState<TargetClass | null>(null);
   const targetClass = targetOverride ?? savedTarget;
@@ -252,7 +255,7 @@ export default function InsightsPage() {
       let analyticsData = await getDocument<AnalyticsDoc>(`analytics/${user.uid}`);
 
       // Degree class from the shared rules; alert only when the displayed CGPA's class really changes.
-      const alertPlan = planDegreeClassAlert({ previous: analyticsData, currentCgpa: series.currentCgpa, gradedCredits: series.gradedCredits });
+      const alertPlan = planDegreeClassAlert({ previous: analyticsData, currentCgpa: series.currentCgpa, gradedCredits: series.gradedCredits, scale });
       const newDegreeClass = alertPlan.label;
       if (alertPlan.alert) {
         const token = await user.getIdToken();
@@ -298,7 +301,7 @@ export default function InsightsPage() {
         label: sem.label || `${sem.level}L Semester ${sem.semester}`,
         courses: await queryCollection<Course & PlanningCourse>(`users/${user.uid}/semesters/${sem.id}/courses`),
       })));
-      setCarryReport(buildCarryOverReport(semesterCourses));
+      setCarryReport(buildCarryOverReport(semesterCourses, scale));
 
       // AI access for this account (age and consent) from the usage summary.
       let block: AiBlock | null = null;
@@ -330,6 +333,7 @@ export default function InsightsPage() {
               cgpaHistory: cgpaHist,
               forceRegenerate: forceRefresh,
               academicContext,
+              ...scaleContextFor(scale),
             }),
           });
 
@@ -365,7 +369,7 @@ export default function InsightsPage() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${authToken}`,
           },
-          body: JSON.stringify({ forceRegenerate: forceRefresh, semesterData: semesters, academicContext }),
+          body: JSON.stringify({ forceRegenerate: forceRefresh, semesterData: semesters, academicContext, ...scaleContextFor(scale) }),
         });
 
         if (res.ok) {

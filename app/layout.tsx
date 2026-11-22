@@ -87,20 +87,12 @@ export const metadata: Metadata = {
     title: DEFAULT_TITLE,
     description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
-    images: [
-      {
-        url: '/opengraph-image',
-        width: 1200,
-        height: 630,
-        alt: 'AcadeGrade: a result slip with the brand stripe',
-      },
-    ],
+    // og:image comes from app/opengraph-image.tsx and each route's own file.
   },
   twitter: {
     card: 'summary_large_image',
     title: DEFAULT_TITLE,
     description: SITE_DESCRIPTION,
-    images: ['/opengraph-image'],
   },
   robots: {
     index: true,
@@ -117,8 +109,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F5F7FC' },
-    { media: '(prefers-color-scheme: dark)', color: '#080B16' },
+    // Brand v2: Haze on light, Night on dark (docs/brand-v2/DESIGN.md).
+    { media: '(prefers-color-scheme: light)', color: '#F4F1FF' },
+    { media: '(prefers-color-scheme: dark)', color: '#0E0B2B' },
   ],
   width: 'device-width',
   initialScale: 1,

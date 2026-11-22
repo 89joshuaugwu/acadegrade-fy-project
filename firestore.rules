@@ -33,14 +33,53 @@ service cloud.firestore {
         || !(feature in get(/databases/$(database)/documents/config/settings).data.get('disabledFeatures', []));
     }
 
+    // users/{uid}.gradingScale (optional; absent means the 5-point scale).
+    // Same limits as validateCustomScale in lib/cgpa/academicRules.ts; the app
+    // checks the details, the rules keep the stored size bounded.
+    function validGradingScale(gs) {
+      return gs is map
+        && gs.keys().hasAll(['id'])
+        && gs.keys().hasOnly(['id', 'custom', 'nceClasses'])
+        && gs.id in ['ng5', 'ng5-noE', 'nbte4', 'nce5', 'custom']
+        && (gs.id != 'custom' || 'custom' in gs)
+        && (!('custom' in gs) || validCustomScale(gs.custom))
+        && (!('nceClasses' in gs) || validNceClasses(gs.nceClasses));
+    }
+
+    function validCustomScale(c) {
+      return c is map
+        && c.keys().hasOnly(['name', 'maxPoint', 'bands', 'classes'])
+        && c.bands is list && c.bands.size() >= 2 && c.bands.size() <= 12
+        && c.classes is list && c.classes.size() >= 1 && c.classes.size() <= 8
+        && c.maxPoint is number && c.maxPoint >= 1 && c.maxPoint <= 10
+        && (!('name' in c) || (c.name is string && c.name.size() <= 40));
+    }
+
+    function validNceBoundary(value) {
+      return value is number && value > 0 && value <= 5;
+    }
+
+    function validNceClasses(n) {
+      return n is map
+        && n.keys().hasOnly(['distinction', 'credit', 'merit', 'pass'])
+        && (!('distinction' in n) || validNceBoundary(n.distinction))
+        && (!('credit' in n) || validNceBoundary(n.credit))
+        && (!('merit' in n) || validNceBoundary(n.merit))
+        && (!('pass' in n) || validNceBoundary(n.pass));
+    }
+
     // 1. Users Collection
     match /users/{userId} {
       allow read, delete: if isOwner(userId) || isAdmin();
       allow create: if (isOwner(userId) || isAdmin())
-        && !request.resource.data.keys().hasAny(serverOwnedUserFields());
+        && !request.resource.data.keys().hasAny(serverOwnedUserFields())
+        && (!('gradingScale' in request.resource.data) || validGradingScale(request.resource.data.gradingScale));
       // Other profile edits (tour flags, preferences, tokens, avatar) are unchanged.
       allow update: if (isOwner(userId) || isAdmin())
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOwnedUserFields());
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOwnedUserFields())
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['gradingScale'])
+          || !('gradingScale' in request.resource.data)
+          || validGradingScale(request.resource.data.gradingScale));
       
       // Subcollection: Semesters
       match /semesters/{semesterId} {

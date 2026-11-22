@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { siteHost } from '@/lib/public/features-android';
 import { AcadeGradeMark } from '@/components/public/Logo';
 import { PhoneFrame } from '@/components/site/ui';
+import { CountUpText } from '@/components/motion/CountUp';
 
 /**
  * iPhone pieces (brand v2): Safari's share sheet with Add to Home Screen,
@@ -63,7 +64,7 @@ export function SafariShareSheet() {
             <AcadeGradeMark size={20} />
             <span className="text-[0.875rem] font-semibold">AcadeGrade</span>
           </div>
-          <p className="ag-display ag-num mt-3 text-[2.25rem] font-bold leading-none">4.43</p>
+          <p className="ag-display ag-num mt-3 text-[2.25rem] font-bold leading-none"><CountUpText text="4.43" /></p>
           <p className="mt-1 text-[0.8125rem] text-ag-mist-night">Second Class Upper</p>
         </div>
         <div className="absolute inset-x-0 bottom-0 rounded-t-[28px] bg-[#F7F6FB] px-3 pb-6 pt-3 shadow-[0_-20px_50px_-20px_rgba(14,11,43,0.4)]">

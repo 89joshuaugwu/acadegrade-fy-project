@@ -6,7 +6,7 @@ export const alt = 'AcadeGrade works on your iPhone';
 
 export default function Image() {
   return renderOgImage({
-    meta: 'iPhone · Safari',
+    meta: 'iPhone, through Safari',
     headline: 'AcadeGrade works on your iPhone.',
     line: 'Add it to your Home Screen and it opens like an app, with your whole record.',
   });

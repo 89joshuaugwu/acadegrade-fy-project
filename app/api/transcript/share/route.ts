@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { checkPlatformAccess } from '@/lib/platform/settings-server';
 import { computeCumulativeCGPA, roundCgpa } from '@/lib/cgpa/academicRules';
+import { readGradingScaleSetting } from '@/lib/cgpa/scaleSetting';
 import { parseShareOptions, SHARE_PIN_HEADER } from '@/lib/share/options';
 import { hashPin } from '@/lib/share/pin';
 import { decideShareAccess, SHARE_PRIVATE_FIELDS, toMillis, type ShareAccessDecision } from '@/lib/share/access';
@@ -121,6 +122,8 @@ export async function POST(request: NextRequest) {
       showPhoto,
       semesters,
       shareLevel: level,
+      // Additive: the student's grading scale, so the record names it (absent on the default scale).
+      ...(readGradingScaleSetting(profile.gradingScale) ? { gradingScale: readGradingScaleSetting(profile.gradingScale) } : {}),
       expiresInDays,
       ...pinFields,
       createdAt: new Date(),

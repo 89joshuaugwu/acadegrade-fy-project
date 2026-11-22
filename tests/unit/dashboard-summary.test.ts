@@ -104,3 +104,20 @@ describe('dashboard academic summary', () => {
     expect(summary.unknownCount).toBe(1);
     expect(summary.atRiskCount).toBe(1);
   });});
+
+describe('dashboard attention on another grading scale', () => {
+  it('flags letter-only courses whose band starts below 50 on the active scale', async () => {
+    const { SCALES } = await import('@/lib/cgpa/academicRules');
+    const summary = buildDashboardSummary([
+      {
+        semesterId: 's1', semesterLabel: 'ND1 First', session: '2024/2025', semesterIndex: 0,
+        courses: [
+          { id: 'a', code: 'COM 111', title: 'A', grade: 'CD' },
+          { id: 'b', code: 'COM 112', title: 'B', grade: 'D' },
+          { id: 'c', code: 'COM 113', title: 'C', grade: 'E' },
+        ],
+      },
+    ], 3, SCALES.nbte4);
+    expect(summary.atRiskCount).toBe(2);
+  });
+});

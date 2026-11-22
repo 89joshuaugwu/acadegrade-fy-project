@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 import { roundCgpa } from '@/lib/cgpa/academicRules';
-import { DEFAULT_SCALE } from '@/lib/public/scales';
+import { DEFAULT_SCALE, type PublicClassBand, type PublicScale } from '@/lib/public/scales';
+import { axisTicks } from '@/lib/cgpa/scale';
 
 /**
- * The 5-point scale as one bar of class zones (the home page's scale strip),
+ * A grading scale (the 5-point one by default) as one bar of class zones (the home page's scale strip),
  * with an optional marker for the visitor's figure, plus the class and grade
  * lists. Every value comes from lib/public/scales.ts. Server-safe.
  */
@@ -26,11 +27,19 @@ const DOT_TONE: Record<string, string> = {
   '1st': 'bg-ag-gold',
 };
 
-const max = DEFAULT_SCALE.maxPoint;
+const RANK_TONE = ['1st', '2:1', '2:2', '3rd', 'Pass'];
 
-/** Zones low to high, with their widths on the 0 to 5 bar. */
-function zones() {
-  const bands = [...DEFAULT_SCALE.classBands].reverse();
+/** Colour key by rank on the scale (top class gold ... lowest "below a Pass"). */
+function toneKey(band: PublicClassBand, scale: PublicScale): string {
+  const index = scale.classBands.indexOf(band);
+  if (index === scale.classBands.length - 1 && scale.classBands.length > 1) return 'Fail';
+  return RANK_TONE[Math.min(index, RANK_TONE.length - 1)] ?? 'Pass';
+}
+
+/** Zones low to high, with their widths on the 0 to max bar. */
+function zones(scale: PublicScale) {
+  const max = scale.maxPoint;
+  const bands = [...scale.classBands].reverse();
   return bands.map((band, index) => {
     const from = index === 0 ? 0 : band.min;
     const to = index === bands.length - 1 ? max : bands[index + 1].min;
@@ -42,12 +51,16 @@ export function ScaleBar({
   marker,
   compact = false,
   caption,
+  scale = DEFAULT_SCALE,
 }: {
   /** The visitor's figure on the bar, with a line under it. */
   marker?: { value: number; title: ReactNode; sub?: ReactNode } | null;
   compact?: boolean;
   caption: string;
+  /** The scale to draw (the 5-point scale by default). */
+  scale?: PublicScale;
 }) {
+  const max = scale.maxPoint;
   const at = marker ? (Math.max(0, Math.min(max, roundCgpa(marker.value))) / max) * 100 : null;
   const alignRight = at !== null && at > 55;
   return (
@@ -55,17 +68,17 @@ export function ScaleBar({
       <figcaption className="sr-only">{caption}</figcaption>
       <div className="relative">
         <div className={`flex overflow-hidden rounded-2xl ${compact ? 'h-12' : 'h-14 sm:h-20'}`}>
-          {zones().map(({ band, from, to }) => (
+          {zones(scale).map(({ band, from, to }) => (
             <div
               key={band.short}
-              className={`flex min-w-0 flex-col justify-center px-1 sm:px-3 ${ZONE_TONE[band.engineShort]}`}
+              className={`flex min-w-0 flex-col justify-center px-1 sm:px-3 ${ZONE_TONE[toneKey(band, scale)]}`}
               style={{ width: `${((to - from) / max) * 100}%` }}
             >
               <span className={`${compact ? 'hidden' : 'hidden xl:block'} truncate text-[0.8125rem] font-semibold leading-tight`}>{band.label}</span>
               <span
-                className={`${compact ? '' : 'xl:hidden'} ${band.engineShort === 'Pass' ? 'hidden sm:block' : ''} overflow-hidden whitespace-nowrap text-center text-[0.8125rem] font-semibold leading-tight sm:text-left`}
+                className={`${compact ? '' : 'xl:hidden'} ${toneKey(band, scale) === 'Pass' ? 'hidden sm:block' : ''} overflow-hidden whitespace-nowrap text-center text-[0.8125rem] font-semibold leading-tight sm:text-left`}
               >
-                {band.engineShort === 'Fail' ? '' : band.short}
+                {toneKey(band, scale) === 'Fail' ? '' : band.short}
               </span>
             </div>
           ))}
@@ -79,7 +92,7 @@ export function ScaleBar({
         ) : null}
       </div>
       <div className="ag-num mt-3 flex justify-between text-[0.8125rem] text-ag-mist" aria-hidden="true">
-        {[0, 1, 2, 3, 4, 5].map((tick) => (
+        {axisTicks(max).map((tick) => (
           <span key={tick}>{tick.toFixed(2)}</span>
         ))}
       </div>
@@ -101,8 +114,8 @@ export function ScaleBar({
 }
 
 /** The class floors as two-ended rows; `active` (a class short label) is highlighted. */
-export function ClassList({ active, activeNote }: { active?: string | null; activeNote?: string }) {
-  const bands = DEFAULT_SCALE.classBands.filter((band) => band.engineShort !== 'Fail');
+export function ClassList({ active, activeNote, scale = DEFAULT_SCALE }: { active?: string | null; activeNote?: string; scale?: PublicScale }) {
+  const bands = scale.classBands.filter((band) => toneKey(band, scale) !== 'Fail');
   return (
     <ul className="space-y-1.5">
       {bands.map((band) => {
@@ -112,7 +125,7 @@ export function ClassList({ active, activeNote }: { active?: string | null; acti
             key={band.short}
             className={`flex items-center gap-3 rounded-xl px-4 py-3 text-[0.9375rem] transition-colors ${on ? 'bg-ag-night text-white' : 'text-ag-ink'}`}
           >
-            <span className={`h-3 w-3 shrink-0 rounded-full ${DOT_TONE[band.engineShort]}`} aria-hidden="true" />
+            <span className={`h-3 w-3 shrink-0 rounded-full ${DOT_TONE[toneKey(band, scale)]}`} aria-hidden="true" />
             <span className="min-w-0 flex-1 font-semibold">
               {band.label}
               {on && activeNote ? <span className="block text-[0.8125rem] font-normal text-ag-gold">{activeNote}</span> : null}
@@ -128,14 +141,14 @@ export function ClassList({ active, activeNote }: { active?: string | null; acti
 }
 
 /** The grade bands as two-ended rows ("A, 70 to 100 ... 5 points"). */
-export function GradeList() {
+export function GradeList({ scale = DEFAULT_SCALE }: { scale?: PublicScale } = {}) {
   return (
     <ul className="space-y-1.5">
-      {DEFAULT_SCALE.gradeBands.map((band) => (
+      {scale.gradeBands.map((band) => (
         <li key={band.grade} className="flex items-center gap-3 rounded-xl px-4 py-3 text-[0.9375rem] text-ag-ink">
           <span
             className={`ag-display grid h-8 w-8 shrink-0 place-items-center rounded-full text-[1rem] font-bold ${
-              band.gradePoint === 5 ? 'bg-ag-gold text-ag-night' : band.gradePoint === 0 ? 'bg-[#C2361F] text-white' : 'bg-ag-haze text-ag-ink'
+              band.gradePoint === scale.maxPoint ? 'bg-ag-gold text-ag-night' : band.gradePoint === 0 ? 'bg-[#C2361F] text-white' : 'bg-ag-haze text-ag-ink'
             }`}
             aria-hidden="true"
           >

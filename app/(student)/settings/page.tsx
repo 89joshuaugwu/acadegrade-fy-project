@@ -39,6 +39,10 @@ import { DevicesCard } from '@/components/privacy/DevicesCard';
 import { useDataSaver } from '@/lib/dataSaver/useDataSaver';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
+import { GradingScaleSection } from '@/components/settings/GradingScaleSection';
+import { applyGradingScaleSwitch, loadSwitchSemesters } from '@/lib/firebase/gradingScale';
+import { computeCumulativeCGPA, resolveGradingScale } from '@/lib/cgpa/academicRules';
+import { resolveDegreeClass } from '@/lib/cgpa/degreeClass';
 const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 
 export default function SettingsPage() {
@@ -130,6 +134,8 @@ export default function SettingsPage() {
   // Google-SSO accounts have no password to re-authenticate with —
   // they need a Google popup instead of a password field.
   const isGoogleAccount = auth.currentUser?.providerData?.[0]?.providerId === 'google.com';
+  // Only an email-and-password sign-in has a password to change (Android: hasPasswordSignIn).
+  const canChangePassword = (auth.currentUser?.providerData ?? []).some((provider) => provider?.providerId === 'password');
 
   // 1. Avatar Upload
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,6 +372,7 @@ export default function SettingsPage() {
           {[
             { id: 'profile', label: 'Profile', danger: false },
             { id: 'academic', label: 'Academic Setup', danger: false },
+            { id: 'grading', label: 'Grading scale', danger: false },
             { id: 'notifications', label: 'Notifications', danger: false },
             { id: 'privacy', label: 'Privacy & AI choices', danger: false },
             { id: 'security', label: 'Security & data', danger: true }
@@ -548,6 +555,19 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          {/* GRADING SCALE SECTION (#section-grading) */}
+          {user && (
+            <GradingScaleSection
+              disabled={disableEditProfile}
+              loadSemesters={() => loadSwitchSemesters(user.uid)}
+              onApply={(setting, updated) => {
+                const scale = resolveGradingScale(setting);
+                const cgpa = computeCumulativeCGPA(updated).cgpa;
+                return applyGradingScaleSwitch(user.uid, setting, updated, { cgpa, degreeClass: resolveDegreeClass(cgpa, scale).label });
+              }}
+            />
+          )}
+
           {/* NOTIFICATIONS SECTION */}
           <section id="section-notifications" className="relative bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6 flex items-center gap-2">
@@ -602,11 +622,17 @@ export default function SettingsPage() {
               <div className="flex flex-col gap-3 p-4 bg-[var(--acade-deep)] rounded-xl border border-[var(--acade-border)] sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 sm:pr-4">
                   <h4 className="font-bold text-[var(--acade-text)] text-[length:var(--text-sm)]">Password</h4>
-                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">Update your password securely.</p>
+                  <p className="text-[length:var(--text-xs)] text-[var(--acade-text-muted)] mt-1">
+                    {canChangePassword
+                      ? 'Update your password securely.'
+                      : 'You sign in with Google, so there is no AcadeGrade password to change. To change your Google password, go to your Google account settings.'}
+                  </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setPasswordModal(true)} className="w-full sm:w-auto">
-                  <KeyRound size={16} className="mr-2" /> Change
-                </Button>
+                {canChangePassword && (
+                  <Button variant="outline" size="sm" onClick={() => setPasswordModal(true)} className="w-full sm:w-auto">
+                    <KeyRound size={16} className="mr-2" /> Change
+                  </Button>
+                )}
               </div>
 
               <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4">
@@ -661,7 +687,7 @@ export default function SettingsPage() {
       </Modal>
 
       {/* Password Modal */}
-      <Modal open={passwordModal} onClose={() => setPasswordModal(false)} title="Change Password">
+      <Modal open={passwordModal && canChangePassword} onClose={() => setPasswordModal(false)} title="Change Password">
         <div className="space-y-4">
           <Input label="Current Password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
           <Input label="New Password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />

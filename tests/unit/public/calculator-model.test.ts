@@ -257,3 +257,38 @@ describe('calculator behaviour helpers', () => {
     expect(handoffCourses(example(), 'score')[0]).toMatchObject({ code: 'CSC 301', units: 3, score: 76, grade: undefined });
   });
 });
+
+describe('calculator on another grading scale', () => {
+  it('adds an optional scale to the link only for scales other than 5-point', async () => {
+    const { toolScaleById } = await import('@/lib/public/scales');
+    const rows = [{ c: 'COM 111', u: 3, g: 'AB' }];
+    expect(encodeCalculation({ mode: 'grade', rows, scale: 'nbte4' })).toMatch(/&sc=nbte4$/);
+    expect(encodeCalculation({ mode: 'grade', rows: toEncodedRows(defaultRows(), 'grade') })).toBe(DEFAULT_LINK);
+    const decoded = decodeCalculation(`?${encodeCalculation({ mode: 'grade', rows, scale: 'nbte4' })}`);
+    expect(decoded.scale).toBe('nbte4');
+    expect(decoded.rows?.[0]).toMatchObject({ grade: 'AB', reset: false });
+    // Old links have no scale: 5-point letters only, AB is reset.
+    const old = decodeCalculation(`?m=grade&c=${encodeURIComponent(encodeRows(rows))}`);
+    expect(old.scale).toBeNull();
+    expect(old.rows?.[0]).toMatchObject({ grade: null, reset: true });
+    void toolScaleById;
+  });
+
+  it('works out GPA, class and carry-overs with the scale', async () => {
+    const { toolScaleById } = await import('@/lib/public/scales');
+    const scale = toolScaleById('nbte4');
+    const rows: CalcRow[] = [
+      { id: 'a', code: 'COM 111', units: 3, grade: 'AB', scoreText: '72' },
+      { id: 'b', code: 'COM 112', units: 3, grade: 'F', scoreText: '30' },
+    ];
+    const byGrade = computeCalculation({ mode: 'grade', rows, priorCgpa: '3.5', priorUnits: '30', scale });
+    expect(byGrade.semester?.gpa).toBe(1.75);
+    expect(byGrade.carryOvers.map((item) => item.label)).toEqual(['COM 112']);
+    expect(byGrade.classBand?.label).toBe('Upper Credit'); // (3.5*30 + 10.5) / 36 = 3.21
+    expect(byGrade.next?.band.label).toBe('Distinction');
+    const byScore = computeCalculation({ mode: 'score', rows, scale });
+    expect(byScore.semester?.gpa).toBe(1.75);
+    expect(priorCgpaError('4.5', scale)).toBe('Enter a CGPA from 0.00 to 4.00.');
+    expect(switchMode([{ id: 'x', code: '', units: 3, grade: null, scoreText: '66' }], 'grade', scale)[0].grade).toBe('B');
+  });
+});

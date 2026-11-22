@@ -3,22 +3,21 @@
  * (localStorage), never in Firestore. Cleared on sign-out with the drafts.
  */
 
-import type { AcademicGrade } from '@/lib/cgpa/academicRules';
-
 const PREFIX = 'acadegrade:preview:v1:';
-const GRADES = new Set<string>(['A', 'B', 'C', 'D', 'E', 'F']);
+/** Any scale letter (1-3 characters); the preview checks it against the active scale. */
+const isGradeLabel = (grade: string) => /^[A-Za-z0-9+\-]{1,3}$/.test(grade);
 
 export const previewStorageKey = (uid: string, semesterId: string) => `${PREFIX}${uid}:${semesterId}`;
 
-export function loadExpectedGrades(uid: string, semesterId: string): Record<string, AcademicGrade> {
+export function loadExpectedGrades(uid: string, semesterId: string): Record<string, string> {
   try {
     const raw = window.localStorage.getItem(previewStorageKey(uid, semesterId));
     if (!raw) return {};
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    const result: Record<string, AcademicGrade> = {};
+    const result: Record<string, string> = {};
     for (const [id, grade] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof grade === 'string' && GRADES.has(grade)) result[id] = grade as AcademicGrade;
+      if (typeof grade === 'string' && isGradeLabel(grade)) result[id] = grade;
     }
     return result;
   } catch {
@@ -26,7 +25,7 @@ export function loadExpectedGrades(uid: string, semesterId: string): Record<stri
   }
 }
 
-export function saveExpectedGrades(uid: string, semesterId: string, expected: Record<string, AcademicGrade>): void {
+export function saveExpectedGrades(uid: string, semesterId: string, expected: Record<string, string>): void {
   try {
     const key = previewStorageKey(uid, semesterId);
     if (Object.keys(expected).length === 0) window.localStorage.removeItem(key);

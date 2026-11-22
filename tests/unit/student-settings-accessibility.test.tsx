@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   updateDocument: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+  auth: { currentUser: null as null | { email: string; providerData: { providerId: string }[] } },
 }));
 
 const profile = {
@@ -41,7 +42,7 @@ vi.mock('@/hooks/usePlatformSettings', () => ({
 }));
 
 vi.mock('@/lib/firebase/client', () => ({
-  auth: { currentUser: null },
+  get auth() { return mocks.auth; },
 }));
 
 vi.mock('@/lib/firebase/firestore', () => ({
@@ -75,6 +76,7 @@ describe('Student settings accessibility', () => {
     mocks.updateDocument.mockReset().mockResolvedValue(undefined);
     mocks.toastError.mockReset();
     mocks.toastSuccess.mockReset();
+    mocks.auth.currentUser = null;
   });
 
   it('uses one semantic avatar upload button without nested interactive controls', () => {
@@ -125,6 +127,19 @@ describe('Student settings accessibility', () => {
     expect(localStorage.getItem('acadegrade:data-saver:v1')).toBe('1');
     expect(screen.getByRole('switch', { name: /data saver/i })).toHaveAttribute('aria-checked', 'true');
     localStorage.clear();
+  });
+
+  it('offers Change password only to accounts that sign in with a password', () => {
+    mocks.auth.currentUser = { email: 'ada@test.example', providerData: [{ providerId: 'password' }] };
+    const { unmount } = render(<SettingsPage />);
+    expect(screen.getByRole('button', { name: /change/i })).toBeInTheDocument();
+    expect(screen.queryByText(/no AcadeGrade password to change/)).not.toBeInTheDocument();
+    unmount();
+
+    mocks.auth.currentUser = { email: 'ada@test.example', providerData: [{ providerId: 'google.com' }] };
+    render(<SettingsPage />);
+    expect(screen.queryByRole('button', { name: /^change$/i })).not.toBeInTheDocument();
+    expect(screen.getByText('You sign in with Google, so there is no AcadeGrade password to change. To change your Google password, go to your Google account settings.')).toBeInTheDocument();
   });
 
   it('shows the devices section with the within-an-hour sign-out wording', () => {

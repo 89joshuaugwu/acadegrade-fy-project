@@ -38,3 +38,17 @@ describe('WhatIfCalculator required GPA', () => {
     expect(screen.getByText('Impossible')).toBeInTheDocument();
   });
 });
+
+describe('WhatIfCalculator on another grading scale', () => {
+  it('caps the target and the reachable GPA at the scale top point', async () => {
+    const { GradingScaleProvider } = await import('@/hooks/useGradingScale');
+    // target starts at min(4, 3.9 + 0.2) = 4.0: (4 x 78 - 3.9 x 60) / 18 = 4.33 > 4.
+    render(
+      <GradingScaleProvider setting={{ id: 'nbte4' }}>
+        <WhatIfCalculator currentCGPA={3.9} totalCredits={60} initialRemainingSemesters={1} initialCreditLoad={18} />
+      </GradingScaleProvider>
+    );
+    expect(screen.getByText('>4.00')).toBeInTheDocument();
+    expect(screen.getByText('/ 4.00')).toBeInTheDocument();
+  });
+});

@@ -14,6 +14,7 @@ import { useSemesters } from '@/hooks/useSemesters';
 import { useMilestones } from '@/hooks/useMilestones';
 import { getAcademicPlan } from '@/lib/academic/timeline';
 import type { CarryOverCourse } from '@/lib/cgpa/academicRules';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { MilestoneCard } from '@/components/dashboard/MilestoneCard';
 import { getDocument, queryCollection, updateDocument } from '@/lib/firebase/firestore';
 import { getGreeting } from '@/lib/utils/format';
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { cgpa, pi, degreeClass, semesterHistory, totalCredits, loading: cgpaLoading, error: cgpaError } = useCGPA();
+  const { scale } = useGradingScale();
   const { semesters: fullSemesters, loading: semestersLoading, error: semestersError } = useSemesters();
   const { insightsStale } = useAnalytics();
 
@@ -125,7 +127,7 @@ export default function DashboardPage() {
             ),
           }))
         );
-        const summary = buildDashboardSummary(semesterCourses);
+        const summary = buildDashboardSummary(semesterCourses, 3, scale);
         if (!isMounted) return;
         setCoursesDone(summary.totalCourses);
         setAtRiskCount(summary.atRiskCount);
@@ -145,7 +147,7 @@ export default function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, [cgpaLoading, courseRefreshKey, semesterHistory, user?.uid]);
+  }, [cgpaLoading, courseRefreshKey, semesterHistory, user?.uid, scale]);
 
   // C1: milestones run only when the profile, semesters and every course list have loaded.
   const milestoneSemesters = useMemo(() => {

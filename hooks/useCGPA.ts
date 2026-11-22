@@ -3,10 +3,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from './useAuth';
 import { useSemesters } from './useSemesters';
+import { useGradingScale } from './useGradingScale';
 import type { CumulativeResult } from '@/types/course';
 import type { DegreeClass } from '@/types/analytics';
 import type { SemesterSummary } from '@/types/semester';
-import { DEGREE_CLASSES } from '@/lib/utils/constants';
 import { computeCumulativeCGPA } from '@/lib/cgpa/calculator';
 import { resolveDegreeClass } from '@/lib/cgpa/degreeClass';
 
@@ -27,13 +27,14 @@ interface CGPAState {
  */
 export function useCGPA(): CGPAState {
   const { semesters, loading, error } = useSemesters();
+  const { scale } = useGradingScale();
 
   const result = useMemo(() => {
     if (semesters.length === 0) {
       return {
         cgpa: 0,
         pi: 0,
-        degreeClass: DEGREE_CLASSES[DEGREE_CLASSES.length - 1],
+        degreeClass: resolveDegreeClass(0, scale),
         semesterHistory: [],
         totalCredits: 0,
         totalCourses: 0,
@@ -53,9 +54,9 @@ export function useCGPA(): CGPAState {
       });
     }
 
-    // Shared academic rules: credit-weighted CGPA, rounded lower-bound class
+    // Shared academic rules: credit-weighted CGPA, rounded lower-bound class on the active scale
     const { cgpa, pi, totalCredits } = computeCumulativeCGPA(semesters);
-    const degreeClass = resolveDegreeClass(cgpa);
+    const degreeClass = resolveDegreeClass(cgpa, scale);
 
     return {
       cgpa,
@@ -65,7 +66,7 @@ export function useCGPA(): CGPAState {
       totalCredits,
       totalCourses: 0,
     };
-  }, [semesters]);
+  }, [semesters, scale]);
 
   return {
     ...result,

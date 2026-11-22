@@ -5,6 +5,8 @@ export interface ApiContext {
   method: string;
   body: unknown;
   role: PreviewRole;
+  /** Request headers (for example X-Share-Pin). */
+  headers?: Headers;
 }
 
 /** A tagged reply when the status is not 200 or the body is not JSON. Plain values are sent as 200 JSON. */

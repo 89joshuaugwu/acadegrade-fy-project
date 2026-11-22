@@ -11,6 +11,7 @@ import { coins, RewardError, rewards, type CoinHold, type RewardLease } from '@/
 import { checkPlatformAccess } from '@/lib/platform/settings-server';
 import { aiAgeGate } from '@/lib/user/age';
 import { scrubIdentityFields } from '@/lib/ai/prompt-privacy';
+import { readScaleContext, scalePromptLine } from '@/lib/ai/scaleContext';
 import { chargedFailureResponse, chargedHeaders, freeCoinHeaders, readCoinSpend, refundQuietly, rewardErrorResponse, withCoinHint } from '@/lib/ads/reward/http';
 
 const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
@@ -64,10 +65,12 @@ export async function POST(request: NextRequest) {
             : undefined,
         }
       : undefined;
+    // Additive: only sent for scales other than the default 5-point one.
+    const scaleContext = readScaleContext(body);
     const settingsDoc = await adminDb.collection('config').doc('settings').get();
     const basePrompt = settingsDoc.data()?.aiSystemPrompt || 'You are an expert academic advisor at a top Nigerian University.';
     const configRevision = await getAiConfigRevision();
-    const inputSignature = JSON.stringify({ semesterData, academicContext, configRevision, promptRevision: basePrompt });
+    const inputSignature = JSON.stringify({ semesterData, academicContext, configRevision, promptRevision: basePrompt, ...(scaleContext ? { scaleContext } : {}) });
 
     const analyticsRef = adminDb.collection('analytics').doc(uid);
     const analyticsDoc = await analyticsRef.get();
@@ -118,6 +121,7 @@ export async function POST(request: NextRequest) {
 
       Student Data:
       ${JSON.stringify(scrubIdentityFields(semesterData))}
+      ${scalePromptLine(scaleContext)}
 
       Academic Timeline:
       ${academicContext

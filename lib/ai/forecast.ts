@@ -9,14 +9,14 @@ import { linearRegression, linearRegressionLine } from 'simple-statistics';
 import type { ForecastResponse, RiskLevel } from '@/types/ai';
 import type { TrendDirection } from '@/types/analytics';
 
-/** Clamp a value to the valid GPA range [0.00, 5.00] */
-const clamp = (v: number): number => Math.max(0, Math.min(5, v));
 
 /**
  * Compute forecast from PI history and CGPA history using linear regression.
  * Returns projected values for next 2 semesters for both, slope (based on PI), and risk score.
  */
-export function computeForecast(piHistory: number[], cgpaHistory?: number[]) {
+export function computeForecast(piHistory: number[], cgpaHistory?: number[], maxPoint = 5) {
+  /** Clamp a value to the valid GPA range [0.00, maxPoint] (5.00 on the default scale). */
+  const clamp = (v: number): number => Math.max(0, Math.min(maxPoint, v));
   const getProjection = (history: number[]): [number, number] => {
     if (history.length < 2) return [history[0] ?? 0, history[0] ?? 0];
     const data: [number, number][] = history.map((y, x) => [x, y]);

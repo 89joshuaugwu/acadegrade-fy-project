@@ -8,6 +8,7 @@ import { planWorking } from '@/lib/public/features-timetable';
 import { AcadeMindMark } from '@/components/public/Logo';
 import { ArcGauge } from '@/components/site/ArcGauge';
 import { FakeButton, GradePill, UiCard, UiCardHead } from './shared';
+import { CountUpText } from '@/components/motion/CountUp';
 
 /**
  * Product screens rebuilt in HTML with the example student's data (brand v2).
@@ -124,7 +125,7 @@ export function DegreeGoalCard({ className = '', title = 'Degree goal', float = 
       <dl className="mt-5 flex flex-wrap items-end gap-x-8 gap-y-3">
         <div>
           <dt className="text-[0.8125rem] text-ag-mist">Required GPA</dt>
-          <dd className="ag-display ag-num text-[3rem] font-bold leading-none text-ag-ink">{goal.required}</dd>
+          <dd className="ag-display ag-num text-[3rem] font-bold leading-none text-ag-ink"><CountUpText text={String(goal.required)} /></dd>
         </div>
         <div>
           <dt className="text-[0.8125rem] text-ag-mist">Target average score</dt>

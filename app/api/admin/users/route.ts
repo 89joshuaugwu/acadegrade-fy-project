@@ -8,7 +8,7 @@ import { deleteUserData, queueAccountDeletion, settleAccountDeletion } from '@/l
 import { deviceTokens } from '@/lib/admin/user-devices';
 import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { readAgeStatusFrom, readAiConsent } from '@/lib/user/requirements';
-import { computeCumulativeCGPA } from '@/lib/cgpa/academicRules';
+import { computeCumulativeCGPA, resolveGradingScale } from '@/lib/cgpa/academicRules';
 import { AdminAuthorizationError, requireAdmin } from '@/lib/api/admin-auth';
 import { toMillis } from '@/lib/admin/metrics';
 import type { DocumentSnapshot, QueryDocumentSnapshot } from 'firebase-admin/firestore';
@@ -46,6 +46,9 @@ async function toUserRow(doc: QueryDocumentSnapshot | DocumentSnapshot) {
     currentLevel: data.currentLevel || 100,
     cgpa,
     pi,
+    // Read-only scale name, so the CGPA is read on the right scale.
+    gradingScale: resolveGradingScale(data.gradingScale).name,
+    gradingScaleMax: resolveGradingScale(data.gradingScale).maxPoint,
     semesterCount: semSnap.size,
     disabled: data.disabled || false,
     // Read from the profile already loaded: no extra reads.

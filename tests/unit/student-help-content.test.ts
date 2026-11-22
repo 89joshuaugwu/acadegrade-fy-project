@@ -20,7 +20,7 @@ describe('canonical student help copy', () => {
   it('is byte-identical to the shared Android copy (sha256 with CRLF normalised to LF)', () => {
     const raw = readFileSync(path.join(root, 'lib/help/student-help.json'), 'utf8').replace(/\r\n/g, '\n');
     expect(createHash('sha256').update(raw, 'utf8').digest('hex')).toBe(STUDENT_HELP_SHA256);
-    expect(STUDENT_HELP_SHA256).toBe('1d5e0dd86bda46a12395bd0772ce32f1b210d152ac64718cc6c002acae6a9bf9');
+    expect(STUDENT_HELP_SHA256).toBe('36c5e99177d31144fa14936d576644084b58348694ae66c73a821d81b4293519');
     expect(sharedHelp.version).toBe(STUDENT_HELP_CONTENT_VERSION);
   });
 

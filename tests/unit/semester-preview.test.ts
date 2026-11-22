@@ -61,3 +61,20 @@ describe('previewSemester (A3)', () => {
     expect(result.previewedCount).toBe(1);
   });
 });
+
+describe('previewSemester on another grading scale', () => {
+  it('grades expected letters with the active scale', async () => {
+    const { SCALES } = await import('@/lib/cgpa/academicRules');
+    // 65 = B (3.25) on NBTE; AB = 3.5; earlier semester stored on the same scale.
+    const result = previewSemester({
+      courses: [courses[0], courses[1]],
+      expected: { c2: 'AB' },
+      semesters: [{ id: 'sem-1', gpa: 3, pi: 3, creditLoaded: 18 }, semesters[1]],
+      semesterId: 'sem-2',
+      scale: SCALES.nbte4,
+    });
+    expect(result.scenario.gpa).toBeCloseTo((3.25 * 3 + 3.5 * 3) / 6, 10);
+    expect(result.official.gpa).toBe(3.25);
+    expect(result.scenario.band.shortLabel).toBe('Upper');
+  });
+});

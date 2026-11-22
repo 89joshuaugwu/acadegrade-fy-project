@@ -10,8 +10,11 @@ export type SharedTranscriptResult<T = Record<string, unknown>> =
   | { status: 'pin-required' }
   | { status: 'pin-incorrect' }
   | { status: 'locked'; retryAfterSeconds: number }
-  /** Expired or unknown: shown the same way, as before. */
-  | { status: 'unavailable' }
+  /**
+   * Expired (410) or unknown (404, which includes a revoked link). The public page shows
+   * both the same way, as before; the owner's preview may say which.
+   */
+  | { status: 'unavailable'; reason?: 'expired' | 'not-found' }
   | { status: 'error' };
 
 async function readJson(response: Response): Promise<Record<string, unknown>> {
@@ -49,6 +52,7 @@ export async function fetchSharedTranscript<T = Record<string, unknown>>(
     const seconds = typeof body.retryAfterSeconds === 'number' ? body.retryAfterSeconds : header;
     return { status: 'locked', retryAfterSeconds: Number.isFinite(seconds) && seconds > 0 ? seconds : 3600 };
   }
-  if (response.status === 404 || response.status === 410) return { status: 'unavailable' };
+  if (response.status === 410) return { status: 'unavailable', reason: 'expired' };
+  if (response.status === 404) return { status: 'unavailable', reason: 'not-found' };
   return { status: 'error' };
 }

@@ -26,6 +26,7 @@ describe('public search discovery', () => {
       'https://product.acadegrade.test/features/ai-insights',
       'https://product.acadegrade.test/features/timetable',
       'https://product.acadegrade.test/app',
+      'https://product.acadegrade.test/app/download/ios',
       'https://product.acadegrade.test/calculator',
       'https://product.acadegrade.test/tools',
       'https://product.acadegrade.test/tools/degree-class-checker',
@@ -57,10 +58,13 @@ describe('public search discovery', () => {
       '/login',
       '/register',
       '/forgot-password',
-      '/c/',
       '/maintenance',
       '/offline',
     ]));
+    // Shared course lists and transcripts carry noindex in their HTML. Crawlers must be
+    // allowed to fetch them to see it, and X will not show a card for a blocked URL.
+    expect(rules?.disallow).not.toEqual(expect.arrayContaining(['/c/']));
+    expect(rules?.disallow).not.toEqual(expect.arrayContaining(['/share/']));
   });
 });
 

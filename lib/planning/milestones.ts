@@ -13,6 +13,7 @@ import {
   resolveDegreeClass,
   roundCgpa,
   type CarryOverCourse,
+  type GradingScale,
 } from '@/lib/cgpa/academicRules';
 import { buildAcademicSeries } from '@/lib/planning/academicSeries';
 
@@ -25,7 +26,7 @@ export interface MilestoneSemester {
   isComplete?: boolean;
   level?: number;
   semester?: number;
-  courses?: readonly CarryOverCourse[];
+  courses?: readonly CarryOverCourse<string>[];
 }
 
 export interface MilestoneInput {
@@ -33,6 +34,8 @@ export interface MilestoneInput {
   semesters: readonly MilestoneSemester[];
   /** plan.isGraduated from lib/academic/timeline. */
   isGraduated: boolean;
+  /** The student's scale; the 5-point scale when left out. */
+  scale?: GradingScale;
 }
 
 /** Firestore field-path safe: only letters, digits and underscores. */
@@ -49,8 +52,10 @@ export function detectMilestones(input: MilestoneInput): string[] {
   if (completedGraded.length > 0) ids.push('first_semester');
   if (input.isGraduated) ids.push('programme_complete');
 
-  const everFailed = input.semesters.some((semester) => (semester.courses ?? []).some(isCarryOver));
-  if (everFailed && outstandingCarryOvers(input.semesters.map((semester) => ({ courses: semester.courses ?? [] }))).length === 0) {
+  const scale = input.scale;
+  const failed = (course: CarryOverCourse<string>) => (scale ? isCarryOver(course, scale) : isCarryOver(course as CarryOverCourse));
+  const everFailed = input.semesters.some((semester) => (semester.courses ?? []).some(failed));
+  if (everFailed && outstandingCarryOvers(input.semesters.map((semester) => ({ courses: semester.courses ?? [] })), scale).length === 0) {
     ids.push('carry_overs_cleared');
   }
 
@@ -70,10 +75,16 @@ export function detectMilestones(input: MilestoneInput): string[] {
     creditLoaded: semester.creditLoaded,
   })));
   if (cgpaHistory.length >= 2) {
-    const before = resolveDegreeClass(cgpaHistory[cgpaHistory.length - 2]);
-    const after = resolveDegreeClass(cgpaHistory[cgpaHistory.length - 1]);
-    // Bands are highest first, so a smaller index is a higher class.
-    if (DEGREE_CLASS_BANDS.indexOf(after) < DEGREE_CLASS_BANDS.indexOf(before)) ids.push(`class_up_${after.shortLabel}`);
+    if (scale) {
+      const before = resolveDegreeClass(cgpaHistory[cgpaHistory.length - 2], scale);
+      const after = resolveDegreeClass(cgpaHistory[cgpaHistory.length - 1], scale);
+      if (after.minCgpa > before.minCgpa) ids.push(`class_up_${after.shortLabel}`);
+    } else {
+      const before = resolveDegreeClass(cgpaHistory[cgpaHistory.length - 2]);
+      const after = resolveDegreeClass(cgpaHistory[cgpaHistory.length - 1]);
+      // Bands are highest first, so a smaller index is a higher class.
+      if (DEGREE_CLASS_BANDS.indexOf(after) < DEGREE_CLASS_BANDS.indexOf(before)) ids.push(`class_up_${after.shortLabel}`);
+    }
   }
 
   return [...new Set(ids.map(sanitiseMilestoneId))];
@@ -118,15 +129,16 @@ export interface MilestoneCopy {
 }
 
 /** Display copy for a milestone id. */
-export function describeMilestone(id: string): MilestoneCopy {
+export function describeMilestone(id: string, scale?: GradingScale): MilestoneCopy {
   if (id === 'first_semester') return { title: 'First semester recorded', body: 'Your first completed semester is in your record.' };
   if (id === 'programme_complete') return { title: 'Programme complete', body: 'Every semester of your programme is marked complete.' };
   if (id === 'carry_overs_cleared') return { title: 'Carry-overs cleared', body: 'You have passed every course you previously failed.' };
   if (id.startsWith('personal_best_')) return { title: 'Personal best semester', body: 'Your newest semester GPA is your highest yet.' };
   if (id.startsWith('class_up_')) {
     const suffix = id.slice('class_up_'.length);
+    const onScale = scale?.classes.find((item) => sanitiseMilestoneId(item.shortLabel) === suffix);
     const band = DEGREE_CLASS_BANDS.find((item) => sanitiseMilestoneId(item.shortLabel) === suffix);
-    return { title: 'Class moved up', body: 'Your CGPA has moved up to', className: band?.label ?? 'a higher class' };
+    return { title: 'Class moved up', body: 'Your CGPA has moved up to', className: onScale?.name ?? band?.label ?? 'a higher class' };
   }
   return { title: 'New milestone', body: 'You reached a new milestone.' };
 }

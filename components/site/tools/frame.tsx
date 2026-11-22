@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { CheckIcon, Container, FaqList, Heading } from '@/components/site/ui';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
 
 /**
  * The frame every tools page shares (calculator, /tools, the four tools):
@@ -32,8 +34,8 @@ export function ToolHero({
       <Container className="relative pb-32 pt-10 sm:pb-36 sm:pt-14 lg:pb-40">
         <div className="max-w-3xl">
           {trail ? <div className="ag-rise mb-6">{trail}</div> : null}
-          <h1 id={titleId} className="ag-display ag-rise text-[2.5rem] font-bold leading-[1.03] sm:text-[3.5rem] lg:text-[4rem]">
-            {title}
+          <h1 id={titleId} className={`ag-display ${typeof title === 'string' ? 'mo-load-words' : 'ag-rise'} text-[2.5rem] font-bold leading-[1.03] sm:text-[3.5rem] lg:text-[4rem]`}>
+            <Words>{title}</Words>
           </h1>
           {sentence ? <p className="ag-rise ag-rise-2 mt-5 max-w-[38rem] text-[1.0625rem] leading-relaxed text-ag-mist-night sm:text-[1.125rem]">{sentence}</p> : null}
           {facts?.length ? (
@@ -61,7 +63,7 @@ export function ToolStage({ children, label, after }: { children: ReactNode; lab
   return (
     <section aria-label={label} className="relative z-10 flow-root bg-ag-haze pb-16 sm:pb-20">
       <Container>
-        <div className="-mt-24 sm:-mt-28">{children}</div>
+        <div className="mo-load -mt-24 sm:-mt-28" style={{ '--mo-at': '260ms' } as CSSProperties}>{children}</div>
         {after}
       </Container>
     </section>
@@ -92,7 +94,7 @@ export function ToolSection({
     <section aria-labelledby={id} className={`${tone === 'haze' ? 'bg-ag-haze' : 'bg-white'} py-20 sm:py-28 ${className}`}>
       <Container>
         <Heading id={id} title={title} lead={lead} />
-        <div className="mt-12 sm:mt-14">{children}</div>
+        <div {...reveal('rise', 120)} className="mt-12 sm:mt-14">{children}</div>
       </Container>
     </section>
   );
@@ -114,10 +116,10 @@ export function ToolFaqSection({
     <section aria-labelledby={id} className={`${tone === 'haze' ? 'bg-ag-haze' : 'bg-white'} py-20 sm:py-28`}>
       <Container className="grid gap-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-12">
         <div>
-          <h2 id={id} className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            {title}
+          <h2 id={id} {...reveal('words')} className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{title}</Words>
           </h2>
-          <p className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">
+          <p {...reveal('rise')} className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">
             Anything else?{' '}
             <Link href="/support" className="ag-focus rounded font-semibold text-ag-violet underline decoration-ag-violet/30 underline-offset-4 hover:decoration-ag-violet">
               Ask support

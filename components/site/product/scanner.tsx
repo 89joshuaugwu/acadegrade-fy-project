@@ -10,6 +10,7 @@ import { CheckList, Container, Heading, Section, TextLinkV2 } from '@/components
 import { PastePanelCard, ScanRowsCard } from './cards';
 import { CheckRows } from './CheckRows';
 import { FakeButton, UiCard, UiCardHead } from './shared';
+import { reveal } from '@/components/motion/Reveal';
 
 /** Sections of /features/result-scanner in brand v2 (content: docs/public-redesign/pages/features-result-scanner.md). */
 
@@ -65,7 +66,7 @@ export function HowAScanGoes({ videoUrl }: { videoUrl: string | null }) {
       <Container className="grid grid-cols-[minmax(0,1fr)] gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center lg:gap-16">
         <div>
           <Heading id="steps-title" title="How a scan goes" lead="From a photo of your slip to rows you can check, while you wait." />
-          <ol className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
+          <ol {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
             {STEP_LINES.map((step, index) => (
               <li key={step.line} className="rounded-[24px] bg-ag-haze p-6">
                 <span className="ag-display grid h-10 w-10 place-items-center rounded-full bg-ag-gold text-[1.125rem] font-bold text-ag-night" aria-hidden="true">
@@ -187,7 +188,7 @@ export function CheckSection() {
           <Heading id="check-heading" title={PLATE_COPY.heading} />
           <p className="max-w-xl text-[1.0625rem] leading-relaxed text-ag-mist lg:justify-self-end">{PLATE_COPY.description}</p>
         </div>
-        <div className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
+        <div {...reveal('stagger')} className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
           <div className="min-w-0">
             <p className="mb-3 text-[0.9375rem] font-semibold text-ag-ink">Your slip</p>
             <SlipCard />

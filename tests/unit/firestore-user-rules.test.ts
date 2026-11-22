@@ -21,11 +21,11 @@ describe('users/{uid} rules: server-owned age and consent fields', () => {
   });
 
   it('forbids creating a profile that already carries them', () => {
-    expect(usersBlock()).toContain('allow create: if (isOwner(userId) || isAdmin())\n        && !request.resource.data.keys().hasAny(serverOwnedUserFields());');
+    expect(usersBlock()).toContain('allow create: if (isOwner(userId) || isAdmin())\n        && !request.resource.data.keys().hasAny(serverOwnedUserFields())\n');
   });
 
   it('forbids updates that add, change or remove them, but keeps other profile edits', () => {
-    expect(usersBlock()).toContain('allow update: if (isOwner(userId) || isAdmin())\n        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOwnedUserFields());');
+    expect(usersBlock()).toContain('allow update: if (isOwner(userId) || isAdmin())\n        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOwnedUserFields())\n');
   });
 
   it('keeps owner and admin reads and deletes', () => {
@@ -111,5 +111,42 @@ describe('new server-only collections and config/legal', () => {
 
   it('keeps config/settings public-read for installed Android apps', () => {
     expect(rules()).toContain("match /config/settings {\n      allow read: if true;");
+  });
+});
+
+describe('users/{uid}.gradingScale (grading scales, phase 1)', () => {
+  const helper = () => {
+    const text = rules();
+    return text.slice(text.indexOf('function validGradingScale(gs) {'), text.indexOf('// 1. Users Collection'));
+  };
+
+  it('allows only the five scale ids and the three known keys', () => {
+    expect(helper()).toContain("gs.keys().hasAll(['id'])");
+    expect(helper()).toContain("gs.keys().hasOnly(['id', 'custom', 'nceClasses'])");
+    expect(helper()).toContain("gs.id in ['ng5', 'ng5-noE', 'nbte4', 'nce5', 'custom']");
+    expect(helper()).toContain("(gs.id != 'custom' || 'custom' in gs)");
+  });
+
+  it('bounds a custom scale: 2-12 bands, 1-8 classes, top point 1-10, name up to 40', () => {
+    const text = helper();
+    expect(text).toContain("c.keys().hasOnly(['name', 'maxPoint', 'bands', 'classes'])");
+    expect(text).toContain('c.bands is list && c.bands.size() >= 2 && c.bands.size() <= 12');
+    expect(text).toContain('c.classes is list && c.classes.size() >= 1 && c.classes.size() <= 8');
+    expect(text).toContain('c.maxPoint is number && c.maxPoint >= 1 && c.maxPoint <= 10');
+    expect(text).toContain("(!('name' in c) || (c.name is string && c.name.size() <= 40))");
+  });
+
+  it('bounds NCE class boundaries to four numbers from above 0 to 5', () => {
+    const text = helper();
+    expect(text).toContain("n.keys().hasOnly(['distinction', 'credit', 'merit', 'pass'])");
+    for (const key of ['distinction', 'credit', 'merit', 'pass']) {
+      expect(text).toContain(`(!('${key}' in n) || validNceBoundary(n.${key}))`);
+    }
+    expect(text).toContain('return value is number && value > 0 && value <= 5;');
+  });
+
+  it('checks the shape on create and whenever an update touches it, leaving other edits alone', () => {
+    expect(usersBlock()).toContain("&& (!('gradingScale' in request.resource.data) || validGradingScale(request.resource.data.gradingScale));");
+    expect(usersBlock()).toContain("&& (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['gradingScale'])\n          || !('gradingScale' in request.resource.data)\n          || validGradingScale(request.resource.data.gradingScale));");
   });
 });

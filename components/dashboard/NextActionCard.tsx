@@ -9,17 +9,14 @@ const TONES = {
   primary: {
     icon: CircleCheck,
     iconClass: 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]',
-    eyebrowClass: 'text-[var(--acade-primary)]',
   },
   warning: {
     icon: AlertTriangle,
     iconClass: 'bg-[var(--acade-warning)]/12 text-[var(--acade-warning)]',
-    eyebrowClass: 'text-[var(--acade-warning)]',
   },
   info: {
     icon: Info,
     iconClass: 'bg-[var(--acade-info)]/12 text-[var(--acade-info)]',
-    eyebrowClass: 'text-[var(--acade-info)]',
   },
 } as const;
 
@@ -45,10 +42,9 @@ export function NextActionCard({ action }: { action: DashboardNextAction }) {
         <div className={cn('flex size-11 items-center justify-center rounded-[var(--radius-control)]', tone.iconClass)}>
           <Icon className="size-5" aria-hidden="true" />
         </div>
-        <p className={cn('mt-5 text-sm font-medium', tone.eyebrowClass)}>
-          {action.eyebrow}
-        </p>
-        <h2 className="mt-1 font-[family-name:var(--font-bricolage)] text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--acade-text)]">
+        {/* Brand v2 has no eyebrow labels: the status is read with the heading, and the icon shows the tone. */}
+        <h2 className="mt-5 font-[family-name:var(--font-bricolage)] text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-[var(--acade-text)]">
+          <span className="sr-only">{action.eyebrow}: </span>
           {action.title}
         </h2>
         <p className="mt-3 text-sm leading-6 text-[var(--acade-text-muted)]">

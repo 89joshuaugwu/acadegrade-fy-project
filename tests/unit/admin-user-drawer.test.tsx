@@ -12,7 +12,7 @@ const DETAIL = {
   profile: {
     uid: 'stu', fullName: 'Ada Obi', email: 'ada@example.com', matric: 'CSC/1', university: 'Uni', department: 'CSC', programme: 'BSc',
     currentLevel: 300, createdAt: '2026-01-01T00:00:00.000Z', lastActiveAt: null, disabled: false,
-    ageStatus: 'adult', aiConsent: true, marketingConsent: null,
+    ageStatus: 'adult', aiConsent: true, marketingConsent: null, gradingScale: 'Polytechnic 4-point (NBTE)',
   },
   academic: { semesterCount: 3, completedCount: 2 },
   devices: { count: 2 },
@@ -51,6 +51,7 @@ describe('UserDetailDrawer', () => {
     expect(dialog).toHaveTextContent('Never seen');
     expect(dialog).toHaveTextContent(/2 devices/);
     expect(dialog).toHaveTextContent(/Grades are hidden/);
+    expect(dialog).toHaveTextContent('Grading scalePolytechnic 4-point (NBTE)');
     expect(dialog).not.toHaveTextContent(/CGPA \d/);
   });
 

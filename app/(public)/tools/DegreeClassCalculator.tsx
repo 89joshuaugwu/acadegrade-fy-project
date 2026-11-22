@@ -8,23 +8,28 @@ import { Announcer, useQueryOnce, useTween } from '@/components/site/tools/hooks
 import { ReceiptCard, ReceiptRows } from '@/components/site/tools/Receipt';
 import { ClassPill, GaugeFigure, NightCard } from '@/components/site/tools/result';
 import { ScaleBar } from '@/components/site/tools/ScaleStrip';
-import { DEFAULT_SCALE, type PublicClassBand } from '@/lib/public/scales';
+import { DEFAULT_SCALE, toolScaleById, toolScaleParam, type PublicClassBand, type PublicScale } from '@/lib/public/scales';
+import { ToolScaleSelect } from '@/components/site/tools/ToolScaleSelect';
 import { NO_VALUE } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
 import { checkDegreeClass, parseNumber, suggestDecimal } from './tool-math';
 
-const max = DEFAULT_SCALE.maxPoint;
-const CGPA_ERROR = `Enter a CGPA from 0.00 to ${max.toFixed(2)}.`;
-const publicBand = (engineShort: string): PublicClassBand =>
-  DEFAULT_SCALE.classBands.find((band) => band.engineShort === engineShort) ?? DEFAULT_SCALE.classBands[DEFAULT_SCALE.classBands.length - 1];
+const cgpaError = (max: number) => `Enter a CGPA from 0.00 to ${max.toFixed(2)}.`;
+const publicBand = (engineShort: string, scale: PublicScale): PublicClassBand =>
+  scale.classBands.find((band) => band.engineShort === engineShort) ?? scale.classBands[scale.classBands.length - 1];
+/** "&scale=nbte4" for links, nothing on the 5-point scale. */
+const scaleQuery = (scale: PublicScale, first = false) => {
+  const id = toolScaleParam(scale);
+  return id ? `${first ? '?' : '&'}scale=${id}` : '';
+};
 
 /** The checker as plain data, for the result card, the receipt and tests. */
-export function degreeClassView(text: string) {
-  const check = checkDegreeClass(parseNumber(text));
+export function degreeClassView(text: string, scale: PublicScale = DEFAULT_SCALE) {
+  const check = checkDegreeClass(parseNumber(text), scale.engine);
   if (!check) return null;
-  const band = publicBand(check.band.shortLabel);
-  const next = check.next ? publicBand(check.next.shortLabel) : null;
-  const below = band.engineShort === 'Fail';
+  const band = publicBand(check.band.shortLabel, scale);
+  const next = check.next ? publicBand(check.next.shortLabel, scale) : null;
+  const below = band === scale.classBands[scale.classBands.length - 1];
   const gap = check.gap ?? 0;
   const gapLine = next
     ? below
@@ -41,15 +46,20 @@ export function DegreeClassCalculator() {
   const [blurred, setBlurred] = useState(false);
   const fieldRef = useRef<HTMLInputElement>(null);
   const reported = useRef(false);
+  const [scaleId, setScaleId] = useState('ng5');
+  const scale = toolScaleById(scaleId);
+  const max = scale.maxPoint;
 
   useQueryOnce((params) => {
+    const linked = toolScaleById(params.get('scale'));
+    setScaleId(linked.engine.id);
     const value = parseNumber(params.get('cgpa') ?? '');
-    if (value !== null && value >= 0 && value <= max) setText(String(params.get('cgpa')).trim());
+    if (value !== null && value >= 0 && value <= linked.maxPoint) setText(String(params.get('cgpa')).trim());
   });
 
-  const view = degreeClassView(text);
+  const view = degreeClassView(text, scale);
   const invalid = text.trim() !== '' && !view;
-  const suggestion = invalid ? suggestDecimal(text) : null;
+  const suggestion = invalid ? suggestDecimal(text, scale.engine) : null;
   const shown = useTween(view ? view.rounded : null);
 
   useEffect(() => {
@@ -62,7 +72,7 @@ export function DegreeClassCalculator() {
   const error =
     blurred && invalid ? (
       <>
-        {CGPA_ERROR}
+        {cgpaError(max)}
         {suggestion !== null ? (
           <>
             {' '}Did you mean{' '}
@@ -83,8 +93,8 @@ export function DegreeClassCalculator() {
       </>
     ) : null;
 
-  const bands = DEFAULT_SCALE.classBands;
-  const tone = !view ? 'empty' : view.band.engineShort === '1st' ? 'gold' : view.below ? 'mark' : 'plain';
+  const bands = scale.classBands;
+  const tone = !view ? 'empty' : view.band === bands[0] ? 'gold' : view.below ? 'mark' : 'plain';
 
   return (
     <>
@@ -95,7 +105,8 @@ export function DegreeClassCalculator() {
         <div className={`${PANEL_CLASS} grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,23.5rem)] lg:gap-x-10 lg:gap-y-0`}>
           <div className="min-w-0 lg:col-start-1 lg:row-start-1">
             <h2 className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">Type your CGPA</h2>
-            <p className="mt-1 text-[0.9375rem] text-ag-mist">{DEFAULT_SCALE.line}</p>
+            <p className="mt-1 text-[0.9375rem] text-ag-mist">{scale.line}</p>
+            <ToolScaleSelect scale={scale} onChange={setScaleId} className="mt-4 w-full max-w-[20rem]" />
             <div className="mt-7 flex flex-wrap items-start gap-x-5 gap-y-3">
               <TField
                 ref={fieldRef}
@@ -128,6 +139,8 @@ export function DegreeClassCalculator() {
                 figure={shown === null ? NO_VALUE : shown.toFixed(2)}
                 caption="CGPA"
                 label={view ? `CGPA ${view.rounded.toFixed(2)} of ${max.toFixed(2)}, ${view.band.label}` : 'No CGPA yet'}
+                max={max}
+                ticks={bands.slice(0, -2).map((band) => band.min)}
                 intro
               />
               <div className="mt-1 text-center" key={view?.band.label ?? 'none'}>
@@ -135,7 +148,7 @@ export function DegreeClassCalculator() {
                 {view ? <p className="mx-auto mt-3 max-w-[17rem] text-[0.9375rem] leading-snug text-ag-mist-night">{view.gapLine}</p> : null}
               </div>
               <div className="mt-6 border-t border-white/10 pt-5 text-center">
-                <TextLinkV2 href={view ? `/tools/required-gpa?current=${view.rounded.toFixed(2)}` : '/tools/required-gpa'} onDark className="text-[0.9375rem]">
+                <TextLinkV2 href={view ? `/tools/required-gpa?current=${view.rounded.toFixed(2)}${scaleQuery(scale)}` : `/tools/required-gpa${scaleQuery(scale, true)}`} onDark className="text-[0.9375rem]">
                   What do I need to get there?
                 </TextLinkV2>
               </div>
@@ -145,7 +158,8 @@ export function DegreeClassCalculator() {
           <div className="min-w-0 lg:col-start-1 lg:row-start-2 lg:pt-10">
             <ScaleBar
               compact
-              caption="Degree classes on the 5-point scale, with your CGPA marked"
+              scale={scale}
+              caption={`Degree classes on the ${scale.name}, with your CGPA marked`}
               marker={view ? { value: view.rounded, title: `Your CGPA: ${view.rounded.toFixed(2)}`, sub: view.band.label } : null}
             />
             <noscript>
@@ -183,7 +197,7 @@ export function DegreeClassCalculator() {
                   name: 'Where each class begins',
                   lines: bands.map((band) => ({
                     label: band.label,
-                    value: band.engineShort === 'Fail' ? `under ${bands[bands.length - 2].min.toFixed(2)}` : `${band.min.toFixed(2)} to ${band.max.toFixed(2)}`,
+                    value: band === bands[bands.length - 1] ? `under ${bands[bands.length - 2].min.toFixed(2)}` : `${band.min.toFixed(2)} to ${band.max.toFixed(2)}`,
                     inverted: view?.band === band,
                     note: view?.band === band ? 'Your class' : undefined,
                   })),

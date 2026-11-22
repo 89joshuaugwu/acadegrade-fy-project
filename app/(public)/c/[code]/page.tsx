@@ -11,6 +11,19 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   title: 'Shared course list',
   description: 'A course list shared by a classmate on AcadeGrade.',
+  // Generic for every code, so the preview never shows the code or the courses.
+  openGraph: {
+    type: 'website',
+    locale: 'en_NG',
+    siteName: 'AcadeGrade',
+    title: 'Shared course list | AcadeGrade',
+    description: 'A course list shared by a classmate on AcadeGrade. Only course codes, titles and units are shared.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Shared course list | AcadeGrade',
+    description: 'A course list shared by a classmate on AcadeGrade. Only course codes, titles and units are shared.',
+  },
   robots: {
     index: false,
     follow: false,

@@ -1,16 +1,16 @@
 import type { DegreeClass } from '@/types/analytics';
-import { DEGREE_CLASSES } from '@/lib/utils/constants';
-import { resolveDegreeClass as resolveDegreeClassBand } from './academicRules';
+import type { GradingScale } from './academicRules';
+import { DEFAULT_SCALE, scaleDegreeClass } from './scale';
 
 /**
  * Resolve degree class from CGPA value.
  * Classifies the rounded 2-decimal CGPA the UI displays with lower-bound
  * thresholds (see ./academicRules), then returns the themed entry with label,
- * color token, icon and range.
+ * color token, icon and range. With a scale, the class comes from that scale
+ * and the colour from the class's rank (top class gold ... lowest red).
  */
-export function resolveDegreeClass(cgpa: number): DegreeClass {
-  const { shortLabel } = resolveDegreeClassBand(cgpa);
-  return DEGREE_CLASSES.find((dc) => dc.shortLabel === shortLabel) ?? DEGREE_CLASSES[DEGREE_CLASSES.length - 1];
+export function resolveDegreeClass(cgpa: number, scale: GradingScale = DEFAULT_SCALE): DegreeClass {
+  return scaleDegreeClass(cgpa, scale);
 }
 
 /**
@@ -19,9 +19,10 @@ export function resolveDegreeClass(cgpa: number): DegreeClass {
  */
 export function hasClassChanged(
   previousCGPA: number,
-  currentCGPA: number
+  currentCGPA: number,
+  scale: GradingScale = DEFAULT_SCALE
 ): boolean {
-  const prevClass = resolveDegreeClass(previousCGPA);
-  const currClass = resolveDegreeClass(currentCGPA);
+  const prevClass = resolveDegreeClass(previousCGPA, scale);
+  const currClass = resolveDegreeClass(currentCGPA, scale);
   return prevClass.label !== currClass.label;
 }

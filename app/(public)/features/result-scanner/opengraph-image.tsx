@@ -6,7 +6,7 @@ export const alt = 'AcadeGrade result scanner: snap the slip, check the rows';
 
 export default function Image() {
   return renderOgImage({
-    meta: 'Features · Result scanner',
+    meta: 'The result scanner, free on web and Android',
     headline: 'Snap the slip. Check the rows.',
     line: 'A photo of your result slip becomes course rows you check before anything is saved.',
   });

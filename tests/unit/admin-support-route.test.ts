@@ -84,7 +84,7 @@ describe('POST /api/admin/support', () => {
     expect(await response.json()).toMatchObject({ success: true, emailSent: true });
 
     const items = store.paths('notifications/ada/items/').map((path) => store.docs.get(path));
-    expect(items).toEqual([{ title: 'Reply from AcadeGrade support', message: 'Thanks, we fixed the 200L total.', type: 'system', read: false, createdAt: expect.any(Date) }]);
+    expect(items).toEqual([{ title: 'Reply from AcadeGrade support', message: 'Thanks, we fixed the 200L total.', type: 'system', read: false, createdAt: expect.any(Date), actionUrl: '/support' }]);
     expect(state.unread['notif_counts/ada/unread']).toBe(3);
     expect(state.sendEmail).toHaveBeenCalledWith('ada@test.example', 'Reply from AcadeGrade support', expect.stringContaining('Thanks, we fixed'));
     expect(store.docs.get('support_tickets/t1')).toMatchObject({

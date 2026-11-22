@@ -10,6 +10,7 @@ import { DEFAULT_SCALE } from '@/lib/public/scales';
 import '@/components/site/site.css';
 import '@/components/site/tools/tools-v2.css';
 import { TOOL_CONFIGS, getTool, type ToolSlug } from './tools-config';
+import { reveal } from '@/components/motion/Reveal';
 
 export function toolMetadata(slug: ToolSlug): Metadata {
   const tool = getTool(slug);
@@ -63,7 +64,7 @@ export function ToolPage({ slug, children, extra, lastTone = 'white' }: ToolPage
               All free tools
             </TextLinkV2>
           </div>
-          <ul className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ul {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {moreToolLinks(path).map((link) => (
               <ToolCard key={link.href} name={link.name} href={link.href} tone={moreTone === 'haze' ? 'white' : 'haze'} footer={<OpenCue />}>
                 <p className="mt-3 text-[0.9375rem] leading-relaxed text-ag-mist">{link.question}</p>

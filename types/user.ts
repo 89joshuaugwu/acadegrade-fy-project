@@ -1,3 +1,4 @@
+import type { StoredGradingScale } from '@/lib/cgpa/scaleSetting';
 import { Timestamp } from 'firebase/firestore';
 
 /** Student level in Nigerian university system */
@@ -53,6 +54,8 @@ export interface User {
   creditLoadRange?: { min: number; max: number };
   /** C1: milestone id -> when it was first reached. Missing on older accounts (seeded silently). */
   milestones?: Record<string, unknown>;
+  /** Grading scale choice (optional; absent means the 5-point scale). Resolve with useGradingScale / resolveGradingScale. */
+  gradingScale?: StoredGradingScale;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

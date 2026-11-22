@@ -3,7 +3,8 @@
 import { useId } from 'react';
 import { Calculator } from 'lucide-react';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
-import { bandFor, planDegreeGoal, TARGET_CLASS_OPTIONS, type ClassRequirement, type TargetClass } from '@/lib/planning/degreeGoal';
+import { bandFor, defaultTargetClass, planDegreeGoal, targetClassOptions, type ClassRequirement, type TargetClass } from '@/lib/planning/degreeGoal';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { cn } from '@/lib/utils/cn';
@@ -32,7 +33,10 @@ const toneClass = { ink: 'text-[var(--acade-text)]', good: 'text-[var(--acade-su
 /** A6: a saved degree-class goal with the GPA it needs. Pure maths, no AI call. */
 export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits = 0, targetClass, onTargetChange, saving = false }: DegreeGoalCardProps) {
   const headingId = useId();
-  const plan = planDegreeGoal({ currentCgpa, completedUnits: gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits, targetClass: targetClass ?? '2:1' });
+  const { scale } = useGradingScale();
+  const options = targetClassOptions(scale);
+  const fallbackTarget = defaultTargetClass(scale);
+  const plan = planDegreeGoal({ currentCgpa, completedUnits: gradedCredits, remainingSemesters, unitsPerSemester, gradedInProgressUnits, targetClass: targetClass ?? fallbackTarget, scale });
   const target = targetClass && plan.kind === 'plan' ? plan.target : null;
   const semesters = `${remainingSemesters} remaining ${remainingSemesters === 1 ? 'semester' : 'semesters'}`;
 
@@ -86,7 +90,7 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
               placeholder="Choose a class"
               value={targetClass ?? ''}
               disabled={saving}
-              options={TARGET_CLASS_OPTIONS.map(option => ({ value: option.value, label: option.label }))}
+              options={options.map(option => ({ value: option.value, label: option.label }))}
               onChange={value => { if (value) onTargetChange(value as TargetClass); }}
             />
           </div>
@@ -115,7 +119,7 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
       <div className="mt-5 text-pretty text-[0.9375rem] leading-7 text-[var(--acade-text)]" aria-live="polite">
         <DiscreetValue label="Goal summary" block><p>{message}</p></DiscreetValue>
       </div>
-      {plan.kind === 'plan' && target?.state === 'unreachable' && plan.suggestion && plan.suggestion.shortLabel !== 'Fail' && (
+      {plan.kind === 'plan' && target?.state === 'unreachable' && plan.suggestion && options.some(option => option.value === plan.suggestion!.shortLabel) && (
         <Button
           variant="outline"
           size="sm"
@@ -128,7 +132,7 @@ export function DegreeGoalCard({ currentCgpa, gradedCredits, remainingSemesters,
       )}
       {plan.kind === 'plan' && (
         <p className="mt-5 border-t border-[var(--acade-border-subtle)] pt-4 text-sm leading-6 text-[var(--acade-text-muted)]">
-          Assumes {semesters} of {unitsPerSemester} units at the same GPA, less units already graded in your current semester. Uses every graded course so far; courses awaiting results are left out. Each class starts at its lowest CGPA ({formatCgpa(bandFor(targetClass ?? '2:1').minCGPA)} for {targetClass ?? '2:1'}).
+          Assumes {semesters} of {unitsPerSemester} units at the same GPA, less units already graded in your current semester. Uses every graded course so far; courses awaiting results are left out. Each class starts at its lowest CGPA ({formatCgpa(bandFor(targetClass ?? fallbackTarget, scale).minCGPA)} for {bandFor(targetClass ?? fallbackTarget, scale).label}).
         </p>
       )}
     </section>

@@ -108,3 +108,21 @@ describe('parseTargetClass', () => {
     expect(parseTargetClass(4.5)).toBeNull();
   });
 });
+
+describe('degree goal on another grading scale', () => {
+  it('offers the scale classes and uses its top grade point', async () => {
+    const { SCALES } = await import('@/lib/cgpa/academicRules');
+    const { planDegreeGoal: plan, targetClassOptions, parseTargetClass: parse, defaultTargetClass } = await import('@/lib/planning/degreeGoal');
+    expect(targetClassOptions(SCALES.nbte4).map((option) => option.value)).toEqual(['Dist', 'Upper', 'Lower', 'Pass']);
+    expect(parse('2:1', SCALES.nbte4)).toBeNull();
+    expect(parse('Upper', SCALES.nbte4)).toBe('Upper');
+    expect(defaultTargetClass(SCALES.nbte4)).toBe('Upper');
+    const result = plan({ currentCgpa: 3, completedUnits: 30, remainingSemesters: 1, unitsPerSemester: 30, targetClass: 'Dist', scale: SCALES.nbte4 });
+    if (result.kind !== 'plan') throw new Error('expected a plan');
+    // (3.5 * 60 - 3 * 30) / 30 = 4.0: exactly the top point, so still reachable.
+    expect(result.target.requiredGpa).toBeCloseTo(4, 10);
+    expect(result.target.state).toBe('reachable');
+    expect(result.target.band.label).toBe('Distinction');
+    expect(result.maxReachable).toBeCloseTo(3.5, 10);
+  });
+});

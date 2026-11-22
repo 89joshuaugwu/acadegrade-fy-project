@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
-import { Download, Share2, Printer, Link2, Copy, Check, Trash2, ImageIcon, AlertTriangle, FileText, Lock } from 'lucide-react';
+import { Download, Printer, Link2, AlertTriangle, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -11,50 +11,37 @@ import { queryCollection, deleteDocument, where } from '@/lib/firebase/firestore
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { CGPAArc } from '@/components/cgpa/CGPAArc';
+import { Switch } from '@/components/ui/Switch';
 import { ShareQr } from '@/components/transcript/ShareQr';
+import { shortShareLink } from '@/lib/share/link';
+import { ShareLinkDialog, type CreatedShareLink, type ShareLinkSettings } from '@/components/transcript/ShareLinkDialog';
+import { SharedLinksList, type SharedLinkRow } from '@/components/transcript/SharedLinksList';
+import { TranscriptPreview, type PreviewRequest } from '@/components/transcript/TranscriptPreview';
 import { EmptyState, ErrorState } from '@/components/shared';
-import { cn } from '@/lib/utils/cn';
-import { computeCumulativeCGPA, formatCgpa, resolveDegreeClass, weightedAverageScore } from '@/lib/cgpa/academicRules';
+import { computeCumulativeCGPA, formatCgpa, weightedAverageScore } from '@/lib/cgpa/academicRules';
+import { transcriptClassLabel } from '@/lib/cgpa/scale';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
-import {
-  DEFAULT_SHARE_EXPIRY_DAYS,
-  SHARE_EXPIRY_CHOICES,
-  isValidPin,
-  type ShareExpiryDays,
-  type ShareLevel,
-} from '@/lib/share/options';
 
 import type { SemesterWithId, SemesterWithCourses } from '@/types/semester';
 import type { CourseWithId } from '@/types/course';
 
-function shareModalDescription(created: { expiresInDays: number; hasPin: boolean } | null): string {
-  const days = created?.expiresInDays ?? DEFAULT_SHARE_EXPIRY_DAYS;
-  const who = created?.hasPin ? 'Anyone with this link and the PIN' : 'Anyone with this link';
-  return `${who} can view your transcript. The link expires in ${days} ${days === 1 ? 'day' : 'days'}.`;
-}
-
 export default function TranscriptPage() {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { scale } = useGradingScale();
   
   const [semesters, setSemesters] = useState<SemesterWithCourses[]>([]);
   const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [downloading, setDownloading] = useState(false);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [sharing, setSharing] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [showPhoto, setShowPhoto] = useState(true);
-  const [sharedLinks, setSharedLinks] = useState<any[]>([]);
-  // Share link settings. The PIN is cleared as soon as the request is sent.
-  const [shareExpiryDays, setShareExpiryDays] = useState<ShareExpiryDays>(DEFAULT_SHARE_EXPIRY_DAYS);
-  const [shareSummaryOnly, setShareSummaryOnly] = useState(false);
-  const [sharePin, setSharePin] = useState('');
-  const [sharePinError, setSharePinError] = useState<string | null>(null);
-  const [createdShare, setCreatedShare] = useState<{ expiresInDays: number; level: ShareLevel; hasPin: boolean } | null>(null);
+  const [sharedLinks, setSharedLinks] = useState<SharedLinkRow[]>([]);
+  const [previewRequest, setPreviewRequest] = useState<PreviewRequest | null>(null);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -78,7 +65,7 @@ export default function TranscriptPage() {
 
       // Load active shared links
       try {
-        const links = await queryCollection<any>('shared_transcripts', where('uid', '==', user.uid));
+        const links = await queryCollection<SharedLinkRow & { expiresAt?: any }>('shared_transcripts', where('uid', '==', user.uid));
         // filter out expired locally just in case
         const activeLinks = links.filter(link => {
           const expiresAt = link.expiresAt?.toDate?.() || link.expiresAt;
@@ -145,20 +132,11 @@ export default function TranscriptPage() {
     window.print();
   };
 
-  const handleShareLink = async () => {
-    if (!user || loadStatus !== 'ready' || semesters.length === 0) return;
-    const pin = sharePin.trim();
-    if (pin && !isValidPin(pin)) {
-      setSharePinError('Use 4 to 6 digits, or leave the PIN empty.');
-      return;
-    }
-    setSharePinError(null);
-    const level: ShareLevel = shareSummaryOnly ? 'summary' : 'full';
-    const body: Record<string, unknown> = { showPhoto, expiresInDays: shareExpiryDays, level };
+  /** Creates a link from the dialog's settings. The PIN is only in this request body. */
+  const handleShareLink = async ({ expiresInDays, level, pin }: ShareLinkSettings): Promise<CreatedShareLink | null> => {
+    if (!user || loadStatus !== 'ready' || semesters.length === 0) return null;
+    const body: Record<string, unknown> = { showPhoto, expiresInDays, level };
     if (pin) body.pin = pin;
-    // The PIN is not kept on this page once it has been sent.
-    setSharePin('');
-    setSharing(true);
     try {
       const token = await user.getIdToken();
       const res = await fetch('/api/transcript/share', {
@@ -171,54 +149,44 @@ export default function TranscriptPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'Failed to create share link');
       }
 
       const created = await res.json();
-      setShareUrl(created.shareUrl);
-      const summary = {
-        expiresInDays: typeof created.expiresInDays === 'number' ? created.expiresInDays : shareExpiryDays,
+      const days = typeof created.expiresInDays === 'number' ? created.expiresInDays : expiresInDays;
+      const expiresAt = typeof created.expiresAt === 'string' ? new Date(created.expiresAt) : new Date(Date.now() + days * 86_400_000);
+      const result: CreatedShareLink = {
+        shareUrl: created.shareUrl,
+        expiresInDays: days,
+        expiresAt,
         level: created.level === 'summary' || created.level === 'full' ? created.level : level,
         hasPin: typeof created.hasPin === 'boolean' ? created.hasPin : Boolean(pin),
-      } as const;
-      setCreatedShare(summary);
-      setShareModalOpen(true);
-      // Show the new link in "Active Shared Transcripts" without another read.
+        showPhoto: showPhoto && Boolean(userPhotoUrl),
+      };
+      // Show the new link in "Shared links" without another read.
       if (typeof created.shareId === 'string') {
-        const expiresAt = typeof created.expiresAt === 'string'
-          ? new Date(created.expiresAt)
-          : new Date(Date.now() + summary.expiresInDays * 86_400_000);
         setSharedLinks((prev) => [
-          { id: created.shareId, expiresAt, shareLevel: summary.level, hasPin: summary.hasPin, viewCount: 0 },
+          {
+            id: created.shareId, expiresAt, shareLevel: result.level, hasPin: result.hasPin, viewCount: 0,
+            showPhoto: result.showPhoto, avatarUrl: result.showPhoto ? userPhotoUrl : null,
+          },
           ...prev.filter((link) => link.id !== created.shareId),
         ]);
       }
+      return result;
     } catch (err: any) {
       // Never log the request body: it may hold the PIN.
       console.error('Share link failed');
       toast.error(err.message || 'Failed to create share link');
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  const handleCopyLink = async () => {
-    if (!shareUrl) return;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      toast.success('Link copied!');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Failed to copy');
+      return null;
     }
   };
 
   const handleCopyLinkText = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Link copied!');
+      toast.success('Link copied');
     } catch {
       toast.error('Failed to copy');
     }
@@ -235,10 +203,10 @@ export default function TranscriptPage() {
     try {
       await deleteDocument(`shared_transcripts/${id}`);
       setSharedLinks(prev => prev.filter(link => link.id !== id));
-      toast.success('Shared transcript deleted');
+      toast.success('Link deleted');
     } catch (e) {
       console.error(e);
-      toast.error('Failed to delete shared transcript');
+      toast.error("Couldn't delete the link. Try again.");
     }
   };
 
@@ -321,7 +289,8 @@ export default function TranscriptPage() {
   const cgpaNum = parseFloat(cgpa);
   const piNum = parseFloat(cumulativePI);
   // Classified from the same rounded CGPA that is displayed
-  const degreeClass = resolveDegreeClass(cumulative.cgpa).transcriptLabel;
+  const degreeClass = transcriptClassLabel(cumulative.cgpa, scale);
+  const maxText = formatCgpa(scale.maxPoint);
   const universityName = profile?.university?.trim() || 'University not specified';
   // Credit-weighted mean of the course scores. Not a CGPA, not official, no 4.0 conversion.
   const weighted = weightedAverageScore(semesters.flatMap((sem) => sem.courses));
@@ -331,304 +300,158 @@ export default function TranscriptPage() {
 
   const hide = (label: string, value: React.ReactNode) => <DiscreetValue label={label}>{value}</DiscreetValue>;
 
+  const openPreview = (id: string) => setPreviewRequest((prev) => ({ id, key: (prev?.key ?? 0) + 1 }));
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+
   return (
     <DiscreetScope>
     <div className="max-w-4xl mx-auto pb-10">
       {/* Page heading - hidden when printing */}
-      <header className="mb-6 print:hidden">
-        <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
-          Unofficial Transcript
-        </h1>
-        <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
-          HTML preview. Use the buttons below to export.
-        </p>
-        <p className="mt-0.5 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
-          Transcript CGPA covers completed semesters only.
-        </p>
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between print:hidden">
+        <div className="min-w-0">
+          <h1 className="app-display text-[clamp(1.75rem,3.2vw,2.25rem)] font-bold leading-tight text-[var(--acade-text)]">
+            Unofficial Transcript
+          </h1>
+          <p className="mt-2 max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+            Save it as a PDF, or send a private link that you control.
+          </p>
+          <p className="max-w-2xl text-[0.9375rem] leading-7 text-[var(--acade-text-muted)]">
+            Transcript CGPA covers completed semesters only.
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <HelpButton entryId={STUDENT_HELP.transcript} source={studentHelpSource} />
+          <DiscreetRevealButton label="Transcript values" className="border border-[var(--acade-border)]" />
+        </div>
       </header>
 
-      {/* Export and share - hidden when printing */}
-      <section aria-label="Export and share" className="mb-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] print:hidden">
-        <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+      {/* Summary and the main actions - hidden when printing */}
+      <section aria-labelledby="transcript-summary-title" className="mb-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] print:hidden">
+        <h2 id="transcript-summary-title" className="sr-only">Summary</h2>
+        <div className="grid gap-5 p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:items-center md:gap-8">
           <div className="min-w-0">
-            <h2 className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">Export and share</h2>
-            <p className="mt-1 text-sm text-[var(--acade-text-muted)]">Print it, save a PDF, or send a private link.</p>
+            <p className="text-sm font-medium text-[var(--acade-text-muted)]">Cumulative CGPA</p>
+            <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
+              <span className="app-display text-[2.75rem] font-bold leading-none tabular-nums text-[var(--acade-text)]">{hide('CGPA', cgpa)}</span>
+              <span className="text-[0.9375rem] text-[var(--acade-text-muted)]">of {maxText}</span>
+            </p>
+            <p className="mt-2 text-[1.0625rem] font-semibold text-[var(--acade-text)]">{hide('Degree class', degreeClass)}</p>
           </div>
-          <div
-            role="group"
-            aria-label="Transcript export options"
-            className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:justify-end"
-          >
-            <HelpButton entryId={STUDENT_HELP.transcript} source={studentHelpSource} className="col-span-2 justify-center sm:col-span-1" />
-            <DiscreetRevealButton label="Transcript values" className="col-span-2 border border-[var(--acade-border)] sm:col-span-1" />
-            {/* Photo Toggle */}
-            <button
-              type="button"
-              aria-pressed={showPhoto}
-              onClick={() => setShowPhoto(prev => !prev)}
-              className={cn(
-                "flex min-h-12 min-w-0 w-full items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] border px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-primary)] sm:w-auto",
-                showPhoto
-                  ? "border-[var(--acade-primary)]/40 bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]"
-                  : "border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text-muted)] hover:text-[var(--acade-text)]"
-              )}
-              title={showPhoto ? "Click to hide your photo from the transcript" : "Click to show your photo on the transcript"}
-            >
-              <ImageIcon size={16} aria-hidden="true" />
-              {showPhoto ? 'Photo On' : 'Photo Off'}
-            </button>
+          <dl className="grid min-w-0 grid-cols-2 gap-x-5 gap-y-4">
+            <div className="min-w-0">
+              <dt className="text-[0.8125rem] text-[var(--acade-text-muted)]">Completed semesters</dt>
+              <dd className="mt-0.5 text-[1.0625rem] font-semibold tabular-nums text-[var(--acade-text)]">{semesters.length}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="text-[0.8125rem] text-[var(--acade-text-muted)]">Units earned</dt>
+              <dd className="mt-0.5 text-[1.0625rem] font-semibold tabular-nums text-[var(--acade-text)]">{totalCredits}</dd>
+            </div>
+            <div className="col-span-2 min-w-0">
+              <dt className="text-[0.8125rem] text-[var(--acade-text-muted)]">Grading scale</dt>
+              <dd className="mt-0.5 break-words text-[1.0625rem] font-semibold text-[var(--acade-text)]">{scale.name}</dd>
+            </div>
+          </dl>
+        </div>
 
-            <Button variant="outline" size="sm" onClick={handlePrint} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
-              <Printer size={16} className="shrink-0" aria-hidden="true" />
-              Print HTML
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleShareLink} disabled={sharing} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
-              <Link2 size={16} className={cn("shrink-0", sharing && "animate-spin")} aria-hidden="true" />
-              {sharing ? 'Creating...' : 'Share Link'}
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleDownload} disabled={downloading} className="min-w-0 w-full px-2 sm:w-auto sm:px-4">
-              <Download size={16} className={cn("shrink-0", downloading && "animate-bounce")} aria-hidden="true" />
+        <div className="flex flex-col gap-4 border-t border-[var(--acade-border-subtle)] p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+          <div role="group" aria-label="Export and share" className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button variant="primary" size="sm" onClick={handleDownload} loading={downloading} loadingLabel="Making PDF…" className="col-span-2 sm:col-span-1">
+              <Download size={16} className="shrink-0" aria-hidden="true" />
               Download PDF
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setShareDialogOpen(true)}>
+              <Link2 size={16} className="shrink-0" aria-hidden="true" />
+              Share a link
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handlePrint}>
+              <Printer size={16} className="shrink-0" aria-hidden="true" />
+              Print
+            </Button>
           </div>
-        </div>
-
-      {/* Share link settings: applied when "Share Link" is pressed */}
-      <fieldset className="min-w-0 border-t border-[var(--acade-border-subtle)] p-5 sm:p-6">
-        <legend className="sr-only">Share link settings</legend>
-        <div className="mb-4 flex items-center gap-2">
-          <Link2 size={16} className="text-[var(--acade-primary)]" aria-hidden="true" />
-          <h3 className="text-[0.9375rem] font-semibold text-[var(--acade-text)]" aria-hidden="true">
-            Share link settings
-          </h3>
-        </div>
-        <div className="grid min-w-0 gap-5 md:grid-cols-3">
-          <div role="radiogroup" aria-labelledby="share-expiry-label" className="min-w-0">
-            <p id="share-expiry-label" className="mb-2 text-sm font-medium text-[var(--acade-text-muted)]">
-              Link expires after
-            </p>
-            <div className="grid grid-cols-3 gap-1 rounded-[var(--radius-control)] border border-[var(--acade-border)] bg-[var(--acade-void)] p-1">
-              {SHARE_EXPIRY_CHOICES.map((days) => (
-                <label
-                  key={days}
-                  className={cn(
-                    'flex min-h-11 cursor-pointer items-center justify-center rounded-[10px] px-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]',
-                    shareExpiryDays === days
-                      ? 'bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
-                      : 'text-[var(--acade-text-muted)] hover:bg-[var(--acade-overlay)] hover:text-[var(--acade-text)]',
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="share-expiry"
-                    className="sr-only"
-                    checked={shareExpiryDays === days}
-                    onChange={() => setShareExpiryDays(days)}
-                  />
-                  {days === 1 ? '1 day' : `${days} days`}
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="min-w-0">
-            <p className="mb-2 text-sm font-medium text-[var(--acade-text-muted)]">
-              What the link shows
-            </p>
-            <label
-              className={cn(
-                'flex min-h-11 cursor-pointer items-start gap-3 rounded-[var(--radius-control)] border p-3 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--acade-primary)]',
-                shareSummaryOnly
-                  ? 'border-[var(--acade-primary)]/40 bg-[var(--acade-primary-dim)]'
-                  : 'border-[var(--acade-border)] bg-[var(--acade-void)] hover:border-[var(--acade-control-border)]'
-              )}
-            >
-              <input
-                type="checkbox"
-                checked={shareSummaryOnly}
-                onChange={(event) => setShareSummaryOnly(event.target.checked)}
-                aria-describedby="share-summary-hint"
-                className="peer sr-only"
-              />
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
-                  shareSummaryOnly
-                    ? 'border-[var(--acade-primary)] bg-[var(--acade-primary)] text-[var(--acade-on-primary)]'
-                    : 'border-[var(--acade-control-border)] bg-[var(--acade-surface)]'
-                )}
-              >
-                {shareSummaryOnly && <Check size={13} strokeWidth={3} />}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-semibold text-[var(--acade-text)]">Summary only</span>
-                <span id="share-summary-hint" className="block text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">
-                  Semester GPAs and your CGPA, without course-by-course scores.
-                </span>
-              </span>
-            </label>
-          </div>
-
-          <div className="min-w-0">
-            <label htmlFor="share-pin" className="mb-2 block text-sm font-medium text-[var(--acade-text-muted)]">
-              PIN (optional)
-            </label>
-            {/* No `name`: the PIN is only ever sent in the share request body. */}
-            <input
-              id="share-pin"
-              type="password"
-              inputMode="numeric"
-              autoComplete="new-password"
-              maxLength={6}
-              placeholder="4 to 6 digits"
-              value={sharePin}
-              onChange={(event) => {
-                setSharePin(event.target.value.replace(/\D/g, '').slice(0, 6));
-                setSharePinError(null);
-              }}
-              aria-invalid={sharePinError ? true : undefined}
-              aria-describedby={sharePinError ? 'share-pin-note share-pin-error' : 'share-pin-note'}
-              className="h-12 w-full rounded-[var(--radius-control)] border border-[var(--acade-control-border)] bg-[var(--acade-deep)] px-4 text-base tracking-[0.3em] text-[var(--acade-text)] outline-none tabular-nums placeholder:tracking-normal placeholder:text-[var(--acade-text-faint)] focus-visible:border-[var(--acade-primary)] focus-visible:ring-2 focus-visible:ring-[var(--acade-primary)]/25"
-            />
-            {sharePinError && (
-              <p id="share-pin-error" role="alert" className="mt-1.5 text-sm font-medium text-[var(--acade-danger)]">
-                {sharePinError}
+          <div className="flex items-center justify-between gap-3 rounded-2xl bg-[var(--acade-overlay)] py-1 pl-4 pr-1 lg:min-w-[17rem]">
+            <div className="min-w-0 py-1.5">
+              <p id="transcript-photo-label" className="text-[0.9375rem] font-semibold text-[var(--acade-text)]">Include my photo</p>
+              <p className="text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">
+                {userPhotoUrl ? 'On the PDF, the printout and new links.' : 'Add a profile photo to use this.'}
               </p>
-            )}
-            <p id="share-pin-note" className="mt-1.5 text-[0.8125rem] leading-5 text-[var(--acade-text-muted)]">
-              The person opening the link must type this PIN. Send it separately from the link. It can&apos;t be recovered or shown again, so note it down; if you forget it, delete the link and make a new one.
-            </p>
+            </div>
+            <Switch checked={showPhoto} onCheckedChange={setShowPhoto} aria-labelledby="transcript-photo-label" />
           </div>
         </div>
-      </fieldset>
       </section>
 
-      {/* Active Shared Links */}
-      {sharedLinks.length > 0 && (
-        <div className="mb-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 sm:p-6 print:hidden">
-          <h2 className="app-display mb-4 flex items-center gap-2 text-[1.125rem] font-semibold text-[var(--acade-text)]">
-            <Link2 size={18} className="text-[var(--acade-primary)]" aria-hidden="true" />
-            Active Shared Transcripts
+      {/* Shared links - hidden when printing */}
+      <section aria-labelledby="shared-links-title" className="mb-6 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 sm:p-6 print:hidden">
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 id="shared-links-title" className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">
+            Shared links
+            {sharedLinks.length > 0 ? (
+              <span className="ml-2 text-[0.9375rem] font-medium tabular-nums text-[var(--acade-text-muted)]">{sharedLinks.length}</span>
+            ) : null}
           </h2>
-          <div className="space-y-2">
-            {sharedLinks.map(link => {
-              const url = `${window.location.origin}/share/${link.id}`;
-              const expiresAt = link.expiresAt?.toDate?.() || new Date(link.expiresAt);
-              const linkHasPin = Boolean(link.pinHash) || link.hasPin === true;
-              const views = typeof link.viewCount === 'number' ? link.viewCount : null;
-              return (
-                <div key={link.id} className="grid min-w-0 grid-cols-1 gap-3 rounded-2xl bg-[var(--acade-overlay)] p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4">
-                  <div className="min-w-0 overflow-hidden">
-                    <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-[var(--acade-text-muted)]">
-                      <span>Expires: {new Date(expiresAt).toLocaleDateString()}</span>
-                      {link.shareLevel === 'summary' && (
-                        <span className="rounded-full bg-[var(--acade-surface)] px-2 py-0.5 font-medium text-[var(--acade-text)]">Summary</span>
-                      )}
-                      {linkHasPin && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--acade-primary-dim)] px-2 py-0.5 font-medium text-[var(--acade-primary)]">
-                          <Lock size={11} aria-hidden="true" />
-                          <span>PIN</span>
-                        </span>
-                      )}
-                      {views !== null && <span>{views === 1 ? '1 view' : `${views} views`}</span>}
-                    </div>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label="Open shared transcript"
-                      title={url}
-                      className="block min-w-0 max-w-full truncate text-sm font-medium text-[var(--acade-text)] hover:text-[var(--acade-primary)]"
-                    >
-                      {url}
-                    </a>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      aria-label="Copy shared transcript link"
-                      onClick={() => handleCopyLinkText(url)}
-                    >
-                      <Copy size={14} aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label="Delete shared transcript link"
-                      onClick={() => handleDeleteShare(link.id)}
-                      className="text-[var(--acade-danger)]"
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <p className="text-[0.8125rem] text-[var(--acade-text-muted)]">Links stop working when they expire or you delete them.</p>
         </div>
-      )}
+        <SharedLinksList
+          links={sharedLinks}
+          origin={origin}
+          onCopy={(url) => void handleCopyLinkText(url)}
+          onShowQr={setQrUrl}
+          onPreview={openPreview}
+          onDelete={handleDeleteShare}
+        />
+      </section>
+
+      {/* Preview a transcript - hidden when printing */}
+      <section aria-labelledby="preview-title" className="mb-8 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)] p-5 sm:p-6 print:hidden">
+        <h2 id="preview-title" className="app-display text-[1.25rem] font-semibold text-[var(--acade-text)]">Preview a transcript</h2>
+        <p className="mb-4 mt-1 max-w-2xl text-[0.9375rem] leading-6 text-[var(--acade-text-muted)]">
+          Paste a share link or its ID to see the record exactly as the person opening it does.
+        </p>
+        <TranscriptPreview request={previewRequest} />
+      </section>
+
+      <ShareLinkDialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        showPhoto={showPhoto}
+        onShowPhotoChange={setShowPhoto}
+        hasPhoto={Boolean(userPhotoUrl)}
+        onCreate={handleShareLink}
+      />
 
       <Modal
-        open={shareModalOpen && Boolean(shareUrl)}
-        onClose={() => setShareModalOpen(false)}
-        title="Transcript shared"
-        description={shareModalDescription(createdShare)}
+        open={Boolean(qrUrl)}
+        onClose={() => setQrUrl(null)}
+        title="QR code for this link"
+        description="Let someone scan it to open your shared transcript."
+        size="confirm"
         className="print:hidden"
       >
-        {shareUrl && (
-          <div className="space-y-5 text-center">
-            {createdShare && (createdShare.hasPin || createdShare.level === 'summary') && (
-              <ul className="space-y-1.5 rounded-xl border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-3 text-left text-[length:var(--text-sm)] text-[var(--acade-text-muted)]">
-                {createdShare.hasPin && (
-                  <li className="flex items-start gap-2">
-                    <Lock size={14} className="mt-1 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
-                    <span>PIN protected. Send the PIN separately; it can&apos;t be recovered later.</span>
-                  </li>
-                )}
-                {createdShare.level === 'summary' && (
-                  <li className="flex items-start gap-2">
-                    <FileText size={14} className="mt-1 shrink-0 text-[var(--acade-primary)]" aria-hidden="true" />
-                    <span>Summary only: no course-by-course scores.</span>
-                  </li>
-                )}
-              </ul>
-            )}
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-[var(--acade-primary)]/10">
-              <Share2 size={24} className="text-[var(--acade-primary)]" aria-hidden="true" />
+        {qrUrl ? (
+          <div className="flex flex-col items-center gap-4">
+            <div className="rounded-2xl bg-white p-4">
+              <ShareQr url={qrUrl} size={200} />
             </div>
-            <div className="mx-auto inline-block rounded-xl bg-white p-4">
-              <ShareQr url={shareUrl} size={180} />
-            </div>
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--acade-border-subtle)] bg-[var(--acade-deep)] p-2">
-              <input
-                aria-label="Shared transcript link"
-                readOnly
-                value={shareUrl}
-                className="min-w-0 flex-1 truncate bg-transparent px-2 text-[length:var(--text-sm)] text-[var(--acade-text)] outline-none"
-              />
-              <Button variant="primary" size="sm" onClick={handleCopyLink} className="shrink-0 gap-1.5">
-                {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-                {copied ? 'Copied' : 'Copy'}
-              </Button>
-            </div>
+            <p className="max-w-full break-all text-center text-[0.9375rem] font-medium text-[var(--acade-text)]">{shortShareLink(qrUrl)}</p>
+            <Button variant="primary" size="sm" fullWidth onClick={() => void handleCopyLinkText(qrUrl)}>
+              Copy link
+            </Button>
           </div>
-        )}
+        ) : null}
       </Modal>
 
       <Modal
         open={Boolean(deleteConfirmId)}
         onClose={() => setDeleteConfirmId(null)}
-        title="Delete shared link?"
-        description="This transcript will be permanently unshared. Anyone with the link will no longer have access."
+        title="Delete this link?"
+        description="The link stops working straight away for everyone who has it. This can't be undone."
         confirm={{ label: 'Delete link', onConfirm: () => void confirmDeleteShare() }}
         className="print:hidden"
       >
         <div className="flex items-start gap-3 rounded-xl border border-[var(--acade-danger)]/25 bg-[var(--acade-danger-dim)] p-4">
           <AlertTriangle className="mt-0.5 size-5 shrink-0 text-[var(--acade-danger)]" aria-hidden="true" />
           <p className="text-left text-[length:var(--text-sm)] leading-6 text-[var(--acade-text-muted)]">
-            Delete this link only if you no longer want recipients to access this transcript.
+            To share again later, make a new link. Its address will be different.
           </p>
         </div>
       </Modal>
@@ -742,12 +565,13 @@ export default function TranscriptPage() {
             </div>
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
               <div>
-                <p><span className="font-bold inline-block w-40">Cumulative CGPA:</span> <span className="font-bold text-lg">{hide('CGPA', cgpa)}</span> / 5.00</p>
-                <p className="mt-1"><span className="font-bold inline-block w-40">Cumulative PI:</span> <span className="font-bold text-lg">{hide('PI', cumulativePI)}</span> / 5.00</p>
+                <p><span className="font-bold inline-block w-40">Cumulative CGPA:</span> <span className="font-bold text-lg">{hide('CGPA', cgpa)}</span> / {maxText}</p>
+                <p className="mt-1"><span className="font-bold inline-block w-40">Cumulative PI:</span> <span className="font-bold text-lg">{hide('PI', cumulativePI)}</span> / {maxText}</p>
                 <p className="mt-1"><span className="font-bold inline-block w-40">Total Credits Earned:</span> {totalCredits}</p>
               </div>
               <div>
                 <p><span className="font-bold inline-block w-44">Projected Degree Class:</span> {hide('Degree class', degreeClass)}</p>
+                <p className="mt-1"><span className="font-bold inline-block w-44">Grading scale:</span> {scale.name}</p>
               </div>
             </div>
           </div>

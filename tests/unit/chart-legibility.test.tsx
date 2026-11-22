@@ -41,3 +41,20 @@ describe('TrendChart', () => {
     expect(container.querySelector('.touch-none')).toBeNull();
   });
 });
+
+describe('charts on another grading scale', () => {
+  it('end the y-axis at the scale top point', async () => {
+    const { GradingScaleProvider } = await import('@/hooks/useGradingScale');
+    const { container } = render(
+      <GradingScaleProvider setting={{ id: 'nbte4' }}>
+        <TrendChart metric="both" semesters={[{ semesterId: 's1', label: 'ND1 First', session: '2024/2025', gpa: 3.2, pi: 3, creditLoaded: 18 }]} />
+        <ForecastChart history={[3.1, 3.2]} projected={[3.4]} labels={['A', 'B', 'C']} />
+      </GradingScaleProvider>
+    );
+    const axes = container.querySelectorAll('[data-axis="y"]');
+    expect(axes).toHaveLength(2);
+    axes.forEach((axis) => {
+      expect(axis.textContent).toBe('0.01.02.03.04.0');
+    });
+  });
+});

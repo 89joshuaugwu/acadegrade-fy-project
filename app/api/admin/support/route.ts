@@ -5,6 +5,7 @@ import { writeAdminAudit } from '@/lib/api/admin-audit';
 import {
   SUPPORT_MAX_REPLIES, SUPPORT_PURGE_AFTER_MS, SUPPORT_REPLY_MAX, toIsoTime, type SupportStatus,
 } from '@/lib/support/tickets';
+import { SUPPORT_PAGE_PATH } from '@/lib/site/contact-email';
 
 export const dynamic = 'force-dynamic';
 
@@ -122,7 +123,7 @@ export async function POST(request: Request) {
     if (uid) {
       // Same shape the app inboxes already read (notifications/{uid}/items).
       await adminDb.collection(`notifications/${uid}/items`).doc().set({
-        title: REPLY_TITLE, message, type: 'system', read: false, createdAt: now,
+        title: REPLY_TITLE, message, type: 'system', read: false, createdAt: now, actionUrl: SUPPORT_PAGE_PATH,
       });
       await adminRtdb.ref(`notif_counts/${uid}/unread`).transaction((current: number | null) => (current || 0) + 1).catch(() => undefined);
     }

@@ -1,6 +1,7 @@
 import { AcadeGradeMark } from '@/components/public/Logo';
 import { ArcGauge } from '@/components/site/ArcGauge';
-import { formatCgpa, resolveDegreeClass, roundCgpa } from '@/lib/cgpa/academicRules';
+import { formatCgpa, resolveGradingScale, roundCgpa } from '@/lib/cgpa/academicRules';
+import { transcriptClassLabel } from '@/lib/cgpa/scale';
 import {
   MADE_WITH_LINE,
   NOT_OFFICIAL_LINE,
@@ -212,30 +213,34 @@ function Cumulative({ transcript }: { transcript: SharedTranscript }) {
   // The server snapshot's CGPA (shared academic rules) is authoritative; old snapshots are recomputed.
   const standing = resolveSharedStanding(transcript);
   const cgpa = formatCgpa(standing.cgpa);
-  const degreeClass = resolveDegreeClass(standing.cgpa).transcriptLabel;
+  const scale = resolveGradingScale(transcript.gradingScale);
+  const maxText = formatCgpa(scale.maxPoint);
+  const degreeClass = transcriptClassLabel(standing.cgpa, scale);
+  const ticks = scale.classes.map((cls) => cls.minCgpa).filter((min) => min > 0);
   return (
     <section
       className="ag-record-summary grid grid-cols-[minmax(0,1fr)] items-center gap-6 rounded-[24px] bg-ag-haze p-5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-8 sm:p-7"
       aria-label="Cumulative summary"
     >
       <div className="relative mx-auto w-full max-w-[11rem]">
-        <ArcGauge value={roundCgpa(standing.cgpa)} tone="light" className="ag-gauge-intro block h-auto w-full" label={`CGPA ${cgpa} of 5.00, ${degreeClass}`} />
+        <ArcGauge value={roundCgpa(standing.cgpa)} max={scale.maxPoint} ticks={ticks} tone="light" className="ag-gauge-intro block h-auto w-full" label={`CGPA ${cgpa} of ${maxText}, ${degreeClass}`} />
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-2" aria-hidden="true">
           <span className="text-[0.8125rem] font-medium text-ag-mist">CGPA</span>
           <span className="ag-display ag-num text-[2.5rem] font-bold leading-none text-ag-ink">{cgpa}</span>
-          <span className="mt-1 text-[0.8125rem] text-ag-mist">of 5.00</span>
+          <span className="mt-1 text-[0.8125rem] text-ag-mist">of {maxText}</span>
         </div>
       </div>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-5">
         <div className="col-span-2">
           <dt className="text-[0.8125rem] text-ag-mist">Projected class</dt>
           <dd className="ag-display mt-1 text-[1.375rem] font-bold leading-tight text-ag-ink sm:text-[1.5rem]">{degreeClass}</dd>
+          <p className="mt-1 text-[0.8125rem] text-ag-mist">Grading scale: {scale.name}</p>
         </div>
         <div>
           <dt className="text-[0.8125rem] text-ag-mist">PI</dt>
           <dd className="mt-1 flex items-baseline gap-1.5">
             <span className="ag-display ag-num text-[1.75rem] font-bold leading-none text-ag-ink">{formatCgpa(standing.pi)}</span>
-            <span className="text-[0.8125rem] text-ag-mist">of 5.00</span>
+            <span className="text-[0.8125rem] text-ag-mist">of {maxText}</span>
           </dd>
         </div>
         <div>

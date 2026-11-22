@@ -85,3 +85,21 @@ describe('canOfferWrittenAnalysis (C3.3)', () => {
     expect(canOfferWrittenAnalysis({ eligibility: { status: 'adult', aiAllowed: true, aiConsent: true }, privacy: adult, featureDisabled: true })).toBe(false);
   });
 });
+
+describe('semester recap on another grading scale', () => {
+  it('names classes and the strongest course on the active scale', async () => {
+    const { SCALES } = await import('@/lib/cgpa/academicRules');
+    const recap = buildSemesterRecap({
+      semesters: [{ id: 's1', label: 'ND1 First', gpa: 3.6, pi: 3, creditLoaded: 6, isComplete: true }],
+      coursesBySemester: { s1: [
+        { code: 'COM 101', title: 'Intro', units: 3, caScore: 25, examScore: 52 },
+        { code: 'COM 102', title: 'Maths', units: 3, caScore: 25, examScore: 47 },
+      ] },
+      semesterId: 's1',
+      scale: SCALES.nbte4,
+    });
+    expect(recap?.strongest).toEqual({ code: 'COM 101', title: 'Intro', grade: 'A' });
+    expect(recap?.classAfter).toMatchObject({ label: 'Distinction', shortLabel: 'Dist' });
+    expect(recap?.unitsEarned).toBe(6);
+  });
+});

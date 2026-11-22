@@ -4,7 +4,7 @@
  * Numbers come from the real grading rules, so every GPA and CGPA on screen adds up.
  */
 import { computeCourseMetrics, computeSemesterGPA, type GpaRow } from '@/lib/cgpa/academicRules';
-import { daysAgo, PREVIEW_UID } from '../runtime';
+import { daysAgo, PREVIEW_UID, PreviewTimestamp } from '../runtime';
 
 type Row = [code: string, title: string, units: number, ca: number | null, exam: number | null, ar?: boolean];
 
@@ -128,6 +128,12 @@ export function firestoreSeed(): Record<string, unknown> {
       updatedAt: daysAgo(s.ago),
     };
   }
+
+  // The student's own active share links (ids match preview/fixtures/api/share.ts).
+  const inDays = (days: number) => PreviewTimestamp.fromMillis(Date.now() + days * 86_400_000 - 60_000);
+  out['shared_transcripts/5f2a9c81d3e4'] = { uid, expiresAt: inDays(7), shareLevel: 'summary', viewCount: 3, showPhoto: false, avatarUrl: null };
+  out['shared_transcripts/9b7e1a4c6d20'] = { uid, expiresAt: inDays(30), shareLevel: 'full', pinHash: 'f'.repeat(128), viewCount: 0, showPhoto: true, avatarUrl: 'https://placehold.co/96x128.png' };
+  out['shared_transcripts/0c3d5e7f9a1b'] = { uid, expiresAt: inDays(1), shareLevel: 'full', viewCount: 1, showPhoto: false, avatarUrl: null };
 
   const notes: [string, string, string, boolean, number, string?][] = [
     ['success', 'Semester saved', '300 Level, First Semester is saved. MTH 301 is still awaiting its result.', false, 0, '/results/y3s1'],

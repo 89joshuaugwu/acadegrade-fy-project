@@ -8,6 +8,7 @@ import { AuthAction } from './AuthAction';
 import { SafariShareSheet } from './ios';
 import { DashboardScreen, phoneScreen } from './phone-screens';
 import { NotificationCard } from './shared';
+import { Parallax } from '@/components/motion/Parallax';
 
 /** Sections of /app (the Android page) in brand v2 (content: docs/public-redesign/pages/android-app.md). */
 
@@ -70,7 +71,9 @@ export function AndroidHeroPhone() {
       <PhoneFrame className="relative max-w-[320px]">
         <DashboardScreen />
       </PhoneFrame>
-      <NotificationCard title={note.title} body={note.body} className="relative -mt-28 w-[92%] sm:absolute sm:-left-2 sm:top-[46%] sm:mt-0 sm:w-[300px] lg:-left-10" />
+      <Parallax distance={64} className="relative -mt-28 w-[92%] sm:absolute sm:-left-2 sm:top-[46%] sm:mt-0 sm:w-[300px] lg:-left-10">
+        <NotificationCard title={note.title} body={note.body} className="w-full" />
+      </Parallax>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import './public.css';
 import { CookieStub } from '@/components/public/CookieStub';
 import { MotionReady } from '@/components/public/MotionReady';
+import { MotionScript } from '@/components/motion/MotionScript';
 import { PublicChrome } from '@/components/public/PublicChrome';
 import { SkipLink } from '@/components/public/SkipLink';
 import { SiteFooter } from '@/components/site/SiteFooter';
@@ -29,6 +30,7 @@ import '@/components/site/site.css';
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="public-root">
+      <MotionScript />
       <MotionReady />
       <PublicChrome
         header={

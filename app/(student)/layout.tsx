@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { StudentShell } from '@/components/layout/StudentShell';
+import { GradingScaleProvider } from '@/hooks/useGradingScale';
 import { getDocument } from '@/lib/firebase/firestore';
 import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -113,10 +114,10 @@ export default function StudentLayout({
   }
 
   return (
-    <>
+    <GradingScaleProvider setting={profile?.gradingScale}>
       <StudentShell>{children}</StudentShell>
       {/* "Finish setting up" for existing accounts; fails open when the endpoint is unavailable. */}
       <RequirementsGate />
-    </>
+    </GradingScaleProvider>
   );
 }

@@ -6,7 +6,7 @@ export const alt = 'AcadeGrade for Android';
 
 export default function Image() {
   return renderOgImage({
-    meta: 'Android app · Free',
+    meta: 'Free on Android',
     headline: 'AcadeGrade for Android.',
     line: 'Everything on the website, plus offline timetable reminders, a camera scanner and App Lock.',
   });

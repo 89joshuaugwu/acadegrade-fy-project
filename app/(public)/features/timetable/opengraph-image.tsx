@@ -6,7 +6,7 @@ export const alt = 'AcadeGrade timetables: your week, on time';
 
 export default function Image() {
   return renderOgImage({
-    meta: 'Features · Timetable',
+    meta: 'Free on web and Android',
     headline: 'Your week, on time.',
     line: 'Lectures, reading and exams in one timetable, with reminders on Android, even offline.',
   });

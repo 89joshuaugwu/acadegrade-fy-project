@@ -43,5 +43,7 @@ export interface SharedTranscript {
   semesters: SharedSemester[];
   /** 'summary' links carry semester totals only. Absent on older links (full). */
   shareLevel?: 'full' | 'summary';
+  /** The student's grading scale (users/{uid}.gradingScale); absent means the 5-point scale. */
+  gradingScale?: unknown;
   createdAt?: unknown;
 }

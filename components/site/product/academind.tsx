@@ -9,6 +9,7 @@ import { Photo } from '@/components/site/Photo';
 import { CheckList, Container, Heading, Panel, Section, TextLinkV2 } from '@/components/site/ui';
 import { DegreeGoalCard, ForecastCard, MindTile } from './cards';
 import { UiCard } from './shared';
+import { reveal } from '@/components/motion/Reveal';
 
 /** Sections of /features/ai-insights, titled AcadeMind, in brand v2 (content: docs/public-redesign/pages/features-academind.md). */
 
@@ -211,7 +212,7 @@ export function FreeEveryDay({ usage }: { usage: PublicUsage | null }) {
 
         <div>
           <Heading id="free-heading" title="Free every day" lead="Free uses come back every day. The maths behind every answer is always free, with no limit." />
-          <div className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-10 md:grid-cols-2">
+          <div {...reveal('stagger')} className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-10 md:grid-cols-2">
             {menu.groups.map((group) => (
               <div key={group.name}>
                 <h3 className="text-[1.125rem] font-semibold text-ag-ink">{group.name}</h3>
@@ -256,7 +257,7 @@ export function DataInPlainWords() {
             <TextLinkV2 href="/privacy#ai-and-scanning">Read the AI section of the privacy notice</TextLinkV2>
           </p>
         </div>
-        <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-2 lg:grid-cols-3">
           {DATA_QA.map((qa) => (
             <div key={qa.question} className="rounded-[24px] bg-white p-6 sm:p-7">
               <h3 className="text-[1.125rem] font-semibold leading-snug text-ag-ink">{qa.question}</h3>

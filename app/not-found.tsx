@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import type { CSSProperties } from 'react';
 import { IMPRINT_LINE } from '@/components/public/nav';
 import { MinimalShell } from '@/components/public/shells/MinimalShell';
+import { MotionScript } from '@/components/motion/MotionScript';
+import { Words } from '@/components/motion/Words';
 import { Photo } from '@/components/site/Photo';
 import { AuthLinkButton, InlineLink } from '@/components/site/auth/controls';
 import { RequestedPath } from '@/components/site/system/RequestedPath';
@@ -41,20 +44,21 @@ export default function NotFound() {
         ) : undefined
       }
     >
+      <MotionScript />
       <div className="flex flex-1 items-start justify-center px-4 py-10 sm:px-8 sm:py-16 lg:items-center">
         <section
           aria-labelledby="not-found-title"
-          className="grid w-full max-w-[1080px] grid-cols-[minmax(0,1fr)] overflow-hidden rounded-[32px] bg-white ring-1 ring-ag-ink/[0.06] md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]"
+          className="mo-load-visual grid w-full max-w-[1080px] grid-cols-[minmax(0,1fr)] overflow-hidden rounded-[32px] bg-white ring-1 ring-ag-ink/[0.06] md:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]"
         >
           <div className="p-7 sm:p-10 lg:p-14">
-            <h1 id="not-found-title" className="ag-display text-[2.375rem] font-bold leading-[1.04] text-ag-ink sm:text-[3rem]">
-              We can&apos;t find that page
+            <h1 id="not-found-title" className="ag-display mo-load-words text-[2.375rem] font-bold leading-[1.04] text-ag-ink sm:text-[3rem]">
+              <Words>{"We can't find that page"}</Words>
             </h1>
-            <p className="mt-4 max-w-[34rem] text-[1.0625rem] leading-relaxed text-ag-mist">
+            <p style={{ "--mo-at": "200ms" } as CSSProperties} className="mo-load mt-4 max-w-[34rem] text-[1.0625rem] leading-relaxed text-ag-mist">
               The link may be mistyped, or the page may have moved. Your results are safe; nothing was changed.
             </p>
 
-            <div className="mt-8 rounded-2xl bg-ag-haze p-4 sm:p-5">
+            <div className="mo-load mt-8 rounded-2xl bg-ag-haze p-4 sm:p-5" style={{ '--mo-at': '380ms' } as CSSProperties}>
               <table className="w-full text-left">
                 <caption className="sr-only">Result for this address</caption>
                 <thead>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { AcadeGradeMark } from '@/components/public/Logo';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { EXAMPLE_STUDENT, computeExampleSlip } from '@/lib/public/example-student';
@@ -50,7 +50,7 @@ export function AuthAside({ photo, reassurance }: { photo: PagePhoto | null; rea
     <div className="hidden p-3 lg:block">
       <figure className="ag-hero-sky sticky top-3 h-[calc(100dvh-1.5rem)] min-h-[36rem] overflow-hidden rounded-[28px]">
         {photo ? (
-          <picture className="absolute inset-0 block">
+          <picture className="mo-load-visual absolute inset-0 block">
             {photo.avifSrcSet ? <source media={WIDE} type="image/avif" srcSet={photo.avifSrcSet} sizes={SIZES} /> : null}
             {photo.webpSrcSet ? <source media={WIDE} type="image/webp" srcSet={photo.webpSrcSet} sizes={SIZES} /> : null}
             {/* A 1x1 fallback: phones and tablets match no source and request nothing. */}
@@ -73,7 +73,7 @@ export function AuthAside({ photo, reassurance }: { photo: PagePhoto | null; rea
           className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,11,43,0.35)_0%,rgba(14,11,43,0)_28%,rgba(14,11,43,0.25)_55%,rgba(14,11,43,0.93)_100%)]"
         />
         <div aria-hidden="true" className="absolute inset-0 bg-[radial-gradient(70%_50%_at_10%_0%,rgba(107,78,255,0.35),transparent_70%)]" />
-        <div className="absolute right-8 top-8 xl:right-10 xl:top-10">
+        <div className="mo-load absolute right-8 top-8 xl:right-10 xl:top-10" style={{ '--mo-at': '450ms' } as CSSProperties}>
           <ExampleCard />
         </div>
         {reassurance ? (

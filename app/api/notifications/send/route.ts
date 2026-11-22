@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb, adminRtdb, adminMessaging } from '@/lib/firebase/admin';
 import { logApiCall, apiTimer } from '@/lib/api/logger';
 import { maintenanceResponse, getPlatformSettings } from '@/lib/platform/settings-server';
+import { inboxActionUrl } from '@/lib/notifications/action-url';
 
 /**
  * POST /api/notifications/send
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
 
     let fcmTokens: string[] = providedToken ? [providedToken] : [];
     let userEmail = '';
+    let userPrefs: Record<string, unknown> = {};
     const tokenToUidMap = new Map<string, string>();
 
     // Fetch user doc if UID is provided
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest) {
         fcmTokens.push(userDoc.data()?.fcmToken);
       }
       userEmail = userDoc.data()?.email || '';
+      userPrefs = userDoc.data()?.notificationPreferences || {};
     }
 
     if (type === 'email') {
@@ -84,6 +87,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing email address for email type' }, { status: 400 });
       }
       const targetEmail = userEmail || providedToken; // if token was abused to pass email
+
+      // The degree-class email honours the same preference as its push.
+      if (event === 'degreeClass' && userPrefs.degreeClass === false) {
+        return NextResponse.json({ success: true, skipped: true, message: 'Degree-class alerts are turned off.' });
+      }
       
       const { sendEmail, welcomeEmail, semesterSavedEmail, degreeClassEmail } = await import('@/lib/email/mailer');
       
@@ -112,12 +120,15 @@ export async function POST(request: NextRequest) {
     // 1. Create the notification in Firestore (inbox)
     if (uid && uid !== 'all') {
       const notifRef = adminDb.collection(`notifications/${uid}/items`).doc();
+      // actionUrl is optional and same-site only (lib/notifications/action-url).
+      const actionUrl = inboxActionUrl({ url: data?.url, event });
       await notifRef.set({
         title,
         message,
         type: type || 'info',
         read: false,
         createdAt: new Date(),
+        ...(actionUrl ? { actionUrl } : {}),
       });
 
       // 2. Increment Realtime Database unread count

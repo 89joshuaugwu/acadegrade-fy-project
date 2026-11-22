@@ -1,4 +1,5 @@
 import type { PagePhoto } from '@/lib/public/page-photos';
+import { reveal } from '@/components/motion/Reveal';
 
 interface PhotoProps {
   photo: PagePhoto;
@@ -13,7 +14,7 @@ interface PhotoProps {
 export function Photo({ photo, sizes, className, imgClassName, eager }: PhotoProps) {
   const priority = eager ?? photo.priority;
   return (
-    <picture className={className}>
+    <picture {...(priority ? {} : reveal('photo'))} className={className}>
       {photo.avifSrcSet ? <source type="image/avif" srcSet={photo.avifSrcSet} sizes={sizes} /> : null}
       {photo.webpSrcSet ? <source type="image/webp" srcSet={photo.webpSrcSet} sizes={sizes} /> : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}

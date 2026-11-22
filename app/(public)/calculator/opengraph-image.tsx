@@ -7,7 +7,7 @@ export const alt = 'CGPA calculator for Nigerian universities';
 export default function Image() {
   return renderOgImage({
     headline: 'CGPA calculator',
-    meta: 'Free tools · Nigerian university 5-point scale, with PI',
+    meta: 'Free for Nigerian universities, 5-point scale with PI',
     line: 'Your GPA, PI and CGPA from your result slip. Free, no account.',
   });
 }

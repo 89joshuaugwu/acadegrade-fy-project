@@ -18,7 +18,8 @@ export default function robots(): MetadataRoute.Robots {
         '/login',
         '/register',
         '/forgot-password',
-        '/c/',
+        // Not '/c/' or '/share/': those pages say noindex in their HTML, which crawlers
+        // only see if they may fetch them, and X shows no card for a blocked URL.
         '/maintenance',
         '/offline',
       ],

@@ -4,11 +4,12 @@ import {
   isNotYetGraded,
   normaliseCourseCode,
   outstandingCarryOvers,
-  type AcademicGrade,
+  failGrade,
   type CarryOverCourse,
+  type GradingScale,
 } from '@/lib/cgpa/academicRules';
 
-export interface PlanningCourse extends CarryOverCourse {
+export interface PlanningCourse extends CarryOverCourse<string> {
   title?: string | null;
   units?: number | null;
 }
@@ -35,7 +36,8 @@ export interface AtRiskCourse {
   code: string;
   title: string;
   units: number;
-  grade: Extract<AcademicGrade, 'D' | 'E' | 'F'>;
+  /** D, E or F on the 5-point scale; any band starting below 50 on the active scale. */
+  grade: string;
   totalScore: number | null;
   semesterLabel: string;
 }
@@ -54,14 +56,31 @@ const finite = (value: unknown): value is number => typeof value === 'number' &&
  * Mirrors the shared module's carry-over grading; `isCarryOver(row)` is
  * exactly `knownGradeOf(row) === 'F'` (pinned by tests).
  */
-export function knownGradeOf(course: CarryOverCourse): AcademicGrade | null {
+export function knownGradeOf(course: CarryOverCourse<string>, scale?: GradingScale): string | null {
   if (isNotYetGraded(course)) return null;
-  if (finite(course.caScore) && finite(course.examScore)) return gradeFromScore(course.caScore + course.examScore).grade;
-  if (finite(course.totalScore)) return gradeFromScore(course.totalScore).grade;
-  return course.grade ?? null;
+  const grade = (score: number) => (scale ? gradeFromScore(score, scale).grade : gradeFromScore(score).grade);
+  if (finite(course.caScore) && finite(course.examScore)) return grade(course.caScore + course.examScore);
+  if (finite(course.totalScore)) return grade(course.totalScore);
+  if (!scale) return course.grade ?? null;
+  // On a scale, a letter that is not on it is unknown (as in the shared rules).
+  const wanted = String(course.grade ?? '').trim().toUpperCase();
+  return scale.bands.find((band) => band.grade.toUpperCase() === wanted)?.grade ?? null;
 }
 
-function totalOf(course: CarryOverCourse): number | null {
+/** The scale's fail grade ('F' on the 5-point scale). */
+export function failGradeOf(scale?: GradingScale): string {
+  return scale ? failGrade(scale) : 'F';
+}
+
+/** A grade whose band starts below 50: D, E or F on the 5-point scale. */
+export function isLowGrade(grade: string | null, scale?: GradingScale): boolean {
+  if (grade === null) return false;
+  if (!scale) return grade === 'D' || grade === 'E' || grade === 'F';
+  const band = scale.bands.find((item) => item.grade === grade);
+  return Boolean(band && band.minScore < 50);
+}
+
+function totalOf(course: CarryOverCourse<string>): number | null {
   if (finite(course.caScore) && finite(course.examScore)) return course.caScore + course.examScore;
   return finite(course.totalScore) ? course.totalScore : null;
 }
@@ -71,20 +90,20 @@ function totalOf(course: CarryOverCourse): number | null {
  * code) with their units, plus a separate D/E/F list. Awaiting-result and
  * pending rows are never counted. Semesters must be in chronological order.
  */
-export function buildCarryOverReport(semesters: readonly PlanningSemester[]): CarryOverReport {
-  const outstandingCodes = outstandingCarryOvers(semesters);
+export function buildCarryOverReport(semesters: readonly PlanningSemester[], scale?: GradingScale): CarryOverReport {
+  const outstandingCodes = outstandingCarryOvers(semesters, scale);
   const latestFail = new Map<string, OutstandingCarryOver>();
   const atRisk: AtRiskCourse[] = [];
 
   for (const semester of semesters) {
     for (const course of semester.courses) {
-      const grade = knownGradeOf(course);
+      const grade = knownGradeOf(course, scale);
       const units = finite(course.units) ? course.units : 0;
       const title = course.title ?? '';
-      if (grade === 'D' || grade === 'E' || grade === 'F') {
+      if (grade !== null && isLowGrade(grade, scale)) {
         atRisk.push({ code: course.code, title, units, grade, totalScore: totalOf(course), semesterLabel: semester.label });
       }
-      if (!isCarryOver(course)) continue;
+      if (!(scale ? isCarryOver(course, scale) : isCarryOver(course as CarryOverCourse))) continue;
       const key = normaliseCourseCode(course.code);
       const previous = latestFail.get(key);
       latestFail.set(key, {

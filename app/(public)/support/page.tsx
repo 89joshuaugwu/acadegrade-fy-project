@@ -20,6 +20,8 @@ import {
 import { readPublicUsage } from '@/lib/public/usage-public';
 import { absoluteUrl, createPageMetadata } from '@/lib/seo/site';
 import { contactHref, getContactEmail } from '@/lib/site/contact';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'Support',
@@ -87,7 +89,7 @@ export default async function SupportPage() {
               <span className="ag-display grid h-10 w-10 place-items-center rounded-xl bg-ag-gold text-[1.125rem] font-bold text-ag-night" aria-hidden="true">
                 1
               </span>
-              <h2 className="ag-display mt-5 text-[1.375rem] font-bold leading-tight text-white">Signed in?</h2>
+              <h2 {...reveal('words')} className="ag-display mt-5 text-[1.375rem] font-bold leading-tight text-white"><Words>{"Signed in?"}</Words></h2>
               <p className="mt-2 text-[0.9375rem] leading-relaxed text-ag-mist-night">
                 Send it from Help and support in Settings. Our replies arrive in your AcadeGrade inbox and by email.
               </p>
@@ -105,7 +107,7 @@ export default async function SupportPage() {
               <span className="ag-display grid h-10 w-10 place-items-center rounded-xl bg-white text-[1.125rem] font-bold text-ag-night" aria-hidden="true">
                 2
               </span>
-              <h2 className="ag-display mt-5 text-[1.375rem] font-bold leading-tight text-white">Can&apos;t sign in?</h2>
+              <h2 {...reveal('words')} className="ag-display mt-5 text-[1.375rem] font-bold leading-tight text-white"><Words>{"Can't sign in?"}</Words></h2>
               <p className="mt-2 text-[0.9375rem] leading-relaxed text-ag-mist-night">
                 Reset your password from{' '}
                 <TextLinkV2 href="/forgot-password" onDark>
@@ -138,12 +140,12 @@ export default async function SupportPage() {
 
       <Section tone="haze" id="request">
         <Container className="grid grid-cols-[minmax(0,1fr)] items-start gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-14">
-          <div className="rounded-[32px] bg-white p-6 shadow-[0_30px_80px_-40px_rgba(23,19,58,0.35)] sm:p-10">
+          <div {...reveal('rise')} className="rounded-[32px] bg-white p-6 shadow-[0_30px_80px_-40px_rgba(23,19,58,0.35)] sm:p-10">
             <SupportCoupon email={email} supportOpen={supportOpen} />
           </div>
 
-          <div id="before-you-write" className="scroll-mt-24 lg:pt-4">
-            <h2 className="ag-display text-[1.75rem] font-bold leading-[1.1] text-ag-ink sm:text-[2.25rem]">Never send your password.</h2>
+          <div {...reveal('right', 150)} id="before-you-write" className="scroll-mt-24 lg:pt-4">
+            <h2 {...reveal('words')} className="ag-display text-[1.75rem] font-bold leading-[1.1] text-ag-ink sm:text-[2.25rem]"><Words>{"Never send your password."}</Words></h2>
             <p className="mt-4 text-[1.0625rem] leading-relaxed text-ag-mist">
               We will never ask for your password or for a code we sent you. Tell us what happened instead: the more exact, the faster we can fix it.
             </p>
@@ -178,8 +180,8 @@ export default async function SupportPage() {
         <Container className="grid grid-cols-[minmax(0,1fr)] gap-12 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-16">
           <div>
             <div className="lg:sticky lg:top-28">
-              <h2 id="quick-fixes-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-                Quick fixes
+              <h2 {...reveal('words')} id="quick-fixes-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+                <Words>{"Quick fixes"}</Words>
               </h2>
               <p className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">Fourteen common problems, answered.</p>
               {photo ? (

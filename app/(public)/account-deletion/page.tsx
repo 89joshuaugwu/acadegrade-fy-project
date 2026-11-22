@@ -21,6 +21,8 @@ import {
 } from '@/lib/public/account-deletion';
 import { absoluteUrl, createPageMetadata, resolveSiteUrl } from '@/lib/seo/site';
 import { getContactEmail } from '@/lib/site/contact';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
 
 export const metadata: Metadata = createPageMetadata({
   title: 'Delete your account',
@@ -129,8 +131,8 @@ export default async function AccountDeletionPage() {
         }
         aside={
           <section id="how-to-delete" aria-labelledby="how-to-delete-title" className="scroll-mt-24 rounded-[28px] bg-white/[0.06] p-6 ring-1 ring-white/10 backdrop-blur-sm sm:p-8">
-            <h2 id="how-to-delete-title" className="ag-display text-[1.5rem] font-bold leading-tight text-white sm:text-[1.75rem]">
-              How to delete your account
+            <h2 {...reveal('words')} id="how-to-delete-title" className="ag-display text-[1.5rem] font-bold leading-tight text-white sm:text-[1.75rem]">
+              <Words>{"How to delete your account"}</Words>
             </h2>
             <div className="mt-7 grid grid-cols-[minmax(0,1fr)] gap-8">
               <Route title="In the Android app" steps={ANDROID_STEPS} />
@@ -158,16 +160,16 @@ export default async function AccountDeletionPage() {
         <Container>
           <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
             <section id="what-is-deleted" aria-labelledby="what-is-deleted-title" className="scroll-mt-24 rounded-[32px] bg-ag-haze p-7 sm:p-10">
-              <h2 id="what-is-deleted-title" className="ag-display text-[2rem] font-bold leading-[1.05] text-ag-ink sm:text-[2.5rem]">
-                What is deleted
+              <h2 {...reveal('words')} id="what-is-deleted-title" className="ag-display text-[2rem] font-bold leading-[1.05] text-ag-ink sm:text-[2.5rem]">
+                <Words>{"What is deleted"}</Words>
               </h2>
               <p className="mt-3 text-[1rem] leading-relaxed text-ag-mist">Everything linked to your account, in the app and on the website.</p>
               <CheckList className="mt-7" items={DELETED_ITEMS.map((item) => item.text)} />
             </section>
 
             <section id="what-is-kept" aria-labelledby="what-is-kept-title" className="scroll-mt-24 rounded-[32px] bg-ag-night p-7 text-white sm:p-10">
-              <h2 id="what-is-kept-title" className="ag-display text-[2rem] font-bold leading-[1.05] sm:text-[2.5rem]">
-                What may be kept for a while, and why
+              <h2 {...reveal('words')} id="what-is-kept-title" className="ag-display text-[2rem] font-bold leading-[1.05] sm:text-[2.5rem]">
+                <Words>{"What may be kept for a while, and why"}</Words>
               </h2>
               <dl className="mt-7 divide-y divide-white/10 border-y border-white/10">
                 {KEPT_ITEMS.map((item) => (
@@ -200,7 +202,7 @@ export default async function AccountDeletionPage() {
               {CANNOT_SIGN_IN.reset.after}
             </p>
           </div>
-          <ol className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-3">
+          <ol {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-3">
             <StepCard number={1} title={CANNOT_SIGN_IN.write.line}>
               {email ? (
                 <p>

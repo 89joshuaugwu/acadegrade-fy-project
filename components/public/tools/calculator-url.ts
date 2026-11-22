@@ -3,7 +3,8 @@
  *
  * Format, unchanged from the first calculator so old links open:
  *   ?m=grade|score&c=<base64 of JSON [{c, u, g}] or [{c, u, s}]>
- * plus the optional prior record &pc=4.47&pu=74.
+ * plus the optional prior record &pc=4.47&pu=74 and the optional grading
+ * scale &sc=nbte4 (absent = the 5-point scale, so old links open unchanged).
  *
  * The base64 is UTF-8 safe (the old btoa threw on any non-Latin-1 character,
  * so a pasted curly apostrophe silently froze the link); for plain ASCII the
@@ -11,7 +12,7 @@
  * so `=`, `/` and `+` are percent-encoded and survive any messenger.
  */
 
-import type { AcademicGrade } from '@/lib/cgpa/academicRules';
+import { READY_SCALE_IDS, SCALES, type ReadyGradingScaleId } from '@/lib/cgpa/academicRules';
 
 export type CalculatorMode = 'grade' | 'score';
 
@@ -19,13 +20,18 @@ export type CalculatorMode = 'grade' | 'score';
 export interface EncodedRow {
   c: string;
   u: number;
-  g?: AcademicGrade;
+  /** A letter on the link's scale (A-F on the 5-point scale). */
+  g?: string;
   s?: number;
 }
 
 export const CALCULATOR_MAX_ROWS = 40;
 export const CODE_MAX_LENGTH = 24;
-const GRADES: readonly AcademicGrade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+/** A ready-made scale id from a link value, or null for the 5-point default and anything unknown. */
+function readScaleId(value: string | null): ReadyGradingScaleId | null {
+  return value && value !== 'ng5' && READY_SCALE_IDS.includes(value as ReadyGradingScaleId) ? (value as ReadyGradingScaleId) : null;
+}
 
 function toBase64Utf8(text: string): string {
   const bytes = new TextEncoder().encode(text);
@@ -57,6 +63,8 @@ export interface CalculationLink {
   /** Prior record as typed (kept as text so a half-typed value round-trips). */
   priorCgpa?: string;
   priorUnits?: string;
+  /** Grading scale id; left out for the 5-point scale. */
+  scale?: string;
 }
 
 /** "m=grade&c=…%3D%3D&pc=4.47&pu=74" (no leading "?"). */
@@ -66,13 +74,15 @@ export function encodeCalculation(link: CalculationLink): string {
   params.set('c', encodeRows(link.rows));
   if (link.priorCgpa?.trim()) params.set('pc', link.priorCgpa.trim());
   if (link.priorUnits?.trim()) params.set('pu', link.priorUnits.trim());
+  const scale = readScaleId(link.scale ?? null);
+  if (scale) params.set('sc', scale);
   return params.toString();
 }
 
 export interface DecodedRow {
   code: string;
   units: number;
-  grade: AcademicGrade | null;
+  grade: string | null;
   /** The score as text, so an out-of-range value stays in its field with its error. */
   scoreText: string;
   /** A value in this row was outside the calculator's range and was reset or flagged. */
@@ -89,9 +99,11 @@ export interface DecodedCalculation {
   partlyReset: boolean;
   priorCgpa: string;
   priorUnits: string;
+  /** The link's scale id, or null for the 5-point scale. */
+  scale: ReadyGradingScaleId | null;
 }
 
-function decodeRow(value: unknown, mode: CalculatorMode): DecodedRow {
+function decodeRow(value: unknown, mode: CalculatorMode, grades: readonly string[]): DecodedRow {
   const source = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
   let reset = !(value && typeof value === 'object');
   const code = typeof source.c === 'string' ? source.c.trim().slice(0, CODE_MAX_LENGTH) : '';
@@ -100,8 +112,8 @@ function decodeRow(value: unknown, mode: CalculatorMode): DecodedRow {
   if (typeof rawUnits === 'number' && Number.isInteger(rawUnits) && rawUnits >= 1 && rawUnits <= 6) units = rawUnits;
   else reset = true;
 
-  let grade: AcademicGrade | null = null;
-  if (typeof source.g === 'string' && GRADES.includes(source.g as AcademicGrade)) grade = source.g as AcademicGrade;
+  let grade: string | null = null;
+  if (typeof source.g === 'string' && grades.includes(source.g)) grade = source.g;
   else if (mode === 'grade' && source.g !== undefined) reset = true;
 
   let scoreText = '';
@@ -122,7 +134,9 @@ export function decodeCalculation(search: string | URLSearchParams): DecodedCalc
   const priorCgpa = params.get('pc') ?? '';
   const priorUnits = params.get('pu') ?? '';
   const encoded = params.get('c');
-  const base = { mode, priorCgpa, priorUnits };
+  const scale = readScaleId(params.get('sc'));
+  const grades = SCALES[scale ?? 'ng5'].bands.map((band) => band.grade);
+  const base = { mode, priorCgpa, priorUnits, scale };
   if (encoded === null || encoded === '') return { ...base, rows: null, unreadable: false, partlyReset: false };
 
   let parsed: unknown;
@@ -134,6 +148,6 @@ export function decodeCalculation(search: string | URLSearchParams): DecodedCalc
   if (!Array.isArray(parsed)) return { ...base, rows: null, unreadable: true, partlyReset: false };
 
   const cut = parsed.length > CALCULATOR_MAX_ROWS;
-  const rows = parsed.slice(0, CALCULATOR_MAX_ROWS).map((value) => decodeRow(value, mode));
+  const rows = parsed.slice(0, CALCULATOR_MAX_ROWS).map((value) => decodeRow(value, mode, grades));
   return { ...base, rows, unreadable: false, partlyReset: cut || rows.some((row) => row.reset) };
 }

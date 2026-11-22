@@ -28,9 +28,9 @@ function arcPath(from: number, to: number, radius = RADIUS) {
   return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} A ${radius} ${radius} 0 ${large} 1 ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
 }
 
-export function angleFor(value: number) {
-  const clamped = Math.max(0, Math.min(5, value));
-  return START + (clamped / 5) * SWEEP;
+export function angleFor(value: number, max = 5) {
+  const clamped = Math.max(0, Math.min(max, value));
+  return START + (clamped / max) * SWEEP;
 }
 
 const TRACK = arcPath(START, START + SWEEP);
@@ -42,11 +42,15 @@ interface ArcGaugeProps {
   tone?: 'night' | 'light';
   className?: string;
   label?: string;
+  /** Top of the scale (5 on the 5-point scale). */
+  max?: number;
+  /** Class boundaries to mark (the 5-point classes by default). */
+  ticks?: readonly number[];
 }
 
-export function ArcGauge({ value, tone = 'night', className, label }: ArcGaugeProps) {
-  const progress = Math.max(0, Math.min(5, value)) / 5;
-  const dot = point(angleFor(value));
+export function ArcGauge({ value, tone = 'night', className, label, max = 5, ticks = TICKS }: ArcGaugeProps) {
+  const progress = Math.max(0, Math.min(max, value)) / max;
+  const dot = point(angleFor(value, max));
   const trackColour = tone === 'night' ? 'rgba(255,255,255,0.09)' : 'rgba(23,19,58,0.08)';
   const tickColour = tone === 'night' ? 'rgba(255,255,255,0.35)' : 'rgba(23,19,58,0.3)';
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
@@ -67,9 +71,9 @@ export function ArcGauge({ value, tone = 'night', className, label }: ArcGaugePr
         </filter>
       </defs>
       <path d={TRACK} fill="none" stroke={trackColour} strokeWidth={26} strokeLinecap="round" />
-      {TICKS.map((tick) => {
-        const inner = point(angleFor(tick), RADIUS - 24);
-        const outer = point(angleFor(tick), RADIUS - 34);
+      {ticks.map((tick) => {
+        const inner = point(angleFor(tick, max), RADIUS - 24);
+        const outer = point(angleFor(tick, max), RADIUS - 34);
         return <line key={tick} x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} stroke={tickColour} strokeWidth={2} strokeLinecap="round" />;
       })}
       <path

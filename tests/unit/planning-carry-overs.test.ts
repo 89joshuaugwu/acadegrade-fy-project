@@ -53,3 +53,14 @@ describe('buildCarryOverReport (A4)', () => {
     }
   });
 });
+
+describe('carry-overs on another grading scale', () => {
+  it('uses the scale fail grade and its low bands', async () => {
+    const { SCALES } = await import('@/lib/cgpa/academicRules');
+    const report = buildCarryOverReport([
+      { id: 's1', label: 'ND1 First', courses: [course('COM101', { caScore: 10, examScore: 28 }), course('COM102', { caScore: 15, examScore: 31 }), course('COM103', { grade: 'CD' })] },
+    ], SCALES.nbte4);
+    expect(report.outstanding.map((item) => item.code)).toEqual(['COM101']);
+    expect(report.atRisk.map((item) => [item.code, item.grade])).toEqual([['COM101', 'F'], ['COM102', 'D']]);
+  });
+});

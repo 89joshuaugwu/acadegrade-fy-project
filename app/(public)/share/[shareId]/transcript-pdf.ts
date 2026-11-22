@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable, { type CellHookData, type RowInput } from 'jspdf-autotable';
 import { arcAngle } from '@/components/public/ArcMeter';
-import { formatCgpa, resolveDegreeClass, roundCgpa } from '@/lib/cgpa/academicRules';
+import { formatCgpa, resolveGradingScale, roundCgpa } from '@/lib/cgpa/academicRules';
+import { transcriptClassLabel } from '@/lib/cgpa/scale';
 import {
   MADE_WITH_LINE,
   NOT_OFFICIAL_LINE,
@@ -322,17 +323,20 @@ export async function downloadTranscriptPdf(transcript: SharedTranscript, { expi
     currentY = 20;
   }
   const standing = resolveSharedStanding(transcript);
-  const degreeClass = resolveDegreeClass(standing.cgpa).transcriptLabel;
+  const scale = resolveGradingScale(transcript.gradingScale);
+  const maxText = formatCgpa(scale.maxPoint);
+  const degreeClass = transcriptClassLabel(standing.cgpa, scale);
   const barHeight = 24;
-  drawArc(doc, MARGIN + 13, currentY + 12, 9.5, roundCgpa(standing.cgpa));
+  // The arc runs 0 to 5; other scales are drawn in proportion.
+  drawArc(doc, MARGIN + 13, currentY + 12, 9.5, (roundCgpa(standing.cgpa) / scale.maxPoint) * 5);
 
   const barX = MARGIN + 32;
   const barWidth = contentWidth - 32;
   doc.setFillColor(...INK);
   doc.rect(barX, currentY, barWidth, barHeight, 'F');
   const cells: Array<{ label: string; value: string; width: number; gold?: boolean }> = [
-    { label: 'CGPA', value: `${formatCgpa(standing.cgpa)} / 5.00`, width: 36, gold: true },
-    { label: 'PI', value: `${formatCgpa(standing.pi)} / 5.00`, width: 32 },
+    { label: 'CGPA', value: `${formatCgpa(standing.cgpa)} / ${maxText}`, width: 36, gold: true },
+    { label: 'PI', value: `${formatCgpa(standing.pi)} / ${maxText}`, width: 32 },
     { label: 'Total units', value: String(standing.totalCredits), width: 26 },
     { label: 'Projected class', value: degreeClass, width: barWidth - 94 },
   ];
@@ -350,6 +354,8 @@ export async function downloadTranscriptPdf(transcript: SharedTranscript, { expi
     doc.text(cell.value, cellX + 4, currentY + (long ? 14 : 16), { maxWidth: cell.width - 8 });
     cellX += cell.width;
   }
+  setType('normal', 7.5, INK_SOFT);
+  doc.text(`Grading scale: ${scale.name}`, barX, currentY + barHeight + 4.5);
 
   // -- Foot on every page
   const footLine = [MADE_WITH_LINE, NOT_OFFICIAL_LINE, expiry ? expiryLine(expiry) : null].filter(Boolean).join(' · ');

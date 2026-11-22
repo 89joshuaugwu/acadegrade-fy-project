@@ -479,5 +479,437 @@
       "range": { "min": 15, "max": 24 },
       "expected": []
     }
+  ],
+  "scaleDefinitions": {
+    "ng5": { "name": "5-point (with E)", "maxPoint": 5,
+      "bands": [["A", 70, 5], ["B", 60, 4], ["C", 50, 3], ["D", 45, 2], ["E", 40, 1], ["F", 0, 0]],
+      "classes": [["First Class", "1st", 4.5], ["Second Class Upper (2:1)", "2:1", 3.5], ["Second Class Lower (2:2)", "2:2", 2.4], ["Third Class", "3rd", 1.5], ["Pass", "Pass", 1], ["Fail", "Fail", 0]] },
+    "ng5-noE": { "name": "5-point (no E)", "maxPoint": 5,
+      "bands": [["A", 70, 5], ["B", 60, 4], ["C", 50, 3], ["D", 45, 2], ["F", 0, 0]],
+      "classes": [["First Class", "1st", 4.5], ["Second Class Upper (2:1)", "2:1", 3.5], ["Second Class Lower (2:2)", "2:2", 2.4], ["Third Class", "3rd", 1.5], ["Pass", "Pass", 1], ["Fail", "Fail", 0]] },
+    "nbte4": { "name": "Polytechnic 4-point (NBTE)", "maxPoint": 4,
+      "bands": [["A", 75, 4], ["AB", 70, 3.5], ["B", 65, 3.25], ["BC", 60, 3], ["C", 55, 2.75], ["CD", 50, 2.5], ["D", 45, 2.25], ["E", 40, 2], ["F", 0, 0]],
+      "classes": [["Distinction", "Dist", 3.5], ["Upper Credit", "Upper", 3], ["Lower Credit", "Lower", 2.5], ["Pass", "Pass", 2], ["Fail", "Fail", 0]] },
+    "nce5": { "name": "NCE 5-point", "maxPoint": 5,
+      "bands": [["A", 70, 5], ["B", 60, 4], ["C", 50, 3], ["D", 45, 2], ["E", 40, 1], ["F", 0, 0]],
+      "classes": [["Distinction", "Dist", 4.5], ["Credit", "Credit", 3.5], ["Merit", "Merit", 2.4], ["Pass", "Pass", 1], ["Fail", "Fail", 0]] }
+  },
+  "scaleById": [
+    { "id": "ng5", "expected": "ng5" },
+    { "id": "ng5-noE", "expected": "ng5-noE" },
+    { "id": "nbte4", "expected": "nbte4" },
+    { "id": "nce5", "expected": "nce5" },
+    { "id": "custom", "expected": null, "note": "custom scales have no fixed definition; use validateCustomScale or resolveGradingScale" },
+    { "id": "NBTE4", "expected": null },
+    { "id": "toString", "expected": null },
+    { "id": null, "expected": null }
+  ],
+  "scaledGradeFromScore": [
+    { "scale": "ng5", "score": 44, "grade": "E", "gradePoint": 1 },
+    { "scale": "ng5-noE", "score": 70, "grade": "A", "gradePoint": 5 },
+    { "scale": "ng5-noE", "score": 69.99999999999999, "grade": "A", "gradePoint": 5 },
+    { "scale": "ng5-noE", "score": 45, "grade": "D", "gradePoint": 2 },
+    { "scale": "ng5-noE", "score": 44.5, "grade": "F", "gradePoint": 0, "note": "no E band: 40-44 fails" },
+    { "scale": "ng5-noE", "score": 40, "grade": "F", "gradePoint": 0 },
+    { "scale": "nbte4", "score": 100, "grade": "A", "gradePoint": 4 },
+    { "scale": "nbte4", "score": 75, "grade": "A", "gradePoint": 4 },
+    { "scale": "nbte4", "score": 74.99999999999999, "grade": "A", "gradePoint": 4 },
+    { "scale": "nbte4", "score": 74.5, "grade": "AB", "gradePoint": 3.5 },
+    { "scale": "nbte4", "score": 70, "grade": "AB", "gradePoint": 3.5 },
+    { "scale": "nbte4", "score": 69, "grade": "B", "gradePoint": 3.25 },
+    { "scale": "nbte4", "score": 65, "grade": "B", "gradePoint": 3.25 },
+    { "scale": "nbte4", "score": 64.9, "grade": "BC", "gradePoint": 3 },
+    { "scale": "nbte4", "score": 60, "grade": "BC", "gradePoint": 3 },
+    { "scale": "nbte4", "score": 55, "grade": "C", "gradePoint": 2.75 },
+    { "scale": "nbte4", "score": 54, "grade": "CD", "gradePoint": 2.5 },
+    { "scale": "nbte4", "score": 50, "grade": "CD", "gradePoint": 2.5 },
+    { "scale": "nbte4", "score": 49.5, "grade": "D", "gradePoint": 2.25 },
+    { "scale": "nbte4", "score": 45, "grade": "D", "gradePoint": 2.25 },
+    { "scale": "nbte4", "score": 44, "grade": "E", "gradePoint": 2 },
+    { "scale": "nbte4", "score": 40, "grade": "E", "gradePoint": 2 },
+    { "scale": "nbte4", "score": 39.9, "grade": "F", "gradePoint": 0 },
+    { "scale": "nbte4", "score": -5, "grade": "F", "gradePoint": 0 },
+    { "scale": "nbte4", "score": "NaN", "grade": "F", "gradePoint": 0 },
+    { "scale": "nce5", "score": 70, "grade": "A", "gradePoint": 5 },
+    { "scale": "nce5", "score": 40, "grade": "E", "gradePoint": 1 },
+    { "scale": "nce5", "score": 39, "grade": "F", "gradePoint": 0 }
+  ],
+  "scaledCourseMetrics": [
+    {
+      "name": "nbte4: CA plus exam, PI is total / 100 x 4",
+      "scale": "nbte4",
+      "input": { "code": "CSC 425", "title": "Allocation Management", "units": 2, "caScore": 26, "examScore": 28 },
+      "expected": { "totalScore": 54, "grade": "CD", "gradePoint": 2.5, "piPoint": 2.16, "estimated": false },
+      "absentKeys": ["isAR", "pending"]
+    },
+    {
+      "name": "nbte4: full marks reach the 4.00 top point",
+      "scale": "nbte4",
+      "input": { "code": "CSC 401", "title": "Compilers", "units": 3, "caScore": 30, "examScore": 70 },
+      "expected": { "totalScore": 100, "grade": "A", "gradePoint": 4, "piPoint": 4, "estimated": false }
+    },
+    {
+      "name": "nbte4: a two-letter grade only is estimated",
+      "scale": "nbte4",
+      "input": { "code": "CSC 463", "title": "Software Engineering", "units": 2, "caScore": null, "examScore": null, "grade": "AB" },
+      "expected": { "totalScore": null, "grade": "AB", "gradePoint": 3.5, "piPoint": 3.5, "estimated": true }
+    },
+    {
+      "name": "nbte4: letter matching ignores case and spaces",
+      "scale": "nbte4",
+      "input": { "code": "CSC 464", "title": "Testing", "units": 2, "caScore": null, "examScore": null, "grade": " bc" },
+      "expected": { "totalScore": null, "grade": "BC", "gradePoint": 3, "piPoint": 3, "estimated": true }
+    },
+    {
+      "name": "ng5-noE: a letter not on the scale counts as nothing known",
+      "scale": "ng5-noE",
+      "input": { "code": "CSC 465", "title": "Old E", "units": 2, "caScore": null, "examScore": null, "grade": "E" },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false }
+    },
+    {
+      "name": "ng5-noE: 42 is a fail without the E band",
+      "scale": "ng5-noE",
+      "input": { "code": "CSC 466", "title": "Borderline", "units": 3, "caScore": 15, "examScore": 27 },
+      "expected": { "totalScore": 42, "grade": "F", "gradePoint": 0, "piPoint": 2.1, "estimated": false }
+    },
+    {
+      "name": "nce5: no score and no grade",
+      "scale": "nce5",
+      "input": { "code": "EDU 470", "title": "Unknown", "units": 2, "caScore": null, "examScore": null },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false }
+    },
+    {
+      "name": "nbte4: awaiting result keeps its flag",
+      "scale": "nbte4",
+      "input": { "code": "CSC 499", "title": "Project", "units": 6, "caScore": null, "examScore": null, "isAR": true },
+      "expected": { "totalScore": null, "grade": "F", "gradePoint": 0, "piPoint": 0, "estimated": false, "isAR": true }
+    }
+  ],
+  "scaledSemesterGpa": [
+    {
+      "name": "nbte4: awaiting-result and pending rows do not count; distribution lists every nbte4 grade",
+      "scale": "nbte4",
+      "courses": [
+        { "code": "CSC 401", "title": "Compilers", "units": 3, "caScore": 26, "examScore": 50 },
+        { "code": "CSC 402", "title": "Databases", "units": 2, "caScore": 20, "examScore": 35 },
+        { "code": "CSC 499", "title": "Project", "units": 6, "caScore": null, "examScore": null, "isAR": true },
+        { "code": "CSC 410", "title": "Imported", "units": 3, "caScore": null, "examScore": null, "pending": true }
+      ],
+      "expected": {
+        "gpa": 3.5, "pi": 2.704, "creditLoaded": 5, "courseCount": 4,
+        "gradeDistribution": { "A": 1, "AB": 0, "B": 0, "BC": 0, "C": 1, "CD": 0, "D": 0, "E": 0, "F": 0 }
+      }
+    },
+    {
+      "name": "ng5-noE: a 42 counts as F with 0 points",
+      "scale": "ng5-noE",
+      "courses": [
+        { "code": "CSC 466", "title": "Borderline", "units": 3, "caScore": 15, "examScore": 27 },
+        { "code": "CSC 467", "title": "Strong", "units": 2, "caScore": 30, "examScore": 40 }
+      ],
+      "expected": {
+        "gpa": 2, "pi": 2.66, "creditLoaded": 5, "courseCount": 2,
+        "gradeDistribution": { "A": 1, "B": 0, "C": 0, "D": 0, "F": 1 }
+      }
+    },
+    {
+      "name": "nce5: letter-grade rows count with their grade point",
+      "scale": "nce5",
+      "courses": [
+        { "code": "EDU 463", "title": "Methods", "units": 3, "caScore": null, "examScore": null, "grade": "B" },
+        { "code": "EDU 464", "title": "Practice", "units": 2, "caScore": 30, "examScore": 45 }
+      ],
+      "expected": {
+        "gpa": 4.4, "pi": 3.9, "creditLoaded": 5, "courseCount": 2,
+        "gradeDistribution": { "A": 1, "B": 1, "C": 0, "D": 0, "E": 0, "F": 0 }
+      }
+    }
+  ],
+  "scaledEndToEnd": [
+    {
+      "name": "nbte4: two semesters give 3.04, Upper Credit",
+      "scale": "nbte4",
+      "courseSemesters": [
+        { "courses": [
+          { "code": "CSC 301", "title": "Algorithms", "units": 3, "caScore": 26, "examScore": 50 },
+          { "code": "CSC 302", "title": "Automata", "units": 3, "caScore": 22, "examScore": 40 }
+        ] },
+        { "courses": [
+          { "code": "CSC 303", "title": "Networks", "units": 2, "caScore": 26, "examScore": 40 },
+          { "code": "CSC 304", "title": "Systems", "units": 4, "caScore": 18, "examScore": 30 },
+          { "code": "CSC 399", "title": "Industrial Training", "units": 6, "caScore": null, "examScore": null, "isAR": true }
+        ] }
+      ],
+      "expected": { "cgpa": 3.0416666666666665, "display": "3.04", "className": "Upper Credit", "shortLabel": "Upper" }
+    },
+    {
+      "name": "nce5: 539 grade points over 120 units shows 4.49 and is Credit",
+      "scale": "nce5",
+      "summaries": [
+        { "gpa": 4.5, "pi": 4.1, "creditLoaded": 40 },
+        { "gpa": 4.4875, "pi": 4, "creditLoaded": 80 }
+      ],
+      "expected": { "cgpa": 4.491666666666667, "display": "4.49", "className": "Credit", "shortLabel": "Credit" }
+    },
+    {
+      "name": "ng5 passed explicitly matches the default",
+      "scale": "ng5",
+      "summaries": [
+        { "gpa": 4.5, "pi": 4.1, "creditLoaded": 40 },
+        { "gpa": 4.4875, "pi": 4, "creditLoaded": 80 }
+      ],
+      "expected": { "cgpa": 4.491666666666667, "display": "4.49", "className": "Second Class Upper (2:1)", "shortLabel": "2:1" }
+    }
+  ],
+  "scaledDegreeClass": [
+    { "scale": "ng5", "cgpa": 4.495, "name": "First Class", "shortLabel": "1st" },
+    { "scale": "ng5", "cgpa": 4.4949, "name": "Second Class Upper (2:1)", "shortLabel": "2:1" },
+    { "scale": "ng5", "cgpa": 1.4949, "name": "Pass", "shortLabel": "Pass" },
+    { "scale": "ng5-noE", "cgpa": 2.4, "name": "Second Class Lower (2:2)", "shortLabel": "2:2" },
+    { "scale": "ng5-noE", "cgpa": 0.994, "name": "Fail", "shortLabel": "Fail" },
+    { "scale": "nbte4", "cgpa": 4, "name": "Distinction", "shortLabel": "Dist" },
+    { "scale": "nbte4", "cgpa": 3.5, "name": "Distinction", "shortLabel": "Dist" },
+    { "scale": "nbte4", "cgpa": 3.495, "name": "Distinction", "shortLabel": "Dist" },
+    { "scale": "nbte4", "cgpa": 3.4949, "name": "Upper Credit", "shortLabel": "Upper" },
+    { "scale": "nbte4", "cgpa": 3, "name": "Upper Credit", "shortLabel": "Upper" },
+    { "scale": "nbte4", "cgpa": 2.995, "name": "Upper Credit", "shortLabel": "Upper" },
+    { "scale": "nbte4", "cgpa": 2.99, "name": "Lower Credit", "shortLabel": "Lower" },
+    { "scale": "nbte4", "cgpa": 2.5, "name": "Lower Credit", "shortLabel": "Lower" },
+    { "scale": "nbte4", "cgpa": 2.4949, "name": "Pass", "shortLabel": "Pass" },
+    { "scale": "nbte4", "cgpa": 2, "name": "Pass", "shortLabel": "Pass" },
+    { "scale": "nbte4", "cgpa": 1.995, "name": "Pass", "shortLabel": "Pass" },
+    { "scale": "nbte4", "cgpa": 1.99, "name": "Fail", "shortLabel": "Fail" },
+    { "scale": "nbte4", "cgpa": 0, "name": "Fail", "shortLabel": "Fail" },
+    { "scale": "nbte4", "cgpa": "NaN", "name": "Fail", "shortLabel": "Fail" },
+    { "scale": "nce5", "cgpa": 4.495, "name": "Distinction", "shortLabel": "Dist" },
+    { "scale": "nce5", "cgpa": 4.4949, "name": "Credit", "shortLabel": "Credit" },
+    { "scale": "nce5", "cgpa": 3.5, "name": "Credit", "shortLabel": "Credit" },
+    { "scale": "nce5", "cgpa": 3.49, "name": "Merit", "shortLabel": "Merit" },
+    { "scale": "nce5", "cgpa": 2.395, "name": "Merit", "shortLabel": "Merit" },
+    { "scale": "nce5", "cgpa": 2.39, "name": "Pass", "shortLabel": "Pass" },
+    { "scale": "nce5", "cgpa": 0.995, "name": "Pass", "shortLabel": "Pass" },
+    { "scale": "nce5", "cgpa": 0.994, "name": "Fail", "shortLabel": "Fail" },
+    { "scale": "nce5", "cgpa": null, "name": "Fail", "shortLabel": "Fail" }
+  ],
+  "scaledTargets": [
+    { "scale": "nbte4", "input": { "currentCgpa": 3.2, "completedUnits": 60, "targetCgpa": 3.5, "remainingUnits": 40 }, "required": 3.95, "maxReachable": 3.52 },
+    { "scale": "nbte4", "input": { "currentCgpa": 3, "completedUnits": 90, "targetCgpa": 3.5, "remainingUnits": 30 }, "required": 5, "maxReachable": 3.25, "note": "above 4.00 is out of reach on a 4-point scale" },
+    { "scale": "nbte4", "input": { "currentCgpa": 0, "completedUnits": 0, "targetCgpa": 3, "remainingUnits": 18 }, "required": 3, "maxReachable": 4 },
+    { "scale": "nbte4", "input": { "currentCgpa": 3.2, "completedUnits": 100, "targetCgpa": 3.5, "remainingUnits": 0 }, "required": null, "maxReachable": 3.2 },
+    { "scale": "ng5", "input": { "currentCgpa": 3.4, "completedUnits": 30, "targetCgpa": 3.5, "remainingUnits": 18 }, "required": 3.6666666666666665, "maxReachable": 4 },
+    { "scale": "nce5", "input": { "currentCgpa": 4, "completedUnits": 60, "targetCgpa": 4.5, "remainingUnits": 36 }, "required": 5.333333333333333, "maxReachable": 4.375 }
+  ],
+  "scaledCarryOver": [
+    { "name": "ng5-noE: 42 fails without the E band", "scale": "ng5-noE", "course": { "code": "CSC 201", "caScore": 15, "examScore": 27 }, "expected": true },
+    { "name": "ng5-noE: D is a pass", "scale": "ng5-noE", "course": { "code": "CSC 203", "caScore": 20, "examScore": 25 }, "expected": false },
+    { "name": "ng5-noE: a letter not on the scale is unknown, not a carry-over", "scale": "ng5-noE", "course": { "code": "CSC 208", "caScore": null, "examScore": null, "grade": "E" }, "expected": false },
+    { "name": "nbte4: fractional fail below 40", "scale": "nbte4", "course": { "code": "CSC 202", "caScore": 19.5, "examScore": 20 }, "expected": true },
+    { "name": "nbte4: E is a pass", "scale": "nbte4", "course": { "code": "CSC 204", "caScore": 15, "examScore": 25 }, "expected": false },
+    { "name": "nbte4: letter F only", "scale": "nbte4", "course": { "code": "CSC 207", "caScore": null, "examScore": null, "grade": "f" }, "expected": true },
+    { "name": "nbte4: letter AB only", "scale": "nbte4", "course": { "code": "CSC 209", "caScore": null, "examScore": null, "grade": "AB" }, "expected": false },
+    { "name": "nbte4: stored total only, failing", "scale": "nbte4", "course": { "code": "CSC 205", "caScore": null, "examScore": null, "totalScore": 35, "grade": null }, "expected": true },
+    { "name": "nbte4: awaiting result is not a carry-over", "scale": "nbte4", "course": { "code": "CSC 210", "caScore": null, "examScore": null, "grade": "F", "isAR": true }, "expected": false }
+  ],
+  "scaledOutstandingCarryOvers": [
+    {
+      "name": "ng5-noE: a 42 fail is not cleared by a later letter that is not on the scale",
+      "scale": "ng5-noE",
+      "semesters": [
+        { "courses": [{ "code": "MTH 101", "caScore": 15, "examScore": 27 }] },
+        { "courses": [{ "code": "MTH 101", "caScore": null, "examScore": null, "grade": "E" }] }
+      ],
+      "expected": ["MTH101"],
+      "defaultScaleExpected": []
+    },
+    {
+      "name": "nbte4: a failed course passed later is cleared",
+      "scale": "nbte4",
+      "semesters": [
+        { "courses": [{ "code": "PHY 101", "caScore": 10, "examScore": 20 }, { "code": "PHY 102", "caScore": 10, "examScore": 20 }] },
+        { "courses": [{ "code": "phy101", "caScore": null, "examScore": null, "grade": "CD" }] }
+      ],
+      "expected": ["PHY102"],
+      "defaultScaleExpected": ["PHY102"]
+    }
+  ],
+  "customScaleValid": [
+    {
+      "name": "labels are trimmed and upper-cased, bands and classes sorted highest first",
+      "input": {
+        "name": "  My college  ", "maxPoint": 4,
+        "bands": [
+          { "grade": "b", "minScore": 60, "gradePoint": 3 },
+          { "grade": "A", "minScore": 70, "gradePoint": 4 },
+          { "grade": "F", "minScore": 0, "gradePoint": 0 },
+          { "grade": " c ", "minScore": 50, "gradePoint": 2 }
+        ],
+        "classes": [
+          { "name": "Pass", "minCgpa": 1.5 },
+          { "name": " Distinction ", "shortLabel": "Dist", "minCgpa": 3.5 },
+          { "name": "Fail", "minCgpa": 0 }
+        ]
+      },
+      "expected": {
+        "id": "custom", "name": "My college", "maxPoint": 4,
+        "bands": [
+          { "grade": "A", "minScore": 70, "gradePoint": 4 },
+          { "grade": "B", "minScore": 60, "gradePoint": 3 },
+          { "grade": "C", "minScore": 50, "gradePoint": 2 },
+          { "grade": "F", "minScore": 0, "gradePoint": 0 }
+        ],
+        "classes": [
+          { "name": "Distinction", "shortLabel": "Dist", "minCgpa": 3.5 },
+          { "name": "Pass", "shortLabel": "Pass", "minCgpa": 1.5 },
+          { "name": "Fail", "shortLabel": "Fail", "minCgpa": 0 }
+        ]
+      },
+      "gradeChecks": [
+        { "score": 65, "grade": "B", "gradePoint": 3 },
+        { "score": 49.9, "grade": "F", "gradePoint": 0 },
+        { "score": "NaN", "grade": "F", "gradePoint": 0 }
+      ],
+      "classChecks": [
+        { "cgpa": 3.495, "name": "Distinction" },
+        { "cgpa": 3.4949, "name": "Pass" },
+        { "cgpa": 1.4949, "name": "Fail" }
+      ],
+      "maxReachable": { "input": { "currentCgpa": 0, "completedUnits": 0, "remainingUnits": 18 }, "expected": 4 }
+    },
+    {
+      "name": "the smallest scale: two bands, one class, default name",
+      "input": {
+        "maxPoint": 1,
+        "bands": [ { "grade": "P", "minScore": 50, "gradePoint": 1 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ],
+        "classes": [ { "name": "Result", "minCgpa": 0 } ]
+      },
+      "expected": {
+        "id": "custom", "name": "Custom", "maxPoint": 1,
+        "bands": [ { "grade": "P", "minScore": 50, "gradePoint": 1 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ],
+        "classes": [ { "name": "Result", "shortLabel": "Result", "minCgpa": 0 } ]
+      },
+      "gradeChecks": [ { "score": 50, "grade": "P", "gradePoint": 1 } ],
+      "classChecks": [ { "cgpa": 1, "name": "Result" } ]
+    }
+  ],
+  "customScaleInvalid": [
+    { "name": "not an object", "input": null, "fields": ["scale"] },
+    { "name": "an array is not a scale", "input": [], "fields": ["scale"] },
+    {
+      "name": "one band is too few",
+      "input": { "maxPoint": 5, "bands": [ { "grade": "F", "minScore": 0, "gradePoint": 0 } ], "classes": [ { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["bands"]
+    },
+    {
+      "name": "thirteen bands are too many",
+      "input": { "maxPoint": 5, "bands": [
+        { "grade": "A", "minScore": 60, "gradePoint": 0 }, { "grade": "B", "minScore": 55, "gradePoint": 0 }, { "grade": "C", "minScore": 50, "gradePoint": 0 },
+        { "grade": "D", "minScore": 45, "gradePoint": 0 }, { "grade": "E", "minScore": 40, "gradePoint": 0 }, { "grade": "G", "minScore": 35, "gradePoint": 0 },
+        { "grade": "H", "minScore": 30, "gradePoint": 0 }, { "grade": "I", "minScore": 25, "gradePoint": 0 }, { "grade": "J", "minScore": 20, "gradePoint": 0 },
+        { "grade": "K", "minScore": 15, "gradePoint": 0 }, { "grade": "L", "minScore": 10, "gradePoint": 0 }, { "grade": "M", "minScore": 5, "gradePoint": 0 },
+        { "grade": "F", "minScore": 0, "gradePoint": 0 }
+      ], "classes": [ { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["bands"]
+    },
+    {
+      "name": "bad band fields are reported per band",
+      "input": { "maxPoint": 5, "bands": [
+        { "grade": "ABCD", "minScore": 70, "gradePoint": 5 },
+        { "grade": "B", "minScore": 101, "gradePoint": 4 },
+        { "grade": "b", "minScore": 50, "gradePoint": 3 },
+        { "grade": "D", "minScore": 50, "gradePoint": 6 },
+        { "grade": "F", "minScore": 0, "gradePoint": -1 },
+        "x"
+      ], "classes": [ { "name": "Pass", "minCgpa": 1 }, { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["bands[0].grade", "bands[1].minScore", "bands[2].grade", "bands[3].minScore", "bands[3].gradePoint", "bands[4].gradePoint", "bands[5]"]
+    },
+    {
+      "name": "no band starts at 0, and a higher band is worth fewer points",
+      "input": { "maxPoint": 5, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 4 }, { "grade": "B", "minScore": 60, "gradePoint": 5 }, { "grade": "F", "minScore": 10, "gradePoint": 0 } ],
+        "classes": [ { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["bands", "bands"]
+    },
+    {
+      "name": "the band at 0 must be worth 0 points",
+      "input": { "maxPoint": 5, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 5 }, { "grade": "F", "minScore": 0, "gradePoint": 1 } ],
+        "classes": [ { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["bands"]
+    },
+    {
+      "name": "top grade point out of range",
+      "input": { "maxPoint": 11, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 5 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ],
+        "classes": [ { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["maxPoint"]
+    },
+    {
+      "name": "missing top grade point and missing lists",
+      "input": { "name": 7 },
+      "fields": ["name", "maxPoint", "bands", "classes"]
+    },
+    {
+      "name": "scale name too long",
+      "input": { "name": "A scale name that is longer than forty chars", "maxPoint": 5,
+        "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 5 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ],
+        "classes": [ { "name": "Fail", "minCgpa": 0 } ] },
+      "fields": ["name"]
+    },
+    {
+      "name": "no classes",
+      "input": { "maxPoint": 5, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 5 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ], "classes": [] },
+      "fields": ["classes"]
+    },
+    {
+      "name": "nine classes are too many",
+      "input": { "maxPoint": 10, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 10 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ], "classes": [
+        { "name": "C1", "minCgpa": 8 }, { "name": "C2", "minCgpa": 7 }, { "name": "C3", "minCgpa": 6 }, { "name": "C4", "minCgpa": 5 }, { "name": "C5", "minCgpa": 4 },
+        { "name": "C6", "minCgpa": 3 }, { "name": "C7", "minCgpa": 2 }, { "name": "C8", "minCgpa": 1 }, { "name": "C9", "minCgpa": 0 }
+      ] },
+      "fields": ["classes"]
+    },
+    {
+      "name": "bad class fields are reported per class",
+      "input": { "maxPoint": 5, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 5 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ], "classes": [
+        { "name": "A class name over thirty chars!", "minCgpa": 3 },
+        { "name": "Pass", "minCgpa": 6 },
+        { "name": "pass", "minCgpa": 2 },
+        { "name": "Merit", "minCgpa": 3 },
+        { "name": "Distinction", "shortLabel": "Distinction!!", "minCgpa": 4.5 }
+      ] },
+      "fields": ["classes[0].name", "classes[1].minCgpa", "classes[2].name", "classes[3].minCgpa", "classes[4].shortLabel"]
+    },
+    {
+      "name": "no class starts at 0",
+      "input": { "maxPoint": 5, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 5 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ], "classes": [ { "name": "Pass", "minCgpa": 1 } ] },
+      "fields": ["classes"]
+    }
+  ],
+  "nceClasses": [
+    { "name": "no boundaries keeps the defaults", "input": null, "ok": true, "classMins": [4.5, 3.5, 2.4, 1, 0] },
+    { "name": "the college's own boundaries", "input": { "distinction": 4, "credit": 3 }, "ok": true, "classMins": [4, 3, 2.4, 1, 0] },
+    { "name": "every boundary moved", "input": { "distinction": 4.25, "credit": 3.25, "merit": 2.25, "pass": 1.25 }, "ok": true, "classMins": [4.25, 3.25, 2.25, 1.25, 0] },
+    { "name": "Credit at or above Distinction", "input": { "credit": 4.5 }, "ok": false, "fields": ["credit"] },
+    { "name": "Pass must be above 0", "input": { "pass": 0 }, "ok": false, "fields": ["pass"] },
+    { "name": "above the top point", "input": { "distinction": 5.5 }, "ok": false, "fields": ["distinction"] },
+    { "name": "not a number", "input": { "merit": "2.4" }, "ok": false, "fields": ["merit"] },
+    { "name": "not an object", "input": 3, "ok": false, "fields": ["nceClasses"] }
+  ],
+  "resolveGradingScale": [
+    { "name": "absent setting is ng5", "setting": "undefined", "id": "ng5", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1.5, 1, 0] },
+    { "name": "empty setting is ng5", "setting": {}, "id": "ng5", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1.5, 1, 0] },
+    { "name": "unknown id is ng5", "setting": { "id": "uk4" }, "id": "ng5", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1.5, 1, 0] },
+    { "name": "ready-made nbte4", "setting": { "id": "nbte4" }, "id": "nbte4", "maxPoint": 4, "classMins": [3.5, 3, 2.5, 2, 0] },
+    { "name": "ready-made ng5-noE", "setting": { "id": "ng5-noE" }, "id": "ng5-noE", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1.5, 1, 0] },
+    { "name": "nce5 with the college's boundaries", "setting": { "id": "nce5", "nceClasses": { "distinction": 4 } }, "id": "nce5", "maxPoint": 5, "classMins": [4, 3.5, 2.4, 1, 0] },
+    { "name": "nce5 with invalid boundaries falls back to the default NCE classes", "setting": { "id": "nce5", "nceClasses": { "credit": 9 } }, "id": "nce5", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1, 0] },
+    { "name": "a valid custom scale", "setting": { "id": "custom", "custom": { "maxPoint": 4, "bands": [ { "grade": "A", "minScore": 70, "gradePoint": 4 }, { "grade": "F", "minScore": 0, "gradePoint": 0 } ], "classes": [ { "name": "Pass", "minCgpa": 2 }, { "name": "Fail", "minCgpa": 0 } ] } }, "id": "custom", "maxPoint": 4, "classMins": [2, 0] },
+    { "name": "an invalid custom scale falls back to ng5", "setting": { "id": "custom", "custom": { "maxPoint": 4 } }, "id": "ng5", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1.5, 1, 0] },
+    { "name": "custom with nothing stored falls back to ng5", "setting": { "id": "custom" }, "id": "ng5", "maxPoint": 5, "classMins": [4.5, 3.5, 2.4, 1.5, 1, 0] }
+  ],
+  "scaleBandRanges": [
+    { "scale": "nbte4", "expected": [["A", 75, 100, 4], ["AB", 70, 74, 3.5], ["B", 65, 69, 3.25], ["BC", 60, 64, 3], ["C", 55, 59, 2.75], ["CD", 50, 54, 2.5], ["D", 45, 49, 2.25], ["E", 40, 44, 2], ["F", 0, 39, 0]] },
+    { "scale": "ng5-noE", "expected": [["A", 70, 100, 5], ["B", 60, 69, 4], ["C", 50, 59, 3], ["D", 45, 49, 2], ["F", 0, 44, 0]] }
+  ],
+  "scaleClassRanges": [
+    { "scale": "nbte4", "expected": [["Distinction", 3.5, 4], ["Upper Credit", 3, 3.49], ["Lower Credit", 2.5, 2.99], ["Pass", 2, 2.49], ["Fail", 0, 1.99]] },
+    { "scale": "nce5", "expected": [["Distinction", 4.5, 5], ["Credit", 3.5, 4.49], ["Merit", 2.4, 3.49], ["Pass", 1, 2.39], ["Fail", 0, 0.99]] }
   ]
 }

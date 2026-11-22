@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
 import '@/components/site/company/legal.css';
 import { CookieChoicesLink } from '@/components/public/CookieChoicesLink';
 import { LegalContents } from '@/components/site/company/LegalContents';
@@ -88,8 +90,8 @@ export function LegalPage({
                 {LEGAL_DRAFT_NOTICE}
               </p>
             ) : null}
-            <h1 id="legal-title" className="ag-display ag-rise mt-6 max-w-3xl text-[2.5rem] font-bold leading-[1.03] sm:text-[3.5rem] lg:text-[4rem]">
-              {title}
+            <h1 id="legal-title" className={`ag-display ${typeof title === 'string' ? 'mo-load-words' : 'ag-rise'} mt-6 max-w-3xl text-[2.5rem] font-bold leading-[1.03] sm:text-[3.5rem] lg:text-[4rem]`}>
+              <Words>{title}</Words>
             </h1>
             {summary.trim() ? (
               <p className="ag-rise ag-rise-2 mt-5 max-w-[42rem] text-[1.0625rem] leading-relaxed text-ag-mist-night sm:text-[1.125rem]">{summary}</p>
@@ -127,7 +129,7 @@ export function LegalPage({
       <div className="ag-legal-body bg-white py-14 sm:py-20">
         <Container>
           <div className="ag-legal-grid mx-auto grid max-w-[1080px] grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-16">
-            <div className="hidden lg:block">
+            <div className="mo-load-visual hidden lg:block">
               <LegalContents items={items} label={navLabel} />
             </div>
             <div className="min-w-0 max-w-[720px]">
@@ -143,7 +145,7 @@ export function LegalPage({
                 ))}
               </div>
 
-              <footer className="ag-legal-end mt-16 rounded-[28px] bg-ag-haze p-7 sm:p-9">
+              <footer {...reveal('pop')} className="ag-legal-end mt-16 rounded-[28px] bg-ag-haze p-7 sm:p-9">
                 <p className="ag-display text-[1.375rem] font-bold leading-tight text-ag-ink">{documentName}</p>
                 <p className="mt-2 text-[0.9375rem] text-ag-mist">
                   Version {version}, effective {effectiveDate}.

@@ -11,8 +11,8 @@ import webOnly from './web-help.json';
 import type { HelpEntry, HelpId, HelpSource } from './types';
 
 /** sha256 of student-help.json with CRLF normalised to LF; matches the Android lock file. */
-export const STUDENT_HELP_SHA256 = '1d5e0dd86bda46a12395bd0772ce32f1b210d152ac64718cc6c002acae6a9bf9';
-export const STUDENT_HELP_CONTENT_VERSION = '2026-11-13.5';
+export const STUDENT_HELP_SHA256 = '36c5e99177d31144fa14936d576644084b58348694ae66c73a821d81b4293519';
+export const STUDENT_HELP_CONTENT_VERSION = '2026-11-22.1';
 
 /** Help ids for each authenticated student page (spec 4.4). */
 export const STUDENT_HELP = {

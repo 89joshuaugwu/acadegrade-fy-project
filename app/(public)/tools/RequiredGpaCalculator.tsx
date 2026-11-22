@@ -7,28 +7,37 @@ import { PillChoice, TButton, TField, textButtonClass, type PillOption } from '@
 import { Announcer, useQueryOnce, useTween } from '@/components/site/tools/hooks';
 import { ReceiptCard, ReceiptRows, type ReceiptLine } from '@/components/site/tools/Receipt';
 import { GaugeFigure, NightCard } from '@/components/site/tools/result';
-import { formatCgpa, MAX_GRADE_POINT, roundCgpa } from '@/lib/cgpa/academicRules';
-import { DEFAULT_SCALE, publicClassFor } from '@/lib/public/scales';
+import { formatCgpa, roundCgpa } from '@/lib/cgpa/academicRules';
+import { DEFAULT_SCALE, publicClassFor, toolScaleById, type PublicScale } from '@/lib/public/scales';
+import { ToolScaleSelect } from '@/components/site/tools/ToolScaleSelect';
 import { NO_VALUE } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
 import { parseNumber, requiredGpa, type RequiredGpaOutcome } from './tool-math';
 
 const max = DEFAULT_SCALE.maxPoint;
-const CLASS_KEYS = DEFAULT_SCALE.classBands
-  .filter((band) => band.engineShort !== 'Fail')
-  .map((band) => {
-    const name = band.engineShort === '1st' ? 'First Class' : band.engineShort === '3rd' ? 'Third' : band.short;
-    return { value: band.min.toFixed(2), label: `${name}\n${band.min.toFixed(2)}`, accessibleName: `${name}, ${band.min.toFixed(2)}`, min: band.min };
-  });
-const TARGET_OPTIONS: PillOption<string>[] = CLASS_KEYS.map((key) => ({ value: key.value, label: key.label, accessibleName: key.accessibleName }));
+
+/** Target keys: every class floor above "below a Pass", highest first. */
+function classKeys(scale: PublicScale) {
+  return scale.classBands
+    .slice(0, -1)
+    .map((band) => {
+      const name = band.engineShort === '1st' ? 'First Class' : band.engineShort === '3rd' ? 'Third' : band.short;
+      return { value: band.min.toFixed(2), label: `${name}\n${band.min.toFixed(2)}`, accessibleName: `${name}, ${band.min.toFixed(2)}`, min: band.min };
+    });
+}
+const CLASS_KEYS = classKeys(DEFAULT_SCALE);
+const targetOptions = (scale: PublicScale): PillOption<string>[] =>
+  classKeys(scale).map((key) => ({ value: key.value, label: key.label, accessibleName: key.accessibleName }));
 
 type FieldKey = 'current' | 'done' | 'left' | 'target';
-const ERRORS: Record<FieldKey, (value: number | null) => string | null> = {
-  current: (value) => (value === null || value < 0 || value > max ? `Enter a CGPA from 0.00 to ${max.toFixed(2)}.` : null),
-  done: (value) => (value === null || value < 0 ? 'Enter 0 or more units.' : null),
-  left: (value) => (value === null || value <= 0 ? 'Enter more than 0 units.' : null),
-  target: (value) => (value === null || value < 0 || value > max ? `Enter a target from 0.00 to ${max.toFixed(2)}.` : null),
-};
+function errorsFor(top: number): Record<FieldKey, (value: number | null) => string | null> {
+  return {
+    current: (value) => (value === null || value < 0 || value > top ? `Enter a CGPA from 0.00 to ${top.toFixed(2)}.` : null),
+    done: (value) => (value === null || value < 0 ? 'Enter 0 or more units.' : null),
+    left: (value) => (value === null || value <= 0 ? 'Enter more than 0 units.' : null),
+    target: (value) => (value === null || value < 0 || value > top ? `Enter a target from 0.00 to ${top.toFixed(2)}.` : null),
+  };
+}
 
 const money = (value: number) => (value < 0 ? `−${Math.abs(roundCgpa(value)).toFixed(2)}` : roundCgpa(value).toFixed(2));
 
@@ -44,27 +53,33 @@ const STAGES = [
 ];
 
 /** The highest class floor at or below a reachable CGPA (for "Aim for 3.50 instead"). */
-export function aimFor(reachable: number): number | null {
-  const band = CLASS_KEYS.find((key) => key.min <= roundCgpa(reachable));
+export function aimFor(reachable: number, scale: PublicScale = DEFAULT_SCALE): number | null {
+  const band = (scale === DEFAULT_SCALE ? CLASS_KEYS : classKeys(scale)).find((key) => key.min <= roundCgpa(reachable));
   return band ? band.min : null;
 }
 
 /** The planner's words for an outcome (tool-required-gpa.md §5.1 states). */
-export function requiredView(outcome: RequiredGpaOutcome, input: { current: number; done: number; left: number; target: number } | null) {
+export function requiredView(
+  outcome: RequiredGpaOutcome,
+  input: { current: number; done: number; left: number; target: number } | null,
+  scale: PublicScale = DEFAULT_SCALE
+) {
   if (outcome.status === 'invalid' || !input) return null;
+  const max = scale.maxPoint;
   const reach = outcome.maxReachable;
-  const reachClass = publicClassFor(reach).label;
+  const reachClass = publicClassFor(reach, scale).label;
+  const top = scale.gradeBands[0]?.grade ?? 'A';
   if (outcome.status === 'needed') {
-    const straightAs = outcome.required >= MAX_GRADE_POINT;
+    const straightAs = outcome.required >= max;
     return {
       status: 'needed' as const,
       figure: outcome.required.toFixed(2),
       dot: outcome.required,
       arcLabel: `Average needed ${outcome.required.toFixed(2)} of ${max.toFixed(2)}`,
-      lead: straightAs ? 'an A in every remaining course' : `over your remaining ${input.left} units`,
+      lead: straightAs ? `${/^[AEFHILMNORSX]/.test(top) ? 'an' : 'a'} ${top} in every remaining course` : `over your remaining ${input.left} units`,
       lines: straightAs
-        ? [`There is no room for a B. Highest you can still reach: ${reach.toFixed(2)}.`]
-        : [`to finish on ${input.target.toFixed(2)}, ${publicClassFor(input.target).label}`, `Highest you can still reach: ${reach.toFixed(2)}`],
+        ? [`There is no room for a lower grade. Highest you can still reach: ${reach.toFixed(2)}.`]
+        : [`to finish on ${input.target.toFixed(2)}, ${publicClassFor(input.target, scale).label}`, `Highest you can still reach: ${reach.toFixed(2)}`],
       announce: `You need an average of ${outcome.required.toFixed(2)} over ${input.left} units. Highest you can still reach: ${reach.toFixed(2)}.`,
       strip: `You need ${outcome.required.toFixed(2)}`,
     };
@@ -97,17 +112,26 @@ export function RequiredGpaCalculator() {
   const [values, setValues] = useState<Record<FieldKey, string>>({ current: '', done: '', left: '', target: '' });
   const [blurred, setBlurred] = useState<Partial<Record<FieldKey, boolean>>>({});
   const reported = useRef(false);
+  const [scaleId, setScaleId] = useState('ng5');
+  const scale = toolScaleById(scaleId);
+  const max = scale.maxPoint;
+  const keys = classKeys(scale);
+  const ERRORS = errorsFor(max);
 
   useQueryOnce((params) => {
+    const linked = toolScaleById(params.get('scale'));
+    setScaleId(linked.engine.id);
+    const linkedErrors = errorsFor(linked.maxPoint);
+    const linkedKeys = classKeys(linked);
     const next: Partial<Record<FieldKey, string>> = {};
     for (const key of ['current', 'done', 'left', 'target'] as FieldKey[]) {
       const raw = params.get(key);
-      if (raw !== null && ERRORS[key](parseNumber(raw)) === null) next[key] = raw.trim();
+      if (raw !== null && linkedErrors[key](parseNumber(raw)) === null) next[key] = raw.trim();
     }
     if (next.current && !next.target) {
       const current = roundCgpa(parseNumber(next.current) ?? 0);
-      const above = [...CLASS_KEYS].reverse().find((key) => key.min > current);
-      next.target = (above ?? CLASS_KEYS[0]).value;
+      const above = [...linkedKeys].reverse().find((key) => key.min > current);
+      next.target = (above ?? linkedKeys[0]).value;
     }
     setValues((previous) => ({ ...previous, ...next }));
   });
@@ -119,12 +143,12 @@ export function RequiredGpaCalculator() {
     target: parseNumber(values.target),
   };
   const allFilled = (Object.keys(values) as FieldKey[]).every((key) => values[key].trim());
-  const outcome = requiredGpa({ currentCgpa: numbers.current, completedUnits: numbers.done, remainingUnits: numbers.left, targetCgpa: numbers.target });
+  const outcome = requiredGpa({ currentCgpa: numbers.current, completedUnits: numbers.done, remainingUnits: numbers.left, targetCgpa: numbers.target }, scale.engine);
   const input =
     allFilled && numbers.current !== null && numbers.done !== null && numbers.left !== null && numbers.target !== null
       ? { current: numbers.current, done: numbers.done, left: numbers.left, target: numbers.target }
       : null;
-  const view = allFilled ? requiredView(outcome, input) : null;
+  const view = allFilled ? requiredView(outcome, input, scale) : null;
   const shown = useTween(view?.status === 'needed' ? Number(view.figure) : null);
 
   useEffect(() => {
@@ -136,8 +160,8 @@ export function RequiredGpaCalculator() {
 
   const set = (key: FieldKey, value: string) => setValues((previous) => ({ ...previous, [key]: value }));
   const errorFor = (key: FieldKey) => (blurred[key] && values[key].trim() ? ERRORS[key](numbers[key]) : null);
-  const selectedKey = CLASS_KEYS.find((key) => numbers.target !== null && roundCgpa(numbers.target) === key.min)?.value ?? null;
-  const aim = view?.status === 'unreachable' && outcome.status === 'unreachable' ? aimFor(outcome.maxReachable) : null;
+  const selectedKey = keys.find((key) => numbers.target !== null && roundCgpa(numbers.target) === key.min)?.value ?? null;
+  const aim = view?.status === 'unreachable' && outcome.status === 'unreachable' ? aimFor(outcome.maxReachable, scale) : null;
 
   const receipt: ReceiptLine[] = (() => {
     if (!view || !input) {
@@ -190,6 +214,7 @@ export function RequiredGpaCalculator() {
               <div>
                 <h2 className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">Where you are</h2>
                 <p className="mt-1 text-[0.9375rem] text-ag-mist">Four numbers from your last result and your course plan.</p>
+                <ToolScaleSelect scale={scale} onChange={setScaleId} className="mt-4 w-full max-w-[20rem]" />
               </div>
               <button
                 type="button"
@@ -213,7 +238,7 @@ export function RequiredGpaCalculator() {
                 name="target-class"
                 labelledBy="target-label"
                 shape="wide"
-                options={TARGET_OPTIONS}
+                options={targetOptions(scale)}
                 value={selectedKey}
                 onChange={(value) => set('target', value)}
                 className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5"
@@ -228,7 +253,7 @@ export function RequiredGpaCalculator() {
 
           <aside aria-label="The average you need" className="min-w-0 lg:self-start">
             <NightCard>
-              <GaugeFigure value={view ? view.dot : null} figure={figure} caption="Average you need" label={view?.arcLabel ?? 'No result yet'} intro />
+              <GaugeFigure value={view ? view.dot : null} figure={figure} caption="Average you need" label={view?.arcLabel ?? 'No result yet'} max={max} ticks={scale.classBands.slice(0, -2).map((band) => band.min)} intro />
               <div className="mt-1 text-center">
                 <p className="mx-auto max-w-[18rem] text-[1rem] font-semibold leading-snug text-white">
                   {view ? view.lead : 'Fill in all four lines to see the average you need.'}

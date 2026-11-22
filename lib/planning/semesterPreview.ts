@@ -13,8 +13,10 @@ import {
   computeSemesterGPA,
   isNotYetGraded,
   resolveDegreeClass,
-  type AcademicGrade,
+  SCALES,
   type DegreeClassBand,
+  type GradingScale,
+  type ScaleClass,
 } from '@/lib/cgpa/academicRules';
 
 export interface PreviewCourse {
@@ -22,7 +24,8 @@ export interface PreviewCourse {
   units: number;
   caScore: number | null;
   examScore: number | null;
-  grade?: AcademicGrade | null;
+  /** A letter on the active scale. */
+  grade?: string | null;
   isAR?: boolean;
   pending?: boolean;
 }
@@ -30,14 +33,17 @@ export interface PreviewCourse {
 export interface PreviewFigures {
   gpa: number;
   cgpa: number;
-  band: DegreeClassBand;
+  /** The class on the active scale (the ng5 band, with its icon and range, when no scale is given). */
+  band: DegreeClassBand | ScaleClass;
 }
 
 export interface SemesterPreviewInput {
   courses: readonly PreviewCourse[];
-  expected: Readonly<Record<string, AcademicGrade>>;
+  expected: Readonly<Record<string, string>>;
   semesters: readonly { id: string; gpa: number; pi: number; creditLoaded: number }[];
   semesterId: string;
+  /** The student's scale; the 5-point scale when left out. */
+  scale?: GradingScale;
 }
 
 export interface SemesterPreviewResult {
@@ -47,6 +53,7 @@ export interface SemesterPreviewResult {
 }
 
 function figures(courses: readonly PreviewCourse[], input: SemesterPreviewInput): PreviewFigures {
+  const scale = input.scale ?? SCALES.ng5;
   const rows = courses.map((course) => computeCourseMetrics({
     code: '',
     title: '',
@@ -56,11 +63,11 @@ function figures(courses: readonly PreviewCourse[], input: SemesterPreviewInput)
     grade: course.grade ?? null,
     ...(course.isAR !== undefined ? { isAR: course.isAR } : {}),
     ...(course.pending !== undefined ? { pending: course.pending } : {}),
-  }));
-  const semester = computeSemesterGPA(rows);
+  }, scale));
+  const semester = computeSemesterGPA(rows, scale);
   const others = input.semesters.filter((sem) => sem.id !== input.semesterId);
   const cumulative = computeCumulativeCGPA([...others, semester]);
-  return { gpa: semester.gpa, cgpa: cumulative.cgpa, band: resolveDegreeClass(cumulative.cgpa) };
+  return { gpa: semester.gpa, cgpa: cumulative.cgpa, band: input.scale ? resolveDegreeClass(cumulative.cgpa, input.scale) : resolveDegreeClass(cumulative.cgpa) };
 }
 
 export function previewSemester(input: SemesterPreviewInput): SemesterPreviewResult {

@@ -50,7 +50,7 @@ export function receiptGroups(result: CalculationResult, open: boolean): Receipt
   if (result.mode === 'score') {
     const piValues = rows.map((entry) => clean(entry.metrics.piPoint * entry.metrics.units));
     const piLines = rows.map((entry, i) => ({
-      label: `${rowLabel(entry.row, entry.index)}, ${entry.score} ÷ 100 × 5 = ${two(entry.metrics.piPoint)}, × ${entry.metrics.units}`,
+      label: `${rowLabel(entry.row, entry.index)}, ${entry.score} ÷ 100 × ${result.scale.maxPoint} = ${two(entry.metrics.piPoint)}, × ${entry.metrics.units}`,
       value: two(piValues[i]),
     }));
     groups.push({
@@ -101,7 +101,7 @@ export function CalculatorReceipt() {
           <dl className="mt-10 space-y-5 border-t border-ag-ink/10 pt-8">
             {[
               ['GPA', 'One semester. Grade points times units, divided by the units.'],
-              ['PI', `Uses your actual scores: each total ÷ 100 × ${DEFAULT_SCALE.maxPoint}, averaged by units. Not every school uses PI.`],
+              ['PI', `Uses your actual scores: each total ÷ 100 × ${result.scale.maxPoint}, averaged by units. Not every school uses PI.`],
               [
                 'CGPA',
                 result.cumulative
@@ -136,16 +136,19 @@ export function CalculatorReceipt() {
 
 /** Points, bands and classes, with the visitor's figure on the bar and their class highlighted. */
 export function CalculatorScale() {
-  const { result } = useCalculator();
+  const { result, scale } = useCalculator();
   const headline = result.headline;
-  const active = result.classBand && result.classBand.engineShort !== 'Fail' ? result.classBand.short : null;
+  const lowest = scale.classBands[scale.classBands.length - 1];
+  const active = result.classBand && result.classBand !== lowest ? result.classBand.short : null;
+  const isDefault = scale.engine.id === DEFAULT_SCALE.engine.id;
   return (
     <section aria-labelledby="points-bands" className="bg-ag-haze py-20 sm:py-28">
       <Container>
-        <Heading id="points-bands" title="Points, bands and classes" lead={`Most Nigerian universities use these bands. ${DEFAULT_SCALE.handbookNote}`} />
+        <Heading id="points-bands" title="Points, bands and classes" lead={isDefault ? `Most Nigerian universities use these bands. ${DEFAULT_SCALE.handbookNote}` : `The bands of the ${scale.name}. ${scale.handbookNote}`} />
         <div className="mt-12 rounded-[28px] bg-white p-5 sm:p-8">
           <ScaleBar
-            caption="Degree classes on the 5-point scale, with your figure marked"
+            scale={scale}
+            caption={`Degree classes on the ${scale.name}, with your figure marked`}
             marker={
               headline && result.classBand
                 ? { value: headline.value, title: `Your ${headline.label === 'CGPA' ? 'CGPA' : 'GPA'}: ${formatCgpa(headline.value)}`, sub: result.classBand.label }
@@ -156,14 +159,14 @@ export function CalculatorScale() {
         <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
           <div className="min-w-0 rounded-[24px] bg-white p-4 sm:p-7">
             <h3 className="ag-display px-4 pb-3 text-[1.375rem] font-bold text-ag-ink">Classes</h3>
-            <ClassList active={active} activeNote="Your result is here" />
+            <ClassList active={active} activeNote="Your result is here" scale={scale} />
             <p className="px-4 pt-4 text-[0.875rem] leading-relaxed text-ag-mist">
               Your class is read from your CGPA rounded to two decimals, so 4.495 shows as 4.50.
             </p>
           </div>
           <div className="min-w-0 rounded-[24px] bg-white p-4 sm:p-7">
             <h3 className="ag-display px-4 pb-3 text-[1.375rem] font-bold text-ag-ink">Grades</h3>
-            <GradeList />
+            <GradeList scale={scale} />
             <p className="px-4 pt-4 text-[0.875rem] leading-relaxed text-ag-mist">
               CA out of {DEFAULT_SCALE.scoreSplit.ca} plus exam out of {DEFAULT_SCALE.scoreSplit.exam} is your score out of 100.
             </p>

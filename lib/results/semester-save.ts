@@ -1,5 +1,6 @@
 import { computeCourseMetrics, computeSemesterGPA } from '@/lib/cgpa/calculator';
-import type { CourseInput, CourseMetrics, Grade } from '@/types/course';
+import { SCALES, type AcademicCourseMetrics, type GradingScale } from '@/lib/cgpa/academicRules';
+import type { CourseInput } from '@/types/course';
 
 const MAX_COURSES_PER_SEMESTER = 100;
 
@@ -11,7 +12,8 @@ export interface PreparedCourse {
   caScore: number | null;
   examScore: number | null;
   totalScore: number | null;
-  grade: Grade | null;
+  /** Letter on the active scale (A-F on the 5-point scale). */
+  grade: string | null;
   gradePoint: number;
   piPoint: number;
   estimated: boolean;
@@ -39,7 +41,8 @@ function normalizedScore(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
-export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave {
+/** Grades and totals use the student's active scale (5-point when not given). */
+export function prepareSemesterSave(inputs: CourseInput[], scale: GradingScale = SCALES.ng5): PreparedSemesterSave {
   if (inputs.length === 0) {
     throw new SemesterSaveValidationError('Add at least one completed course before saving this semester.');
   }
@@ -48,7 +51,7 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
   }
 
   const seenCodes = new Set<string>();
-  const contributingMetrics: CourseMetrics[] = [];
+  const contributingMetrics: AcademicCourseMetrics<string>[] = [];
   const courses = inputs.map((input, index): PreparedCourse => {
     const row = index + 1;
     const code = input.code.trim().toUpperCase();
@@ -110,7 +113,7 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
       units,
       caScore,
       examScore,
-    });
+    }, scale);
     contributingMetrics.push(metrics);
 
     return {
@@ -124,7 +127,7 @@ export function prepareSemesterSave(inputs: CourseInput[]): PreparedSemesterSave
     throw new SemesterSaveValidationError('Add at least one graded course before completing this semester.');
   }
 
-  const result = computeSemesterGPA(contributingMetrics);
+  const result = computeSemesterGPA(contributingMetrics, scale);
   return {
     courses,
     summary: {

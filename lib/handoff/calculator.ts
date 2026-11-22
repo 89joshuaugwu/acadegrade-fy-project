@@ -19,7 +19,8 @@ export type HandoffMode = 'grade' | 'score';
 export interface HandoffCourse {
   code: string;
   units: number;
-  grade?: Grade;
+  /** A letter on the calculator's scale (A-F on the 5-point scale, AB etc. on others). */
+  grade?: string;
   score?: number;
 }
 
@@ -30,7 +31,8 @@ export interface CalculatorHandoff {
   courses: HandoffCourse[];
 }
 
-const GRADES: readonly Grade[] = ['A', 'B', 'C', 'D', 'E', 'F'];
+/** Any grade label of 1 to 3 letters (every ready-made scale's letters). */
+const isGradeLabel = (grade: string) => /^[A-Z]{1,3}$/.test(grade);
 
 function storage(): Storage | null {
   try {
@@ -50,8 +52,8 @@ function cleanCourse(value: unknown, mode: HandoffMode): HandoffCourse | null {
 
   if (mode === 'grade') {
     const grade = source.grade;
-    if (typeof grade !== 'string' || !GRADES.includes(grade as Grade)) return null;
-    return { code, units, grade: grade as Grade };
+    if (typeof grade !== 'string' || !isGradeLabel(grade)) return null;
+    return { code, units, grade };
   }
   const score = Number(source.score);
   if (source.score === undefined || source.score === null || !Number.isFinite(score) || score < 0 || score > 100) return null;
@@ -126,7 +128,7 @@ export function clearCalculatorHandoff(): void {
 export function handoffToCourseInputs(handoff: CalculatorHandoff): CourseInput[] {
   return handoff.courses.map((course) => (
     handoff.mode === 'grade'
-      ? { code: course.code, title: '', units: course.units, grade: course.grade, caScore: null, examScore: null }
+      ? { code: course.code, title: '', units: course.units, grade: course.grade as Grade | undefined, caScore: null, examScore: null }
       : {
           code: course.code,
           title: '',

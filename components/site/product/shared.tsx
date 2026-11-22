@@ -4,6 +4,7 @@ import { featureFoot, type FeaturePageHref } from '@/lib/public/features-shared'
 import { serializeJsonLd } from '@/lib/seo/site';
 import { AcadeGradeMark } from '@/components/public/Logo';
 import { Container } from '@/components/site/ui';
+import { reveal } from '@/components/motion/Reveal';
 
 /**
  * Brand v2 pieces shared by the product pages (/features, the three feature
@@ -89,6 +90,7 @@ export function FactChips({ items, onDark = false, className = '' }: { items: re
 export function UiCard({ children, className = '', float = false }: { children: ReactNode; className?: string; float?: boolean }) {
   return (
     <div
+      {...(float ? reveal('rise', 320) : {})}
       className={`rounded-[20px] bg-white p-5 text-ag-ink ring-1 ring-ag-ink/5 ${
         float ? 'shadow-[0_24px_60px_-18px_rgba(14,11,43,0.55)]' : ''
       } ${className}`}

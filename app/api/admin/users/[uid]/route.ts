@@ -7,6 +7,7 @@ import { getUsageSummary } from '@/lib/usage/server';
 import { currentAnswers } from '@/lib/user/requirements';
 import { toMillis } from '@/lib/admin/metrics';
 import { deviceTokens } from '@/lib/admin/user-devices';
+import { resolveGradingScale } from '@/lib/cgpa/academicRules';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ uid:
         ageStatus: answers.ageStatus,
         aiConsent: answers.aiConsent,
         marketingConsent: answers.marketingConsent,
+        // Read-only: the scale's name (5-point when none is stored).
+        gradingScale: resolveGradingScale(data.gradingScale).name,
       },
       academic: {
         semesterCount: semesters.size,

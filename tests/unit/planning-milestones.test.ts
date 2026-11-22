@@ -106,3 +106,21 @@ describe('planMilestoneWrites (C1.2)', () => {
     expect(Object.keys(milestoneUpdate(['x'], { first_semester: 1 }, now)!)).toEqual(['milestones.x']);
   });
 });
+
+describe('milestones on another grading scale', () => {
+  it('detects a class move and carry-overs with the active scale', async () => {
+    const { SCALES } = await import('@/lib/cgpa/academicRules');
+    const { detectMilestones: detect, describeMilestone: describe_ } = await import('@/lib/planning/milestones');
+    const ids = detect({
+      semesters: [
+        { id: 's1', gpa: 2.6, pi: 2.6, creditLoaded: 10, isComplete: true, level: 100, semester: 1, courses: [{ code: 'COM 111', caScore: 10, examScore: 20 }] },
+        { id: 's2', gpa: 3.9, pi: 3.9, creditLoaded: 30, isComplete: true, level: 100, semester: 2, courses: [{ code: 'COM 111', caScore: 20, examScore: 52 }] },
+      ],
+      isGraduated: false,
+      scale: SCALES.nbte4,
+    });
+    expect(ids).toContain('carry_overs_cleared');
+    expect(ids).toContain('class_up_Dist');
+    expect(describe_('class_up_Dist', SCALES.nbte4).className).toBe('Distinction');
+  });
+});

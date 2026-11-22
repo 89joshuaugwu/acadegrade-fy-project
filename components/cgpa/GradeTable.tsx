@@ -6,10 +6,12 @@ import { Plus, Trash2, CheckCircle2, History, AlertTriangle, Check } from 'lucid
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 import { MAX_CA_SCORE, MAX_EXAM_SCORE } from '@/lib/utils/constants';
-import { computeSemesterGPA, creditLoadWarnings, formatCgpa, gradeFromScore, normaliseCourseCode } from '@/lib/cgpa/academicRules';
+import { computeSemesterGPA, creditLoadWarnings, formatCgpa, gradeFromScore, normaliseCourseCode, type GradingScale } from '@/lib/cgpa/academicRules';
+import { gradeColor, gradeTone } from '@/lib/cgpa/scale';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue, useDiscreetMode } from '@/lib/discreet';
 import { DRAFT_DEBOUNCE_MS, clearDraft, draftDiffers, loadDraft, saveDraft, type SemesterDraft } from '@/lib/drafts/semester-drafts';
-import type { CourseInput, Grade } from '@/types/course';
+import type { CourseInput } from '@/types/course';
 import { Badge, getGradeBadgeVariant } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { findByCode, findByTitle, type CatalogSuggestion } from './courseCatalog';
@@ -75,12 +77,12 @@ const stripIds = (courses: LocalCourse[]): CourseInput[] => courses.map((course)
   return copy;
 });
 
-function computeRow(ca: number | null, exam: number | null, isAR?: boolean) {
-  if (isAR) return { totalScore: null, grade: 'AR' as const, gradePoint: 0, piPoint: 0 };
+function computeRow(ca: number | null, exam: number | null, isAR: boolean | undefined, scale: GradingScale): { totalScore: number | null; grade: string | null; gradePoint: number; piPoint: number } {
+  if (isAR) return { totalScore: null, grade: 'AR', gradePoint: 0, piPoint: 0 };
   if (ca !== null && exam !== null) {
     const totalScore = ca + exam;
-    const { grade, gradePoint } = gradeFromScore(totalScore);
-    return { totalScore, grade, gradePoint, piPoint: (totalScore / 100) * 5 };
+    const { grade, gradePoint } = gradeFromScore(totalScore, scale);
+    return { totalScore, grade, gradePoint, piPoint: (totalScore / 100) * scale.maxPoint };
   }
   return { totalScore: null, grade: null, gradePoint: 0, piPoint: 0 };
 }
@@ -95,7 +97,6 @@ function draftTimeLabel(savedAt: number) {
 
 const inputBase = 'min-h-11 rounded-[var(--radius-control)] border border-[var(--acade-border)] bg-[var(--acade-surface)] text-[var(--acade-text)] transition-[border-color,box-shadow] duration-150 placeholder:text-[var(--acade-text-faint)] hover:border-[var(--acade-control-border)] focus:border-[var(--acade-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--acade-primary)]/20 disabled:cursor-not-allowed disabled:bg-[var(--acade-overlay)] disabled:opacity-60';
 const headerCell = 'text-[0.8125rem] font-medium text-[var(--acade-text-muted)]';
-const GRADE_COLOURS: Record<Grade, string> = { A: 'var(--grade-a)', B: 'var(--grade-b)', C: 'var(--grade-c)', D: 'var(--grade-d)', E: 'var(--grade-e)', F: 'var(--grade-f)' };
 
 /** Keeps only digits (and one decimal point when allowed) from what the student typed. */
 function cleanNumber(raw: string, decimals: boolean) {
@@ -142,6 +143,7 @@ function NumericField({ value, onValueChange, decimals = true, ...props }: Numer
 
 export function GradeTable({ initialCourses = [], editable = false, onSave, isSaving = false, catalog, draft, restoreDraftOnMount = false, importRequest, onImportResult, creditLoadRange }: GradeTableProps) {
   const shouldReduceMotion = useReducedMotion();
+  const { scale } = useGradingScale();
   const lastImportId = useRef(importRequest?.id);
   const { enabled: discreet } = useDiscreetMode();
   const previousInitialCourses = useRef(initialCourses);
@@ -300,12 +302,13 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
   const summary = useMemo(() => {
     // Only rows with a grade count; awaiting-result and unscored rows are left out.
     const graded = courses.flatMap((course) => {
-      const { grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
-      return grade && grade !== 'AR' ? [{ units: course.units, grade: grade as Grade, gradePoint, piPoint }] : [];
+      const { grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR, scale);
+      return grade && grade !== 'AR' ? [{ units: course.units, grade, gradePoint, piPoint }] : [];
     });
-    const result = computeSemesterGPA(graded);
+    const result = computeSemesterGPA(graded, scale);
     return { totalUnits: result.creditLoaded, gpa: result.gpa, pi: result.pi, gradeCount: result.gradeDistribution };
-  }, [courses]);
+  }, [courses, scale]);
+  const scaleLetters = useMemo(() => [...scale.bands].sort((a, b) => b.minScore - a.minScore).map((band) => band.grade), [scale]);
 
   const loadWarnings = useMemo(() => creditLoadMessages(courses, creditLoadRange), [courses, creditLoadRange]);
 
@@ -395,13 +398,13 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <span
             className="app-num inline-flex size-8 items-center justify-center rounded-full text-sm font-bold"
             style={{
-              color: GRADE_COLOURS[grade as Grade] ?? 'var(--acade-text)',
-              backgroundColor: `color-mix(in srgb, ${GRADE_COLOURS[grade as Grade] ?? 'var(--acade-text)'} 14%, transparent)`,
+              color: gradeColor(grade, scale),
+              backgroundColor: `color-mix(in srgb, ${gradeColor(grade, scale)} 14%, transparent)`,
             }}
           >
             {grade}
           </span>
-        ) : <Badge variant={getGradeBadgeVariant(grade)}>{grade}</Badge>}
+        ) : <Badge variant={getGradeBadgeVariant(gradeTone(grade, scale))}>{grade}</Badge>}
       </DiscreetValue>
     );
   };
@@ -493,7 +496,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <tbody>
             <AnimatePresence initial={false}>
               {courses.flatMap((course, idx) => {
-                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR, scale);
                 const name = courseName(course, idx);
                 const rows = [
                   <motion.tr
@@ -601,7 +604,7 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
           <tbody>
             <AnimatePresence initial={false}>
               {courses.flatMap((course, idx) => {
-                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR);
+                const { totalScore, grade, gradePoint, piPoint } = computeRow(course.caScore, course.examScore, course.isAR, scale);
                 const isShaking = shakeId === course.localId;
                 const name = courseName(course, idx);
                 const rows = [
@@ -762,18 +765,18 @@ export function GradeTable({ initialCourses = [], editable = false, onSave, isSa
         <DiscreetValue label="Grade distribution" block className="flex w-full min-w-0 flex-col gap-2 lg:max-w-md">
           <div className="flex flex-col gap-2.5">
             <div className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-[var(--acade-border-subtle)]" aria-hidden="true">
-              {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((letter) => {
+              {scaleLetters.map((letter) => {
                 const gradedCount = Object.values(summary.gradeCount).reduce((total, count) => total + count, 0);
-                const share = (summary.gradeCount[letter] / Math.max(1, gradedCount)) * 100;
-                return <div key={letter} style={{ width: `${share}%`, backgroundColor: GRADE_COLOURS[letter], display: share > 0 ? undefined : 'none' }} className="h-full rounded-full transition-all duration-500" />;
+                const share = ((summary.gradeCount[letter] ?? 0) / Math.max(1, gradedCount)) * 100;
+                return <div key={letter} style={{ width: `${share}%`, backgroundColor: gradeColor(letter, scale), display: share > 0 ? undefined : 'none' }} className="h-full rounded-full transition-all duration-500" />;
               })}
             </div>
-            <div className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-[0.8125rem] text-[var(--acade-text-muted)]">
-              {(['A', 'B', 'C', 'D', 'E', 'F'] as Grade[]).map((letter) => (
+            <div data-testid="grade-table-distribution" className="flex flex-wrap justify-between gap-x-3 gap-y-1 text-[0.8125rem] text-[var(--acade-text-muted)]">
+              {scaleLetters.map((letter) => (
                 <span key={letter} className="inline-flex items-center gap-1.5">
-                  <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: GRADE_COLOURS[letter] }} />
+                  <span aria-hidden="true" className="size-2 rounded-full" style={{ backgroundColor: gradeColor(letter, scale) }} />
                   <span className="font-semibold text-[var(--acade-text)]">{letter}</span>
-                  <span className="tabular-nums">{summary.gradeCount[letter]}</span>
+                  <span className="tabular-nums">{summary.gradeCount[letter] ?? 0}</span>
                 </span>
               ))}
             </div>

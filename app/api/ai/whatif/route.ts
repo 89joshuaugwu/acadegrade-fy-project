@@ -8,6 +8,7 @@ import { coins, RewardError, type CoinHold } from '@/lib/ads/reward';
 import { checkPlatformAccess } from '@/lib/platform/settings-server';
 import { aiAgeGate } from '@/lib/user/age';
 import { MAX_GRADE_POINT, requiredAverageForTarget } from '@/lib/cgpa/academicRules';
+import { readScaleContext, scalePromptLine } from '@/lib/ai/scaleContext';
 import { chargedFailureResponse, chargedHeaders, freeCoinHeaders, readCoinSpend, refundQuietly, rewardErrorResponse, withCoinHint } from '@/lib/ads/reward/http';
 
 export async function POST(request: NextRequest) {
@@ -36,8 +37,11 @@ export async function POST(request: NextRequest) {
     if (values.some((value) => !Number.isFinite(value))) {
       return NextResponse.json({ error: 'All what-if parameters must be valid numbers.' }, { status: 400 });
     }
-    if (currentCGPA < 0 || currentCGPA > 5 || targetCGPA < 0 || targetCGPA > 5) {
-      return NextResponse.json({ error: 'CGPA values must be between 0 and 5.' }, { status: 400 });
+    // Additive: only sent for scales other than the default 5-point one.
+    const scaleContext = readScaleContext(body);
+    const maxPoint = scaleContext ? scaleContext.maxPoint : MAX_GRADE_POINT;
+    if (currentCGPA < 0 || currentCGPA > maxPoint || targetCGPA < 0 || targetCGPA > maxPoint) {
+      return NextResponse.json({ error: `CGPA values must be between 0 and ${maxPoint}.` }, { status: 400 });
     }
     if (totalCredits < 0 || totalCredits > 1000 || remainingSemesters < 1 || remainingSemesters > 20 || creditLoad < 1 || creditLoad > 30) {
       return NextResponse.json({ error: 'Credits, remaining semesters, or credit load are outside the supported range.' }, { status: 400 });
@@ -58,13 +62,13 @@ export async function POST(request: NextRequest) {
       remainingUnits: futureCredits,
       targetCgpa: targetCGPA,
     }) as number;
-    const requiredAvgScore = (requiredGPA / MAX_GRADE_POINT) * 100;
+    const requiredAvgScore = (requiredGPA / maxPoint) * 100;
 
     let feasibilityNote = '';
     let charge: { spent: number; balance: number } | undefined;
     // Impossible/secured targets are answered locally: no provider call, never charged.
-    if (requiredGPA > MAX_GRADE_POINT) {
-      feasibilityNote = "Mathematically impossible. The required GPA exceeds the maximum 5.0 scale.";
+    if (requiredGPA > maxPoint) {
+      feasibilityNote = `Mathematically impossible. The required GPA exceeds the maximum ${maxPoint.toFixed(1)} scale.`;
     } else if (requiredGPA < 0) {
       feasibilityNote = "Target already secured. You could fail all remaining courses and still hit this target.";
     } else {
@@ -91,6 +95,7 @@ export async function POST(request: NextRequest) {
         They want to reach a target CGPA of ${targetCGPA}.
         They have ${remainingSemesters} semesters left, taking ~${creditLoad} units per semester.
         Mathematically, they need to maintain a GPA of ${requiredGPA.toFixed(2)} for all remaining semesters (approx. ${requiredAvgScore.toFixed(1)}% average score).
+        ${scalePromptLine(scaleContext)}
 
         Write EXACTLY ONE concise, encouraging, and highly specific sentence analyzing the feasibility of this goal.
         Do not repeat the math. Do not give generic advice. Keep it under 20 words.

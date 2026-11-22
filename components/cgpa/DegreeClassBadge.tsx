@@ -4,11 +4,15 @@ import { motion } from 'motion/react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { resolveDegreeClass } from '@/lib/cgpa/degreeClass';
+import { useGradingScale } from '@/hooks/useGradingScale';
+import type { GradingScale } from '@/lib/cgpa/academicRules';
 
 interface DegreeClassBadgeProps {
   cgpa: number;
   animated?: boolean;
   className?: string;
+  /** Overrides the student's active scale. */
+  scale?: GradingScale;
 }
 
 /**
@@ -17,9 +21,10 @@ interface DegreeClassBadgeProps {
  * Resolves class from CGPA via degreeClass.ts.
  * Animated: scale 0.4→1.15→1.0 + glow pulse on mount.
  */
-function DegreeClassBadge({ cgpa, animated = false, className }: DegreeClassBadgeProps) {
+function DegreeClassBadge({ cgpa, animated = false, className, scale }: DegreeClassBadgeProps) {
   const shouldReduceMotion = useReducedMotion();
-  const degreeClass = resolveDegreeClass(cgpa);
+  const { scale: activeScale } = useGradingScale();
+  const degreeClass = resolveDegreeClass(cgpa, scale ?? activeScale);
 
   const colorMap: Record<string, string> = {
     '--class-first': 'var(--class-first)',

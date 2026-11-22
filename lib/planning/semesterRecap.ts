@@ -10,11 +10,17 @@ import {
   GRADE_POINTS,
   normaliseCourseCode,
   outstandingCarryOvers,
+  gradePointFor,
   resolveDegreeClass,
-  type AcademicGrade,
-  type DegreeClassBand,
+  type GradingScale,
 } from '@/lib/cgpa/academicRules';
-import { knownGradeOf, type PlanningCourse } from '@/lib/planning/carryOvers';
+import { failGradeOf, knownGradeOf, type PlanningCourse } from '@/lib/planning/carryOvers';
+
+/** A degree class as the recap shows it (an ng5 band, or a class on the active scale). */
+export interface RecapClass {
+  label: string;
+  shortLabel: string;
+}
 import type { AiEligibilityView, PrivacyState } from '@/lib/consent/requirements';
 
 export interface RecapSemester {
@@ -34,10 +40,10 @@ export interface SemesterRecap {
   delta: number | null;
   /** Units of graded, non-F courses this semester. */
   unitsEarned: number;
-  strongest: { code: string; title: string; grade: AcademicGrade } | null;
+  strongest: { code: string; title: string; grade: string } | null;
   /** Class before this semester; null when nothing earlier was graded. */
-  classBefore: DegreeClassBand | null;
-  classAfter: DegreeClassBand;
+  classBefore: RecapClass | null;
+  classAfter: RecapClass;
   /** Course codes (as written this semester) whose earlier failure this semester cleared. */
   carryOversCleared: string[];
 }
@@ -47,6 +53,8 @@ export interface SemesterRecapInput {
   semesters: readonly RecapSemester[];
   coursesBySemester: Readonly<Record<string, readonly PlanningCourse[]>>;
   semesterId: string;
+  /** The student's scale; the 5-point scale when left out. */
+  scale?: GradingScale;
 }
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
@@ -71,14 +79,17 @@ export function buildSemesterRecap(input: SemesterRecapInput): SemesterRecap | n
   let unitsEarned = 0;
   let strongest: SemesterRecap['strongest'] = null;
   let bestRank = -Infinity;
+  const scale = input.scale;
+  const fail = failGradeOf(scale);
+  const pointsOf = (grade: string) => (scale ? gradePointFor(grade, scale) ?? 0 : GRADE_POINTS[grade as keyof typeof GRADE_POINTS] ?? 0);
   for (const course of courses) {
-    const grade = knownGradeOf(course);
+    const grade = knownGradeOf(course, scale);
     if (grade === null) continue;
     const units = finite(course.units) ? course.units : 0;
-    if (grade !== 'F') unitsEarned += units;
+    if (grade !== fail) unitsEarned += units;
     // Rank by grade point, then by score within the grade.
-    const rank = GRADE_POINTS[grade] * 1000 + (scoreOf(course) ?? 0);
-    if (grade !== 'F' && rank > bestRank) {
+    const rank = pointsOf(grade) * 1000 + (scoreOf(course) ?? 0);
+    if (grade !== fail && rank > bestRank) {
       bestRank = rank;
       strongest = { code: course.code, title: course.title ?? '', grade };
     }
@@ -88,8 +99,13 @@ export function buildSemesterRecap(input: SemesterRecapInput): SemesterRecap | n
   const cgpaAfter = computeCumulativeCGPA(through).cgpa;
 
   const chronological = (list: readonly RecapSemester[]) => list.map((semester) => ({ courses: input.coursesBySemester[semester.id] ?? [] }));
-  const after = new Set(outstandingCarryOvers(chronological(through)));
-  const cleared = outstandingCarryOvers(chronological(earlier)).filter((code) => !after.has(code));
+  const after = new Set(outstandingCarryOvers(chronological(through), scale));
+  const cleared = outstandingCarryOvers(chronological(earlier), scale).filter((code) => !after.has(code));
+  const classOf = (cgpa: number): RecapClass => {
+    if (!scale) return resolveDegreeClass(cgpa);
+    const cls = resolveDegreeClass(cgpa, scale);
+    return { label: cls.name, shortLabel: cls.shortLabel };
+  };
   const carryOversCleared = cleared.map((code) => courses.find((course) => normaliseCourseCode(course.code) === code)?.code ?? code);
 
   return {
@@ -100,8 +116,8 @@ export function buildSemesterRecap(input: SemesterRecapInput): SemesterRecap | n
     delta: previousGpa === null ? null : current.gpa - previousGpa,
     unitsEarned,
     strongest,
-    classBefore: cgpaBefore === null ? null : resolveDegreeClass(cgpaBefore),
-    classAfter: resolveDegreeClass(cgpaAfter),
+    classBefore: cgpaBefore === null ? null : classOf(cgpaBefore),
+    classAfter: classOf(cgpaAfter),
     carryOversCleared,
   };
 }

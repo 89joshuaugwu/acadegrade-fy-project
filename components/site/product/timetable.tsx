@@ -8,6 +8,8 @@ import { ButtonLink, CheckList, Container, FaqList, Heading, PhoneFrame, Section
 import { AuthAction, type ActionTarget } from './AuthAction';
 import { FakeButton, NotificationCard, UiCard, UiCardHead } from './shared';
 import { WeekAgenda } from './WeekAgenda';
+import { reveal } from '@/components/motion/Reveal';
+import { CountUpText } from '@/components/motion/CountUp';
 
 /**
  * Sections of /features/timetable in brand v2 (content: docs/public-redesign/pages/features-timetable.md).
@@ -77,7 +79,7 @@ export function WeekSection() {
             >
               <p className="text-[1.125rem] font-semibold">{kind.name}</p>
               <p className={`mt-2 text-[0.9375rem] leading-relaxed ${index === 2 ? 'text-ag-night/80' : 'text-white/80'}`}>{kind.sentence}</p>
-              <p className="ag-display ag-num mt-6 text-[2.75rem] font-bold leading-none">{kind.figure}</p>
+              <p className="ag-display ag-num mt-6 text-[2.75rem] font-bold leading-none"><CountUpText text={kind.figure} /></p>
               <p className={`mt-2 text-[0.875rem] ${index === 2 ? 'text-ag-night/75' : 'text-white/70'}`}>{kind.caption}</p>
             </li>
           ))}
@@ -188,7 +190,7 @@ export function BuildSection() {
             </div>
           </div>
         </div>
-        <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
+        <div {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
           <QuestionsCard />
           <WorkingCard />
         </div>
@@ -240,7 +242,7 @@ export function LengthSection() {
       <Container className="grid grid-cols-[minmax(0,1fr)] gap-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center lg:gap-16">
         <div>
           <Heading id="length-title" title="As long as you need it" lead={LENGTH_NOTE} />
-          <dl className="mt-10 grid grid-cols-2 gap-3">
+          <dl {...reveal('stagger')} className="mt-10 grid grid-cols-2 gap-3">
             {LENGTHS.map((length) => (
               <div key={length.unit} className="rounded-[20px] bg-ag-haze p-5">
                 <dt className="ag-display text-[1.5rem] font-bold text-ag-ink">{length.unit}</dt>
@@ -276,7 +278,7 @@ function LockScreen() {
         </div>
         <p className="mt-8 text-center text-[0.875rem] text-white/80">Monday, 30 November</p>
         <p className="ag-display ag-num text-center text-[4rem] font-bold leading-none">08:50</p>
-        <div className="mt-8 space-y-2.5">
+        <div {...reveal('stagger')} className="mt-8 space-y-2.5">
           <NotificationCard title={note.title} body={note.body} />
           <div className="rounded-[20px] bg-white/10 p-4 ring-1 ring-white/15 backdrop-blur-md">
             <p className="text-[0.8125rem] font-semibold text-white/80">Next reminders, already on your phone</p>

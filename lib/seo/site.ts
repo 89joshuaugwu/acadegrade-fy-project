@@ -53,6 +53,8 @@ export function createPageMetadata({
   keywords,
 }: PageMetadataOptions): Metadata {
   const canonical = absoluteUrl(path);
+  // The layout's "%s | AcadeGrade" template only reaches <title>, not og:title.
+  const previewTitle = `${title} | ${SITE_NAME}`;
 
   return {
     title,
@@ -63,16 +65,17 @@ export function createPageMetadata({
       type: 'website',
       locale: 'en_NG',
       siteName: SITE_NAME,
-      title,
+      title: previewTitle,
       description,
       url: canonical,
-      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: `${SITE_NAME} — ${title}` }],
     },
+    // No images here: each route's opengraph-image.tsx (or the nearest parent's)
+    // supplies og:image with its width, height, alt and a cache-busting URL, and
+    // X falls back to og:image when there is no twitter:image.
     twitter: {
       card: 'summary_large_image',
-      title,
+      title: previewTitle,
       description,
-      images: ['/opengraph-image'],
     },
   };
 }
@@ -93,6 +96,7 @@ export const PUBLIC_SITEMAP_ROUTES = [
   '/features/ai-insights',
   '/features/timetable',
   '/app',
+  '/app/download/ios',
   '/calculator',
   '/tools',
   '/tools/degree-class-checker',
@@ -124,6 +128,15 @@ export function getSiteJsonLd(contactEmail: string | null = envContactEmail()) {
       url,
       logo: absoluteUrl('/android-chrome-512x512.png'),
       ...(email ? { email } : {}),
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': `${url}/#website`,
+      name: SITE_NAME,
+      url,
+      inLanguage: 'en-NG',
+      publisher: { '@id': `${url}/#organization` },
     },
     {
       '@context': 'https://schema.org',

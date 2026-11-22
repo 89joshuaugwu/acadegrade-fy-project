@@ -4,7 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import type { User } from '@/types/user';
 import type { SemesterWithCourses } from '@/types/semester';
-import { computeCumulativeCGPA, formatCgpa, resolveDegreeClass } from '@/lib/cgpa/academicRules';
+import { computeCumulativeCGPA, formatCgpa, resolveGradingScale } from '@/lib/cgpa/academicRules';
+import { transcriptClassLabel } from '@/lib/cgpa/scale';
 
 /** Shown on every page: the record is the student's own, not a university document. */
 const TRANSCRIPT_DISCLAIMER = 'Self-reported by the student. Not issued or verified by any university.';
@@ -143,7 +144,10 @@ export function buildTranscript(
 
   // Predict Degree Class from the same rounded CGPA that is printed
   const cgpaNum = parseFloat(cgpa);
-  const degreeClass = resolveDegreeClass(cumulative.cgpa).transcriptLabel;
+  // The student's grading scale (5-point when none is stored).
+  const scale = resolveGradingScale(userData.gradingScale);
+  const maxText = formatCgpa(scale.maxPoint);
+  const degreeClass = transcriptClassLabel(cumulative.cgpa, scale);
 
   // -- SEMESTER DATA --
   let currentY = boxY + boxHeight + 10;
@@ -235,7 +239,7 @@ export function buildTranscript(
     );
   }
   // Foreground arc (indigo)
-  const fillRatio = Math.min(cgpaNum / 5, 1);
+  const fillRatio = Math.min(cgpaNum / scale.maxPoint, 1);
   const fillEnd = startAngle + (endAngle - startAngle) * fillRatio;
   doc.setDrawColor(79, 70, 229);
   doc.setLineWidth(3);
@@ -272,7 +276,7 @@ export function buildTranscript(
     );
   }
   // Foreground arc (gold #f59e0b for PI)
-  const piFillRatio = Math.min(piNum / 5, 1);
+  const piFillRatio = Math.min(piNum / scale.maxPoint, 1);
   const piFillEnd = startAngle + (endAngle - startAngle) * piFillRatio;
   doc.setDrawColor(245, 158, 11);
   doc.setLineWidth(3);
@@ -301,13 +305,16 @@ export function buildTranscript(
   doc.text('CUMULATIVE SUMMARY', infoX, currentY + 8);
   
   doc.setFontSize(10);
-  doc.text(`Cumulative CGPA: ${cgpa} / 5.00`, infoX, currentY + 16);
-  doc.text(`Cumulative PI: ${cumulativePI} / 5.00`, infoX, currentY + 22);
+  doc.text(`Cumulative CGPA: ${cgpa} / ${maxText}`, infoX, currentY + 16);
+  doc.text(`Cumulative PI: ${cumulativePI} / ${maxText}`, infoX, currentY + 22);
   doc.text(`Total Credits Earned: ${totalCredits}`, infoX, currentY + 28);
   
   doc.text('Projected Degree Class:', infoX, currentY + 36);
   doc.setFont('helvetica', 'normal');
   doc.text(degreeClass, infoX, currentY + 42);
+  doc.setFontSize(8);
+  doc.text(`Grading scale: ${scale.name}`, infoX, currentY + 48);
+  doc.setFontSize(10);
 
   doc.setLineWidth(0.2);
 

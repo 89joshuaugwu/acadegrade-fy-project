@@ -37,7 +37,7 @@ if (PREVIEW && typeof window !== 'undefined' && !window.__agPreviewFetch) {
     const url = new URL(href, window.location.href);
     if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/')) return realFetch(input, init);
     const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase();
-    const ctx: ApiContext = { url, method, body: parseBody(init?.body), role: PREVIEW_ROLE ?? 'student' };
+    const ctx: ApiContext = { url, method, body: parseBody(init?.body), role: PREVIEW_ROLE ?? 'student', headers: new Headers(init?.headers) };
     const hit = API_FIXTURES.find(
       (f) => (f.method === '*' || f.method === method) && (typeof f.path === 'string' ? f.path === url.pathname : f.path.test(url.pathname)),
     );

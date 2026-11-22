@@ -5,6 +5,7 @@ import { serverTimestamp } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 import { updateDocument } from '@/lib/firebase/firestore';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import {
   describeMilestone,
   detectMilestones,
@@ -33,10 +34,11 @@ export function useMilestones({ uid, stored, semesters, isGraduated, ready }: Us
   const [celebrate, setCelebrate] = useState<string[]>([]);
   const written = useRef<Set<string>>(new Set());
   const seeded = useRef(false);
+  const { scale } = useGradingScale();
 
   useEffect(() => {
     if (!uid || !ready || !semesters) return;
-    const detected = detectMilestones({ semesters, isGraduated });
+    const detected = detectMilestones({ semesters, isGraduated, scale });
     const plan = planMilestoneWrites(detected, stored);
     const record = plan.record.filter((id) => !written.current.has(id));
     const isSeed = stored === undefined;
@@ -52,14 +54,14 @@ export function useMilestones({ uid, stored, semesters, isGraduated, ready }: Us
       .then(() => {
         if (fresh.length === 0) return;
         setCelebrate((previous) => [...previous, ...fresh.filter((id) => !previous.includes(id))]);
-        toast.success(fresh.length === 1 ? `New milestone: ${describeMilestone(fresh[0]).title}` : `${fresh.length} new milestones`);
+        toast.success(fresh.length === 1 ? `New milestone: ${describeMilestone(fresh[0], scale).title}` : `${fresh.length} new milestones`);
       })
       .catch((error: unknown) => {
         record.forEach((id) => written.current.delete(id));
         if (isSeed) seeded.current = false;
         console.warn('Milestones not recorded', error);
       });
-  }, [uid, ready, semesters, isGraduated, stored]);
+  }, [uid, ready, semesters, isGraduated, stored, scale]);
 
   return { celebrate, dismiss: (id: string) => setCelebrate((previous) => previous.filter((item) => item !== id)) };
 }

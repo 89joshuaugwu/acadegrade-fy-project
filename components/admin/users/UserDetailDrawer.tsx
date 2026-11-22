@@ -15,6 +15,8 @@ interface UserDetail {
     department: string | null; programme: string | null; currentLevel: number | null; createdAt: string | null;
     lastActiveAt: string | null; disabled: boolean; ageStatus: 'adult' | 'minor' | 'unknown';
     aiConsent: boolean | null; marketingConsent: boolean | null;
+    /** Name of the student's grading scale; absent from older servers (5-point). */
+    gradingScale?: string;
   };
   academic: { semesterCount: number; completedCount: number };
   devices: { count: number };
@@ -153,6 +155,7 @@ export function UserDetailDrawer({ uid, getToken, onClose, onDeleted }: Readonly
                   ['University', profile.university ?? '—'],
                   ['Department', profile.department ?? '—'],
                   ['Programme', profile.programme ?? '—'],
+                  ['Grading scale', profile.gradingScale ?? '5-point (with E)'],
                   ['Joined', dateText(profile.createdAt, 'Unknown')],
                   ['Last active', dateText(profile.lastActiveAt, 'Never seen')],
                   ['Sign-in', profile.disabled ? 'Disabled' : 'Enabled'],

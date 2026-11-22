@@ -23,6 +23,9 @@ import { EXAMPLE_STUDENT, computeExampleSlip } from '@/lib/public/example-studen
 import type { PagePhoto } from '@/lib/public/page-photos';
 import { contactHref } from '@/lib/site/contact-email';
 import { AuthAwareButton } from './AuthAwareButton';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
+import { CountUpText } from '@/components/motion/CountUp';
 
 /** Brand v2 sections for /about (docs/brand-v2/DESIGN.md; content from docs/public-redesign/pages/about.md). */
 
@@ -50,7 +53,7 @@ export function AboutFacts() {
           <span className="block font-semibold text-white">AcadeGrade</span>A personal academic record, not an official result.
         </p>
       </div>
-      <dl className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2">
+      <dl {...reveal('stagger', 300)} className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2">
         {ABOUT_FACTS.map((fact, index) => (
           <div
             key={fact.fact}
@@ -91,7 +94,7 @@ export function MissionSection({ mission, photo, lists }: { mission: string; pho
                 <p className="text-[0.8125rem] font-semibold text-ag-ink">Example record, {EXAMPLE_STUDENT.levelLabel}</p>
               </div>
               <div className="mt-3 flex items-end justify-between gap-4">
-                <p className="ag-display ag-num text-[2.25rem] font-bold leading-none text-ag-ink">{formatCgpa(slip.cgpa)}</p>
+                <p className="ag-display ag-num text-[2.25rem] font-bold leading-none text-ag-ink"><CountUpText text={formatCgpa(slip.cgpa)} /></p>
                 <p className="text-right text-[0.8125rem] leading-snug text-ag-mist">
                   <span className="block font-semibold text-ag-ink">{slip.classBand.label}</span>
                   CGPA over {slip.totalUnits} units
@@ -101,8 +104,8 @@ export function MissionSection({ mission, photo, lists }: { mission: string; pho
           </div>
         ) : null}
         <div className={photo ? 'lg:pt-6' : 'lg:col-span-2'}>
-          <h2 id="mission-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            Why AcadeGrade exists
+          <h2 {...reveal('words')} id="mission-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{"Why AcadeGrade exists"}</Words>
           </h2>
           <p className="mt-6 text-[1.25rem] leading-[1.55] text-ag-ink sm:text-[1.375rem]">{mission}</p>
           <div className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-8 sm:grid-cols-2">
@@ -161,15 +164,15 @@ export function FounderSection() {
             </ul>
           </div>
           <div className="min-w-0">
-            <h2 id="who-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-              Who runs AcadeGrade
+            <h2 {...reveal('words')} id="who-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+              <Words>{"Who runs AcadeGrade"}</Words>
             </h2>
-            <p className="mt-6 text-[1.125rem] leading-relaxed text-ag-ink">{FOUNDER_LINE}</p>
-            <blockquote className="mt-6 border-l-2 border-ag-gold pl-5 text-[1.0625rem] leading-relaxed text-ag-mist">
+            <p {...reveal('rise')} className="mt-6 text-[1.125rem] leading-relaxed text-ag-ink">{FOUNDER_LINE}</p>
+            <blockquote {...reveal('rise', 120)} className="mt-6 border-l-2 border-ag-gold pl-5 text-[1.0625rem] leading-relaxed text-ag-mist">
               &ldquo;I watched friends add up grade points by hand every semester, then do it again because they weren&apos;t sure.
               AcadeGrade makes the arithmetic the easy part, and keeps your record private.&rdquo;
             </blockquote>
-            <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-ag-ink/10 pt-8 sm:grid-cols-4">
+            <dl {...reveal('stagger', 200)} className="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-ag-ink/10 pt-8 sm:grid-cols-4">
               {OPERATOR_FACTS.map((pair) => (
                 <div key={pair.label} className="min-w-0">
                   <dt className="text-[0.875rem] text-ag-mist">{pair.label}</dt>
@@ -241,7 +244,7 @@ export function WorkingSection({ groups }: { groups: readonly SheetGroup[] }) {
             title="We show our working."
             lead="Every figure in AcadeGrade can be checked with a pen. Here is one semester for our example student, worked out the way your record shows it."
           />
-          <ul className="mt-10 divide-y divide-ag-ink/10 border-y border-ag-ink/10">
+          <ul {...reveal('stagger')} className="mt-10 divide-y divide-ag-ink/10 border-y border-ag-ink/10">
             {WORKING_PRINCIPLES.map((principle) => (
               <li key={principle.title} className="flex gap-4 py-5">
                 <CheckIcon className="mt-1 text-ag-violet" />
@@ -254,7 +257,7 @@ export function WorkingSection({ groups }: { groups: readonly SheetGroup[] }) {
           </ul>
         </div>
 
-        <section aria-labelledby="sheet-title" className="rounded-[32px] bg-ag-haze p-4 sm:p-7">
+        <section {...reveal('pop', 120)} aria-labelledby="sheet-title" className="rounded-[32px] bg-ag-haze p-4 sm:p-7">
           <div className="flex items-center gap-4 px-2 pb-5 pt-2 sm:px-2">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white">
               <AcadeGradeMark size={30} />
@@ -297,7 +300,7 @@ export function CommitmentsSection({ trustStatement }: { trustStatement: string 
     <Section tone="haze" labelledBy="commit-title">
       <Container>
         <Heading id="commit-title" title="Your record is yours" lead={trustStatement} />
-        <div className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
+        <div {...reveal('stagger')} className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
           {COMMITMENTS.map((group) => (
             <div key={group.title} className="rounded-[24px] bg-white p-7 sm:p-8">
               <h3 className="ag-display text-[1.375rem] font-bold leading-tight text-ag-ink">{group.title}</h3>
@@ -337,10 +340,10 @@ export function NotSection({ lines }: { lines: readonly PosterLine[] }) {
   return (
     <Section tone="night" labelledBy="not-title" className="ag-noise">
       <Container className="relative">
-        <h2 id="not-title" className="ag-display max-w-xl text-[2.25rem] font-bold leading-[1.05] text-white sm:text-[3rem]">
-          What AcadeGrade is not
+        <h2 {...reveal('words')} id="not-title" className="ag-display max-w-xl text-[2.25rem] font-bold leading-[1.05] text-white sm:text-[3rem]">
+          <Words>{"What AcadeGrade is not"}</Words>
         </h2>
-        <ul className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-x-14 md:grid-cols-2">
+        <ul {...reveal('stagger')} className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-x-14 md:grid-cols-2">
           {lines.map((item) => {
             const [first, ...rest] = item.line.split(' ');
             return (
@@ -365,8 +368,8 @@ export function WriteSection({ email }: { email: string | null }) {
     <Section tone="white" labelledBy="write-title">
       <Container className="grid grid-cols-[minmax(0,1fr)] items-center gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,6fr)] lg:gap-16">
         <div>
-          <h2 id="write-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            Write to us
+          <h2 {...reveal('words')} id="write-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{"Write to us"}</Words>
           </h2>
           <p className="mt-5 max-w-lg text-[1.25rem] leading-relaxed text-ag-ink">Something wrong for your university? Tell us.</p>
           <p className="mt-3 max-w-lg text-[1.0625rem] leading-relaxed text-ag-mist">
@@ -442,12 +445,12 @@ export function AboutClose() {
     <section className="bg-ag-gold" aria-labelledby="close-title">
       <Container className="flex flex-col items-start gap-8 py-20 sm:py-24 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-2xl">
-          <h2 id="close-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-night sm:text-[3rem]">
-            {ABOUT_CLOSE.headline}
+          <h2 {...reveal('words')} id="close-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-night sm:text-[3rem]">
+            <Words>{ABOUT_CLOSE.headline}</Words>
           </h2>
-          <p className="mt-4 max-w-xl text-[1.0625rem] leading-relaxed text-ag-night/80">{ABOUT_CLOSE.sentence}</p>
+          <p {...reveal('rise', 200)} className="mt-4 max-w-xl text-[1.0625rem] leading-relaxed text-ag-night/80">{ABOUT_CLOSE.sentence}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+        <div {...reveal('rise', 300)} className="flex flex-wrap items-center gap-x-6 gap-y-4">
           <AuthAwareButton href="/register" label="Start your free record" variant="night" />
           <TextLinkV2 href="/calculator" className="!text-ag-night decoration-ag-night/30 hover:decoration-ag-night">
             Try the calculator first

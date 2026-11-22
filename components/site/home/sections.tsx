@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { photoFor } from '@/lib/public/page-photos';
 import { HOME_FAQ } from '@/lib/public/home';
 import type { PublicTestimonial } from '@/lib/public/proof';
@@ -7,6 +7,10 @@ import { AcadeMindMark } from '@/components/public/Logo';
 import { Photo } from '@/components/site/Photo';
 import { HeroLive } from './HeroLive';
 import { HeroAction } from './HeroAction';
+import { CountUp } from '@/components/motion/CountUp';
+import { Parallax } from '@/components/motion/Parallax';
+import { reveal } from '@/components/motion/Reveal';
+import { Words } from '@/components/motion/Words';
 
 function Container({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <div className={`mx-auto w-full max-w-[1240px] px-5 sm:px-8 ${className}`}>{children}</div>;
@@ -28,8 +32,8 @@ export function Hero() {
     <section className="ag-hero-sky ag-noise relative overflow-hidden text-white" aria-labelledby="hero-title">
       <Container className="relative grid grid-cols-[minmax(0,1fr)] items-center gap-12 pb-20 pt-12 sm:pt-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14 lg:pb-28 lg:pt-20">
         <div className="max-w-xl">
-          <h1 id="hero-title" className="ag-display ag-rise text-[2.75rem] font-bold leading-[1.02] sm:text-[3.75rem] lg:text-[4.25rem]">
-            Know exactly where your degree stands.
+          <h1 id="hero-title" className="ag-display mo-load-words text-[2.75rem] font-bold leading-[1.02] sm:text-[3.75rem] lg:text-[4.25rem]">
+            <Words>Know exactly where your degree stands.</Words>
           </h1>
           <p className="ag-rise ag-rise-2 mt-6 max-w-[34rem] text-[1.125rem] leading-relaxed text-ag-mist-night sm:text-[1.1875rem]">
             AcadeGrade turns your results into GPA, CGPA and degree class in seconds, then shows what it takes to reach
@@ -50,8 +54,10 @@ export function Hero() {
             ))}
           </ul>
         </div>
-        <div className="ag-rise ag-rise-3">
-          <HeroLive />
+        <div className="mo-load-visual">
+          <Parallax distance={56}>
+            <HeroLive />
+          </Parallax>
         </div>
       </Container>
     </section>
@@ -84,10 +90,10 @@ export function ScaleSection() {
     <section className="bg-white py-24 sm:py-32" aria-labelledby="scale-title">
       <Container>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-end">
-          <h2 id="scale-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            Built on the 5&#8209;point scale your university uses.
+          <h2 id="scale-title" {...reveal('words')} className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{"Built on the 5‑point scale your university uses."}</Words>
           </h2>
-          <p className="max-w-xl text-[1.0625rem] leading-relaxed text-ag-mist lg:justify-self-end">
+          <p {...reveal('rise', 160)} className="max-w-xl text-[1.0625rem] leading-relaxed text-ag-mist lg:justify-self-end">
             Every grade, unit and class boundary follows the Nigerian university system. AcadeGrade shows your PI beside
             your GPA, tracks carry-overs and handles direct entry and spill-over. Your handbook is still the final word.
           </p>
@@ -96,7 +102,7 @@ export function ScaleSection() {
         <figure className="mt-14">
           <figcaption className="sr-only">Degree classes on the 5-point scale, with the example student at 4.43</figcaption>
           <div className="relative">
-            <div className="flex h-16 overflow-hidden rounded-2xl sm:h-20">
+            <div {...reveal('wipe')} className="flex h-16 overflow-hidden rounded-2xl sm:h-20">
               {CLASS_ZONES.map((zone) => (
                 <div
                   key={zone.label}
@@ -108,20 +114,20 @@ export function ScaleSection() {
                 </div>
               ))}
             </div>
-            <div className="absolute -top-3 bottom-[-0.75rem] w-0.5 rounded bg-ag-night" style={{ left: `${(example / 5) * 100}%` }} aria-hidden="true" />
+            <div {...reveal('fade')} className="absolute -top-3 bottom-[-0.75rem] w-0.5 rounded bg-ag-night" style={{ left: `${(example / 5) * 100}%`, '--mo-delay': '900ms' } as CSSProperties} aria-hidden="true" />
             <div className="ag-num mt-3 flex justify-between text-[0.8125rem] text-ag-mist">
               {[0, 1, 2, 3, 4, 5].map((tick) => (
                 <span key={tick}>{tick.toFixed(2)}</span>
               ))}
             </div>
-            <p className="mt-3 text-right text-[0.875rem] text-ag-ink" style={{ marginRight: `${100 - (example / 5) * 100}%` }}>
+            <p {...reveal('rise')} className="mt-3 text-right text-[0.875rem] text-ag-ink" style={{ marginRight: `${100 - (example / 5) * 100}%`, '--mo-delay': '1000ms' } as CSSProperties}>
               <span className="font-semibold">Example student: 4.43</span>
               <span className="block text-ag-mist">Second Class Upper, 0.07 from a First</span>
             </p>
           </div>
         </figure>
 
-        <dl className="mt-12 grid grid-cols-3 gap-3 sm:grid-cols-6">
+        <dl {...reveal('stagger')} className="mt-12 grid grid-cols-3 gap-3 sm:grid-cols-6">
           {GRADE_BANDS.map((band) => (
             <div key={band.grade} className="rounded-2xl bg-ag-haze px-4 py-4">
               <dt className="ag-display text-[2rem] font-bold leading-none text-ag-ink">{band.grade}</dt>
@@ -139,8 +145,12 @@ export function ScaleSection() {
 
 // ------------------------------------------------------------------ Everything after results day
 
-function Panel({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <article className={`relative overflow-hidden rounded-[32px] ${className}`}>{children}</article>;
+function Panel({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  return (
+    <article {...reveal('pop', delay)} className={`relative overflow-hidden rounded-[32px] ${className}`}>
+      {children}
+    </article>
+  );
 }
 
 const SCAN_ROWS = [
@@ -157,10 +167,10 @@ export function FeaturesSection() {
     <section className="bg-ag-haze py-24 sm:py-32" aria-labelledby="features-title">
       <Container>
         <div className="max-w-2xl">
-          <h2 id="features-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            Everything after results day, in one place.
+          <h2 id="features-title" {...reveal('words')} className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{"Everything after results day, in one place."}</Words>
           </h2>
-          <p className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">
+          <p {...reveal('rise')} className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">
             Scan your result slip, see your class, plan the next semester and share your record when you need to.
           </p>
         </div>
@@ -184,7 +194,7 @@ export function FeaturesSection() {
               ) : (
                 <div className="absolute inset-0 bg-ag-violet/20" />
               )}
-              <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/95 p-4 shadow-[0_18px_50px_-12px_rgba(23,19,58,0.45)] backdrop-blur sm:left-auto sm:w-[330px]" data-ui>
+              <div {...reveal('rise', 550)} className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/95 p-4 shadow-[0_18px_50px_-12px_rgba(23,19,58,0.45)] backdrop-blur sm:left-auto sm:w-[330px]" data-ui>
                 <p className="text-[0.8125rem] font-semibold text-ag-ink">5 courses found. Check each one.</p>
                 <ul className="mt-3 space-y-2">
                   {SCAN_ROWS.map(([code, title, score, grade]) => (
@@ -201,7 +211,7 @@ export function FeaturesSection() {
           </Panel>
 
           {/* AcadeMind */}
-          <Panel className="bg-ag-violet text-white lg:col-span-5">
+          <Panel className="bg-ag-violet text-white lg:col-span-5" delay={120}>
             <div className="flex h-full flex-col p-7 sm:p-9">
               <div className="flex items-center gap-3">
                 <span className="grid h-11 w-11 place-items-center rounded-xl bg-white/15">
@@ -213,7 +223,7 @@ export function FeaturesSection() {
                 Reads your record and writes back in plain English: where you are strong, what is slipping and what would
                 move your class.
               </p>
-              <div className="mt-8 space-y-3" data-ui>
+              <div {...reveal('stagger', 300)} className="mt-8 space-y-3" data-ui>
                 <p className="ml-auto max-w-[85%] rounded-2xl rounded-br-md bg-white/15 px-4 py-3 text-[0.9375rem]">
                   What do I need for a First Class?
                 </p>
@@ -254,15 +264,17 @@ export function FeaturesSection() {
           </Panel>
 
           {/* What you need */}
-          <Panel className="bg-white lg:col-span-4">
+          <Panel className="bg-white lg:col-span-4" delay={120}>
             <div className="flex h-full flex-col p-7 sm:p-9">
               <h3 className="ag-display text-[1.5rem] font-bold leading-tight text-ag-ink">Know what you need next</h3>
-              <p className="ag-display ag-num mt-6 text-[4.5rem] font-bold leading-none text-ag-ink">4.67</p>
+              <p className="ag-display ag-num mt-6 text-[4.5rem] font-bold leading-none text-ag-ink">
+                <CountUp value={4.67} decimals={2} from={3.5} />
+              </p>
               <p className="mt-3 text-[0.9375rem] leading-relaxed text-ag-mist">
                 The average the example student needs over 40 units to finish with a First Class.
               </p>
               <div className="mt-6 h-2.5 overflow-hidden rounded-full bg-ag-haze" aria-hidden="true">
-                <div className="h-full w-[88.6%] rounded-full bg-gradient-to-r from-ag-violet to-ag-gold" />
+                <div {...reveal('wipe', 200)} className="h-full w-[88.6%] rounded-full bg-gradient-to-r from-ag-violet to-ag-gold" />
               </div>
               <Link href="/tools/required-gpa" className="ag-focus mt-6 inline-block self-start rounded text-[0.9375rem] font-semibold text-ag-violet underline decoration-ag-violet/30 underline-offset-4 hover:decoration-ag-violet">
                 Work out yours
@@ -271,11 +283,11 @@ export function FeaturesSection() {
           </Panel>
 
           {/* Transcript */}
-          <Panel className="bg-white lg:col-span-3">
+          <Panel className="bg-white lg:col-span-3" delay={240}>
             <div className="flex h-full flex-col p-7 sm:p-9">
               <h3 className="ag-display text-[1.5rem] font-bold leading-tight text-ag-ink">Share your transcript safely</h3>
               <p className="mt-3 text-[0.9375rem] leading-relaxed text-ag-mist">A clean record, shared on your terms.</p>
-              <ul className="mt-6 flex flex-wrap gap-2 text-[0.8125rem] font-semibold" data-ui>
+              <ul {...reveal('stagger', 300)} className="mt-6 flex flex-wrap gap-2 text-[0.8125rem] font-semibold" data-ui>
                 <li className="rounded-full bg-ag-haze px-3 py-1.5 text-ag-ink">Expires in 7 days</li>
                 <li className="rounded-full bg-ag-haze px-3 py-1.5 text-ag-ink">Summary only</li>
                 <li className="rounded-full bg-ag-gold/25 px-3 py-1.5 text-ag-ink">PIN on</li>
@@ -303,16 +315,20 @@ export function StorySection() {
   const photo = photoFor('home.showcase');
   return (
     <section id="how-it-works" className="relative isolate overflow-hidden bg-ag-night text-white" aria-labelledby="story-title">
-      {photo ? <Photo photo={photo} sizes="100vw" className="absolute inset-0 -z-10" imgClassName="h-full w-full object-cover" /> : null}
+      {photo ? (
+        <Parallax mode="band" distance={90} scale={1.14} className="absolute inset-0 -z-10">
+          <Photo photo={photo} sizes="100vw" className="absolute inset-0" imgClassName="h-full w-full object-cover" />
+        </Parallax>
+      ) : null}
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-ag-night via-ag-night/80 to-ag-night/20" />
       <Container className="py-28 sm:py-36">
-        <h2 id="story-title" className="ag-display max-w-xl text-[2.5rem] font-bold leading-[1.02] sm:text-[3.5rem]">
-          Results day, sorted.
+        <h2 id="story-title" {...reveal('words')} className="ag-display max-w-xl text-[2.5rem] font-bold leading-[1.02] sm:text-[3.5rem]">
+          <Words>{"Results day, sorted."}</Words>
         </h2>
-        <p className="mt-5 max-w-md text-[1.0625rem] leading-relaxed text-white/80">
+        <p {...reveal('rise')} className="mt-5 max-w-md text-[1.0625rem] leading-relaxed text-white/80">
           No more adding grade points on the back of a page. Three steps and you know where you stand.
         </p>
-        <ol className="mt-12 grid gap-4 sm:grid-cols-3 lg:max-w-4xl">
+        <ol {...reveal('stagger', 200)} className="mt-12 grid gap-4 sm:grid-cols-3 lg:max-w-4xl">
           {STEPS.map((step, index) => (
             <li key={step.title} className="rounded-3xl bg-white/10 p-6 ring-1 ring-white/15 backdrop-blur-md">
               <span className="ag-display grid h-10 w-10 place-items-center rounded-full bg-ag-gold text-[1.125rem] font-bold text-ag-night">
@@ -335,14 +351,14 @@ export function AndroidSection() {
     <section className="ag-hero-sky relative overflow-hidden text-white" aria-labelledby="android-title">
       <Container className="grid items-center gap-14 py-24 sm:py-32 lg:grid-cols-2">
         <div className="max-w-lg">
-          <h2 id="android-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] sm:text-[3rem]">
-            Reminders that work when the network doesn&apos;t.
+          <h2 id="android-title" {...reveal('words')} className="ag-display text-[2.25rem] font-bold leading-[1.05] sm:text-[3rem]">
+            <Words>{"Reminders that work when the network doesn't."}</Words>
           </h2>
-          <p className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist-night">
+          <p {...reveal('rise')} className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist-night">
             The Android app adds offline reminders for lectures, reading and exams, the result scanner on your camera and
             an app lock for your record.
           </p>
-          <ul className="mt-8 space-y-3 text-[1rem]">
+          <ul {...reveal('stagger', 220)} className="mt-8 space-y-3 text-[1rem]">
             {['Up to three reminders for every class', 'Build a reading plan with AcadeMind', 'Works on Android 7 and newer'].map((item) => (
               <li key={item} className="flex items-center gap-3 text-ag-gold">
                 <Check />
@@ -350,7 +366,7 @@ export function AndroidSection() {
               </li>
             ))}
           </ul>
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+          <div {...reveal('rise', 360)} className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
             <Link href="/app" className="ag-focus rounded-xl bg-ag-gold px-6 py-3.5 text-[1rem] font-semibold text-ag-night transition hover:brightness-105">
               Get the Android app
             </Link>
@@ -358,7 +374,8 @@ export function AndroidSection() {
           </div>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[340px]" aria-hidden="true">
+        <Parallax mode="band" distance={70} className="relative mx-auto w-full max-w-[340px]">
+        <div {...reveal('pop', 100)} className="relative" aria-hidden="true">
           <div className="absolute -inset-10 rounded-full bg-ag-violet/30 blur-3xl" />
           <div className="relative rounded-[44px] bg-[#05040F] p-3 shadow-[0_40px_90px_-20px_rgba(0,0,0,0.7)] ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[34px] bg-ag-haze text-ag-ink">
@@ -392,6 +409,7 @@ export function AndroidSection() {
             </div>
           </div>
         </div>
+        </Parallax>
       </Container>
     </section>
   );
@@ -403,10 +421,10 @@ export function VoicesSection({ testimonials }: { testimonials: readonly PublicT
   return (
     <section className="bg-white py-24 sm:py-32" aria-labelledby="voices-title">
       <Container>
-        <h2 id="voices-title" className="ag-display max-w-xl text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-          What students say.
+        <h2 id="voices-title" {...reveal('words')} className="ag-display max-w-xl text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+          <Words>{"What students say."}</Words>
         </h2>
-        <ul className="mt-12 grid gap-5 md:grid-cols-3">
+        <ul {...reveal('stagger', 150)} className="mt-12 grid gap-5 md:grid-cols-3">
           {testimonials.slice(0, 3).map((item) => (
             <li key={item.id} className="flex flex-col rounded-[28px] bg-ag-haze p-7">
               <blockquote className="text-[1.125rem] leading-relaxed text-ag-ink">&ldquo;{item.quote}&rdquo;</blockquote>
@@ -428,13 +446,13 @@ export function FounderSection() {
   return (
     <section className="bg-white py-24 sm:py-28" aria-labelledby="founder-title">
       <Container>
-        <div className="grid gap-10 rounded-[32px] bg-ag-haze p-8 sm:p-12 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-14">
+        <div {...reveal('pop')} className="grid gap-10 rounded-[32px] bg-ag-haze p-8 sm:p-12 lg:grid-cols-[auto_1fr] lg:items-center lg:gap-14">
           <div className="ag-display grid h-24 w-24 place-items-center rounded-full bg-ag-night text-[2rem] font-bold text-ag-gold" aria-hidden="true">
             JU
           </div>
           <div className="max-w-2xl">
-            <h2 id="founder-title" className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2.25rem]">
-              Built by a student who has lived through results day.
+            <h2 id="founder-title" {...reveal('words')} className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2.25rem]">
+              <Words>{"Built by a student who has lived through results day."}</Words>
             </h2>
             <p className="mt-4 text-[1.0625rem] leading-relaxed text-ag-mist">
               I studied Computer Science at ESUT and watched friends add up grade points by hand every semester, then do it
@@ -461,17 +479,17 @@ export function FaqSection() {
     <section className="bg-white pb-24 sm:pb-32" aria-labelledby="faq-title">
       <Container className="grid gap-12 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <div>
-          <h2 id="faq-title" className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
-            Questions, answered.
+          <h2 id="faq-title" {...reveal('words')} className="ag-display text-[2.25rem] font-bold leading-[1.05] text-ag-ink sm:text-[3rem]">
+            <Words>{"Questions, answered."}</Words>
           </h2>
-          <p className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">
+          <p {...reveal('rise')} className="mt-5 text-[1.0625rem] leading-relaxed text-ag-mist">
             Anything else?{' '}
             <Link href="/support" className="ag-focus rounded font-semibold text-ag-violet underline decoration-ag-violet/30 underline-offset-4 hover:decoration-ag-violet">
               Ask support
             </Link>
           </p>
         </div>
-        <div className="divide-y divide-ag-ink/10 border-y border-ag-ink/10">
+        <div {...reveal('stagger', 120)} className="divide-y divide-ag-ink/10 border-y border-ag-ink/10">
           {HOME_FAQ.map((item) => (
             <details key={item.id} className="ag-faq group">
               <summary className="ag-focus flex items-center justify-between gap-6 rounded py-6 text-[1.125rem] font-semibold text-ag-ink">
@@ -495,10 +513,10 @@ export function ClosingSection() {
   return (
     <section className="bg-ag-gold" aria-labelledby="closing-title">
       <Container className="flex flex-col items-start gap-8 py-20 sm:py-24 lg:flex-row lg:items-center lg:justify-between">
-        <h2 id="closing-title" className="ag-display max-w-2xl text-[2.25rem] font-bold leading-[1.05] text-ag-night sm:text-[3rem]">
-          Your next result is coming. Know what it means the moment it lands.
+        <h2 id="closing-title" {...reveal('words')} className="ag-display max-w-2xl text-[2.25rem] font-bold leading-[1.05] text-ag-night sm:text-[3rem]">
+          <Words>{"Your next result is coming. Know what it means the moment it lands."}</Words>
         </h2>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+        <div {...reveal('rise', 260)} className="flex flex-wrap items-center gap-x-6 gap-y-4">
           <Link href="/register" className="ag-focus rounded-xl bg-ag-night px-6 py-4 text-[1rem] font-semibold text-white transition hover:bg-ag-night-2">
             Start your free record
           </Link>

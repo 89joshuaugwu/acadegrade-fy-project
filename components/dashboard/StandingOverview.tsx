@@ -6,9 +6,11 @@ import { CGPAArc } from '@/components/cgpa/CGPAArc';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
 import { cn } from '@/lib/utils/cn';
-import { formatCgpa, resolveDegreeClass, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+import { formatCgpa, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+import { cgpaTone } from '@/lib/cgpa/scale';
+import { useGradingScale } from '@/hooks/useGradingScale';
 
-/** Class pill: the class's text tone on a tint of its fill (degree class follows CGPA). */
+/** Class pill: the class's text tone on a tint of its fill (degree class follows CGPA; tone by class rank on the scale). */
 const CLASS_TONES: Record<DegreeClassShortLabel, { text: string; fill: string }> = {
   '1st': { text: 'var(--class-first)', fill: 'var(--class-first-fill, #FFB23F)' },
   '2:1': { text: 'var(--class-2upper)', fill: 'var(--class-2upper-fill, #6B4EFF)' },
@@ -48,7 +50,8 @@ export function StandingOverview({
   atRiskCount,
   unknownCount,
 }: StandingOverviewProps) {
-  const classTone = CLASS_TONES[resolveDegreeClass(cgpa).shortLabel];
+  const { scale } = useGradingScale();
+  const classTone = CLASS_TONES[cgpaTone(cgpa, scale)];
   const stats = [
     { label: 'Credits', value: hasAcademicData ? String(totalCredits) : '—', icon: GraduationCap },
     { label: 'Courses', value: hasAcademicData ? String(coursesDone) : '—', icon: BookOpen },

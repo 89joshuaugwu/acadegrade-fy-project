@@ -96,3 +96,11 @@ describe('calculator → account handoff', () => {
     expect(handoffOfferLabel(4)).toBe('Add these 4 courses as my first semester');
   });
 });
+
+describe('calculator handoff on another grading scale', () => {
+  it('keeps letters from other scales (AB) as the hint for the semester page', async () => {
+    const { saveCalculatorHandoff: save, readCalculatorHandoff: read } = await import('@/lib/handoff/calculator');
+    expect(save({ mode: 'grade', courses: [{ code: 'COM 111', units: 3, grade: 'AB' }, { code: 'X', units: 3, grade: 'not a grade' }] })).toBe(true);
+    expect(read()?.courses).toEqual([{ code: 'COM 111', units: 3, grade: 'AB' }]);
+  });
+});

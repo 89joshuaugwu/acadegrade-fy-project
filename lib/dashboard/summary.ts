@@ -1,5 +1,4 @@
-import type { Grade } from '@/types/course';
-import { isNotYetGraded } from '@/lib/cgpa/academicRules';
+import { isNotYetGraded, SCALES, type GradingScale } from '@/lib/cgpa/academicRules';
 
 interface TimestampLike {
   toMillis?: () => number;
@@ -12,7 +11,8 @@ export interface DashboardCourseSource {
   title: string;
   units?: number;
   totalScore?: number | null;
-  grade?: Grade | null;
+  /** Letter on the student's scale. */
+  grade?: string | null;
   caScore?: number | null;
   examScore?: number | null;
   estimated?: boolean;
@@ -52,19 +52,23 @@ function timestampValue(value: DashboardCourseSource['updatedAt']) {
   return 0;
 }
 
-function attentionState(course: DashboardCourseSource) {
+/** A score under 50, or a letter whose band starts under 50 (D, E, F on the 5-point scale; unknown letters too). */
+function attentionState(course: DashboardCourseSource, scale: GradingScale) {
   if (typeof course.totalScore === 'number') {
     return course.totalScore < 50 ? 'risk' : 'known';
   }
   if (course.grade) {
-    return ['D', 'E', 'F'].includes(course.grade) ? 'risk' : 'known';
+    const wanted = course.grade.trim().toUpperCase();
+    const band = scale.bands.find((item) => item.grade.toUpperCase() === wanted);
+    return !band || band.minScore < 50 ? 'risk' : 'known';
   }
   return 'unknown';
 }
 
 export function buildDashboardSummary(
   semesters: DashboardSemesterCourses[],
-  recentLimit = 3
+  recentLimit = 3,
+  scale: GradingScale = SCALES.ng5
 ) {
   const records: DashboardCourseRecord[] = semesters.flatMap((semester) => (
     semester.courses.map((course) => ({
@@ -90,7 +94,7 @@ export function buildDashboardSummary(
   let unknownCount = 0;
   for (const course of records) {
     if (isNotYetGraded(course)) continue;
-    const state = attentionState(course);
+    const state = attentionState(course, scale);
     if (state === 'risk') atRiskCount += 1;
     if (state === 'unknown') unknownCount += 1;
   }

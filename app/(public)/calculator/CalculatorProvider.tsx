@@ -20,6 +20,8 @@ import {
   type CalculatorMode,
 } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
+import { gradeFromScore } from '@/lib/cgpa/academicRules';
+import { toolScaleById, toolScaleParam, type PublicScale } from '@/lib/public/scales';
 
 /**
  * One store for the calculator page: the tool panel, the result card, the
@@ -40,6 +42,8 @@ interface Flags {
 
 interface CalculatorState {
   mode: CalculatorMode;
+  /** Grading scale id ('ng5' by default; ?sc= in the link). */
+  scaleId: string;
   rows: CalcRow[];
   priorCgpa: string;
   priorUnits: string;
@@ -58,6 +62,8 @@ interface CalculatorContextValue {
   signedIn: boolean;
   hydrated: boolean;
   setMode: (mode: CalculatorMode) => void;
+  scale: PublicScale;
+  setScale: (id: string) => void;
   updateRow: (id: string, patch: Partial<CalcRow>) => void;
   addRow: () => string | null;
   removeRow: (id: string) => void;
@@ -80,6 +86,7 @@ export function useCalculator(): CalculatorContextValue {
 
 const INITIAL: CalculatorState = {
   mode: 'grade',
+  scaleId: 'ng5',
   rows: defaultRows(),
   priorCgpa: '',
   priorUnits: '',
@@ -90,10 +97,26 @@ const INITIAL: CalculatorState = {
   cleared: null,
 };
 
-function writeAddress(state: Pick<CalculatorState, 'mode' | 'rows' | 'priorCgpa' | 'priorUnits'>, empty = false) {
+/**
+ * Rows on a new scale: a row with a score is graded again from it; a letter the
+ * new scale also has is kept; any other letter is cleared to be picked again.
+ */
+export function rowsOnScale(rows: readonly CalcRow[], scale: PublicScale): CalcRow[] {
+  const letters = scale.engine.bands.map((band) => band.grade);
+  return rows.map((row) => {
+    const score = Number(row.scoreText.trim().replace(',', '.'));
+    if (row.scoreText.trim() && Number.isFinite(score) && score >= 0 && score <= 100) {
+      return { ...row, grade: gradeFromScore(score, scale.engine).grade };
+    }
+    return row.grade && !letters.includes(row.grade) ? { ...row, grade: null } : row;
+  });
+}
+
+function writeAddress(state: Pick<CalculatorState, 'mode' | 'rows' | 'priorCgpa' | 'priorUnits' | 'scaleId'>, empty = false) {
   try {
     const path = window.location.pathname;
-    const query = empty ? '' : encodeCalculation({ mode: state.mode, rows: toEncodedRows(state.rows, state.mode), priorCgpa: state.priorCgpa, priorUnits: state.priorUnits });
+    const scale = toolScaleParam(toolScaleById(state.scaleId));
+    const query = empty && !scale ? '' : encodeCalculation({ mode: state.mode, rows: toEncodedRows(state.rows, state.mode), priorCgpa: state.priorCgpa, priorUnits: state.priorUnits, scale });
     window.history.replaceState(window.history.state, '', query ? `${path}?${query}` : path);
   } catch {
     // The calculation stays usable if the address bar can't be written.
@@ -114,11 +137,14 @@ export function CalculatorProvider({ children }: { children: ReactNode }) {
     setHydrated(true);
     const decoded = decodeCalculation(window.location.search);
     const hasPrior = Boolean(decoded.priorCgpa || decoded.priorUnits);
-    if (!decoded.rows && !decoded.unreadable && !hasPrior && !window.location.search.includes('m=')) return;
+    if (!decoded.rows && !decoded.unreadable && !hasPrior && !decoded.scale && !window.location.search.includes('m=')) return;
     setState((previous) => ({
       ...previous,
       mode: decoded.mode,
-      rows: decoded.rows ? decoded.rows.map((row) => ({ id: nextId(), ...row })) : previous.rows,
+      scaleId: decoded.scale ?? 'ng5',
+      // A scale-only link keeps the default rows, graded on that scale.
+      rows: decoded.rows ? previous.rows : rowsOnScale(previous.rows, toolScaleById(decoded.scale)),
+      ...(decoded.rows ? { rows: decoded.rows.map((row) => ({ id: nextId(), ...row })) } : {}),
       priorCgpa: decoded.priorCgpa,
       priorUnits: decoded.priorUnits,
       priorOpen: hasPrior,
@@ -145,15 +171,23 @@ export function CalculatorProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<CalculatorContextValue>(() => {
-    const result = computeCalculation(state);
+    const scale = toolScaleById(state.scaleId);
+    const result = computeCalculation({ ...state, scale });
     return {
       state,
       result,
+      scale,
+      setScale: (id) =>
+        commit((previous) => {
+          const next = toolScaleById(id);
+          if (next.engine.id === previous.scaleId) return previous;
+          return { ...previous, scaleId: next.engine.id, rows: rowsOnScale(previous.rows, next) };
+        }),
       signedIn: Boolean(user),
       hydrated,
       saving,
       setMode: (mode) =>
-        commit((previous) => (previous.mode === mode ? previous : { ...previous, pristine: false, mode, rows: switchMode(previous.rows, mode) })),
+        commit((previous) => (previous.mode === mode ? previous : { ...previous, pristine: false, mode, rows: switchMode(previous.rows, mode, toolScaleById(previous.scaleId)) })),
       updateRow: (id, patch) =>
         commit((previous) => ({
           ...previous,
@@ -167,7 +201,7 @@ export function CalculatorProvider({ children }: { children: ReactNode }) {
         commit((previous) => ({
           ...previous,
           pristine: false,
-          rows: [...previous.rows, { id, code: '', units: 3, grade: previous.mode === 'grade' ? 'A' : null, scoreText: '' }],
+          rows: [...previous.rows, { id, code: '', units: 3, grade: previous.mode === 'grade' ? toolScaleById(previous.scaleId).gradeBands[0].grade : null, scoreText: '' }],
         }));
         return id;
       },
@@ -179,7 +213,7 @@ export function CalculatorProvider({ children }: { children: ReactNode }) {
       },
       undoClear: () => commit((previous) => (previous.cleared ? { ...previous, rows: previous.cleared.rows, cleared: null } : previous)),
       loadExample: () =>
-        commit((previous) => ({ ...previous, rows: exampleRows(nextId), pristine: false, exampleLoaded: true, cleared: null, flags: { shared: false, unreadable: false, reset: false } })),
+        commit((previous) => ({ ...previous, rows: rowsOnScale(exampleRows(nextId), toolScaleById(previous.scaleId)), pristine: false, exampleLoaded: true, cleared: null, flags: { shared: false, unreadable: false, reset: false } })),
       setPrior: (patch) => commit((previous) => ({ ...previous, ...patch })),
       setPriorOpen: (open) => setState((previous) => ({ ...previous, priorOpen: open })),
       save: () => {

@@ -1,0 +1,172 @@
+/*
+ * Public-site motion (brand v2 "Gold hour").
+ *
+ * Two families:
+ * 1. Load sequence (.mo-load*, .mo-load-words): plain CSS keyframes that start on
+ *    first paint, so the hero never waits for JavaScript. They run without
+ *    JS too and always end visible.
+ * 2. Scroll entrances ([data-mo]): hidden only while html.ag-mo is set (the
+ *    runtime in boot.ts ran, motion is allowed) and the element has not yet
+ *    entered the viewport (no data-mo-in). No JS, reduced motion, Data saver
+ *    or print: everything is simply visible.
+ *
+ * Motion only uses transform, opacity and clip-path. Distances 12–24px,
+ * durations 500–900ms, one easing. Nothing loops.
+ */
+
+:root {
+  --mo-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --mo-dur: 720ms;
+}
+
+/* ------------------------------------------------------------ words (mask) */
+/* A word sits in a clipping box; its inner span rises into it. The box adds a
+   little room below so descenders are never cut, then gives it back. */
+.mo-w {
+  display: inline-block;
+  overflow: clip;
+  vertical-align: top;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+.mo-w > span {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ---------------------------------------------- 1. load sequence (CSS only) */
+  @keyframes mo-word-up {
+    from { transform: translate3d(0, 105%, 0); }
+    to { transform: none; }
+  }
+
+  @keyframes mo-rise {
+    from { opacity: 0; transform: translate3d(0, 16px, 0); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes mo-visual {
+    from { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.97); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes mo-curtain {
+    from { clip-path: inset(0 0 100% 0); }
+    to { clip-path: inset(0 0 0 0); }
+  }
+
+  .mo-load-words .mo-w > span {
+    animation: mo-word-up 680ms var(--mo-ease) both;
+    animation-delay: calc(60ms + min(var(--mo-i, 0) * 55ms, 600ms));
+  }
+
+  .mo-load { animation: mo-rise 640ms var(--mo-ease) both; animation-delay: var(--mo-at, 0ms); }
+  .mo-load-visual { animation: mo-visual 900ms var(--mo-ease) both; animation-delay: var(--mo-at, 200ms); }
+  .mo-load-curtain { animation: mo-curtain 1000ms var(--mo-ease) both; animation-delay: var(--mo-at, 150ms); }
+
+  /* ------------------------------------------------ 2. scroll entrances */
+  html.ag-mo [data-mo] {
+    transition:
+      opacity var(--mo-dur) var(--mo-ease),
+      transform var(--mo-dur) var(--mo-ease),
+      clip-path var(--mo-dur) var(--mo-ease);
+    transition-delay: var(--mo-delay, 0ms);
+  }
+
+  /* rise: the default. */
+  html.ag-mo [data-mo='rise']:not([data-mo-in]) { opacity: 0; transform: translate3d(0, 20px, 0); }
+
+  /* fade: for large blocks where travel would feel heavy. */
+  html.ag-mo [data-mo='fade'] { --mo-dur: 900ms; }
+  html.ag-mo [data-mo='fade']:not([data-mo-in]) { opacity: 0; }
+
+  /* from the side, for the two halves of a split layout. */
+  html.ag-mo [data-mo='left']:not([data-mo-in]) { opacity: 0; transform: translate3d(-24px, 0, 0); }
+  html.ag-mo [data-mo='right']:not([data-mo-in]) { opacity: 0; transform: translate3d(24px, 0, 0); }
+
+  /* pop: a panel or device settles up and in from slightly small. */
+  html.ag-mo [data-mo='pop'] { --mo-dur: 820ms; }
+  html.ag-mo [data-mo='pop']:not([data-mo-in]) { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.96); }
+
+  /* photo: the frame opens from the bottom while the picture settles from a slight zoom. */
+  html.ag-mo [data-mo='photo'] { --mo-dur: 1000ms; }
+  html.ag-mo [data-mo='photo']:not([data-mo-in]) { clip-path: inset(14% 0 0 0 round 24px); }
+  html.ag-mo [data-mo='photo'] img { transition: transform 1400ms var(--mo-ease); transition-delay: var(--mo-delay, 0ms); }
+  html.ag-mo [data-mo='photo']:not([data-mo-in]) img { transform: scale(1.1); }
+
+  /* wipe: a bar or scale fills from the left, like a value being drawn. */
+  html.ag-mo [data-mo='wipe'] { --mo-dur: 1100ms; }
+  html.ag-mo [data-mo='wipe']:not([data-mo-in]) { clip-path: inset(0 100% 0 0); }
+
+  /* stagger: direct children rise one after another (a list that arrives as a list). */
+  html.ag-mo [data-mo='stagger'] { transition: none; }
+  html.ag-mo [data-mo='stagger'] > * {
+    transition:
+      opacity 640ms var(--mo-ease),
+      transform 640ms var(--mo-ease);
+  }
+  html.ag-mo [data-mo='stagger']:not([data-mo-in]) > * { opacity: 0; transform: translate3d(0, 18px, 0); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(1) { transition-delay: calc(var(--mo-delay, 0ms) + 0ms); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(2) { transition-delay: calc(var(--mo-delay, 0ms) + 80ms); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(3) { transition-delay: calc(var(--mo-delay, 0ms) + 160ms); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(4) { transition-delay: calc(var(--mo-delay, 0ms) + 240ms); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(5) { transition-delay: calc(var(--mo-delay, 0ms) + 320ms); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(6) { transition-delay: calc(var(--mo-delay, 0ms) + 400ms); }
+  html.ag-mo [data-mo='stagger'] > :nth-child(n + 7) { transition-delay: calc(var(--mo-delay, 0ms) + 460ms); }
+
+  /* words: a heading arrives line by line, each word rising into its mask. */
+  html.ag-mo [data-mo='words'] { transition: none; }
+  html.ag-mo [data-mo='words'] .mo-w > span {
+    transition: transform 760ms var(--mo-ease);
+    transition-delay: calc(var(--mo-delay, 0ms) + min(var(--mo-i, 0) * 45ms, 540ms));
+  }
+  html.ag-mo [data-mo='words']:not([data-mo-in]) .mo-w > span { transform: translate3d(0, 105%, 0); }
+
+  /* A lead sentence that follows a words heading waits for it a moment. */
+  html.ag-mo [data-mo='words'] + [data-mo] { --mo-delay: 180ms; }
+}
+
+/* Reduced motion switched on mid-visit, printing, Data saver: show everything, at once. */
+@media (prefers-reduced-motion: reduce) {
+  html.ag-mo [data-mo],
+  html.ag-mo [data-mo] > *,
+  html.ag-mo [data-mo] img,
+  html.ag-mo [data-mo] .mo-w > span {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    transition: none !important;
+  }
+}
+
+html[data-data-saver='on'].ag-mo [data-mo],
+html[data-data-saver='on'].ag-mo [data-mo] > *,
+html[data-data-saver='on'].ag-mo [data-mo] img,
+html[data-data-saver='on'].ag-mo [data-mo] .mo-w > span {
+  opacity: 1 !important;
+  transform: none !important;
+  clip-path: none !important;
+  transition: none !important;
+}
+
+@media print {
+  [data-mo],
+  [data-mo] > *,
+  [data-mo] img,
+  .mo-w > span,
+  .mo-load,
+  .mo-load-visual,
+  .mo-load-curtain {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Panels side by side in a grid: the second of each pair follows a beat later. */
+@media (prefers-reduced-motion: no-preference) {
+  html.ag-mo [data-mo='pop']:nth-child(2n) { --mo-delay: 120ms; }
+}

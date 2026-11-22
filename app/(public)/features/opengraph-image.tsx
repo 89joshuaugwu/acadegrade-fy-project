@@ -6,7 +6,7 @@ export const alt = 'AcadeGrade features: from result slip to plan';
 
 export default function Image() {
   return renderOgImage({
-    meta: 'Features · Nigerian universities',
+    meta: 'Built for Nigerian universities',
     headline: 'From result slip to plan.',
     line: 'GPA, CGPA and PI, the result scanner, AcadeMind and timetables. Free on the web and Android.',
   });

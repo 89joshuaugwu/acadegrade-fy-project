@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
+import { useGradingScale } from '@/hooks/useGradingScale';
+import { axisTicks } from '@/lib/cgpa/scale';
 
 interface ForecastChartProps {
   history: number[];
@@ -46,6 +48,9 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
   }, [history, projected, labels]);
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const { scale } = useGradingScale();
+  // Whole-number ticks from 0 to the scale's top point (5 on the 5-point scale).
+  const yTicks = axisTicks(scale.maxPoint);
 
   // Constants for pure SVG rendering
   const width = 800;
@@ -59,7 +64,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
     if (data.length <= 1) return padding.left + chartWidth / 2;
     return padding.left + (index / (data.length - 1)) * chartWidth;
   };
-  const getY = (val: number) => padding.top + (1 - val / 5) * chartHeight;
+  const getY = (val: number) => padding.top + (1 - val / scale.maxPoint) * chartHeight;
 
   // Monotone bezier curve generator
   const generateSmoothPath = (points: { x: number; y: number }[]) => {
@@ -158,7 +163,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
       <div className="w-full h-60 md:h-[280px] relative select-none pl-8">
         {/* Axis text is HTML, not SVG text: the SVG stretches non-uniformly and would squash it on phones. */}
         <div aria-hidden="true" data-axis="y" className="pointer-events-none absolute inset-y-0 left-0 w-8">
-          {[0, 1, 2, 3, 4, 5].map((val) => (
+          {yTicks.map((val) => (
             <span
               key={`y-${val}`}
               className="absolute right-1 -translate-y-1/2 text-[0.8125rem] tabular-nums text-[var(--acade-text-muted)]"
@@ -205,7 +210,7 @@ export function ForecastChart({ history, projected, labels, metricName = "PI" }:
 
           {/* Background Grid */}
           <g className="grid-lines">
-            {[0, 1, 2, 3, 4, 5].map((val) => {
+            {yTicks.map((val) => {
               const y = getY(val);
               return (
                 <g key={`grid-f-${val}`}>

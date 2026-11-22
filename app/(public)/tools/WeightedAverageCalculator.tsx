@@ -9,7 +9,8 @@ import { ReceiptCard, ReceiptRows, type ReceiptLine } from '@/components/site/to
 import { GaugeFigure, MiniArc, NightCard, SummaryStrip } from '@/components/site/tools/result';
 import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { EXAMPLE_COURSES } from '@/lib/public/example-student';
-import { DEFAULT_SCALE } from '@/lib/public/scales';
+import { toolScaleById } from '@/lib/public/scales';
+import { ToolScaleSelect } from '@/components/site/tools/ToolScaleSelect';
 import { decodeCalculation } from '@/components/public/tools/calculator-url';
 import { NO_VALUE } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
@@ -67,8 +68,12 @@ export function WeightedAverageCalculator() {
   const codeRefs = useRef(new Map<string, HTMLInputElement>());
   const addRef = useRef<HTMLButtonElement>(null);
   const reported = useRef(false);
+  const [scaleId, setScaleId] = useState('ng5');
+  const scale = toolScaleById(scaleId);
 
   useQueryOnce((params) => {
+    // ?scale= (this page) or ?sc= (a calculator link) picks the scale for the GPA beside the average.
+    setScaleId(toolScaleById(params.get('scale') ?? params.get('sc')).engine.id);
     const brought = rowsFromCalculatorLink(params.toString());
     if (!brought) return;
     setNotes(brought.notes);
@@ -83,8 +88,8 @@ export function WeightedAverageCalculator() {
   }, [focusTarget, rows]);
 
   const result = weightedAverageFromRows(rows);
-  const marks = gpaAndPiFromRows(rows);
-  const link = calculatorLinkFromRows(rows);
+  const marks = gpaAndPiFromRows(rows, scale.engine);
+  const link = calculatorLinkFromRows(rows, scale.engine);
   const average = result.average;
   const shown = useTween(average === null ? null : Math.round(average * 10) / 10);
   const courses = result.usedRows;
@@ -142,7 +147,7 @@ export function WeightedAverageCalculator() {
         <div className={`${PANEL_CLASS} grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,23.5rem)] lg:gap-10`}>
           <div className="min-w-0">
             <SummaryStrip>
-              <MiniArc value={marks ? marks.gpa : null} />
+              <MiniArc value={marks ? marks.gpa : null} max={scale.maxPoint} />
               <span className="flex min-w-0 flex-col">
                 <span className="text-[0.8125rem] text-ag-mist-night">Average score</span>
                 <span className="ag-display ag-num text-[1.5rem] font-bold leading-none">{average === null ? NO_VALUE : average.toFixed(1)}</span>
@@ -154,6 +159,7 @@ export function WeightedAverageCalculator() {
               <div>
                 <h2 className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">Your scores</h2>
                 <p className="mt-1 text-[0.9375rem] text-ag-mist">Each course&apos;s score out of 100 and its units. Up to {MAX_ROWS} courses.</p>
+                <ToolScaleSelect scale={scale} onChange={setScaleId} className="mt-4 w-full max-w-[20rem]" />
               </div>
               <button
                 type="button"
@@ -267,12 +273,14 @@ export function WeightedAverageCalculator() {
                   figure={marks ? formatCgpa(marks.gpa) : NO_VALUE}
                   size="sm"
                   className="!mx-0 w-24 shrink-0"
-                  label={marks ? `GPA from these scores ${formatCgpa(marks.gpa)} of ${DEFAULT_SCALE.maxPoint.toFixed(2)}` : 'GPA from these scores: none yet'}
+                  label={marks ? `GPA from these scores ${formatCgpa(marks.gpa)} of ${scale.maxPoint.toFixed(2)}` : 'GPA from these scores: none yet'}
+                  max={scale.maxPoint}
+                  ticks={scale.classBands.slice(0, -2).map((band) => band.min)}
                 />
                 <div className="min-w-0">
                   <p className="text-[0.8125rem] text-ag-mist-night">The same scores give</p>
                   <p className="ag-num mt-0.5 text-[1.0625rem] font-semibold text-white">{marks ? `GPA ${formatCgpa(marks.gpa)} · PI ${formatCgpa(marks.pi)}` : `GPA ${NO_VALUE} · PI ${NO_VALUE}`}</p>
-                  <p className="mt-0.5 text-[0.8125rem] text-ag-mist-night">on the {DEFAULT_SCALE.name}</p>
+                  <p className="mt-0.5 text-[0.8125rem] text-ag-mist-night">on the {scale.name}</p>
                 </div>
               </div>
               {average !== null ? (
@@ -312,7 +320,7 @@ export function WeightedAverageCalculator() {
                 {open ? 'Show fewer' : 'Show all'}
               </button>
             ) : null}
-            {marks && average !== null ? <p className="mt-5 text-[0.9375rem] text-ag-ink">PI is this average ÷ 20: {formatCgpa(marks.pi)}.</p> : null}
+            {marks && average !== null ? <p className="mt-5 text-[0.9375rem] text-ag-ink">PI is this average ÷ {100 / scale.maxPoint}: {formatCgpa(marks.pi)}.</p> : null}
           </ReceiptCard>
         </Container>
       </section>

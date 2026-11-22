@@ -7,7 +7,9 @@ import { Sparkles, Loader2, Minus, Plus } from 'lucide-react';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils/cn';
 import { useAuth } from '@/hooks/useAuth';
-import { formatCgpa, MAX_GRADE_POINT, requiredAverageForTarget } from '@/lib/cgpa/academicRules';
+import { formatCgpa, requiredAverageForTarget } from '@/lib/cgpa/academicRules';
+import { useGradingScale } from '@/hooks/useGradingScale';
+import { scaleContextFor } from '@/lib/ai/scaleContext';
 import toast from 'react-hot-toast';
 import { classifyAiResponse, type AiBlock } from './aiAccess';
 import { AiDisclosure } from './AiDisclosure';
@@ -103,8 +105,11 @@ export function WhatIfCalculator({
   const shouldReduceMotion = useReducedMotion();
   const { user } = useAuth();
   const ids = useId();
+  const { scale } = useGradingScale();
+  const maxPoint = scale.maxPoint;
+  const maxText = formatCgpa(maxPoint);
 
-  const [targetCGPA, setTargetCGPA] = useState(Math.min(5.0, currentCGPA + 0.2));
+  const [targetCGPA, setTargetCGPA] = useState(Math.min(maxPoint, currentCGPA + 0.2));
   const [remainingSemesters, setRemainingSemesters] = useState(initialRemainingSemesters);
   const [creditLoad, setCreditLoad] = useState(initialCreditLoad);
 
@@ -138,9 +143,9 @@ export function WhatIfCalculator({
     });
     if (reqGPA !== null) {
       setRequiredGPA(reqGPA);
-      setRequiredAvgScore((reqGPA / 5) * 100);
+      setRequiredAvgScore((reqGPA / maxPoint) * 100);
     }
-  }, [targetCGPA, remainingUnits, currentCGPA, totalCredits]);
+  }, [targetCGPA, remainingUnits, currentCGPA, totalCredits, maxPoint]);
 
   // Cooldown effect
   useEffect(() => {
@@ -177,7 +182,7 @@ export function WhatIfCalculator({
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           // gradedInProgressUnits is additive: older servers ignore it.
-          body: JSON.stringify({ currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad, ...(gradedInProgress > 0 ? { gradedInProgressUnits: gradedInProgress } : {}) })
+          body: JSON.stringify({ currentCGPA, totalCredits, targetCGPA, remainingSemesters, creditLoad, ...(gradedInProgress > 0 ? { gradedInProgressUnits: gradedInProgress } : {}), ...scaleContextFor(scale) })
         });
         settledRef.current?.();
 
@@ -212,12 +217,12 @@ export function WhatIfCalculator({
       clearTimeout(timer);
       clearInterval(interval);
     };
-  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, user, aiAllowed, nothingLeft, gradedInProgress]);
+  }, [targetCGPA, remainingSemesters, creditLoad, currentCGPA, totalCredits, user, aiAllowed, nothingLeft, gradedInProgress, scale]);
 
   const locked = aiAllowed && (cooldown > 0 || loading);
-  const outOfReach = requiredGPA > MAX_GRADE_POINT;
+  const outOfReach = requiredGPA > maxPoint;
   const targetLabelId = `${ids}-target-label`;
-  const sliderMin = Math.min(MAX_GRADE_POINT, Math.max(0, currentCGPA));
+  const sliderMin = Math.min(maxPoint, Math.max(0, currentCGPA));
 
   return (
     <section aria-labelledby={`${ids}-heading`} className="overflow-hidden rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-surface)]">
@@ -237,7 +242,7 @@ export function WhatIfCalculator({
                   <span className="app-num text-[2.75rem] font-bold leading-none text-[var(--acade-text)]">
                     {formatCgpa(targetCGPA)}
                   </span>
-                  <span className="app-num text-base font-medium text-[var(--acade-text-muted)]">/ 5.00</span>
+                  <span className="app-num text-base font-medium text-[var(--acade-text-muted)]">/ {maxText}</span>
                 </div>
               </div>
               <div className="rounded-full bg-[var(--acade-overlay)] px-3.5 py-1.5">
@@ -249,17 +254,17 @@ export function WhatIfCalculator({
               id={`${ids}-target`}
               aria-labelledby={targetLabelId}
               min={sliderMin}
-              max={MAX_GRADE_POINT}
+              max={maxPoint}
               step={0.01}
               pageStep={0.1}
               value={targetCGPA}
-              valueText={(value) => `${formatCgpa(value)} out of 5.00`}
+              valueText={(value) => `${formatCgpa(value)} out of ${maxText}`}
               onChange={setTargetCGPA}
               disabled={locked}
             />
             <div className="flex justify-between text-sm tabular-nums text-[var(--acade-text-faint)]" aria-hidden="true">
               <span>{formatCgpa(sliderMin)}</span>
-              <span>5.00</span>
+              <span>{maxText}</span>
             </div>
             {aiAllowed && cooldown > 0 && (
               <p className="text-center text-sm font-medium tabular-nums text-[var(--acade-text-muted)]" role="status">
@@ -307,7 +312,7 @@ export function WhatIfCalculator({
                     outOfReach ? 'text-[#FF8A7A]' : 'text-ag-gold'
                   )}
                 >
-                  <DiscreetValue label="Required GPA">{outOfReach ? '>5.00' : formatCgpa(Math.max(0, requiredGPA))}</DiscreetValue>
+                  <DiscreetValue label="Required GPA">{outOfReach ? `>${maxText}` : formatCgpa(Math.max(0, requiredGPA))}</DiscreetValue>
                 </motion.span>
               </AnimatePresence>
               <span className="mt-2 text-sm text-ag-mist-night">each remaining semester</span>

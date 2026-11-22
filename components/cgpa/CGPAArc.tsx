@@ -5,7 +5,9 @@ import { motion, useSpring, useTransform, AnimatePresence } from 'motion/react';
 import CountUp from 'react-countup';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { formatCgpa, resolveDegreeClass as resolveDegreeClassBand, roundCgpa, type DegreeClassShortLabel } from '@/lib/cgpa/academicRules';
+import { formatCgpa, roundCgpa, type DegreeClassShortLabel, type GradingScale } from '@/lib/cgpa/academicRules';
+import { cgpaTone } from '@/lib/cgpa/scale';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { DegreeClassBadge } from './DegreeClassBadge';
 
 type ArcSize = 'sm' | 'md' | 'lg';
@@ -18,6 +20,8 @@ interface CGPAArcProps {
   showParticles?: boolean;
   className?: string;
   primaryMetric?: 'cgpa' | 'pi';
+  /** Overrides the student's active scale (defaults to it, or the 5-point scale). */
+  scale?: GradingScale;
 }
 
 /* ─── Size presets ─── */
@@ -50,15 +54,15 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 1 ${end.x} ${end.y}`;
 }
 
-/** Map a 0-5 metric value to a gradient color, using the shared (rounded) degree-class bands */
+/** Map a metric value to a colour by the rank of its class on the scale (rounded, shared rules). */
 const METRIC_COLORS: Partial<Record<DegreeClassShortLabel, string>> = {
   '1st': 'var(--grade-a)', // First class — green
   '2:1': 'var(--grade-b)', // 2:1 — indigo
   '2:2': 'var(--grade-c)', // 2:2 — amber
   '3rd': 'var(--grade-d)', // Third — orange
 };
-function getMetricColor(value: number): string {
-  return METRIC_COLORS[resolveDegreeClassBand(value).shortLabel] ?? 'var(--grade-e)'; // Below — red
+function getMetricColor(value: number, scale: GradingScale): string {
+  return METRIC_COLORS[cgpaTone(value, scale)] ?? 'var(--grade-e)'; // Below — red
 }
 
 /** Fill tone of the class a value falls in: the arc ends in it and the dot wears it. */
@@ -70,13 +74,13 @@ const CLASS_FILLS: Record<DegreeClassShortLabel, string> = {
   Pass: 'var(--class-pass-fill, #E0457B)',
   Fail: 'var(--class-fail-fill, #E5484D)',
 };
-function getClassFill(value: number): { fill: string; first: boolean } {
-  const label = resolveDegreeClassBand(value).shortLabel;
+function getClassFill(value: number, scale: GradingScale): { fill: string; first: boolean } {
+  const label = cgpaTone(value, scale);
   return { fill: CLASS_FILLS[label], first: label === '1st' };
 }
 
 /** PI Info Tooltip Component */
-function PITooltip({ size }: { size: ArcSize }) {
+function PITooltip({ size, maxPoint }: { size: ArcSize; maxPoint: number }) {
   const [show, setShow] = useState(false);
 
   if (size === 'sm') return null;
@@ -123,9 +127,9 @@ function PITooltip({ size }: { size: ArcSize }) {
             </span>{' '}
             measures your raw continuous academic mastery. While CGPA rounds your
             grades into letters, PI represents your actual weighted percentage
-            score on a 5.0 scale{' '}
+            score on a {maxPoint.toFixed(1)} scale{' '}
             <span className="text-[var(--acade-gold)] font-medium">
-              (e.g., a 3.04 PI means your overall average raw score is 60.8%)
+              (e.g., a {(maxPoint * 0.608).toFixed(2)} PI means your overall average raw score is 60.8%)
             </span>
             .
             {/* Tooltip arrow */}
@@ -166,8 +170,12 @@ function CGPAArc({
   showParticles = false,
   className,
   primaryMetric = 'cgpa',
+  scale: scaleOverride,
 }: CGPAArcProps) {
   const shouldReduceMotion = useReducedMotion();
+  const { scale: activeScale } = useGradingScale();
+  const scale = scaleOverride ?? activeScale;
+  const maxPoint = scale.maxPoint;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hasAnimated = useRef(false);
 
@@ -176,13 +184,13 @@ function CGPAArc({
   const cx = config.viewBox / 2;
   const cy = config.viewBox / 2;
 
-  // Clamp values to 0-5 range
-  const clampedCGPA = Math.max(0, Math.min(5, cgpa));
-  const clampedPI = Math.max(0, Math.min(5, pi));
+  // Clamp values to the scale's range (0-5 on the 5-point scale)
+  const clampedCGPA = Math.max(0, Math.min(maxPoint, cgpa));
+  const clampedPI = Math.max(0, Math.min(maxPoint, pi));
 
   // Arc fractions (0 to 1)
-  const cgpaFrac = clampedCGPA / 5;
-  const piFrac = clampedPI / 5;
+  const cgpaFrac = clampedCGPA / maxPoint;
+  const piFrac = clampedPI / maxPoint;
 
   // Full arc path (background track)
   const fullArcPath = describeArc(cx, cy, config.outerR, START_RAD, START_RAD + SWEEP_RAD);
@@ -314,10 +322,10 @@ function CGPAArc({
   }, [fireParticles]);
 
   // Both metrics use grade-based colors from their own values
-  const cgpaColor = getMetricColor(clampedCGPA);
-  const piColor = getMetricColor(clampedPI);
+  const cgpaColor = getMetricColor(clampedCGPA, scale);
+  const piColor = getMetricColor(clampedPI, scale);
   const primaryColor = primaryMetric === 'cgpa' ? cgpaColor : piColor;
-  const primaryFill = getClassFill(primaryMetric === 'cgpa' ? clampedCGPA : clampedPI);
+  const primaryFill = getClassFill(primaryMetric === 'cgpa' ? clampedCGPA : clampedPI, scale);
   const secondaryColor = primaryMetric === 'cgpa' ? piColor : cgpaColor;
 
   return (
@@ -326,7 +334,7 @@ function CGPAArc({
         <svg
           viewBox={`0 0 ${config.viewBox} ${config.viewBox}`}
           className="w-full h-full"
-          aria-label={`CGPA: ${formatCgpa(clampedCGPA)}, PI: ${clampedPI.toFixed(2)}`}
+          aria-label={`CGPA: ${formatCgpa(clampedCGPA)} out of ${maxPoint}, PI: ${clampedPI.toFixed(2)}`}
           role="img"
         >
           <defs>
@@ -451,7 +459,7 @@ function CGPAArc({
               )}
             >
               {primaryMetric === 'cgpa'
-                ? <><span>PI: {clampedPI.toFixed(2)}</span><PITooltip size={size} /></>
+                ? <><span>PI: {clampedPI.toFixed(2)}</span><PITooltip size={size} maxPoint={maxPoint} /></>
                 : `CGPA: ${formatCgpa(clampedCGPA)}`
               }
             </span>
@@ -473,6 +481,7 @@ function CGPAArc({
         <DegreeClassBadge
           cgpa={clampedCGPA}
           animated={animateOnMount}
+          scale={scale}
         />
       )}
     </div>

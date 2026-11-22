@@ -13,6 +13,7 @@ import { formatCgpa } from '@/lib/cgpa/academicRules';
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { fetchAiEligibility, readPrivacyState, type AiEligibilityView } from '@/lib/consent/requirements';
 import type { PlanningCourse } from '@/lib/planning/carryOvers';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { buildSemesterRecap, canOfferWrittenAnalysis, shouldShowRecap, type SemesterRecap } from '@/lib/planning/semesterRecap';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -49,6 +50,7 @@ export function SemesterRecapLauncher({ semesters }: { semesters: readonly Semes
 function RecapLoader({ recapId, semesters }: { recapId: string; semesters: readonly SemesterWithId[] }) {
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { scale } = useGradingScale();
   const { isFeatureDisabled } = usePlatformSettings();
   const [recap, setRecap] = useState<SemesterRecap | null>(null);
   const [eligibility, setEligibility] = useState<AiEligibilityView | null>(null);
@@ -77,7 +79,7 @@ function RecapLoader({ recapId, semesters }: { recapId: string; semesters: reado
     ] as const))
       .then((entries) => {
         if (cancelled()) return;
-        setRecap(buildSemesterRecap({ semesters, coursesBySemester: Object.fromEntries(entries), semesterId: target.id }));
+        setRecap(buildSemesterRecap({ semesters, coursesBySemester: Object.fromEntries(entries), semesterId: target.id, scale }));
       })
       .catch((error: unknown) => {
         console.warn('Semester recap unavailable', error);
@@ -88,7 +90,7 @@ function RecapLoader({ recapId, semesters }: { recapId: string; semesters: reado
       .then((token) => fetchAiEligibility(token))
       .then((result) => { if (!cancelled()) setEligibility(result); })
       .catch(() => undefined);
-  }, [recapId, semesters, user]);
+  }, [recapId, semesters, user, scale]);
 
   const close = () => {
     const shown = recap;

@@ -17,8 +17,9 @@ import {
   type PillOption,
 } from '@/components/site/tools/controls';
 import { Announcer, useTween } from '@/components/site/tools/hooks';
-import { formatCgpa, GRADE_POINTS, gradeFromScore, type AcademicGrade } from '@/lib/cgpa/academicRules';
-import { DEFAULT_SCALE } from '@/lib/public/scales';
+import { formatCgpa, gradeFromScore, gradePointFor } from '@/lib/cgpa/academicRules';
+import { DEFAULT_SCALE, type PublicScale } from '@/lib/public/scales';
+import { ToolScaleSelect } from '@/components/site/tools/ToolScaleSelect';
 import {
   announcement,
   NO_VALUE,
@@ -46,11 +47,14 @@ const MODE_OPTIONS: { value: CalculatorMode; label: string }[] = [
   { value: 'score', label: 'Scores out of 100' },
 ];
 
-const GRADE_OPTIONS: PillOption<AcademicGrade>[] = DEFAULT_SCALE.gradeBands.map((band) => ({
-  value: band.grade,
-  label: band.grade,
-  tone: band.gradePoint === DEFAULT_SCALE.maxPoint ? 'gold' : band.gradePoint === 0 ? 'mark' : undefined,
-}));
+/** Letter pills for a scale: the top grade gold, the fail grade marked. */
+export function gradeOptions(scale: PublicScale = DEFAULT_SCALE): PillOption<string>[] {
+  return scale.gradeBands.map((band) => ({
+    value: band.grade,
+    label: band.grade,
+    tone: band.gradePoint === scale.maxPoint ? 'gold' : band.gradePoint === 0 ? 'mark' : undefined,
+  }));
+}
 
 /* Row grids. Phone: code, units and remove on the first line; grades (or score, letter) and the point on the second.
    From 768px: one line in source order. */
@@ -67,8 +71,11 @@ const CELL = 'md:col-span-1 md:col-start-auto md:row-start-auto';
 /** "Second Class Upper" pill tone: gold at First Class, coral below a Pass. */
 export function classTone(result: CalculationResult): 'gold' | 'mark' | 'plain' | 'empty' {
   if (!result.classBand) return 'empty';
-  if (result.classBand.engineShort === '1st') return 'gold';
-  if (result.classBand.engineShort === 'Fail') return 'mark';
+  // By rank on the scale: the top class gold, the lowest (below a Pass) marked.
+  const bands = result.scale.classBands;
+  const index = bands.indexOf(result.classBand);
+  if (index === 0) return 'gold';
+  if (index === bands.length - 1) return 'mark';
   return 'plain';
 }
 
@@ -122,7 +129,7 @@ export function CalculatorSlip() {
       <div className={`${PANEL_CLASS} grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,23.5rem)] lg:gap-10`}>
         <div className="min-w-0">
           <SummaryStrip>
-            <MiniArc value={headline ? headline.value : null} />
+            <MiniArc value={headline ? headline.value : null} max={calc.scale.maxPoint} />
             <span className="flex min-w-0 flex-col">
               <span className="text-[0.8125rem] text-ag-mist-night">{headline?.label ?? 'Semester GPA'}</span>
               <span className="ag-display ag-num text-[1.5rem] font-bold leading-none">{headline ? formatCgpa(headline.value) : NO_VALUE}</span>
@@ -136,7 +143,8 @@ export function CalculatorSlip() {
                 <h2 id="courses-title" className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">
                   Your courses
                 </h2>
-                <p className="mt-1 text-[0.9375rem] text-ag-mist">{state.exampleLoaded ? CALCULATOR_COPY.exampleLine : DEFAULT_SCALE.line}</p>
+                <p className="mt-1 text-[0.9375rem] text-ag-mist">{state.exampleLoaded ? CALCULATOR_COPY.exampleLine : calc.scale.line}</p>
+                <ToolScaleSelect scale={calc.scale} onChange={calc.setScale} className="mt-4 w-full sm:max-w-[20rem]" />
               </div>
               <div className="min-w-0">
                 <p id="mode-label" className="mb-2 text-[0.875rem] font-medium text-ag-ink">
@@ -324,10 +332,13 @@ function CourseRow({
   onChange: (patch: Partial<CalcRow>) => void;
   onRemove: () => void;
 }) {
+  const { scale } = useCalculator();
   const name = rowName(row, index);
   const score = validScore(row.scoreText);
-  const grade = mode === 'grade' ? row.grade : score === null ? null : gradeFromScore(score).grade;
-  const point = grade ? GRADE_POINTS[grade] : null;
+  const grade = mode === 'grade' ? row.grade : score === null ? null : gradeFromScore(score, scale.engine).grade;
+  const point = grade ? gradePointFor(grade, scale.engine) : null;
+  const top = scale.gradeBands[0]?.grade;
+  const fail = scale.gradeBands[scale.gradeBands.length - 1]?.grade;
   const carry = point === 0;
   const scoreError = mode === 'score' && scoreBlurred && scoreInvalid(row.scoreText) ? SCORE_ERROR : null;
   const codeId = useFieldId();
@@ -364,16 +375,16 @@ function CourseRow({
         <TStepper
           className={`col-start-2 row-start-1 ${CELL}`}
           label={`Units for ${name}`}
-          min={DEFAULT_SCALE.units.min}
-          max={DEFAULT_SCALE.units.max}
+          min={scale.units.min}
+          max={scale.units.max}
           value={row.units}
           onChange={(units) => onChange({ units, reset: false })}
         />
         {mode === 'grade' ? (
-          <PillChoice<AcademicGrade>
+          <PillChoice<string>
             name={`grade-${row.id}`}
             label={`Grade for ${name}`}
-            options={GRADE_OPTIONS}
+            options={gradeOptions(scale)}
             value={row.grade}
             onChange={(value) => onChange({ grade: value, reset: false })}
             className={`col-span-2 col-start-1 row-start-2 flex gap-1 ${CELL}`}
@@ -402,7 +413,7 @@ function CourseRow({
               <span className="text-ag-mist md:sr-only">Grade</span>
               <span
                 className={`ag-display grid h-10 w-10 place-items-center rounded-full text-[1.0625rem] font-bold ${
-                  grade === 'A' ? 'bg-ag-gold text-ag-night' : grade === 'F' ? 'bg-[#C2361F] text-white' : grade ? 'bg-ag-night text-white' : 'bg-white text-ag-mist ring-1 ring-inset ring-ag-ink/10'
+                  grade === top ? 'bg-ag-gold text-ag-night' : grade === fail ? 'bg-[#C2361F] text-white' : grade ? 'bg-ag-night text-white' : 'bg-white text-ag-mist ring-1 ring-inset ring-ag-ink/10'
                 }`}
               >
                 {grade ?? NO_VALUE}
@@ -460,11 +471,11 @@ function PriorRecord({ blurred, markBlurred }: { blurred: Set<string>; markBlurr
       <div className="grid gap-4 px-4 pb-5 pt-1 sm:grid-cols-2">
         <TField
           label="CGPA before this semester"
-          hint={`From your last result, 0.00 to ${DEFAULT_SCALE.maxPoint.toFixed(2)}`}
+          hint={`From your last result, 0.00 to ${calc.scale.maxPoint.toFixed(2)}`}
           inputMode="decimal"
           autoComplete="off"
           value={state.priorCgpa}
-          error={blurred.has('pc') ? priorCgpaError(state.priorCgpa) : null}
+          error={blurred.has('pc') ? priorCgpaError(state.priorCgpa, calc.scale) : null}
           onBlur={() => markBlurred('pc')}
           onChange={(event) => calc.setPrior({ priorCgpa: event.target.value })}
         />
@@ -555,7 +566,9 @@ function CalculatorResult({ canSave }: { canSave: boolean }) {
           value={headline ? Number(formatCgpa(headline.value)) : null}
           figure={shown === null ? NO_VALUE : shown.toFixed(2)}
           caption={headline?.label ?? 'Semester GPA'}
-          label={headline ? `${headline.label} ${formatCgpa(headline.value)} of ${DEFAULT_SCALE.maxPoint.toFixed(2)}, ${result.classBand?.label ?? ''}` : 'No result yet'}
+          label={headline ? `${headline.label} ${formatCgpa(headline.value)} of ${result.scale.maxPoint.toFixed(2)}, ${result.classBand?.label ?? ''}` : 'No result yet'}
+          max={result.scale.maxPoint}
+          ticks={result.scale.classBands.slice(0, -2).map((band) => band.min)}
           intro
         />
         <div className="mt-1 text-center">

@@ -25,6 +25,9 @@ interface UserRecord {
   currentLevel: number;
   cgpa: number;
   pi: number;
+  /** The student's grading scale name and top point (absent from older servers: 5-point). */
+  gradingScale?: string;
+  gradingScaleMax?: number;
   semesterCount: number;
   disabled: boolean;
   /** From the admin users API: 'unknown' for accounts that have not answered yet. */
@@ -315,7 +318,7 @@ export default function AdminUsersPage() {
                         <p className="hidden truncate text-[0.8125rem] text-[var(--acade-text-muted)] md:block">{u.email}</p>
                         {/* Small screens hide the columns; keep their facts on a second line. */}
                         <p className="mt-0.5 truncate text-[0.8125rem] text-[var(--acade-text-muted)] tabular-nums md:hidden">
-                          {u.department || 'No department'}, {u.currentLevel}L, CGPA {formatCgpa(u.cgpa)}
+                          {u.department || 'No department'}, {u.currentLevel}L, CGPA {formatCgpa(u.cgpa)}{u.gradingScaleMax && u.gradingScaleMax !== 5 ? ` of ${u.gradingScaleMax}` : ''}
                         </p>
                       </div>
                       <ChevronDown size={18} aria-hidden="true" className={cn('shrink-0 text-[var(--acade-text-muted)] transition-transform md:hidden', expanded && 'rotate-180')} />
@@ -323,7 +326,7 @@ export default function AdminUsersPage() {
                     <span className="hidden truncate text-sm tabular-nums text-[var(--acade-text-muted)] md:block">{u.matric}</span>
                     <span className="hidden truncate text-sm text-[var(--acade-text-muted)] md:block">{u.department}</span>
                     <span className="hidden text-right text-sm tabular-nums text-[var(--acade-text-muted)] md:block">{u.currentLevel}L</span>
-                    <span className="hidden text-right text-[0.9375rem] font-semibold tabular-nums text-[var(--acade-text)] md:block">{formatCgpa(u.cgpa)}</span>
+                    <span title={u.gradingScale ? `Grading scale: ${u.gradingScale}` : undefined} className="hidden text-right text-[0.9375rem] font-semibold tabular-nums text-[var(--acade-text)] md:block">{formatCgpa(u.cgpa)}{u.gradingScaleMax && u.gradingScaleMax !== 5 ? <span className="text-[0.8125rem] font-normal text-[var(--acade-text-muted)]"> /{u.gradingScaleMax}</span> : null}</span>
                     <span className="hidden text-right text-sm tabular-nums text-[var(--acade-text-muted)] md:block">{formatCgpa(u.pi)}</span>
                     <span className="hidden items-center justify-between gap-2 pl-2 md:flex">
                       <StatusPill disabled={u.disabled} />

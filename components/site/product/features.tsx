@@ -11,6 +11,9 @@ import { CheckList, Container, Heading, Panel, Section, TextLinkV2 } from '@/com
 import { AuthAction } from './AuthAction';
 import { BuildPreviewCard, CgpaGlassCard, DegreeGoalCard, ForecastCard, MindTile, PastePanelCard, ScanRowsCard } from './cards';
 import { FactChips, FakeButton, NotificationCard, UiCard, UiCardHead } from './shared';
+import { reveal } from '@/components/motion/Reveal';
+import { CountUpText } from '@/components/motion/CountUp';
+import { Parallax } from '@/components/motion/Parallax';
 
 /** Sections of /features in brand v2 (content: docs/public-redesign/pages/features.md). */
 
@@ -23,9 +26,16 @@ export function FeaturesHeroCards() {
     <figure className="relative mx-auto w-full max-w-[560px]">
       <figcaption className="sr-only">Example screens: a CGPA of 4.43 on the arc, five course rows from a scanned slip, and a lecture reminder.</figcaption>
       <div aria-hidden="true" className="relative flex flex-col sm:block sm:h-[480px]">
-        <CgpaGlassCard className="w-[92%] sm:absolute sm:left-0 sm:top-0 sm:w-[70%]" />
-        <ScanRowsCard float compact className="relative -mt-3 ml-auto w-[94%] sm:absolute sm:right-0 sm:top-[132px] sm:mt-0 sm:w-[62%]" />
-        <NotificationCard title={note.title} body={note.body} className="relative -mt-4 w-[92%] sm:absolute sm:bottom-0 sm:left-[3%] sm:mt-0 sm:w-[62%]" />
+        {/* Three depths: the further a card sits forward, the more it drifts as the hero scrolls away. */}
+        <Parallax distance={20} className="w-[92%] sm:absolute sm:left-0 sm:top-0 sm:w-[70%]">
+          <CgpaGlassCard className="w-full" />
+        </Parallax>
+        <Parallax distance={48} className="relative z-[1] -mt-3 ml-auto w-[94%] sm:absolute sm:right-0 sm:top-[132px] sm:mt-0 sm:w-[62%]">
+          <ScanRowsCard float compact className="w-full" />
+        </Parallax>
+        <Parallax distance={80} className="relative z-[2] -mt-4 w-[92%] sm:absolute sm:bottom-0 sm:left-[3%] sm:mt-0 sm:w-[62%]">
+          <NotificationCard title={note.title} body={note.body} className="w-full" />
+        </Parallax>
       </div>
     </figure>
   );
@@ -44,7 +54,7 @@ export function ContentsIndex() {
               Where each part works and who can use it. All of it is free.
             </p>
           </div>
-          <div className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
+          <div {...reveal('stagger')} className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-3">
             {CONTENTS_GROUPS.map((group) => (
               <div key={group.name} className="rounded-[24px] bg-ag-haze p-3 sm:p-4">
                 <h3 className="px-3 pb-2 pt-2 text-[0.9375rem] font-semibold text-ag-mist">{group.name}</h3>
@@ -328,7 +338,7 @@ export function SmallThings() {
     <Section tone="haze" labelledBy="small-title">
       <Container>
         <Heading id="small-title" title="Small things that help" lead="The details that make a semester easier to keep, on the website and in the Android app." />
-        <ul className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
+        <ul {...reveal('stagger')} className="mt-14 grid grid-cols-[minmax(0,1fr)] gap-x-10 gap-y-9 sm:grid-cols-2 lg:grid-cols-3">
           {SMALL_POINTS.map((point) => (
             <li key={point.title} id={point.id} className="scroll-mt-24 border-t border-ag-ink/10 pt-5">
               <h3 className="flex items-center gap-3 text-[1.0625rem] font-semibold text-ag-ink">
@@ -369,7 +379,7 @@ export function PrivacySection() {
         <dl className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2">
           {PRIVACY_ROWS.map((row, index) => (
             <div key={row.figure} className={`rounded-[24px] p-6 sm:p-7 ${index === 0 ? 'bg-ag-night text-white' : 'bg-ag-haze text-ag-ink'}`}>
-              <dt className={`ag-display ag-num text-[2.75rem] font-bold leading-none ${index === 0 ? 'text-ag-gold' : 'text-ag-ink'}`}>{row.figure}</dt>
+              <dt className={`ag-display ag-num text-[2.75rem] font-bold leading-none ${index === 0 ? 'text-ag-gold' : 'text-ag-ink'}`}><CountUpText text={row.figure} /></dt>
               <dd className={`mt-4 text-[0.9375rem] leading-relaxed ${index === 0 ? 'text-white/80' : 'text-ag-mist'}`}>{row.text}</dd>
             </div>
           ))}
@@ -399,7 +409,7 @@ export function ToolsStrip() {
             Work out a target, a carry-over or your class in the browser. Nothing is saved unless you create a record.
           </p>
         </div>
-        <ul className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <ul {...reveal('stagger')} className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {TOOLS.map((tool) => (
             <li key={tool.href}>
               <Link href={tool.href} className="ag-focus group flex h-full flex-col rounded-[20px] bg-white p-5 ring-1 ring-ag-ink/5 transition hover:ring-ag-violet/40">

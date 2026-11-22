@@ -19,6 +19,7 @@ import { GRADE_SCALE } from '@/lib/utils/constants';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import { readCreditLoadRange } from '@/lib/planning/creditLoadRange';
 import { useSemesters } from '@/hooks/useSemesters';
+import { useGradingScale } from '@/hooks/useGradingScale';
 import { SemesterPreview } from '@/components/cgpa/SemesterPreview';
 
 import { Button } from '@/components/ui/Button';
@@ -49,6 +50,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
   const router = useRouter();
   const { isFeatureDisabled } = usePlatformSettings();
   const { semesters: allSemesters, loading: semestersLoading, error: semestersError } = useSemesters();
+  const { scale } = useGradingScale();
   const creditLoadRange = useMemo(() => readCreditLoadRange(profile?.creditLoadRange), [profile?.creditLoadRange]);
 
   const [semester, setSemester] = useState<Semester | null>(null);
@@ -151,7 +153,7 @@ export default function SemesterDetailPage({ params }: { params: Promise<{ semes
     if (!user?.uid || !semester) return;
     setSaving(true);
     try {
-      const prepared = prepareSemesterSave(updatedCourses);
+      const prepared = prepareSemesterSave(updatedCourses, scale);
       const updatedIds = prepared.courses.map((course) => course.id).filter((id): id is string => Boolean(id));
       const coursesToDelete = initialCourses.filter(c => c.id && !updatedIds.includes(c.id));
 

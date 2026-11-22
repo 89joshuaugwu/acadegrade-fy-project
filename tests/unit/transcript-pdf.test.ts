@@ -54,3 +54,17 @@ describe('PDF transcript', () => {
     expect(text.join('\n')).not.toMatch(/ENUGU|AGBANI/i);
   });
 });
+
+describe('PDF transcript on another grading scale', () => {
+  it('names the scale, uses its top point and its class wording', () => {
+    const user = { ...student('Yaba College of Technology'), gradingScale: { id: 'nbte4' } } as unknown as User;
+    const text = pdfText(user, [semester(3.2, 18)]);
+    expect(text).toContain('Cumulative CGPA: 3.20 / 4.00');
+    expect(text).toContain('Upper Credit');
+    expect(text).toContain('Grading scale: Polytechnic 4-point (NBTE)');
+  });
+
+  it('names the default 5-point scale too', () => {
+    expect(pdfText(student('University of Lagos'), [semester(3.2, 18)])).toContain('Grading scale: 5-point (with E)');
+  });
+});

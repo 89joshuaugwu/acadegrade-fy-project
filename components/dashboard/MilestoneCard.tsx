@@ -5,14 +5,16 @@ import { Award, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { DiscreetValue } from '@/lib/discreet';
 import { describeMilestone } from '@/lib/planning/milestones';
+import { useGradingScale } from '@/hooks/useGradingScale';
 
 /** C1: dismissible "New milestone" card. Renders nothing when there is nothing to celebrate. */
 export function MilestoneCard({ ids, onDismiss }: { ids: readonly string[]; onDismiss: (id: string) => void }) {
+  const { scale } = useGradingScale();
   if (ids.length === 0) return null;
   return (
     <section aria-label="New milestone" className="flex flex-col gap-3">
       {ids.map((id) => {
-        const copy = describeMilestone(id);
+        const copy = describeMilestone(id, scale);
         return (
           <Card key={id} padding="sm" className="flex items-start gap-3 border-[var(--acade-gold)]/35">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-[var(--acade-gold)]/12 text-[var(--acade-gold)]">

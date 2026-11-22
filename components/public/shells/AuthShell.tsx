@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import { Words } from '@/components/motion/Words';
 import Link from 'next/link';
 import '@/components/site/site.css';
 import { AcadeGradeMark } from '../Logo';
@@ -65,12 +66,12 @@ export function AuthShell({ title, sentence, photo, reassurance, progress, below
         <main id="content" tabIndex={-1} aria-labelledby={AUTH_TITLE_ID} className="flex-1 px-5 pb-14 pt-8 outline-none sm:px-10 sm:pt-12 lg:pt-[8vh] xl:px-16">
           <div className="mx-auto w-full max-w-[440px]">
             {progress}
-            <h1 id={AUTH_TITLE_ID} className="ag-display text-[2.375rem] font-bold leading-[1.04] text-ag-ink sm:text-[2.875rem]">
-              {title}
+            <h1 id={AUTH_TITLE_ID} className={`ag-display ${typeof title === 'string' ? 'mo-load-words' : 'mo-load'} text-[2.375rem] font-bold leading-[1.04] text-ag-ink sm:text-[2.875rem]`}>
+              <Words key={typeof title === 'string' ? title : undefined}>{title}</Words>
             </h1>
-            {sentence ? <div className="mt-3 text-[1rem] leading-relaxed text-ag-mist">{sentence}</div> : null}
-            <div className="mt-8">{children}</div>
-            {below ? <div className="mt-10 flex flex-col gap-3 border-t border-ag-ink/10 pt-6 text-[0.9375rem] text-ag-ink">{below}</div> : null}
+            {sentence ? <div className="mo-load mt-3 text-[1rem] leading-relaxed text-ag-mist" style={{ '--mo-at': '120ms' } as CSSProperties}>{sentence}</div> : null}
+            <div className="mo-load mt-8" style={{ '--mo-at': '200ms' } as CSSProperties}>{children}</div>
+            {below ? <div className="mo-load mt-10 flex flex-col gap-3 border-t border-ag-ink/10 pt-6 text-[0.9375rem] text-ag-ink" style={{ '--mo-at': '300ms' } as CSSProperties}>{below}</div> : null}
           </div>
         </main>
 

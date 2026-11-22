@@ -90,6 +90,12 @@ describe('GET /api/admin/users/[uid]', () => {
     expect(state.audit).not.toHaveBeenCalled();
   });
 
+  it("names the student's grading scale (read-only), defaulting to the 5-point scale", async () => {
+    expect((await (await detail('stu')).json()).profile.gradingScale).toBe('5-point (with E)');
+    store.docs.set('users/stu', { ...store.docs.get('users/stu'), gradingScale: { id: 'nbte4' } });
+    expect((await (await detail('stu')).json()).profile.gradingScale).toBe('Polytechnic 4-point (NBTE)');
+  });
+
   it('404 for an unknown account', async () => {
     expect((await detail('nobody')).status).toBe(404);
   });

@@ -30,6 +30,8 @@ export function GaugeFigure({
   size = 'lg',
   intro = false,
   className = '',
+  max,
+  ticks,
 }: {
   value: number | null;
   figure: ReactNode;
@@ -38,6 +40,10 @@ export function GaugeFigure({
   size?: 'lg' | 'md' | 'sm';
   intro?: boolean;
   className?: string;
+  /** Top of the grading scale (5 by default). */
+  max?: number;
+  /** Class boundaries to mark (the 5-point classes by default). */
+  ticks?: readonly number[];
 }) {
   const width = { lg: 'max-w-[14rem]', md: 'max-w-[12rem]', sm: 'max-w-[8.5rem]' }[size];
   const type = { lg: 'text-[3.25rem] sm:text-[3.5rem]', md: 'text-[2.5rem]', sm: 'text-[1.625rem]' }[size];
@@ -48,6 +54,8 @@ export function GaugeFigure({
         value={value ?? 0}
         className={`block h-auto w-full ${value === null ? 'ag-gauge-empty' : ''} ${intro ? 'ag-gauge-intro' : ''}`}
         label={label}
+        {...(max ? { max } : {})}
+        {...(ticks ? { ticks } : {})}
       />
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-[6%]" aria-hidden="true">
         {caption ? <span className={`${size === 'sm' ? 'text-[0.8125rem]' : 'text-[0.8125rem]'} font-medium text-ag-mist-night`}>{caption}</span> : null}
@@ -103,8 +111,8 @@ export function SummaryStrip({ children }: { children: ReactNode }) {
  * 1024px, so a hidden first copy of that id would blank every other gauge on
  * the page. This ring uses plain colours and no ids.
  */
-export function MiniArc({ value }: { value: number | null }) {
-  const progress = value === null ? 0 : Math.max(0, Math.min(5, value)) / 5;
+export function MiniArc({ value, max = 5 }: { value: number | null; max?: number }) {
+  const progress = value === null ? 0 : Math.max(0, Math.min(max, value)) / max;
   const track = 'M 20 35 A 15 15 0 1 1 35 20';
   return (
     <svg viewBox="0 0 40 40" className="h-10 w-10 shrink-0" aria-hidden="true">
