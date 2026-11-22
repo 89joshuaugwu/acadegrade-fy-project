@@ -28,3 +28,19 @@ describe('admin academic catalog', () => {
     expect(updated.revision).toBe(2);
   });
 });
+
+describe('public catalogue aliases', () => {
+  it('publishes aliases of active entries by kind and name (additive field)', () => {
+    const snapshot = {
+      revision: 3,
+      entries: [
+        { id: 'u1', kind: 'university' as const, name: 'University of Lagos, Lagos', status: 'active' as const, source: 'default' as const, aliases: ['UNILAG'] },
+        { id: 'u2', kind: 'university' as const, name: 'Old', status: 'archived' as const, source: 'admin' as const, aliases: ['OLD'] },
+        { id: 'd1', kind: 'department' as const, name: 'Computer Science', status: 'active' as const, source: 'default' as const },
+      ],
+    };
+    const published = publicCatalog(snapshot);
+    expect(published.universities).toEqual(['University of Lagos, Lagos']);
+    expect(published.aliases).toEqual({ universities: { 'University of Lagos, Lagos': ['UNILAG'] }, departments: {}, programmes: {} });
+  });
+});

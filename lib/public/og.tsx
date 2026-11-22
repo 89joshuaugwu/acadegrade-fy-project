@@ -40,8 +40,12 @@ export interface OgImageOptions {
   line?: string;
   /** A short plain line at the foot of the card ("Free tools for Nigerian universities"). */
   meta?: string;
-  /** An example figure drawn inside the arc. Never a real student's. */
-  figure?: { value: number; label: string };
+  /**
+   * An example figure drawn inside the arc. Never a real student's. `max` is
+   * the top of its scale (5 by default, 9 for WAEC credits, 100 for an
+   * aggregate) and `text` what is printed (two decimals by default).
+   */
+  figure?: { value: number; label: string; max?: number; text?: string };
 }
 
 type OgFont = { name: string; data: ArrayBuffer; weight: 400 | 500 | 700 | 800; style: 'normal' };
@@ -88,8 +92,8 @@ function arcPath(to: number) {
   return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} A ${ARC.radius} ${ARC.radius} 0 ${large} 1 ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
 }
 
-function OgArc({ value }: { value: number }) {
-  const end = ARC.start + (Math.max(0, Math.min(5, value)) / 5) * ARC.sweep;
+function OgArc({ value, max = 5 }: { value: number; max?: number }) {
+  const end = ARC.start + (Math.max(0, Math.min(max, value)) / max) * ARC.sweep;
   const dot = arcPoint(end);
   return (
     <svg width={ARC.size} height={ARC.size} viewBox={`0 0 ${ARC.size} ${ARC.size}`}>
@@ -196,7 +200,7 @@ export function OgCard({ headline, line, meta, figure }: OgImageOptions) {
         ) : null}
       </div>
       <div style={{ display: 'flex', position: 'absolute', right: 70, top: 105, width: ARC.size, height: ARC.size }}>
-        <OgArc value={figure ? figure.value : 4.6} />
+        <OgArc value={figure ? figure.value : 4.6} max={figure?.max} />
         <div
           style={{
             display: 'flex',
@@ -213,7 +217,7 @@ export function OgCard({ headline, line, meta, figure }: OgImageOptions) {
           {figure ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 280 }}>
               <span style={{ fontFamily: 'Bricolage Grotesque', fontWeight: 800, fontSize: 104, letterSpacing: -3.5, lineHeight: 1 }}>
-                {figure.value.toFixed(2)}
+                {figure.text ?? figure.value.toFixed(2)}
               </span>
               <span style={{ display: 'flex', marginTop: 8, fontSize: 24, textAlign: 'center', justifyContent: 'center', maxWidth: 260, fontWeight: 500, color: OG_COLOURS.gold }}>{figure.label}</span>
             </div>

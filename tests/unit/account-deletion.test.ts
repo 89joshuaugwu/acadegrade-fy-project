@@ -114,6 +114,40 @@ describe('deleteUserData', () => {
     expect(report.deleted.timetables).toBe(2);
   });
 
+  it('deletes O-level and admission records (Phase 2)', async () => {
+    seedAlice(); seedBob();
+    store.docs.set('users/alice/olevel/current', { schemaVersion: 1, sittings: [] });
+    store.docs.set('users/alice/admission/current', { schemaVersion: 1, formula: 'utme-post', olevelSource: 'record' });
+    store.docs.set('users/bob/olevel/current', { schemaVersion: 1, sittings: [] });
+    const report = await deleteUserData(store.db, uid, { cloudinary: async () => 'skipped' });
+    expect(store.paths('users/alice/olevel/')).toEqual([]);
+    expect(store.paths('users/alice/admission/')).toEqual([]);
+    expect(store.paths('users/bob/olevel/')).toEqual(['users/bob/olevel/current']);
+    expect(report.deleted.olevel).toBe(1);
+    expect(report.deleted.admission).toBe(1);
+  });
+
+  it('redacts the student from catalogue Assign records, keeping the record for everyone else', async () => {
+    seedAlice(); seedBob();
+    store.docs.set('_academic_catalog_assignments/a1', {
+      status: 'applied', typed: 'Unizik', suggestionUid: 'alice', actorUid: 'admin-1', changedCount: 2,
+      changes: { alice: { before: { university: 'Unizik' }, notificationId: 'n1' }, bob: { before: { university: 'unizik' }, notificationId: 'n2' } },
+    });
+    store.docs.set('_academic_catalog_assignments/a2', {
+      status: 'applied', typed: 'CSC', suggestionUid: 'bob', changedCount: 1,
+      changes: { bob: { before: { department: 'CSC' }, notificationId: 'n3' } },
+    });
+    const report = await deleteUserData(store.db, uid, { cloudinary: async () => 'skipped' });
+    const a1 = store.docs.get('_academic_catalog_assignments/a1') as any;
+    expect(a1.suggestionUid).toBeNull();
+    expect(Object.keys(a1.changes)).toEqual(['bob']);
+    expect(a1.changedCount).toBe(1);
+    expect(a1).toMatchObject({ status: 'applied', typed: 'Unizik', actorUid: 'admin-1' });
+    expect(store.docs.get('_academic_catalog_assignments/a2')).toMatchObject({ suggestionUid: 'bob', changes: { bob: { notificationId: 'n3' } } });
+    expect(JSON.stringify(store.docs.get('_academic_catalog_assignments/a1'))).not.toContain('alice');
+    expect(report.deleted._academic_catalog_assignments).toBe(1);
+  });
+
   it('uses batched deletes rather than one write per round trip', async () => {
     seedAlice();
     for (let index = 0; index < 30; index += 1) store.docs.set(`api_logs/x${index}`, { uid });

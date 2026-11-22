@@ -8,11 +8,12 @@ import { destroyCloudinaryAvatar, type CloudinaryDeleteResult } from '@/lib/clou
  * Deletes every Firestore document that can be found for a user, in bounded,
  * batched pages. Firebase Auth and RTDB are handled by the route.
  *
- * Found by uid:        users/{uid} (+ semesters/courses, timetables), notifications/{uid} (+ items),
+ * Found by uid:        users/{uid} (+ semesters/courses, timetables, olevel, admission), notifications/{uid} (+ items),
  *                      analytics/{uid}, shareCodes.authorId, shared_transcripts.uid,
  *                      api_logs.uid, _api_rate_limits.uid, _reward_sessions.uid,
  *                      _reward_transactions.uid, _matric_numbers.uid,
  *                      _academic_catalog_suggestions.uid, support_tickets.uid
+ * Redacted, not deleted: _academic_catalog_assignments (changes.{uid}, suggestionUid)
  * Found by sha256(uid): _coin_wallets/{hash}, _coin_ledger.uidHash, _coin_requests.uidHash,
  *                      _reward_daily/{hash}_{day}, _ai_feedback.uidHash
  * Found by profile:    _matric_numbers/{sha256(matricNormalized)}, otps/{email}_*,
@@ -72,6 +73,46 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
     if ((await ref.get()).exists) await deleteRefs(collection, [ref]);
   }
 
+  /**
+   * Catalogue Assign records (`_academic_catalog_assignments`) keep each changed
+   * student's uid and old values (`changes.{uid}`) and the suggesting student's
+   * uid, for Undo. The record stays for the other students; this student's entry
+   * and uid are removed (counted under the collection name). Assign records are
+   * few (one per admin action), so they are read in bounded id-ordered pages.
+   */
+  async function redactCatalogAssignments() {
+    const collection = '_academic_catalog_assignments';
+    let cursor: string | null = null;
+    for (let page = 0; page < maxPages; page += 1) {
+      let query: Query = db.collection(collection).orderBy(FieldPath.documentId()).limit(pageSize);
+      if (cursor) query = query.startAfter(cursor);
+      const snapshot = await query.get();
+      for (const document of snapshot.docs) {
+        const data = document.data() ?? {};
+        const changes = data.changes && typeof data.changes === 'object' ? data.changes as Record<string, unknown> : {};
+        if (data.suggestionUid !== uid && !Object.prototype.hasOwnProperty.call(changes, uid)) continue;
+        await db.runTransaction(async (transaction) => {
+          const fresh = await transaction.get(document.ref);
+          if (!fresh.exists) return;
+          const current = fresh.data() ?? {};
+          const currentChanges = current.changes && typeof current.changes === 'object' ? { ...(current.changes as Record<string, unknown>) } : {};
+          delete currentChanges[uid];
+          // A full replace (not merge), so the removed map key really goes.
+          transaction.set(document.ref, {
+            ...current,
+            changes: currentChanges,
+            ...(typeof current.changedCount === 'number' ? { changedCount: Object.keys(currentChanges).length } : {}),
+            ...(current.suggestionUid === uid ? { suggestionUid: null } : {}),
+          });
+        });
+        count(collection, 1);
+      }
+      if (snapshot.size < pageSize) return;
+      cursor = snapshot.docs[snapshot.docs.length - 1].id;
+    }
+    report.truncated.push(collection);
+  }
+
   async function deleteQuery(collection: string, query: Query) {
     for (let page = 0; page < maxPages; page += 1) {
       const snapshot = await query.limit(pageSize).get();
@@ -96,6 +137,9 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
   }
   await deleteRefs('semesters', semesters.docs.map((doc) => doc.ref));
   await deleteQuery('timetables', userRef.collection('timetables'));
+  // Phase 2 record types: one document each ('current').
+  await deleteQuery('olevel', userRef.collection('olevel'));
+  await deleteQuery('admission', userRef.collection('admission'));
 
   await deleteQuery('notifications', db.collection('notifications').doc(uid).collection('items'));
   await deleteDoc('notifications', db.collection('notifications').doc(uid));
@@ -119,6 +163,7 @@ export async function deleteUserData(db: Firestore, uid: string, options: Deleti
   await deleteQuery('_api_rate_limits', db.collection('_api_rate_limits').where('uid', '==', uid));
   await deleteQuery('_academic_catalog_suggestions', db.collection('_academic_catalog_suggestions').where('uid', '==', uid));
   await deleteQuery('support_tickets', db.collection('support_tickets').where('uid', '==', uid));
+  await redactCatalogAssignments();
 
   // Matric reservation: by hashed matric (only if still ours) and by uid.
   const matric = profileMatric(profile) || options.identity?.matric || '';

@@ -6,7 +6,7 @@ import { useFormContext } from 'react-hook-form';
 import { useAuth } from '@/hooks/useAuth';
 import { signInWithGoogle } from '@/lib/firebase/auth';
 import type { AcademicCatalogNames } from '@/lib/academic-catalog/merge';
-import { inferCurrentLevel, parseAcademicSession } from '@/lib/academic/timeline';
+import { formatSessionInput, inferCurrentLevel, parseAcademicSession } from '@/lib/academic/timeline';
 import {
   CHECKING_CODE,
   NO_CONNECTION,
@@ -312,6 +312,7 @@ export function Step2Study({
   const departmentVal = watch('department');
   const programmeVal = watch('programme');
   const entrySessionVal = watch('entrySession');
+  const entrySessionField = register('entrySession');
   const durationVal = watch('courseDuration');
   const entryLevelVal = watch('entryLevel') ?? 100;
   const spilloverVal = watch('spilloverSemesters') ?? 0;
@@ -341,6 +342,7 @@ export function Step2Study({
           hint="Start typing, for example University of Nigeria, Nsukka"
           error={errors.university?.message}
           suggestions={catalog.universities}
+          aliases={catalog.aliases?.universities}
           current={universityVal ?? ''}
           onPick={(value) => setValue('university', value, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
           {...register('university')}
@@ -350,6 +352,7 @@ export function Step2Study({
           placeholder="e.g. Computer Science"
           error={errors.department?.message}
           suggestions={catalog.departments}
+          aliases={catalog.aliases?.departments}
           current={departmentVal ?? ''}
           onPick={(value) => setValue('department', value, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
           {...register('department')}
@@ -359,6 +362,7 @@ export function Step2Study({
           placeholder="e.g. B.Sc. Computer Science"
           error={errors.programme?.message}
           suggestions={catalog.programmes}
+          aliases={catalog.aliases?.programmes}
           current={programmeVal ?? ''}
           onPick={(value) => setValue('programme', value, { shouldValidate: true, shouldDirty: true, shouldTouch: true })}
           {...register('programme')}
@@ -373,7 +377,19 @@ export function Step2Study({
 
       <div className="flex flex-col gap-6 border-t border-ag-ink/10 pt-6">
         <h3 className="text-[1.0625rem] font-semibold text-ag-ink">Your timeline</h3>
-        <TextField label="Session you started" placeholder="e.g. 2022/2023" inputMode="numeric" error={errors.entrySession?.message} {...register('entrySession')} />
+        <TextField
+          label="Session you started"
+          placeholder="e.g. 2022/2023"
+          hint="Type the two years, like 20222023. We add the slash for you."
+          inputMode="numeric"
+          maxLength={9}
+          error={errors.entrySession?.message}
+          {...entrySessionField}
+          onChange={(event) => {
+            event.target.value = formatSessionInput(event.target.value);
+            return entrySessionField.onChange(event);
+          }}
+        />
 
         <div className="flex flex-col gap-2">
           <span id={entryLabelId} className={LABEL}>Level you started in</span>
@@ -600,10 +616,12 @@ export function Step4Past({
                     hideLabel
                     value={sem.session}
                     inputMode="numeric"
+                    maxLength={9}
                     inputClassName="ag-num"
                     error={errors.pastSemesters?.[index]?.session?.message}
                     onChange={(event) => {
-                      const next = pastSemesters.map((row, rowIndex) => (rowIndex === index ? { ...row, session: event.target.value } : row));
+                      const session = formatSessionInput(event.target.value);
+                      const next = pastSemesters.map((row, rowIndex) => (rowIndex === index ? { ...row, session } : row));
                       setValue('pastSemesters', next, { shouldDirty: true, shouldValidate: true });
                     }}
                   />

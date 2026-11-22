@@ -237,6 +237,7 @@ export function messageForFinalizeError(code: string | undefined, serverMessage?
       return { tone: 'error', text: "Your past semesters don't line up with the session you started. Check them again." };
     case 'invalid-registration-data':
     case 'account-mismatch':
+    case 'RECORD_TYPE_NEEDS_UPDATE':
       if (serverMessage) return { tone: 'error', text: serverMessage };
       break;
     default:

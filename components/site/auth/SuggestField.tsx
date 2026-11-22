@@ -1,6 +1,8 @@
 'use client';
 
 import { useId, useMemo, useRef, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactNode, type Ref } from 'react';
+import { ACADEMIC_ALIASES } from '@/lib/utils/academic-data';
+import { searchAcademicNames, type AcademicAliasMap } from '@/lib/utils/academic-search';
 import { FieldError, FieldHint, LABEL, inputClass } from './controls';
 
 /**
@@ -15,12 +17,17 @@ import { FieldError, FieldHint, LABEL, inputClass } from './controls';
 
 const MAX_SHOWN = 8;
 
+/** Bundled seeds for every kind, used when the caller passes no live aliases. */
+const BUNDLED_ALIASES: AcademicAliasMap = { ...ACADEMIC_ALIASES.departments, ...ACADEMIC_ALIASES.programmes, ...ACADEMIC_ALIASES.universities };
+
 type SuggestFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className' | 'list' | 'value'> & {
   label: ReactNode;
   hint?: ReactNode;
   error?: ReactNode;
   /** Everything that may be suggested. */
   suggestions: readonly string[];
+  /** Other names per suggestion ("ESUT"), so short names find the listed entry. */
+  aliases?: AcademicAliasMap;
   /** What is in the field now (for filtering). */
   current: string;
   /** Called with the suggestion the student picked. */
@@ -28,22 +35,16 @@ type SuggestFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'className'
   ref?: Ref<HTMLInputElement>;
 };
 
-export function matchSuggestions(all: readonly string[], typed: string, max = MAX_SHOWN): string[] {
-  const query = typed.trim().toLowerCase();
-  if (!query) return all.slice(0, max);
-  const starts: string[] = [];
-  const contains: string[] = [];
-  for (const item of all) {
-    const lower = item.toLowerCase();
-    if (lower === query) continue;
-    if (lower.startsWith(query)) starts.push(item);
-    else if (lower.includes(query)) contains.push(item);
-    if (starts.length >= max) break;
-  }
-  return [...starts, ...contains].slice(0, max);
+/**
+ * Alias-aware matches (lib/utils/academic-search): "ESUT" or "UNILAG" finds the listed name.
+ * The value already in the field is not offered again.
+ */
+export function matchSuggestions(all: readonly string[], typed: string, max = MAX_SHOWN, aliases?: AcademicAliasMap): string[] {
+  const current = (typed ?? '').trim().toLowerCase();
+  return searchAcademicNames(all, typed ?? '', aliases, max + 1).filter((item) => item.toLowerCase() !== current).slice(0, max);
 }
 
-export function SuggestField({ label, hint, error, suggestions, current, onPick, id, ref, onKeyDown, onBlur, onFocus, onChange, ...input }: SuggestFieldProps) {
+export function SuggestField({ label, hint, error, suggestions, aliases, current, onPick, id, ref, onKeyDown, onBlur, onFocus, onChange, ...input }: SuggestFieldProps) {
   const generated = useId().replace(/[^a-zA-Z0-9_-]/g, '');
   const fieldId = id ?? `ag-suggest-${generated}`;
   const listId = `${fieldId}-list`;
@@ -53,7 +54,7 @@ export function SuggestField({ label, hint, error, suggestions, current, onPick,
   const [active, setActive] = useState(-1);
   const closeTimer = useRef<number | null>(null);
 
-  const matches = useMemo(() => matchSuggestions(suggestions, current ?? ''), [suggestions, current]);
+  const matches = useMemo(() => matchSuggestions(suggestions, current ?? '', MAX_SHOWN, aliases ?? BUNDLED_ALIASES), [suggestions, current, aliases]);
   const expanded = open && matches.length > 0;
   const optionId = (index: number) => `${listId}-${index}`;
 

@@ -58,3 +58,16 @@ describe('admin users: age correction', () => {
     expect(within(dialog).getByRole('radio', { name: /adult/i })).toBeInTheDocument();
   });
 });
+
+describe('admin users: deep link', () => {
+  it('opens the user drawer for ?uid= (links from the academic catalogue)', async () => {
+    const spy = mockFetch();
+    window.history.replaceState(null, '', '/admin/users?uid=student-1');
+    try {
+      render(<AdminUsersPage />);
+      await waitFor(() => expect(spy.mock.calls.some(([input]) => String(input) === '/api/admin/users/student-1')).toBe(true));
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+});

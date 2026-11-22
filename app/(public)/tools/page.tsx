@@ -16,6 +16,7 @@ import { absoluteUrl } from '@/lib/seo/site';
 import '@/components/site/site.css';
 import '@/components/site/tools/tools-v2.css';
 import { HUB_COPY, HUB_FAQS, hubExample } from './hub-content';
+import { ADMISSION_EXAMPLE, WAEC_EXAMPLE, admissionView, waecView } from './records-model';
 import { carryOverImpact, checkDegreeClass, requiredGpa } from './tool-math';
 import { toolsByGroup, type ToolSlug } from './tools-config';
 import { reveal } from '@/components/motion/Reveal';
@@ -26,7 +27,7 @@ export const metadata = toolsMetadata({
   title: HUB_COPY.title,
   description: HUB_COPY.description,
   path: '/tools',
-  keywords: ['free CGPA tools', 'GPA calculator Nigeria', 'degree class checker', 'required GPA', 'carry-over CGPA'],
+  keywords: ['free CGPA tools', 'GPA calculator Nigeria', 'degree class checker', 'required GPA', 'carry-over CGPA', 'WAEC credit checker', 'JAMB aggregate calculator'],
 });
 
 const semester = exampleSemesterFromScores();
@@ -202,6 +203,36 @@ function ExampleTile({ slug }: { slug: ToolSlug }) {
       );
       break;
     }
+    case 'waec-credit-checker': {
+      const view = waecView(WAEC_EXAMPLE);
+      body = (
+        <div className="flex items-center gap-4">
+          <GaugeFigure value={view.credits} max={9} ticks={[5]} figure={String(view.credits)} size="sm" className="!mx-0 w-24 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[1.0625rem] font-semibold leading-snug text-white">{view.credits} credits</p>
+            <p className="mt-1 text-[0.8125rem] leading-snug text-ag-mist-night">English and Maths included, from WAEC and NECO</p>
+          </div>
+        </div>
+      );
+      break;
+    }
+    case 'admission-aggregate': {
+      const view = admissionView(ADMISSION_EXAMPLE);
+      const aggregate = view.aggregate!.toFixed(2);
+      body = (
+        <div>
+          <p className="flex items-baseline gap-2">
+            <span className="ag-display ag-num text-[2.75rem] font-bold leading-none"><CountUpText text={aggregate} /></span>
+            <span className="text-[0.875rem] text-ag-mist-night">out of 100</span>
+          </p>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-gradient-to-r from-ag-violet via-[#C77BB8] to-ag-gold" style={{ width: `${view.aggregate}%` }} />
+          </div>
+          <p className="mt-2 text-[0.8125rem] text-ag-mist-night">UTME 268, five credits, post-UTME 62</p>
+        </div>
+      );
+      break;
+    }
   }
   return (
     <div className="ag-hero-sky mb-6 flex min-h-[9.5rem] flex-col justify-center rounded-[18px] p-5 text-white" aria-hidden="true">
@@ -210,11 +241,11 @@ function ExampleTile({ slug }: { slug: ToolSlug }) {
   );
 }
 
-function FourQuickAnswers() {
+function QuickAnswers() {
   return (
-    <section aria-labelledby="four-answers" className="bg-white py-20 sm:py-28">
+    <section aria-labelledby="quick-answers" className="bg-white py-20 sm:py-28">
       <Container>
-        <Heading id="four-answers" title="Four quick answers" lead="Each figure is a worked example from the tool. Open one and put in your own numbers." />
+        <Heading id="quick-answers" title="Six quick answers" lead="Each figure is a worked example from the tool. Open one and put in your own numbers." />
         <ul {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-5 md:grid-cols-2">
           {toolsByGroup().flatMap((group) =>
             group.tools.map((tool) => (
@@ -243,7 +274,7 @@ function ScaleBehind() {
   return (
     <section aria-labelledby="scale-behind" className="bg-ag-haze py-20 sm:py-28">
       <Container>
-        <Heading id="scale-behind" title="The scale behind every tool" lead={`Most Nigerian universities use these bands. ${DEFAULT_SCALE.handbookNote}`} />
+        <Heading id="scale-behind" title="The scale behind the CGPA tools" lead={`Most Nigerian universities use these bands. ${DEFAULT_SCALE.handbookNote}`} />
         <div className="mt-12 rounded-[28px] bg-white p-5 sm:p-8">
           <ScaleBar caption="Degree classes on the Nigerian university 5-point scale" />
         </div>
@@ -281,7 +312,7 @@ export default function ToolsHubPage() {
     <div className="ag-site">
       <ToolHero title={HUB_COPY.h1} sentence={HUB_COPY.sentence} facts={HUB_COPY.facts} titleId="hub-title" />
       <FeaturedCalculator />
-      <FourQuickAnswers />
+      <QuickAnswers />
       <ScaleBehind />
       <ToolFaqSection id="hub-questions" title="Questions about the tools" faqs={HUB_FAQS} />
       <ToolClosing title={HUB_COPY.close} secondary={{ href: '/login', label: 'Sign in' }} />

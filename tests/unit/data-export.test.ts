@@ -95,6 +95,24 @@ describe('collectExportData', () => {
     expect(buildDataExport({ uid: 'u1', profile: {}, semesters: [], analytics: null, notifications: [] }).timetables).toEqual([]);
   });
 
+  it('includes the O-level and admission records (Phase 2), and null when there are none', async () => {
+    const queryCollection = vi.fn().mockResolvedValue([]);
+    const getDocument = vi.fn((path: string) => Promise.resolve(
+      path === 'users/u1/olevel/current' ? { id: 'current', schemaVersion: 1, sittings: [{ id: 's1', exam: 'waec', year: 2024, subjects: [] }] }
+        : path === 'users/u1/admission/current' ? { id: 'current', schemaVersion: 1, formula: 'utme-post', olevelSource: 'record', utme: { score: 250 } }
+          : null
+    ));
+    const data = await collectExportData('u1', {}, { queryCollection, getDocument } as unknown as ExportReaders);
+    const built = buildDataExport({ ...data, exportedAt: new Date('2025-06-01T10:00:00.000Z') });
+    expect(built.olevel).toMatchObject({ sittings: [{ id: 's1', exam: 'waec', year: 2024 }] });
+    expect(built.admission).toMatchObject({ formula: 'utme-post', utme: { score: 250 } });
+
+    const failing = vi.fn().mockRejectedValue(new Error('denied'));
+    const fallback = await collectExportData('u1', {}, { queryCollection, getDocument: failing } as unknown as ExportReaders);
+    expect(buildDataExport(fallback).olevel).toBeNull();
+    expect(buildDataExport({ uid: 'u1', profile: {}, semesters: [], analytics: null, notifications: [] }).admission).toBeNull();
+  });
+
   it('still exports when the optional insights and notifications cannot be read', async () => {
     const queryCollection = vi.fn((path: string) => (
       path.startsWith('notifications') ? Promise.reject(new Error('denied')) : Promise.resolve([])

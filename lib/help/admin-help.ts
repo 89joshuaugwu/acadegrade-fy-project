@@ -105,9 +105,12 @@ export const ADMIN_HELP: Readonly<Record<AdminHelpId, HelpEntry>> = {
     terms: [
       { term: 'Suggestion', meaning: 'A name a student typed that is not in the list yet.' },
       { term: 'Archived', meaning: 'Hidden from sign-up but kept, so existing profiles are unaffected. You can restore it.' },
+      { term: 'Alias', meaning: 'Another name for an entry, such as ESUT or UNILAG. Pickers find the entry when a student types it.' },
+      { term: 'Names typed by students', meaning: 'Values on student profiles that match no entry or alias, with how many students use each.' },
     ],
     tasks: [
       { title: 'Review suggestions', steps: ['Open Pending suggestions.', 'Approve to add the name, or Reject.'] },
+      { title: 'Match a typed name to an entry', steps: ['Choose Assign on a suggestion or a typed name.', 'Pick the entry (and, for a programme, a department if the name holds one).', 'Leave "Also update every other student" ticked to fix every matching profile.', 'Choose Assign. Each updated student gets an inbox message.', 'Choose Undo straight away if it was wrong.'] },
       { title: 'Fix a spelling', steps: ['Choose the tab.', 'Search.', 'Edit.', 'Save.'] },
       { title: 'Retire an entry', steps: ['Choose Archive.', 'Confirm.'] },
     ],

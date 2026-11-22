@@ -11,6 +11,8 @@ export type NavigationIcon =
   | 'activity'
   | 'ai'
   | 'ads'
+  | 'olevel'
+  | 'admission'
   | 'settings';
 
 export interface NavigationItem {
@@ -61,6 +63,8 @@ export function getRouteMeta(pathname: string): RouteMeta {
     '/transcript': { title: 'Academic transcript' },
     '/notifications': { title: 'Notifications' },
     '/settings': { title: 'Settings' },
+    '/olevel': { title: 'WAEC and NECO results' },
+    '/admission': { title: 'Admission aggregate' },
   };
   if (known[current]) return known[current];
 

@@ -59,6 +59,8 @@ export const FOOTER_GROUPS: readonly FooterGroup[] = [
       { href: '/tools/required-gpa', label: 'Required GPA' },
       { href: '/tools/carry-over-impact', label: 'Carry-over impact' },
       { href: '/tools/weighted-average', label: 'Weighted average' },
+      { href: '/tools/waec-credit-checker', label: 'WAEC credit checker' },
+      { href: '/tools/admission-aggregate', label: 'Admission aggregate' },
     ],
   },
   {

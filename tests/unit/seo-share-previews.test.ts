@@ -100,6 +100,16 @@ describe('brand v2 share assets', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it('prints a figure as written on its own scale (credits out of 9, an aggregate out of 100)', async () => {
+    const { renderToStaticMarkup } = await import('react-dom/server');
+    const { OgCard } = await import('@/lib/public/og');
+    const credits = renderToStaticMarkup(OgCard({ headline: 'WAEC credit checker', figure: { value: 6, max: 9, text: '6', label: 'credits' } }));
+    expect(credits).toContain('>6</span>');
+    expect(credits).not.toContain('6.00');
+    const cgpa = renderToStaticMarkup(OgCard({ headline: 'Degree class checker', figure: { value: 4.43, label: 'Second Class Upper' } }));
+    expect(cgpa).toContain('>4.43</span>');
+  });
+
   it('gives the installed app the Night theme colour', () => {
     const manifest = JSON.parse(readFileSync(path.join(process.cwd(), 'public/manifest.json'), 'utf8'));
     expect(manifest.theme_color).toBe('#0E0B2B');

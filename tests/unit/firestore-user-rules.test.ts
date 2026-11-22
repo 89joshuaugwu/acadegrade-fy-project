@@ -150,3 +150,74 @@ describe('users/{uid}.gradingScale (grading scales, phase 1)', () => {
     expect(usersBlock()).toContain("&& (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['gradingScale'])\n          || !('gradingScale' in request.resource.data)\n          || validGradingScale(request.resource.data.gradingScale));");
   });
 });
+
+describe('Phase 2 record types: users/{uid}.recordType, olevel/current, admission/current', () => {
+  const helpers = () => {
+    const text = rules();
+    return text.slice(text.indexOf('function validRecordType(value) {'), text.indexOf('// 1. Users Collection'));
+  };
+  const block = (name: string) => {
+    const text = rules();
+    const start = text.indexOf(`match /${name}/{docId} {`);
+    return start === -1 ? '' : text.slice(start, text.indexOf('\n      }', start));
+  };
+
+  it('allows only the three record types, checked on create and whenever an update touches it', () => {
+    expect(helpers()).toContain("return value in ['tertiary', 'olevel', 'admission'];");
+    expect(usersBlock()).toContain("&& (!('recordType' in request.resource.data) || validRecordType(request.resource.data.recordType))");
+    expect(usersBlock()).toContain("&& (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['recordType'])\n          || !('recordType' in request.resource.data)\n          || validRecordType(request.resource.data.recordType))");
+  });
+
+  it('bounds an O-level record: two sittings, nine subjects each, known exams, grades and years', () => {
+    const text = helpers();
+    expect(text).toContain("d.keys().hasOnly(['schemaVersion', 'sittings', 'targetCourse', 'updatedAt'])");
+    expect(text).toContain('d.sittings is list && d.sittings.size() <= 2');
+    expect(text).toContain('validOlevelSittingAt(d.sittings, 0) && validOlevelSittingAt(d.sittings, 1)');
+    expect(text).toContain("s.exam in ['waec', 'waec-gce', 'neco', 'neco-gce', 'nabteb']");
+    expect(text).toContain('s.year is int && s.year >= 1988 && s.year <= 2100');
+    expect(text).toContain('s.subjects is list && s.subjects.size() <= 9');
+    for (let i = 0; i < 9; i += 1) expect(text).toContain(`validOlevelSubjectAt(s.subjects, ${i})`);
+    expect(text).toContain("g in ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9', 'AR']");
+    expect(text).toContain('shortText(s.subjectId, 80) && shortText(s.name, 60)');
+  });
+
+  it('bounds an admission record: UTME 0-400, post-UTME within its maximum, known formulas, five grades', () => {
+    const text = helpers();
+    expect(text).toContain("d.keys().hasAll(['formula', 'olevelSource'])");
+    expect(text).toContain("d.formula in ['utme-post', 'utme-olevel-post', 'custom']");
+    expect(text).toContain('d.utme.score is int && d.utme.score >= 0 && d.utme.score <= 400');
+    expect(text).toContain('d.postUtme.max is int && d.postUtme.max >= 1 && d.postUtme.max <= 400');
+    expect(text).toContain('d.postUtme.score is number && d.postUtme.score >= 0 && d.postUtme.score <= d.postUtme.max');
+    expect(text).toContain("d.pointTable in ['four-to-two', 'six-to-one', 'ten-to-five', 'custom']");
+    expect(text).toContain('d.olevelGrades is list && d.olevelGrades.size() <= 5');
+    for (let i = 0; i < 5; i += 1) expect(text).toContain(`validAdmissionGradeAt(d.olevelGrades, ${i})`);
+  });
+
+  it.each(['olevel', 'admission'])('users/{uid}/%s: one "current" document, owner writes, admin reads', (name) => {
+    const text = block(name);
+    expect(text).toContain('allow read: if isOwner(userId) || isAdmin();');
+    expect(text).toContain("docId == 'current'");
+    expect(text).toContain('allow delete: if isOwner(userId);');
+    expect(text).not.toContain('allow write');
+    // Nested inside users/{userId}, before the end of that block.
+    expect(rules().indexOf(`match /${name}/{docId} {`)).toBeGreaterThan(rules().indexOf('match /users/{userId} {'));
+    expect(rules().indexOf(`match /${name}/{docId} {`)).toBeLessThan(rules().indexOf('// 2. Analytics Collection'));
+  });
+
+  it('validates the shape on every create and update', () => {
+    expect(block('olevel')).toContain("allow create, update: if isOwner(userId) && docId == 'current' && validOlevelRecord(request.resource.data);");
+    expect(block('admission')).toContain("allow create, update: if isOwner(userId) && docId == 'current' && validAdmissionRecord(request.resource.data);");
+  });
+});
+
+describe('academic catalogue (server-only)', () => {
+  it('denies clients the catalogue suggestions and Assign records', () => {
+    for (const collection of ['_academic_catalog_suggestions', '_academic_catalog_assignments']) {
+      expect(rules()).toContain(`match /${collection}/{document=**} {\n      allow read, write: if false;\n    }`);
+    }
+  });
+
+  it('serves the managed catalogue only through /api/academic-catalog', () => {
+    expect(rules()).toContain('match /config/academicCatalog {\n      allow read, write: if false;\n    }');
+  });
+});

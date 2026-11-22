@@ -79,6 +79,12 @@ export default function AdminUsersPage() {
   /** Results of an exact server search; null while browsing the loaded list. */
   const [exactResults, setExactResults] = useState<UserRecord[] | null>(null);
   const [detailUid, setDetailUid] = useState<string | null>(null);
+  // Deep link (?uid=…, e.g. "Suggested by" on the academic catalogue) opens that student's drawer.
+  // Read on mount from location so the page needs no Suspense boundary for useSearchParams.
+  useEffect(() => {
+    const uid = new URLSearchParams(window.location.search).get('uid');
+    if (uid && /^[A-Za-z0-9_-]{1,128}$/.test(uid)) setDetailUid(uid);
+  }, []);
 
   const submitAgeCorrection = async ({ uid, ageStatus, reason }: { uid: string; ageStatus: AgeStatus; reason: string }) => {
     if (!user) throw new Error('Your admin session is unavailable.');

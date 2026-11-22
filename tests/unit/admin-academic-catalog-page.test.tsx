@@ -43,6 +43,7 @@ describe('AcademicCatalogPage', () => {
     const refreshed = { revision: 2, entries: [...initial.entries, { id: 'dept-2', kind: 'department', name: 'Mathematics', status: 'active', source: 'admin' }] };
     let catalogGets = 0;
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
+      if (String(url).includes('/typed-names')) return { ok: true, json: async () => ({ rows: [], scanned: 0, truncated: false }) } as Response;
       if (String(url).endsWith('/suggestions')) return { ok: true, json: async () => options?.method === 'PATCH' ? { status: 'approved' } : { suggestions: [suggestion] } } as Response;
       catalogGets += 1;
       return { ok: true, json: async () => catalogGets === 1 ? initial : refreshed } as Response;
@@ -120,7 +121,7 @@ describe('AcademicCatalogPage', () => {
     const archived = { revision: 3, entries: renamed.entries.map(entry => entry.id === 'uni-1' ? { ...entry, status: 'archived' } : entry) };
     const restored = { revision: 4, entries: renamed.entries };
     const snapshots = [initial, renamed, archived, restored];
-    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async url => ({ ok: true, json: async () => String(url).endsWith('/suggestions') ? { suggestions: [] } : snapshots.shift() } as Response));
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async url => String(url).includes('/typed-names') ? { ok: true, json: async () => ({ rows: [], scanned: 0, truncated: false }) } as Response : ({ ok: true, json: async () => String(url).endsWith('/suggestions') ? { suggestions: [] } : snapshots.shift() } as Response));
     const user = userEvent.setup();
     render(<AcademicCatalogPage />);
     const row = await screen.findByText('University of Lagos');

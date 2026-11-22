@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils/cn';
 import { updateDocument } from '@/lib/firebase/firestore';
 import {
   COURSE_DURATION_OPTIONS,
+  formatSessionInput,
   graduationSession,
   minimumDurationForSemesters,
   parseAcademicSession,
@@ -457,9 +458,11 @@ export default function SettingsPage() {
                 <Input
                   label="Entry Session"
                   placeholder="e.g. 2022/2023"
+                  inputMode="numeric"
+                  maxLength={9}
                   value={entrySession}
                   onChange={(event) => {
-                    setEntrySession(event.target.value);
+                    setEntrySession(formatSessionInput(event.target.value));
                     setTimelineError(undefined);
                   }}
                   error={timelineError}

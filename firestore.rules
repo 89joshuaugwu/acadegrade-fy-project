@@ -68,15 +68,121 @@ service cloud.firestore {
         && (!('pass' in n) || validNceBoundary(n.pass));
     }
 
+    // Phase 2 record types (GRADING_AND_PROFILES_PLAN.md). users/{uid}.recordType
+    // is optional; absent means tertiary, so existing accounts are unchanged.
+    // The O-level and admission limits match lib/records/olevelRules.ts and
+    // lib/records/admissionRules.ts; the app checks the details, the rules keep
+    // the stored shape bounded.
+    function validRecordType(value) {
+      return value in ['tertiary', 'olevel', 'admission'];
+    }
+
+    function shortText(value, max) {
+      return value is string && value.size() >= 1 && value.size() <= max;
+    }
+
+    function validOlevelGrade(g) {
+      return g in ['A1', 'B2', 'B3', 'C4', 'C5', 'C6', 'D7', 'E8', 'F9', 'AR'];
+    }
+
+    function validOlevelSubject(s) {
+      return s is map
+        && s.keys().hasAll(['subjectId', 'name', 'grade'])
+        && s.keys().hasOnly(['subjectId', 'name', 'grade'])
+        && shortText(s.subjectId, 80) && shortText(s.name, 60)
+        && validOlevelGrade(s.grade);
+    }
+
+    function validOlevelSubjectAt(list, i) {
+      return list.size() <= i || validOlevelSubject(list[i]);
+    }
+
+    function validOlevelSitting(s) {
+      return s is map
+        && s.keys().hasAll(['id', 'exam', 'year', 'subjects'])
+        && s.keys().hasOnly(['id', 'exam', 'year', 'subjects'])
+        && shortText(s.id, 40)
+        && s.exam in ['waec', 'waec-gce', 'neco', 'neco-gce', 'nabteb']
+        && s.year is int && s.year >= 1988 && s.year <= 2100
+        && s.subjects is list && s.subjects.size() <= 9
+        && validOlevelSubjectAt(s.subjects, 0) && validOlevelSubjectAt(s.subjects, 1) && validOlevelSubjectAt(s.subjects, 2)
+        && validOlevelSubjectAt(s.subjects, 3) && validOlevelSubjectAt(s.subjects, 4) && validOlevelSubjectAt(s.subjects, 5)
+        && validOlevelSubjectAt(s.subjects, 6) && validOlevelSubjectAt(s.subjects, 7) && validOlevelSubjectAt(s.subjects, 8);
+    }
+
+    function validOlevelSittingAt(list, i) {
+      return list.size() <= i || validOlevelSitting(list[i]);
+    }
+
+    function validOlevelRecord(d) {
+      return d.keys().hasAll(['sittings'])
+        && d.keys().hasOnly(['schemaVersion', 'sittings', 'targetCourse', 'updatedAt'])
+        && (!('schemaVersion' in d) || d.schemaVersion == 1)
+        && (!('updatedAt' in d) || d.updatedAt is timestamp)
+        && d.sittings is list && d.sittings.size() <= 2
+        && validOlevelSittingAt(d.sittings, 0) && validOlevelSittingAt(d.sittings, 1)
+        && (!('targetCourse' in d) || (d.targetCourse is map
+          && d.targetCourse.keys().hasOnly(['name', 'required'])
+          && shortText(d.targetCourse.name, 80)
+          && d.targetCourse.required is list && d.targetCourse.required.size() <= 6));
+    }
+
+    function validAdmissionGrade(g) {
+      return g is map
+        && g.keys().hasAll(['subjectId', 'grade'])
+        && g.keys().hasOnly(['subjectId', 'grade'])
+        && shortText(g.subjectId, 80)
+        && validOlevelGrade(g.grade);
+    }
+
+    function validAdmissionGradeAt(list, i) {
+      return list.size() <= i || validAdmissionGrade(list[i]);
+    }
+
+    function validAdmissionRecord(d) {
+      return d.keys().hasAll(['formula', 'olevelSource'])
+        && d.keys().hasOnly(['schemaVersion', 'utme', 'postUtme', 'formula', 'weights', 'pointTable', 'customPoints', 'olevelSource', 'olevelGrades', 'school', 'course', 'updatedAt'])
+        && (!('schemaVersion' in d) || d.schemaVersion == 1)
+        && (!('updatedAt' in d) || d.updatedAt is timestamp)
+        && d.formula in ['utme-post', 'utme-olevel-post', 'custom']
+        && d.olevelSource in ['record', 'manual']
+        && (!('utme' in d) || (d.utme is map
+          && d.utme.keys().hasAll(['score'])
+          && d.utme.keys().hasOnly(['score', 'year'])
+          && d.utme.score is int && d.utme.score >= 0 && d.utme.score <= 400
+          && (!('year' in d.utme) || (d.utme.year is int && d.utme.year >= 1978 && d.utme.year <= 2100))))
+        && (!('postUtme' in d) || (d.postUtme is map
+          && d.postUtme.keys().hasAll(['score', 'max'])
+          && d.postUtme.keys().hasOnly(['score', 'max'])
+          && d.postUtme.max is int && d.postUtme.max >= 1 && d.postUtme.max <= 400
+          && d.postUtme.score is number && d.postUtme.score >= 0 && d.postUtme.score <= d.postUtme.max))
+        && (!('weights' in d) || (d.weights is map
+          && d.weights.keys().hasAll(['utme', 'olevel', 'postUtme'])
+          && d.weights.keys().hasOnly(['utme', 'olevel', 'postUtme'])
+          && d.weights.utme is number && d.weights.olevel is number && d.weights.postUtme is number))
+        && (!('pointTable' in d) || d.pointTable in ['four-to-two', 'six-to-one', 'ten-to-five', 'custom'])
+        && (!('customPoints' in d) || (d.customPoints is map
+          && d.customPoints.keys().hasOnly(['A1', 'B2', 'B3', 'C4', 'C5', 'C6'])))
+        && (!('olevelGrades' in d) || (d.olevelGrades is list && d.olevelGrades.size() <= 5
+          && validAdmissionGradeAt(d.olevelGrades, 0) && validAdmissionGradeAt(d.olevelGrades, 1) && validAdmissionGradeAt(d.olevelGrades, 2)
+          && validAdmissionGradeAt(d.olevelGrades, 3) && validAdmissionGradeAt(d.olevelGrades, 4)))
+        && (!('school' in d) || (d.school is string && d.school.size() <= 80))
+        && (!('course' in d) || (d.course is string && d.course.size() <= 80));
+    }
+
     // 1. Users Collection
     match /users/{userId} {
       allow read, delete: if isOwner(userId) || isAdmin();
       allow create: if (isOwner(userId) || isAdmin())
         && !request.resource.data.keys().hasAny(serverOwnedUserFields())
+        && (!('recordType' in request.resource.data) || validRecordType(request.resource.data.recordType))
         && (!('gradingScale' in request.resource.data) || validGradingScale(request.resource.data.gradingScale));
       // Other profile edits (tour flags, preferences, tokens, avatar) are unchanged.
       allow update: if (isOwner(userId) || isAdmin())
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOwnedUserFields())
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['recordType'])
+          || !('recordType' in request.resource.data)
+          || validRecordType(request.resource.data.recordType))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['gradingScale'])
           || !('gradingScale' in request.resource.data)
           || validGradingScale(request.resource.data.gradingScale));
@@ -95,6 +201,20 @@ service cloud.firestore {
       match /timetables/{timetableId} {
         allow read: if isOwner(userId) || isAdmin();
         allow write: if isOwner(userId);
+      }
+
+      // Phase 2: WAEC/NECO sittings, one document ('current'). Owner writes, admin reads.
+      match /olevel/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) && docId == 'current' && validOlevelRecord(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+
+      // Phase 2: JAMB UTME, post-UTME and aggregate settings, one document ('current').
+      match /admission/{docId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create, update: if isOwner(userId) && docId == 'current' && validAdmissionRecord(request.resource.data);
+        allow delete: if isOwner(userId);
       }
     }
     
@@ -260,8 +380,20 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Academic catalog suggestions are moderated through server routes only.
+    // Academic catalog suggestions are moderated through server routes only
+    // (status pending, approved, merged, rejected, assigned or ignored).
     match /_academic_catalog_suggestions/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admin "Assign" records with the undo data (uids and old values); server-only.
+    match /_academic_catalog_assignments/{document=**} {
+      allow read, write: if false;
+    }
+
+    // The managed catalogue (names and aliases). Clients read it through
+    // /api/academic-catalog; admins change it through /api/admin/academic-catalog*.
+    match /config/academicCatalog {
       allow read, write: if false;
     }
 

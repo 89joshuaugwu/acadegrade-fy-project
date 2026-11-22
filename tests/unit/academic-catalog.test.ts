@@ -39,3 +39,32 @@ describe('academic catalog suggestions', () => {
     }, defaults).departments).toEqual(['Computer Engineering']);
   });
 });
+
+describe('catalogue aliases (alias-aware pickers)', () => {
+  const defaults = {
+    universities: ['University of Lagos, Lagos', 'University of Ilorin, Ilorin'],
+    departments: ['Computer Science'],
+    programmes: ['Bachelor of Science (B.Sc.)'],
+    aliases: { universities: { 'University of Lagos, Lagos': ['UNILAG'], 'Gone University': ['GU'] }, departments: {}, programmes: {} },
+  };
+
+  it('joins live aliases with bundled seeds for names still in the list', () => {
+    const merged = mergeCatalogWithDefaults({
+      revision: 5,
+      universities: ['University of Lagos, Lagos', 'University of Ilorin, Ilorin'],
+      departments: ['Computer Science'],
+      programmes: ['Bachelor of Science (B.Sc.)'],
+      aliases: { universities: { 'University of Lagos, Lagos': ['Unilag', 'Akoka'], 'University of Ilorin, Ilorin': ['UNILORIN', 7] }, departments: 'bad', programmes: {} },
+    } as never, defaults);
+    expect(merged.aliases?.universities).toEqual({
+      'University of Lagos, Lagos': ['Unilag', 'Akoka'],
+      'University of Ilorin, Ilorin': ['UNILORIN'],
+    });
+    expect(merged.aliases?.departments).toEqual({});
+  });
+
+  it('keeps bundled seeds when the live catalogue has no aliases yet (older server)', () => {
+    const merged = mergeCatalogWithDefaults({ revision: 2, universities: ['University of Lagos, Lagos'], departments: [], programmes: [] }, defaults);
+    expect(merged.aliases?.universities).toEqual({ 'University of Lagos, Lagos': ['UNILAG'] });
+  });
+});

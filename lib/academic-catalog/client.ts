@@ -1,10 +1,11 @@
-import { ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES, NIGERIAN_UNIVERSITIES } from '@/lib/utils/academic-data';
+import { ACADEMIC_ALIASES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES, NIGERIAN_UNIVERSITIES } from '@/lib/utils/academic-data';
 import { mergeCatalogWithDefaults, type AcademicCatalogNames } from './merge';
 
 export const DEFAULT_ACADEMIC_CATALOG: AcademicCatalogNames = {
   universities: NIGERIAN_UNIVERSITIES,
   departments: ACADEMIC_DEPARTMENTS,
   programmes: ACADEMIC_PROGRAMMES,
+  aliases: ACADEMIC_ALIASES,
 };
 
 export async function loadAcademicCatalog(fetcher: typeof fetch = fetch): Promise<AcademicCatalogNames> {

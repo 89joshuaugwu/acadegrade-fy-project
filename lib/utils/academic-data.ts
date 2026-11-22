@@ -222,3 +222,96 @@ export const ACADEMIC_PROGRAMMES = [
   "Doctor of Philosophy (PhD)",
   "Certificate/Diploma"
 ];
+
+// Other names students type for an entry: the alias-aware picker search
+// (lib/utils/academic-search.ts) and the admin catalogue use them. Keys are
+// exact names from the lists above. Only widely used short names; an alias is
+// never shared by two entries. Push them to the live catalogue with
+// scripts/sync-academic-catalog.mjs --aliases (web repo).
+export const ACADEMIC_ALIASES: {
+  universities: Readonly<Record<string, readonly string[]>>;
+  departments: Readonly<Record<string, readonly string[]>>;
+  programmes: Readonly<Record<string, readonly string[]>>;
+} = {
+  universities: {
+    "Abia State University, Uturu": ["ABSU"],
+    "Abubakar Tafawa Balewa University, Bauchi": ["ATBU"],
+    "Adamawa State University, Mubi": ["ADSU"],
+    "Adekunle Ajasin University, Akungba-Akoko": ["AAUA"],
+    "Afe Babalola University, Ado-Ekiti": ["ABUAD"],
+    "Ahmadu Bello University, Zaria": ["ABU", "ABU Zaria"],
+    "Air Force Institute of Technology, Kaduna": ["AFIT"],
+    "Akwa Ibom State University, Ikot Akpaden": ["AKSU"],
+    "Alex Ekwueme Federal University, Ndufu-Alike": ["AE-FUNAI", "FUNAI"],
+    "Ambrose Alli University, Ekpoma": ["AAU", "AAU Ekpoma"],
+    "American University of Nigeria, Yola": ["AUN"],
+    "Bayero University, Kano": ["BUK"],
+    "Benue State University, Makurdi": ["BSU"],
+    "Borno State University, Maiduguri": ["BOSU"],
+    "Chukwuemeka Odumegwu Ojukwu University, Uli": ["COOU", "ANSU"],
+    "Delta State University, Abraka": ["DELSU"],
+    "Ebonyi State University, Abakaliki": ["EBSU"],
+    "Ekiti State University, Ado-Ekiti": ["EKSU"],
+    "Enugu State University of Science and Technology, Enugu": ["ESUT", "ESUT Agbani"],
+    "Federal University of Agriculture, Abeokuta": ["FUNAAB"],
+    "Federal University of Petroleum Resources, Effurun": ["FUPRE"],
+    "Federal University of Technology, Akure": ["FUTA"],
+    "Federal University of Technology, Minna": ["FUTMINNA", "FUT Minna"],
+    "Federal University of Technology, Owerri": ["FUTO"],
+    "Federal University, Dutsin-Ma": ["FUDMA"],
+    "Federal University, Lafia": ["FULAFIA"],
+    "Federal University, Oye-Ekiti": ["FUOYE"],
+    "Ibrahim Badamasi Babangida University, Lapai": ["IBBU"],
+    "Ignatius Ajuru University of Education, Port Harcourt": ["IAUE"],
+    "Imo State University, Owerri": ["IMSU"],
+    "Joseph Sarwuan Tarka University, Makurdi": ["JOSTUM", "FUAM"],
+    "Kaduna State University, Kaduna": ["KASU"],
+    "Kwara State University, Ilorin": ["KWASU"],
+    "Ladoke Akintola University of Technology, Ogbomoso": ["LAUTECH"],
+    "Lagos State University of Science and Technology, Ikorodu": ["LASUSTECH"],
+    "Lagos State University, Ojo": ["LASU"],
+    "Michael Okpara University of Agriculture, Umudike": ["MOUAU"],
+    "Modibbo Adama University, Yola": ["MAUTECH"],
+    "Nasarawa State University, Keffi": ["NSUK"],
+    "National Open University of Nigeria, Abuja": ["NOUN"],
+    "Niger Delta University, Wilberforce Island": ["NDU"],
+    "Nigerian Defence Academy, Kaduna": ["NDA"],
+    "Nnamdi Azikiwe University, Awka": ["UNIZIK", "NAU"],
+    "Obafemi Awolowo University, Ile-Ife": ["OAU", "OAU Ife"],
+    "Olabisi Onabanjo University, Ago Iwoye": ["OOU"],
+    "Osun State University, Osogbo": ["UNIOSUN"],
+    "Plateau State University, Bokkos": ["PLASU"],
+    "Prince Abubakar Audu University, Anyigba": ["PAAU"],
+    "Rivers State University, Port Harcourt": ["RSU", "RSUST"],
+    "Tai Solarin University of Education, Ijagun": ["TASUED"],
+    "Umaru Musa Yar'adua University, Katsina": ["UMYU"],
+    "University of Abuja, Abuja": ["UNIABUJA"],
+    "University of Benin, Benin City": ["UNIBEN"],
+    "University of Calabar, Calabar": ["UNICAL"],
+    "University of Cross River State, Calabar": ["UNICROSS"],
+    "University of Delta, Agbor": ["UNIDEL"],
+    "University of Ibadan, Ibadan": ["UI"],
+    "University of Ilorin, Ilorin": ["UNILORIN"],
+    "University of Jos, Jos": ["UNIJOS"],
+    "University of Lagos, Lagos": ["UNILAG"],
+    "University of Maiduguri, Maiduguri": ["UNIMAID"],
+    "University of Nigeria, Nsukka": ["UNN"],
+    "University of Port Harcourt, Port Harcourt": ["UNIPORT"],
+    "University of Uyo, Uyo": ["UNIUYO"],
+    "Usmanu Danfodiyo University, Sokoto": ["UDUS"]
+  },
+  departments: {},
+  programmes: {
+    "Bachelor of Science (B.Sc.)": ["BSc", "B.Sc"],
+    "Bachelor of Arts (B.A.)": ["BA", "B.A"],
+    "Bachelor of Engineering (B.Eng.)": ["BEng", "B.Eng"],
+    "Bachelor of Laws (LL.B)": ["LLB"],
+    "Bachelor of Pharmacy (B.Pharm)": ["BPharm"],
+    "Bachelor of Technology (B.Tech)": ["BTech"],
+    "Bachelor of Education (B.Ed.)": ["BEd", "B.Ed"],
+    "Bachelor of Agriculture (B.Agric)": ["BAgric"],
+    "Master of Science (M.Sc.)": ["MSc", "M.Sc"],
+    "Master of Arts (M.A.)": ["MA", "M.A"],
+    "Master of Engineering (M.Eng.)": ["MEng"]
+  }
+};

@@ -47,8 +47,8 @@ beforeEach(() => {
 });
 
 describe('free tool pages', () => {
-  it('lists the hub and all four tools in the public sitemap routes', () => {
-    expect(TOOL_PATHS).toHaveLength(4);
+  it('lists the hub and all six tools in the public sitemap routes', () => {
+    expect(TOOL_PATHS).toHaveLength(6);
     for (const path of [...TOOL_PATHS, '/tools', '/calculator']) expect(PUBLIC_SITEMAP_ROUTES).toContain(path);
   });
 
@@ -70,6 +70,14 @@ describe('free tool pages', () => {
     expect(screen.getAllByRole('link', { name: 'All free tools' })[0]).toHaveAttribute('href', '/tools');
     expect(screen.getByRole('link', { name: 'CGPA calculator' })).toHaveAttribute('href', '/calculator');
     expect(container.querySelector('img')).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: 'More free tools' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'WAEC credit checker' })).toHaveAttribute('href', '/tools/waec-credit-checker');
+    expect(screen.getByRole('link', { name: 'Admission aggregate' })).toHaveAttribute('href', '/tools/admission-aggregate');
+  });
+
+  it('keeps the 5-point hero facts on the CGPA tools', () => {
+    render(<DegreeClassCheckerPage />);
+    expect(screen.getByRole('heading', { level: 1 }).closest('section')).toHaveTextContent('Nigerian university 5-point scale, with PI');
   });
 
   it('classifies a typed CGPA', async () => {
@@ -180,7 +188,7 @@ describe('free tool pages', () => {
 });
 
 describe('tools hub', () => {
-  it('leads with the calculator slip and lists the four tools with worked values', () => {
+  it('leads with the calculator slip and lists the six tools with worked values', () => {
     const { container } = render(<ToolsHubPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Free CGPA tools' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Open the CGPA calculator' })).toHaveAttribute('href', '/calculator');
@@ -197,6 +205,8 @@ describe('tools hub', () => {
       'Weighted average score calculator',
       'Required GPA calculator',
       'Carry-over impact calculator',
+      'WAEC credit checker',
+      'JAMB admission aggregate calculator',
     ]);
     expect(blocks[1].mainEntity.map((entry: { name: string }) => entry.name)).toEqual(HUB_FAQS.map((faq) => faq.question));
     expect(container.querySelector('img')).toBeNull();
@@ -208,9 +218,12 @@ describe('tools hub', () => {
     expect(hubExample('weighted-average').value).toBe('65.9');
     expect(hubExample('required-gpa').value).toBe('3.68 needed');
     expect(hubExample('carry-over-impact').value).toBe('3.10 or 3.25');
+    expect(hubExample('waec-credit-checker').value).toBe('6 credits');
+    expect(hubExample('admission-aggregate').value).toBe('68.10');
     expect(toolsByGroup().map((group) => group.tools.map((tool) => tool.slug))).toEqual([
       ['degree-class-checker', 'weighted-average'],
       ['required-gpa', 'carry-over-impact'],
+      ['waec-credit-checker', 'admission-aggregate'],
     ]);
   });
 });

@@ -3,6 +3,8 @@ import { requireAdmin } from '@/lib/api/admin-auth';
 import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { adminDb } from '@/lib/firebase/admin';
 import { DEFAULT_CATALOG } from '@/lib/academic-catalog/defaults';
+import { shortDisplayName } from '@/lib/academic-catalog/assign-server';
+import { invalidateTypedNamesCache } from '@/lib/academic-catalog/typed-names';
 import { createInitialCatalog, mutateCatalog, normalizeCatalogName, type CatalogKind, type CatalogSnapshot } from '@/lib/academic-catalog/model';
 
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -17,7 +19,19 @@ export async function GET(request: Request) {
   try {
     await requireAdmin(request);
     const snapshot = await adminDb.collection('_academic_catalog_suggestions').where('status', '==', 'pending').limit(100).get();
-    return NextResponse.json({ suggestions: snapshot.docs.map((document) => ({ id: document.id, ...document.data() })) }, { headers });
+    const suggestions = snapshot.docs.map((document) => ({ id: document.id, ...document.data() } as Record<string, unknown> & { id: string }));
+    // "Suggested by Chidi O.": short display names only (never emails). Fails open to null.
+    const uids = [...new Set(suggestions.map((item) => item.uid).filter((uid): uid is string => typeof uid === 'string' && uid.length > 0))];
+    const names = new Map<string, string>();
+    try {
+      const profiles = uids.length ? await adminDb.getAll(...uids.map((uid) => adminDb.collection('users').doc(uid))) : [];
+      profiles.forEach((profile, index) => names.set(uids[index], shortDisplayName(profile.exists ? profile.data() : undefined)));
+    } catch {
+      names.clear();
+    }
+    return NextResponse.json({
+      suggestions: suggestions.map((item) => ({ ...item, suggestedBy: typeof item.uid === 'string' ? names.get(item.uid) ?? null : null })),
+    }, { headers });
   } catch (error) {
     return errorResponse(error);
   }
@@ -60,6 +74,7 @@ export async function PATCH(request: Request) {
       transaction.set(suggestionRef, { ...review, status: 'approved' }, { merge: true });
       return { status: 'approved' };
     });
+    invalidateTypedNamesCache();
     await writeAdminAudit({
       actorUid: actor?.uid, actorEmail: actor?.email ?? '', action: `academic-catalog.suggestion.${body.action}`,
       target: `_academic_catalog_suggestions/${body.id}`, after: result,

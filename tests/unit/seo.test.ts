@@ -33,6 +33,8 @@ describe('public search discovery', () => {
       'https://product.acadegrade.test/tools/required-gpa',
       'https://product.acadegrade.test/tools/carry-over-impact',
       'https://product.acadegrade.test/tools/weighted-average',
+      'https://product.acadegrade.test/tools/waec-credit-checker',
+      'https://product.acadegrade.test/tools/admission-aggregate',
       'https://product.acadegrade.test/about',
       'https://product.acadegrade.test/support',
       'https://product.acadegrade.test/privacy',

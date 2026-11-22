@@ -106,6 +106,8 @@ export function queryTestDb() {
       orderBy: (field: unknown, direction: 'asc' | 'desc' = 'asc') => query(collection, filters, [...orders, { field, direction }], max, after),
       limit: (count: number) => query(collection, filters, orders, count, after),
       startAfter: (...values: unknown[]) => query(collection, filters, orders, max, values),
+      // Field projection: the double returns whole documents (callers must not rely on missing fields).
+      select: () => query(collection, filters, orders, max, after),
       count: () => ({ get: async () => { const size = run().size; return { data: () => ({ count: size }) }; } }),
       get: async () => run(),
     };
@@ -127,6 +129,7 @@ export function queryTestDb() {
   let queue = Promise.resolve();
   const db = {
     collection: (name: string) => collectionRef(name),
+    getAll: async (...refs: { path: string }[]) => refs.map((ref) => snapshot(ref.path)),
     batch: () => {
       const staged: (() => void)[] = [];
       return {

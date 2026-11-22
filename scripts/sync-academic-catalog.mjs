@@ -6,6 +6,11 @@
 // Dry run (default, read-only):  node scripts/sync-academic-catalog.mjs
 // Write the additions:           node scripts/sync-academic-catalog.mjs --apply
 //
+// Aliases (ACADEMIC_ALIASES, e.g. ESUT, UNILAG) instead of names:
+// Dry run:                       node scripts/sync-academic-catalog.mjs --aliases
+// Write the aliases:             node scripts/sync-academic-catalog.mjs --aliases --apply
+// Aliases are only added, never removed; one already used by another entry is skipped.
+//
 // Needs FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY in the
 // environment or in .env.local. Existing entries (including archived and admin ones)
 // are never changed. Requires Node 22.18+ (runs the .ts sources with type stripping).
@@ -14,11 +19,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cert, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES, NIGERIAN_UNIVERSITIES } from '../lib/utils/academic-data.ts';
+import { ACADEMIC_ALIASES, ACADEMIC_DEPARTMENTS, ACADEMIC_PROGRAMMES, NIGERIAN_UNIVERSITIES } from '../lib/utils/academic-data.ts';
 import { addMissingDefaultEntries } from '../lib/academic-catalog/sync.ts';
+import { seedAliases } from '../lib/academic-catalog/aliases.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const apply = process.argv.includes('--apply');
+const aliasesMode = process.argv.includes('--aliases');
 
 function loadEnvFile(file) {
   if (!fs.existsSync(file)) return;
@@ -52,6 +59,55 @@ const report = (result, verb) => {
   console.log(`${verb} ${result.added.length} name(s); revision -> ${result.snapshot.revision}`);
   for (const { kind, name } of result.added) console.log(`  + ${kind}: ${name}`);
 };
+
+function planAliases(document) {
+  const data = document.exists ? document.data() : undefined;
+  if (!data || !Number.isSafeInteger(data.revision) || !Array.isArray(data.entries)) return null;
+  return seedAliases({ revision: data.revision, entries: data.entries }, ACADEMIC_ALIASES);
+}
+
+if (aliasesMode) {
+  const current = await reference.get();
+  const preview = planAliases(current);
+  if (!preview) {
+    console.log('config/academicCatalog does not exist yet; clients already use the bundled aliases. Nothing to do.');
+    process.exit(0);
+  }
+  const skippedReport = (skipped) => {
+    for (const { kind, name, alias, reason } of skipped) console.log(`  - skipped ${kind}: ${alias} for ${name} (${reason})`);
+  };
+  if (preview.added.length === 0) {
+    console.log(`Catalog (revision ${preview.snapshot.revision}) already has every bundled alias it can take. Nothing to do.`);
+    skippedReport(preview.skipped);
+    process.exit(0);
+  }
+  if (!apply) {
+    console.log(`Dry run: would add ${preview.added.length} alias(es); revision -> ${preview.snapshot.revision}`);
+    for (const { kind, name, alias } of preview.added) console.log(`  + ${kind}: ${alias} -> ${name}`);
+    skippedReport(preview.skipped);
+    console.log('Re-run with --aliases --apply to write these aliases.');
+    process.exit(0);
+  }
+  const applied = await db.runTransaction(async (transaction) => {
+    const result = planAliases(await transaction.get(reference));
+    if (result && result.added.length > 0) transaction.set(reference, result.snapshot);
+    return result;
+  });
+  const now = new Date();
+  await db.collection('_admin_audit').doc(`${now.getTime()}-sync-academic-aliases`).create({
+    actorUid: null,
+    actorEmail: 'script:sync-academic-catalog',
+    action: 'academicCatalog.syncAliases',
+    target: 'config/academicCatalog',
+    summary: `Added ${applied?.added.length ?? 0} bundled alias(es)`,
+    before: { revision: current.data().revision },
+    after: { revision: applied?.snapshot.revision ?? null, added: (applied?.added ?? []).slice(0, 50) },
+    createdAt: now,
+    createdAtMs: now.getTime(),
+  }).catch(() => console.warn('Audit entry not written.'));
+  console.log(`Added ${applied?.added.length ?? 0} alias(es); revision -> ${applied?.snapshot.revision}`);
+  process.exit(0);
+}
 
 const current = await reference.get();
 const preview = plan(current);

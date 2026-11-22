@@ -1,4 +1,5 @@
 import type { StoredGradingScale } from '@/lib/cgpa/scaleSetting';
+import type { RecordType } from '@/types/records';
 import { Timestamp } from 'firebase/firestore';
 
 /** Student level in Nigerian university system */
@@ -56,6 +57,8 @@ export interface User {
   milestones?: Record<string, unknown>;
   /** Grading scale choice (optional; absent means the 5-point scale). Resolve with useGradingScale / resolveGradingScale. */
   gradingScale?: StoredGradingScale;
+  /** Phase 2: what this account tracks. Absent means 'tertiary' (resolveRecordType in types/records.ts). */
+  recordType?: RecordType;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

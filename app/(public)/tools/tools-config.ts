@@ -1,7 +1,7 @@
 import { DEFAULT_SCALE, type PublicClassBand } from '@/lib/public/scales';
 
 /**
- * The four quick tools: copy, FAQs, hub grouping and worked examples.
+ * The six quick tools: copy, FAQs, hub grouping and worked examples.
  * The hub (/tools), every tool page, the sitemap and the JSON-LD read this
  * list, so a new tool is one entry here. Class thresholds in the FAQs are
  * templated from lib/public/scales.ts.
@@ -12,7 +12,13 @@ export interface ToolFaq {
   answer: string;
 }
 
-export type ToolSlug = 'degree-class-checker' | 'required-gpa' | 'carry-over-impact' | 'weighted-average';
+export type ToolSlug =
+  | 'degree-class-checker'
+  | 'required-gpa'
+  | 'carry-over-impact'
+  | 'weighted-average'
+  | 'waec-credit-checker'
+  | 'admission-aggregate';
 
 export interface ToolConfig {
   slug: ToolSlug;
@@ -29,11 +35,19 @@ export interface ToolConfig {
   /** Hub menu: the name, the question it answers and its group. */
   menuName: string;
   question: string;
-  group: 'Where you stand' | 'What comes next';
+  group: 'Where you stand' | 'What comes next' | 'Getting into university';
   /** "More free tools" table: the kind column. */
   kind: string;
   /** Close sentence. */
   close: string;
+  /** The FAQ section's heading. */
+  faqTitle: string;
+  /**
+   * Hero facts. The CGPA tools leave this out and get the default (no
+   * account, nothing saved, the 5-point scale line); the O-level and JAMB
+   * tools are not on that scale, so they name what they work on instead.
+   */
+  facts?: readonly string[];
 }
 
 const scale = DEFAULT_SCALE;
@@ -83,6 +97,7 @@ export const TOOL_CONFIGS: readonly ToolConfig[] = [
     group: 'Where you stand',
     kind: 'Class',
     close: 'Let your class update itself.',
+    faqTitle: 'Degree class questions',
   },
   {
     slug: 'required-gpa',
@@ -130,6 +145,7 @@ export const TOOL_CONFIGS: readonly ToolConfig[] = [
     group: 'What comes next',
     kind: 'Target',
     close: 'Set your target once. Your record keeps count.',
+    faqTitle: 'Planning questions',
   },
   {
     slug: 'carry-over-impact',
@@ -175,6 +191,7 @@ export const TOOL_CONFIGS: readonly ToolConfig[] = [
     group: 'What comes next',
     kind: 'Retake',
     close: 'Track every carry-over until it clears.',
+    faqTitle: 'Carry-over questions',
   },
   {
     slug: 'weighted-average',
@@ -221,6 +238,107 @@ export const TOOL_CONFIGS: readonly ToolConfig[] = [
     group: 'Where you stand',
     kind: 'Average',
     close: 'Keep every score, every semester.',
+    faqTitle: 'Average score questions',
+  },
+  {
+    slug: 'waec-credit-checker',
+    title: 'WAEC credit checker',
+    heading: 'WAEC credit checker',
+    sentence:
+      'Add your WAEC, NECO or NABTEB grades from up to two sittings. See your credits, your best grade in each subject and whether you have five credits including English and Maths.',
+    description:
+      'Check your WAEC, NECO or NABTEB credits across two sittings: your best grade per subject and whether you have five credits with English and Maths. Free.',
+    keywords: [
+      'WAEC credit checker',
+      'how many credits do I have WAEC',
+      'five credits including English and Maths',
+      'combine WAEC and NECO',
+      'WAEC two sittings',
+      'O-level requirements for admission',
+    ],
+    faqs: [
+      {
+        question: 'How many credits do I need for admission?',
+        answer:
+          "Most Nigerian universities ask for five credits (A1 to C6) including English Language and Mathematics, in subjects that fit your course, from no more than two sittings. Some courses ask for particular subjects too, so check your school's brochure.",
+      },
+      {
+        question: 'Which grades are credits?',
+        answer: 'A1, B2, B3, C4, C5 and C6 are credits. D7 and E8 are passes, which do not count as credits, and F9 is a fail.',
+      },
+      {
+        question: 'Can I combine two sittings?',
+        answer:
+          'Most schools accept up to two sittings, such as WAEC and NECO, or two WAEC sittings. The checker takes your best grade in each subject across both, so a C6 in Mathematics from NECO covers a D7 from WAEC.',
+      },
+      {
+        question: 'Does a D7 in Mathematics count?',
+        answer: 'No. D7 is a pass, not a credit, so it does not meet the English and Mathematics rule. A credit in a second sitting can make up for it.',
+      },
+      {
+        question: 'Are NECO and NABTEB grades the same as WAEC?',
+        answer:
+          'They use the same letters, A1 to F9, so the checker reads them the same way. NABTEB is accepted for many courses, but check that your school takes it for yours.',
+      },
+      {
+        question: 'Does AcadeGrade keep the grades I type here?',
+        answer: "No. Nothing is saved or sent: your grades live only in this page's link. Create a free record if you want them kept.",
+      },
+    ],
+    menuName: 'WAEC credit checker',
+    question: 'Do I have five credits including English and Maths?',
+    group: 'Getting into university',
+    kind: 'Credits',
+    close: 'Keep your O-level results in one place.',
+    faqTitle: 'O-level questions',
+    facts: ['No account needed', 'Nothing you type is saved', 'WAEC, NECO and NABTEB, up to two sittings'],
+  },
+  {
+    slug: 'admission-aggregate',
+    title: 'JAMB admission aggregate calculator',
+    heading: 'Admission aggregate',
+    sentence:
+      'Put in your UTME score, your post-UTME score and, if your school counts them, five O-level grades. See your aggregate out of 100, step by step, and the post-UTME score your target needs.',
+    description:
+      'Estimate your admission aggregate from your JAMB UTME score, post-UTME score and O-level grades, and see the post-UTME score your target needs. Free.',
+    keywords: ['JAMB aggregate calculator', 'post-UTME aggregate', 'how to calculate admission aggregate', 'UTME divided by 8', 'O-level points aggregate', 'post-UTME score needed'],
+    faqs: [
+      {
+        question: 'How is the admission aggregate worked out?',
+        answer:
+          'Many schools take UTME ÷ 8, a score out of 50, and add the post-UTME score scaled to 50. Others take UTME ÷ 8, five O-level grades scaled to 20 and post-UTME scaled to 30. Pick the one your school uses; every result is an estimate.',
+      },
+      {
+        question: 'How are O-level grades turned into points?',
+        answer:
+          'A common table gives A1 4.0, B2 3.6, B3 3.2, C4 2.8, C5 2.4 and C6 2.0, so five A1s make 20. Some schools use A1 6 down to C6 1, or A1 10 down to C6 5. D7, E8 and F9 earn nothing.',
+      },
+      {
+        question: 'Which five O-level subjects count?',
+        answer: 'Usually English Language, Mathematics and the three subjects your course asks for, from no more than two sittings.',
+      },
+      {
+        question: 'What post-UTME score do I need?',
+        answer:
+          'Type your target aggregate and the tool works out the post-UTME score that gets you there. With 268 in UTME, five grades worth 16 points and a target of 70, you need 68.34 out of 100.',
+      },
+      {
+        question: 'What is a good aggregate for admission?',
+        answer:
+          "It depends on the school and the course, and cut-off marks change every year. Compare your estimate with your school's published cut-off for your course.",
+      },
+      {
+        question: 'Is this my official aggregate?',
+        answer: "No. It is an estimate from the numbers you type, and nothing is saved. Your school's admission list is the final word.",
+      },
+    ],
+    menuName: 'Admission aggregate',
+    question: 'What is my aggregate, and what post-UTME score do I need?',
+    group: 'Getting into university',
+    kind: 'Aggregate',
+    close: 'Keep your JAMB and post-UTME scores together.',
+    faqTitle: 'Aggregate questions',
+    facts: ['No account needed', 'Nothing you type is saved', 'UTME, post-UTME and O-level'],
   },
 ];
 
@@ -232,11 +350,11 @@ export function getTool(slug: ToolSlug): ToolConfig {
   return tool;
 }
 
-/** The hub's order: grouped "Where you stand", then "What comes next". */
+/** The hub's order: grouped "Where you stand", "What comes next", then "Getting into university". */
 export function toolsByGroup(): { group: ToolConfig['group']; tools: ToolConfig[] }[] {
-  const order: ToolSlug[] = ['degree-class-checker', 'weighted-average', 'required-gpa', 'carry-over-impact'];
+  const order: ToolSlug[] = ['degree-class-checker', 'weighted-average', 'required-gpa', 'carry-over-impact', 'waec-credit-checker', 'admission-aggregate'];
   const sorted = order.map(getTool);
-  return (['Where you stand', 'What comes next'] as const).map((group) => ({ group, tools: sorted.filter((tool) => tool.group === group) }));
+  return (['Where you stand', 'What comes next', 'Getting into university'] as const).map((group) => ({ group, tools: sorted.filter((tool) => tool.group === group) }));
 }
 
 export function faqJsonLd(faqs: readonly ToolFaq[]) {

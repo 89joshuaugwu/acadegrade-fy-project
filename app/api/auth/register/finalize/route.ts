@@ -62,6 +62,8 @@ const finalizeSchema = z.object({
   authMethod: z.enum(['email', 'google']),
   verificationToken: z.string().min(40).optional(),
   password: z.string().min(8).max(128).optional(),
+  // Phase 2, additive: old clients omit it and get today's tertiary account.
+  recordType: z.literal('tertiary').optional(),
   profile: profileSchema,
   pastSemesters: z.array(pastSemesterSchema).max(20).default([]),
   // Optional, additive: old clients omit both and the account stays "unknown".
@@ -108,9 +110,53 @@ const finalizeSchema = z.object({
   }
 });
 
+/**
+ * WAEC/NECO (olevel) and JAMB (admission) accounts (GRADING_AND_PROFILES_PLAN.md, Phase 2):
+ * a name and email only. No matric, university or timeline, so no matric reservation and
+ * no past semesters.
+ */
+const schoolFinalizeSchema = z.object({
+  authMethod: z.enum(['email', 'google']),
+  verificationToken: z.string().min(40).optional(),
+  password: z.string().min(8).max(128).optional(),
+  recordType: z.enum(['olevel', 'admission']),
+  profile: z.object({
+    fullName: z.string().trim().min(2).max(100),
+    email: z.string().trim().toLowerCase().email(),
+  }),
+  ageStatus: z.enum(['adult', 'minor']).optional(),
+  answers: z.unknown().optional(),
+}).superRefine((data, context) => {
+  if (data.authMethod === 'email') {
+    if (!data.verificationToken) {
+      context.addIssue({ code: 'custom', path: ['verificationToken'], message: 'Verify your email again to continue' });
+    }
+    if (!data.password) {
+      context.addIssue({ code: 'custom', path: ['password'], message: 'Password is required' });
+    }
+  }
+});
+
+type TertiaryFinalize = z.infer<typeof finalizeSchema>;
+type SchoolFinalize = z.infer<typeof schoolFinalizeSchema>;
+
+const RECORD_TYPE_NEEDS_UPDATE_MESSAGE =
+  'This account tracks WAEC or JAMB results. Update AcadeGrade from the website to open it, or sign in on the website.';
+
 class RegistrationError extends Error {
   constructor(message: string, readonly status = 400, readonly code = 'registration-error') {
     super(message);
+  }
+}
+
+/**
+ * Older apps (no recordType) send a tertiary finalize with merge: false, which would wipe
+ * an O-level or admission account. They get a 409 and the account is left as it is.
+ */
+function guardRecordType(existing: unknown, requested: SchoolFinalize['recordType'] | TertiaryFinalize['recordType']) {
+  const stored = existing && typeof existing === 'object' ? (existing as { recordType?: unknown }).recordType : undefined;
+  if (requested === undefined && (stored === 'olevel' || stored === 'admission')) {
+    throw new RegistrationError(RECORD_TYPE_NEEDS_UPDATE_MESSAGE, 409, 'RECORD_TYPE_NEEDS_UPDATE');
   }
 }
 
@@ -163,7 +209,11 @@ export async function POST(request: NextRequest) {
     const blocked = await checkPlatformAccess({});
     if (blocked) return blocked;
 
-    const parsed = finalizeSchema.safeParse(await request.json());
+    const rawBody: unknown = await request.json();
+    const requestedType = rawBody && typeof rawBody === 'object' ? (rawBody as { recordType?: unknown }).recordType : undefined;
+    const parsed = requestedType === 'olevel' || requestedType === 'admission'
+      ? schoolFinalizeSchema.safeParse(rawBody)
+      : finalizeSchema.safeParse(rawBody);
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       const field = issue?.path.join('.');
@@ -177,7 +227,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { authMethod, profile, pastSemesters, password, verificationToken } = parsed.data;
+    const { authMethod, password, verificationToken } = parsed.data;
+    const recordType = parsed.data.recordType;
+    // Tertiary-only details; null for O-level and admission accounts.
+    const tertiary: TertiaryFinalize | null = recordType === 'olevel' || recordType === 'admission'
+      ? null
+      : (parsed.data as TertiaryFinalize);
+    const profile = parsed.data.profile;
+    const pastSemesters = tertiary?.pastSemesters ?? [];
     const settings = await adminDb.collection('config').doc('settings').get();
     if (settings.data()?.disableSignups === true) {
       throw new RegistrationError('New registrations are currently paused.', 403, 'signups-disabled');
@@ -198,7 +255,7 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = profile.email.trim().toLowerCase();
-    const normalizedMatric = normalizeMatric(profile.matric);
+    const normalizedMatric = tertiary ? normalizeMatric(tertiary.profile.matric) : null;
     let uid: string;
     let avatarUrl: string | null = null;
     let ticketId: string | null = null;
@@ -248,6 +305,8 @@ export async function POST(request: NextRequest) {
       try {
         const existingAccount = await adminAuth.getUserByEmail(normalizedEmail);
         const existingProfile = await adminDb.collection('users').doc(existingAccount.uid).get();
+        // Before anything changes (the password included).
+        guardRecordType(existingProfile.data(), recordType);
         if (isStudentProfileComplete(existingProfile.data())) {
           throw new RegistrationError('An account with this email already exists.', 409, 'email-in-use');
         }
@@ -296,13 +355,16 @@ export async function POST(request: NextRequest) {
 
       uid = decoded.uid;
       avatarUrl = account.photoURL || null;
+      guardRecordType((await adminDb.collection('users').doc(uid).get()).data(), recordType);
     }
 
-    await ensureLegacyMatricIsAvailable(normalizedMatric, profile.matric, uid);
+    if (tertiary && normalizedMatric) await ensureLegacyMatricIsAvailable(normalizedMatric, tertiary.profile.matric, uid);
 
-    const expectedSlots = buildAcademicSlots(profile.entrySession, profile.courseDuration, profile.entryLevel, profile.spilloverSemesters)
-      .filter((slot) => slot.level <= profile.currentLevel)
-      .slice(0, profile.recordMode === 'complete' ? profile.semestersCompleted : 0);
+    const expectedSlots = tertiary
+      ? buildAcademicSlots(tertiary.profile.entrySession, tertiary.profile.courseDuration, tertiary.profile.entryLevel, tertiary.profile.spilloverSemesters)
+        .filter((slot) => slot.level <= tertiary.profile.currentLevel)
+        .slice(0, tertiary.profile.recordMode === 'complete' ? tertiary.profile.semestersCompleted : 0)
+      : [];
 
     for (const [index, semester] of pastSemesters.entries()) {
       const expected = expectedSlots[index];
@@ -313,22 +375,27 @@ export async function POST(request: NextRequest) {
 
     const userRef = adminDb.collection('users').doc(uid);
     const analyticsRef = adminDb.collection('analytics').doc(uid);
-    const matricRef = adminDb.collection('_matric_numbers').doc(matricDocumentId(normalizedMatric));
+    const matricRef = normalizedMatric
+      ? adminDb.collection('_matric_numbers').doc(matricDocumentId(normalizedMatric))
+      : null;
     const ticketRef = ticketId
       ? adminDb.collection('_registration_tickets').doc(ticketId)
       : null;
     const now = new Date();
 
     await adminDb.runTransaction(async (transaction) => {
-      const refs = [userRef, analyticsRef, matricRef, legalRef, ...(ticketRef ? [ticketRef] : [])];
+      const refs = [userRef, analyticsRef, legalRef, ...(matricRef ? [matricRef] : []), ...(ticketRef ? [ticketRef] : [])];
       const snapshots = await transaction.getAll(...refs);
-      const [userSnapshot, analyticsSnapshot, matricSnapshot, legalSnapshot, ticketSnapshot] = snapshots;
+      const [userSnapshot, analyticsSnapshot, legalSnapshot] = snapshots;
+      const matricSnapshot = matricRef ? snapshots[3] : null;
+      const ticketSnapshot = ticketRef ? snapshots[matricRef ? 4 : 3] : null;
 
+      guardRecordType(userSnapshot.data(), recordType);
       if (isStudentProfileComplete(userSnapshot.data())) {
         throw new RegistrationError('This account setup is already complete.', 409, 'setup-complete');
       }
 
-      if (matricSnapshot.exists && matricSnapshot.data()?.uid !== uid) {
+      if (matricSnapshot?.exists && matricSnapshot.data()?.uid !== uid) {
         throw new RegistrationError('That matric number is already linked to another account.', 409, 'matric-in-use');
       }
 
@@ -368,31 +435,11 @@ export async function POST(request: NextRequest) {
         ? computeAnswerUpdate(existingUser, answers, readLegalVersions(legalSnapshot.data()), now)
         : {};
 
-      transaction.set(userRef, {
+      const common = {
         ...preservedProfileFields,
         fullName: profile.fullName,
         email: normalizedEmail,
-        matric: normalizedMatric,
-        matricNormalized: normalizedMatric,
-        department: profile.department,
-        currentLevel: profile.currentLevel,
-        programme: profile.programme,
-        university: profile.university,
         avatarUrl: avatarUrl || existingUser.avatarUrl || null,
-        recordMode: profile.recordMode,
-        gradeMode: existingUser.gradeMode === 'pi' ? 'pi' : 'cgpa',
-        currentSession: profile.entrySession,
-        entrySession: profile.entrySession,
-        // Direct entry (200 or 300 level) finishes in fewer years: the programme's years from the entry level.
-        graduationSession: graduationSession(
-          profile.entrySession,
-          Math.max(1, profile.courseDuration - ((profile.entryLevel ?? 100) / 100 - 1))
-        ),
-        courseDuration: profile.courseDuration,
-        // Stored only when set, so accounts that never use them keep the same shape.
-        ...(profile.entryLevel && profile.entryLevel > 100 ? { entryLevel: profile.entryLevel } : {}),
-        ...(profile.spilloverSemesters ? { spilloverSemesters: profile.spilloverSemesters } : {}),
-        semestersCompleted: profile.recordMode === 'complete' ? profile.semestersCompleted : 0,
         isAdmin: false,
         disabled: existingUser.disabled === true,
         fcmToken: existingUser.fcmToken || null,
@@ -402,14 +449,44 @@ export async function POST(request: NextRequest) {
         createdAt: existingUser.createdAt || now,
         updatedAt: now,
         ...answerFields,
-      }, { merge: false });
+      };
 
-      transaction.set(matricRef, {
-        uid,
-        matric: normalizedMatric,
-        createdAt: matricSnapshot.data()?.createdAt || now,
-        updatedAt: now,
-      }, { merge: true });
+      if (tertiary && normalizedMatric && matricRef) {
+        const p = tertiary.profile;
+        transaction.set(userRef, {
+          ...common,
+          matric: normalizedMatric,
+          matricNormalized: normalizedMatric,
+          department: p.department,
+          currentLevel: p.currentLevel,
+          programme: p.programme,
+          university: p.university,
+          recordMode: p.recordMode,
+          gradeMode: existingUser.gradeMode === 'pi' ? 'pi' : 'cgpa',
+          currentSession: p.entrySession,
+          entrySession: p.entrySession,
+          // Direct entry (200 or 300 level) finishes in fewer years: the programme's years from the entry level.
+          graduationSession: graduationSession(
+            p.entrySession,
+            Math.max(1, p.courseDuration - ((p.entryLevel ?? 100) / 100 - 1))
+          ),
+          courseDuration: p.courseDuration,
+          // Stored only when set, so accounts that never use them keep the same shape.
+          ...(p.entryLevel && p.entryLevel > 100 ? { entryLevel: p.entryLevel } : {}),
+          ...(p.spilloverSemesters ? { spilloverSemesters: p.spilloverSemesters } : {}),
+          semestersCompleted: p.recordMode === 'complete' ? p.semestersCompleted : 0,
+        }, { merge: false });
+
+        transaction.set(matricRef, {
+          uid,
+          matric: normalizedMatric,
+          createdAt: matricSnapshot?.data()?.createdAt || now,
+          updatedAt: now,
+        }, { merge: true });
+      } else {
+        // O-level and admission accounts: no academic fields and no matric reservation.
+        transaction.set(userRef, { ...common, recordType }, { merge: false });
+      }
 
       const existingAnalytics = analyticsSnapshot.data() || {};
       transaction.set(analyticsRef, {

@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "about": "Shared AcadeGrade admission-aggregate (JAMB UTME, post-UTME, O-level points) cases for lib/records/admissionRules.ts. Byte-identical copies live at acadegrade-web/tests/fixtures/admission-rules.json and acadegrade-mobile/tests/fixtures/admission-rules.json. Both test suites pin its sha256 (LF line endings), so edit both copies and both hashes together. Special inputs: the strings \"NaN\" and \"undefined\" stand for those JavaScript values. Every formula is an estimate; schools publish their own.",
+  "validateUtme": [
+    { "score": 0, "ok": true },
+    { "score": 180, "ok": true },
+    { "score": 400, "ok": true },
+    { "score": 401, "ok": false, "code": "range" },
+    { "score": -1, "ok": false, "code": "range" },
+    { "score": 250.5, "ok": false, "code": "not-whole" },
+    { "score": "250", "ok": false, "code": "not-number" },
+    { "score": "NaN", "ok": false, "code": "not-number" },
+    { "score": null, "ok": false, "code": "missing" },
+    { "score": "undefined", "ok": false, "code": "missing" }
+  ],
+  "validatePostUtme": [
+    { "score": 62.5, "max": 100, "ok": true },
+    { "score": 0, "max": 100, "ok": true },
+    { "score": 240, "max": 400, "ok": true },
+    { "score": 101, "max": 100, "ok": false, "code": "score-range" },
+    { "score": -1, "max": 100, "ok": false, "code": "score-range" },
+    { "score": 12.345, "max": 100, "ok": false, "code": "decimals" },
+    { "score": null, "max": 100, "ok": false, "code": "score-missing" },
+    { "score": 50, "max": 0, "ok": false, "code": "max-range" },
+    { "score": 50, "max": 401, "ok": false, "code": "max-range" },
+    { "score": 50, "max": 100.5, "ok": false, "code": "max-range" }
+  ],
+  "validateWeights": [
+    { "weights": { "utme": 50, "olevel": 20, "postUtme": 30 }, "ok": true },
+    { "weights": { "utme": 50, "olevel": 0, "postUtme": 50 }, "ok": true },
+    { "weights": { "utme": 60, "olevel": 20, "postUtme": 10 }, "ok": false, "code": "weights-sum" },
+    { "weights": { "utme": 0, "olevel": 50, "postUtme": 50 }, "ok": false, "code": "weights-utme" },
+    { "weights": { "utme": -10, "olevel": 60, "postUtme": 50 }, "ok": false, "code": "weights-range" },
+    { "weights": null, "ok": false, "code": "weights-missing" }
+  ],
+  "validatePointTable": [
+    { "points": { "A1": 4, "B2": 3.6, "B3": 3.2, "C4": 2.8, "C5": 2.4, "C6": 2 }, "ok": true },
+    { "points": { "A1": 3, "B2": 4, "B3": 3, "C4": 2, "C5": 1, "C6": 1 }, "ok": false, "code": "points-order" },
+    { "points": { "A1": 0, "B2": 0, "B3": 0, "C4": 0, "C5": 0, "C6": 0 }, "ok": false, "code": "points-top" },
+    { "points": { "A1": 25, "B2": 9, "B3": 8, "C4": 7, "C5": 6, "C6": 5 }, "ok": false, "code": "points-range" },
+    { "points": { "A1": 4, "B2": 3.6, "B3": 3.2, "C4": 2.8, "C5": 2.4 }, "ok": false, "code": "points-missing" }
+  ],
+  "aggregate": [
+    {
+      "name": "UTME ÷ 8 plus post-UTME scaled to 50",
+      "input": { "formula": "utme-post", "utme": 280, "postUtme": { "score": 70, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 70, "partial": 70,
+        "steps": [
+          { "part": "utme", "raw": 280, "max": 400, "weight": 50, "value": 35 },
+          { "part": "postUtme", "raw": 70, "max": 100, "weight": 50, "value": 35 }
+        ] }
+    },
+    {
+      "name": "rounds half up to two decimals from the exact parts",
+      "input": { "formula": "utme-post", "utme": 245, "postUtme": { "score": 62.5, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 61.88, "partial": 61.88,
+        "steps": [
+          { "part": "utme", "raw": 245, "max": 400, "weight": 50, "value": 30.63 },
+          { "part": "postUtme", "raw": 62.5, "max": 100, "weight": 50, "value": 31.25 }
+        ] }
+    },
+    {
+      "name": "UTME, five O-level grades (A1 4.0 to C6 2.0) and post-UTME scaled to 30",
+      "input": { "formula": "utme-olevel-post", "utme": 300, "olevelGrades": ["A1", "B2", "B3", "C4", "C6"], "postUtme": { "score": 60, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 71.1, "partial": 71.1,
+        "steps": [
+          { "part": "utme", "raw": 300, "max": 400, "weight": 50, "value": 37.5 },
+          { "part": "olevel", "raw": 15.6, "max": 20, "weight": 20, "value": 15.6,
+            "subjects": [{ "grade": "A1", "points": 4 }, { "grade": "B2", "points": 3.6 }, { "grade": "B3", "points": 3.2 }, { "grade": "C4", "points": 2.8 }, { "grade": "C6", "points": 2 }] },
+          { "part": "postUtme", "raw": 60, "max": 100, "weight": 30, "value": 18 }
+        ] }
+    },
+    {
+      "name": "the 6-to-1 point table scales 30 points down to 20",
+      "input": { "formula": "utme-olevel-post", "utme": 200, "olevelGrades": ["A1", "A1", "B2", "C4", "C6"], "pointTable": "six-to-one", "postUtme": { "score": 30, "max": 50 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 57, "partial": 57,
+        "steps": [
+          { "part": "utme", "raw": 200, "max": 400, "weight": 50, "value": 25 },
+          { "part": "olevel", "raw": 21, "max": 30, "weight": 20, "value": 14,
+            "subjects": [{ "grade": "A1", "points": 6 }, { "grade": "A1", "points": 6 }, { "grade": "B2", "points": 5 }, { "grade": "C4", "points": 3 }, { "grade": "C6", "points": 1 }] },
+          { "part": "postUtme", "raw": 30, "max": 50, "weight": 30, "value": 18 }
+        ] }
+    },
+    {
+      "name": "the 10-to-5 point table",
+      "input": { "formula": "utme-olevel-post", "utme": 250, "olevelGrades": ["A1", "B2", "B3", "C4", "C5"], "pointTable": "ten-to-five", "postUtme": { "score": 70, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 68.25, "partial": 68.25,
+        "steps": [
+          { "part": "utme", "raw": 250, "max": 400, "weight": 50, "value": 31.25 },
+          { "part": "olevel", "raw": 40, "max": 50, "weight": 20, "value": 16,
+            "subjects": [{ "grade": "A1", "points": 10 }, { "grade": "B2", "points": 9 }, { "grade": "B3", "points": 8 }, { "grade": "C4", "points": 7 }, { "grade": "C5", "points": 6 }] },
+          { "part": "postUtme", "raw": 70, "max": 100, "weight": 30, "value": 21 }
+        ] }
+    },
+    {
+      "name": "a D7 earns no points",
+      "input": { "formula": "utme-olevel-post", "utme": 280, "olevelGrades": ["A1", "B2", "B3", "C4", "D7"], "postUtme": { "score": 50, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 63.6, "partial": 63.6,
+        "steps": [
+          { "part": "utme", "raw": 280, "max": 400, "weight": 50, "value": 35 },
+          { "part": "olevel", "raw": 13.6, "max": 20, "weight": 20, "value": 13.6,
+            "subjects": [{ "grade": "A1", "points": 4 }, { "grade": "B2", "points": 3.6 }, { "grade": "B3", "points": 3.2 }, { "grade": "C4", "points": 2.8 }, { "grade": "D7", "points": 0 }] },
+          { "part": "postUtme", "raw": 50, "max": 100, "weight": 30, "value": 15 }
+        ] }
+    },
+    {
+      "name": "custom points for each grade",
+      "input": { "formula": "utme-olevel-post", "utme": 400, "olevelGrades": ["A1", "A1", "A1", "A1", "A1"], "pointTable": "custom", "customPoints": { "A1": 5, "B2": 4, "B3": 4, "C4": 3, "C5": 3, "C6": 2 }, "postUtme": { "score": 100, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 100, "partial": 100,
+        "steps": [
+          { "part": "utme", "raw": 400, "max": 400, "weight": 50, "value": 50 },
+          { "part": "olevel", "raw": 25, "max": 25, "weight": 20, "value": 20,
+            "subjects": [{ "grade": "A1", "points": 5 }, { "grade": "A1", "points": 5 }, { "grade": "A1", "points": 5 }, { "grade": "A1", "points": 5 }, { "grade": "A1", "points": 5 }] },
+          { "part": "postUtme", "raw": 100, "max": 100, "weight": 30, "value": 30 }
+        ] }
+    },
+    {
+      "name": "custom weights leave out a zero-weight part",
+      "input": { "formula": "custom", "weights": { "utme": 60, "olevel": 0, "postUtme": 40 }, "utme": 320, "postUtme": { "score": 45, "max": 60 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 78, "partial": 78,
+        "steps": [
+          { "part": "utme", "raw": 320, "max": 400, "weight": 60, "value": 48 },
+          { "part": "postUtme", "raw": 45, "max": 60, "weight": 40, "value": 30 }
+        ] }
+    },
+    {
+      "name": "a post-UTME marked out of 400",
+      "input": { "formula": "utme-post", "utme": 200, "postUtme": { "score": 240, "max": 400 } },
+      "expected": { "ok": true, "errors": [], "complete": true, "missing": [], "aggregate": 55, "partial": 55,
+        "steps": [
+          { "part": "utme", "raw": 200, "max": 400, "weight": 50, "value": 25 },
+          { "part": "postUtme", "raw": 240, "max": 400, "weight": 50, "value": 30 }
+        ] }
+    },
+    {
+      "name": "no post-UTME yet: the UTME part only, no aggregate",
+      "input": { "formula": "utme-post", "utme": 280 },
+      "expected": { "ok": true, "errors": [], "complete": false, "missing": ["postUtme"], "aggregate": null, "partial": 35,
+        "steps": [{ "part": "utme", "raw": 280, "max": 400, "weight": 50, "value": 35 }] }
+    },
+    {
+      "name": "no UTME yet",
+      "input": { "formula": "utme-post", "utme": null, "postUtme": { "score": 50, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": false, "missing": ["utme"], "aggregate": null, "partial": 25,
+        "steps": [{ "part": "postUtme", "raw": 50, "max": 100, "weight": 50, "value": 25 }] }
+    },
+    {
+      "name": "fewer than five grades is incomplete",
+      "input": { "formula": "utme-olevel-post", "utme": 280, "olevelGrades": ["A1", "B2"], "postUtme": { "score": 50, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": false, "missing": ["olevel"], "aggregate": null, "partial": 57.6,
+        "steps": [
+          { "part": "utme", "raw": 280, "max": 400, "weight": 50, "value": 35 },
+          { "part": "olevel", "raw": 7.6, "max": 20, "weight": 20, "value": 7.6, "subjects": [{ "grade": "A1", "points": 4 }, { "grade": "B2", "points": 3.6 }] },
+          { "part": "postUtme", "raw": 50, "max": 100, "weight": 30, "value": 15 }
+        ] }
+    },
+    {
+      "name": "an awaited grade keeps the O-level part incomplete",
+      "input": { "formula": "utme-olevel-post", "utme": 280, "olevelGrades": ["A1", "B2", "B3", "C4", "AR"], "postUtme": { "score": 50, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": false, "missing": ["olevel"], "aggregate": null, "partial": 63.6,
+        "steps": [
+          { "part": "utme", "raw": 280, "max": 400, "weight": 50, "value": 35 },
+          { "part": "olevel", "raw": 13.6, "max": 20, "weight": 20, "value": 13.6,
+            "subjects": [{ "grade": "A1", "points": 4 }, { "grade": "B2", "points": 3.6 }, { "grade": "B3", "points": 3.2 }, { "grade": "C4", "points": 2.8 }, { "grade": "AR", "points": 0 }] },
+          { "part": "postUtme", "raw": 50, "max": 100, "weight": 30, "value": 15 }
+        ] }
+    },
+    {
+      "name": "no O-level grades at all",
+      "input": { "formula": "utme-olevel-post", "utme": 280, "postUtme": { "score": 50, "max": 100 } },
+      "expected": { "ok": true, "errors": [], "complete": false, "missing": ["olevel"], "aggregate": null, "partial": 50,
+        "steps": [
+          { "part": "utme", "raw": 280, "max": 400, "weight": 50, "value": 35 },
+          { "part": "postUtme", "raw": 50, "max": 100, "weight": 30, "value": 15 }
+        ] }
+    },
+    {
+      "name": "UTME above 400",
+      "input": { "formula": "utme-post", "utme": 401, "postUtme": { "score": 50, "max": 100 } },
+      "expected": { "ok": false, "errors": ["utme-range"], "complete": false, "missing": [], "aggregate": null, "partial": 0, "steps": [] }
+    },
+    {
+      "name": "post-UTME above its maximum",
+      "input": { "formula": "utme-post", "utme": 200, "postUtme": { "score": 120, "max": 100 } },
+      "expected": { "ok": false, "errors": ["post-utme-score-range"], "complete": false, "missing": [], "aggregate": null, "partial": 0, "steps": [] }
+    },
+    {
+      "name": "custom weights that do not add up to 100",
+      "input": { "formula": "custom", "weights": { "utme": 50, "olevel": 20, "postUtme": 20 }, "utme": 200 },
+      "expected": { "ok": false, "errors": ["weights-sum"], "complete": false, "missing": [], "aggregate": null, "partial": 0, "steps": [] }
+    },
+    {
+      "name": "six O-level grades",
+      "input": { "formula": "utme-olevel-post", "utme": 200, "olevelGrades": ["A1", "A1", "A1", "A1", "A1", "A1"] },
+      "expected": { "ok": false, "errors": ["olevel-too-many"], "complete": false, "missing": [], "aggregate": null, "partial": 0, "steps": [] }
+    },
+    {
+      "name": "an unknown O-level grade",
+      "input": { "formula": "utme-olevel-post", "utme": 200, "olevelGrades": ["A1", "X1"] },
+      "expected": { "ok": false, "errors": ["olevel-grade"], "complete": false, "missing": [], "aggregate": null, "partial": 0, "steps": [] }
+    },
+    {
+      "name": "an unknown formula",
+      "input": { "formula": "abc", "utme": 200 },
+      "expected": { "ok": false, "errors": ["formula"], "complete": false, "missing": [], "aggregate": null, "partial": 0, "steps": [] }
+    }
+  ],
+  "postUtmeNeeded": [
+    { "name": "half of the post-UTME part", "input": { "formula": "utme-post", "utme": 280 }, "target": 70, "expected": { "status": "needed", "score": 70, "max": 100 } },
+    { "name": "a lower target", "input": { "formula": "utme-post", "utme": 280, "postUtme": { "score": 10, "max": 100 } }, "target": 60, "expected": { "status": "needed", "score": 50, "max": 100 } },
+    { "name": "uses the post-UTME maximum given", "input": { "formula": "utme-post", "utme": 280, "postUtme": { "score": 0, "max": 400 } }, "target": 60, "expected": { "status": "needed", "score": 200, "max": 400 } },
+    { "name": "rounds the score needed up", "input": { "formula": "utme-olevel-post", "utme": 300, "olevelGrades": ["A1", "B2", "B3", "C4", "C6"] }, "target": 70, "expected": { "status": "needed", "score": 56.34, "max": 100 } },
+    { "name": "out of reach", "input": { "formula": "utme-post", "utme": 280 }, "target": 90, "expected": { "status": "out-of-reach" } },
+    { "name": "already met by the other parts", "input": { "formula": "utme-post", "utme": 400 }, "target": 50, "expected": { "status": "met" } },
+    { "name": "needs the UTME first", "input": { "formula": "utme-post", "utme": null }, "target": 50, "expected": { "status": "incomplete" } },
+    { "name": "needs the O-level grades first", "input": { "formula": "utme-olevel-post", "utme": 300, "olevelGrades": ["A1"] }, "target": 50, "expected": { "status": "incomplete" } },
+    { "name": "a formula with no post-UTME", "input": { "formula": "custom", "weights": { "utme": 100, "olevel": 0, "postUtme": 0 }, "utme": 300 }, "target": 50, "expected": { "status": "no-post-utme" } },
+    { "name": "a target outside 0 to 100", "input": { "formula": "utme-post", "utme": 300 }, "target": 101, "expected": { "status": "invalid-target" } },
+    { "name": "an invalid input", "input": { "formula": "utme-post", "utme": 500 }, "target": 60, "expected": { "status": "invalid-input" } }
+  ]
+}

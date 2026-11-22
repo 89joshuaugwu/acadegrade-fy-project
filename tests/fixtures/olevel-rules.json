@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 1,
+  "about": "Shared AcadeGrade O-level (WAEC/NECO/NABTEB) cases for lib/records/olevelRules.ts and lib/records/olevelSubjects.ts. Byte-identical copies live at acadegrade-web/tests/fixtures/olevel-rules.json and acadegrade-mobile/tests/fixtures/olevel-rules.json. Both test suites pin its sha256 (LF line endings), so edit both copies and both hashes together. Special inputs: the strings \"NaN\" and \"undefined\" stand for those JavaScript values.",
+  "gradeFromScore": [
+    { "score": 100, "grade": "A1" },
+    { "score": 75, "grade": "A1" },
+    { "score": 74.5, "grade": "B2" },
+    { "score": 74, "grade": "B2" },
+    { "score": 70, "grade": "B2" },
+    { "score": 69, "grade": "B3" },
+    { "score": 65, "grade": "B3" },
+    { "score": 64, "grade": "C4" },
+    { "score": 60, "grade": "C4" },
+    { "score": 59, "grade": "C5" },
+    { "score": 55, "grade": "C5" },
+    { "score": 54, "grade": "C6" },
+    { "score": 50, "grade": "C6" },
+    { "score": 49, "grade": "D7" },
+    { "score": 45, "grade": "D7" },
+    { "score": 44, "grade": "E8" },
+    { "score": 40, "grade": "E8" },
+    { "score": 39, "grade": "F9" },
+    { "score": 0, "grade": "F9" },
+    { "score": -1, "grade": null },
+    { "score": 101, "grade": null },
+    { "score": "NaN", "grade": null }
+  ],
+  "gradeKinds": [
+    { "grade": "A1", "credit": true, "pass": true },
+    { "grade": "B2", "credit": true, "pass": true },
+    { "grade": "B3", "credit": true, "pass": true },
+    { "grade": "C4", "credit": true, "pass": true },
+    { "grade": "C5", "credit": true, "pass": true },
+    { "grade": "C6", "credit": true, "pass": true },
+    { "grade": "D7", "credit": false, "pass": true },
+    { "grade": "E8", "credit": false, "pass": true },
+    { "grade": "F9", "credit": false, "pass": false },
+    { "grade": "AR", "credit": false, "pass": false },
+    { "grade": "a1", "credit": false, "pass": false },
+    { "grade": "C7", "credit": false, "pass": false }
+  ],
+  "compareGrades": [
+    { "a": "A1", "b": "B2", "sign": -1 },
+    { "a": "C6", "b": "C6", "sign": 0 },
+    { "a": "F9", "b": "E8", "sign": 1 },
+    { "a": "AR", "b": "F9", "sign": 1 },
+    { "a": "F9", "b": "AR", "sign": -1 }
+  ],
+  "combine": [
+    {
+      "name": "one sitting keeps every subject, English and Maths first, then best grade",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "physics", "name": "Physics", "grade": "B3" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C4" },
+          { "subjectId": "biology", "name": "Biology", "grade": "A1" },
+          { "subjectId": "english", "name": "English Language", "grade": "C6" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "B3" }
+        ] }
+      ],
+      "expected": [
+        { "subjectId": "english", "grade": "C6", "sittingIndex": 0, "credit": true },
+        { "subjectId": "mathematics", "grade": "C4", "sittingIndex": 0, "credit": true },
+        { "subjectId": "biology", "grade": "A1", "sittingIndex": 0, "credit": true },
+        { "subjectId": "chemistry", "grade": "B3", "sittingIndex": 0, "credit": true },
+        { "subjectId": "physics", "grade": "B3", "sittingIndex": 0, "credit": true }
+      ]
+    },
+    {
+      "name": "two sittings take the best grade per subject",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "C6" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "F9" },
+          { "subjectId": "physics", "name": "Physics", "grade": "B3" }
+        ] },
+        { "id": "s2", "exam": "neco", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "B2" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C5" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "C4" }
+        ] }
+      ],
+      "expected": [
+        { "subjectId": "english", "grade": "B2", "sittingIndex": 1, "credit": true },
+        { "subjectId": "mathematics", "grade": "C5", "sittingIndex": 1, "credit": true },
+        { "subjectId": "physics", "grade": "B3", "sittingIndex": 0, "credit": true },
+        { "subjectId": "chemistry", "grade": "C4", "sittingIndex": 1, "credit": true }
+      ]
+    },
+    {
+      "name": "a tie keeps the first sitting",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2023, "subjects": [{ "subjectId": "economics", "name": "Economics", "grade": "C5" }] },
+        { "id": "s2", "exam": "waec-gce", "year": 2023, "subjects": [{ "subjectId": "economics", "name": "Economics", "grade": "C5" }] }
+      ],
+      "expected": [{ "subjectId": "economics", "grade": "C5", "sittingIndex": 0, "credit": true }]
+    },
+    {
+      "name": "awaiting result loses to any real grade and stays awaiting when it is the only one",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2025, "subjects": [
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "AR" },
+          { "subjectId": "english", "name": "English Language", "grade": "AR" }
+        ] },
+        { "id": "s2", "exam": "neco", "year": 2025, "subjects": [{ "subjectId": "mathematics", "name": "Mathematics", "grade": "F9" }] }
+      ],
+      "expected": [
+        { "subjectId": "english", "grade": "AR", "sittingIndex": 0, "credit": false },
+        { "subjectId": "mathematics", "grade": "F9", "sittingIndex": 1, "credit": false }
+      ]
+    },
+    {
+      "name": "custom subjects combine by their custom id, ties in grade sort by name",
+      "sittings": [
+        { "id": "s1", "exam": "nabteb", "year": 2022, "subjects": [
+          { "subjectId": "custom:radio and tv works", "name": "Radio and TV Works", "grade": "C6" },
+          { "subjectId": "basic-electricity", "name": "Basic Electricity", "grade": "C6" }
+        ] },
+        { "id": "s2", "exam": "nabteb", "year": 2023, "subjects": [{ "subjectId": "custom:radio and tv works", "name": "Radio & TV works", "grade": "B3" }] }
+      ],
+      "expected": [
+        { "subjectId": "custom:radio and tv works", "grade": "B3", "sittingIndex": 1, "credit": true },
+        { "subjectId": "basic-electricity", "grade": "C6", "sittingIndex": 0, "credit": true }
+      ]
+    }
+  ],
+  "requirements": [
+    {
+      "name": "five credits including English and Maths in one sitting",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "C6" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C5" },
+          { "subjectId": "biology", "name": "Biology", "grade": "B3" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "C4" },
+          { "subjectId": "physics", "name": "Physics", "grade": "A1" },
+          { "subjectId": "civic-education", "name": "Civic Education", "grade": "D7" }
+        ] }
+      ],
+      "expected": { "meets": true, "creditCount": 5, "creditsShort": 0, "tooManySittings": false, "missing": [], "awaiting": 0, "sittingsUsed": 1 }
+    },
+    {
+      "name": "a D7 in English is a pass, not a credit",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "D7" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C5" },
+          { "subjectId": "biology", "name": "Biology", "grade": "B3" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "C4" },
+          { "subjectId": "physics", "name": "Physics", "grade": "A1" },
+          { "subjectId": "geography", "name": "Geography", "grade": "C6" }
+        ] }
+      ],
+      "expected": { "meets": false, "creditCount": 5, "creditsShort": 0, "tooManySittings": false, "missing": [["english"]], "awaiting": 0, "sittingsUsed": 1 }
+    },
+    {
+      "name": "four credits is one short",
+      "sittings": [
+        { "id": "s1", "exam": "neco", "year": 2021, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "C4" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "B3" },
+          { "subjectId": "economics", "name": "Economics", "grade": "C6" },
+          { "subjectId": "government", "name": "Government", "grade": "B2" },
+          { "subjectId": "commerce", "name": "Commerce", "grade": "E8" }
+        ] }
+      ],
+      "expected": { "meets": false, "creditCount": 4, "creditsShort": 1, "tooManySittings": false, "missing": [], "awaiting": 0, "sittingsUsed": 1 }
+    },
+    {
+      "name": "two sittings together meet the rule",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "C6" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "D7" },
+          { "subjectId": "biology", "name": "Biology", "grade": "C5" }
+        ] },
+        { "id": "s2", "exam": "neco", "year": 2024, "subjects": [
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C6" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "B3" },
+          { "subjectId": "physics", "name": "Physics", "grade": "C4" }
+        ] }
+      ],
+      "expected": { "meets": true, "creditCount": 5, "creditsShort": 0, "tooManySittings": false, "missing": [], "awaiting": 0, "sittingsUsed": 2 }
+    },
+    {
+      "name": "a course needs Biology and one of Physics or Chemistry",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "B3" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C4" },
+          { "subjectId": "physics", "name": "Physics", "grade": "D7" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "C4" },
+          { "subjectId": "economics", "name": "Economics", "grade": "C5" },
+          { "subjectId": "geography", "name": "Geography", "grade": "C6" },
+          { "subjectId": "biology", "name": "Biology", "grade": "E8" }
+        ] }
+      ],
+      "options": { "required": ["biology", ["physics", "chemistry"]] },
+      "expected": { "meets": false, "creditCount": 5, "creditsShort": 0, "tooManySittings": false, "missing": [["biology"]], "awaiting": 0, "sittingsUsed": 1 }
+    },
+    {
+      "name": "three sittings are more than schools accept",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2022, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }, { "subjectId": "mathematics", "name": "Mathematics", "grade": "C6" }] },
+        { "id": "s2", "exam": "neco", "year": 2022, "subjects": [{ "subjectId": "biology", "name": "Biology", "grade": "C6" }, { "subjectId": "chemistry", "name": "Chemistry", "grade": "C6" }] },
+        { "id": "s3", "exam": "waec-gce", "year": 2023, "subjects": [{ "subjectId": "physics", "name": "Physics", "grade": "C6" }] }
+      ],
+      "expected": { "meets": false, "creditCount": 5, "creditsShort": 0, "tooManySittings": true, "missing": [], "awaiting": 0, "sittingsUsed": 3 }
+    },
+    {
+      "name": "awaiting Maths is missing and counted as awaiting",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2026, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "B2" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "AR" },
+          { "subjectId": "biology", "name": "Biology", "grade": "B3" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "C4" },
+          { "subjectId": "physics", "name": "Physics", "grade": "C5" },
+          { "subjectId": "agricultural-science", "name": "Agricultural Science", "grade": "C6" }
+        ] }
+      ],
+      "expected": { "meets": false, "creditCount": 5, "creditsShort": 0, "tooManySittings": false, "missing": [["mathematics"]], "awaiting": 1, "sittingsUsed": 1 }
+    },
+    {
+      "name": "a course that asks for six credits",
+      "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+          { "subjectId": "english", "name": "English Language", "grade": "C6" },
+          { "subjectId": "mathematics", "name": "Mathematics", "grade": "C5" },
+          { "subjectId": "biology", "name": "Biology", "grade": "B3" },
+          { "subjectId": "chemistry", "name": "Chemistry", "grade": "C4" },
+          { "subjectId": "physics", "name": "Physics", "grade": "A1" }
+        ] }
+      ],
+      "options": { "minCredits": 6 },
+      "expected": { "meets": false, "creditCount": 5, "creditsShort": 1, "tooManySittings": false, "missing": [], "awaiting": 0, "sittingsUsed": 1 }
+    },
+    {
+      "name": "no sittings yet",
+      "sittings": [],
+      "expected": { "meets": false, "creditCount": 0, "creditsShort": 5, "tooManySittings": false, "missing": [["english"], ["mathematics"]], "awaiting": 0, "sittingsUsed": 0 }
+    }
+  ],
+  "validateSitting": [
+    {
+      "name": "a valid sitting",
+      "currentYear": 2026,
+      "sitting": { "id": "s1", "exam": "waec", "year": 2026, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "AR" }] },
+      "errors": []
+    },
+    {
+      "name": "unknown exam and a future year",
+      "currentYear": 2026,
+      "sitting": { "id": "s1", "exam": "jamb", "year": 2027, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] },
+      "errors": [{ "code": "exam" }, { "code": "year" }]
+    },
+    {
+      "name": "years before 1988 and part years are refused",
+      "currentYear": 2026,
+      "sitting": { "id": "s1", "exam": "neco", "year": 1987, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] },
+      "errors": [{ "code": "year" }]
+    },
+    {
+      "name": "no subjects",
+      "currentYear": 2026,
+      "sitting": { "id": "s1", "exam": "waec", "year": 2020, "subjects": [] },
+      "errors": [{ "code": "subjects-empty" }]
+    },
+    {
+      "name": "ten subjects is one too many",
+      "currentYear": 2026,
+      "sitting": { "id": "s1", "exam": "waec", "year": 2020, "subjects": [
+        { "subjectId": "english", "name": "English Language", "grade": "C6" },
+        { "subjectId": "mathematics", "name": "Mathematics", "grade": "C6" },
+        { "subjectId": "biology", "name": "Biology", "grade": "C6" },
+        { "subjectId": "chemistry", "name": "Chemistry", "grade": "C6" },
+        { "subjectId": "physics", "name": "Physics", "grade": "C6" },
+        { "subjectId": "geography", "name": "Geography", "grade": "C6" },
+        { "subjectId": "economics", "name": "Economics", "grade": "C6" },
+        { "subjectId": "civic-education", "name": "Civic Education", "grade": "C6" },
+        { "subjectId": "computer-studies", "name": "Computer Studies", "grade": "C6" },
+        { "subjectId": "further-mathematics", "name": "Further Mathematics", "grade": "C6" }
+      ] },
+      "errors": [{ "code": "subjects-too-many" }]
+    },
+    {
+      "name": "a subject twice, an unknown grade and a blank name",
+      "currentYear": 2026,
+      "sitting": { "id": "s1", "exam": "waec", "year": 2020, "subjects": [
+        { "subjectId": "english", "name": "English Language", "grade": "C6" },
+        { "subjectId": "english", "name": "Eng Lang", "grade": "B3" },
+        { "subjectId": "physics", "name": "Physics", "grade": "C7" },
+        { "subjectId": "custom:x", "name": "   ", "grade": "A1" }
+      ] },
+      "errors": [{ "code": "subject-duplicate", "subject": 1 }, { "code": "grade", "subject": 2 }, { "code": "subject-name", "subject": 3 }]
+    },
+    {
+      "name": "a missing id",
+      "currentYear": 2026,
+      "sitting": { "id": "", "exam": "nabteb", "year": 2019, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] },
+      "errors": [{ "code": "id" }]
+    }
+  ],
+  "validateRecord": [
+    { "name": "an empty record is valid (new account)", "currentYear": 2026, "record": { "sittings": [] }, "ok": true, "errors": [] },
+    { "name": "not an object", "currentYear": 2026, "record": "undefined", "ok": false, "errors": [{ "code": "record" }] },
+    {
+      "name": "three sittings",
+      "currentYear": 2026,
+      "record": { "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] },
+        { "id": "s2", "exam": "neco", "year": 2024, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] },
+        { "id": "s3", "exam": "waec-gce", "year": 2024, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] }
+      ] },
+      "ok": false,
+      "errors": [{ "code": "sittings-too-many" }]
+    },
+    {
+      "name": "the same sitting id twice and a bad grade in the second sitting",
+      "currentYear": 2026,
+      "record": { "sittings": [
+        { "id": "s1", "exam": "waec", "year": 2024, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "C6" }] },
+        { "id": "s1", "exam": "neco", "year": 2024, "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "Z1" }] }
+      ] },
+      "ok": false,
+      "errors": [{ "code": "sitting-id-duplicate", "sitting": 1 }, { "code": "grade", "sitting": 1, "subject": 0 }]
+    },
+    {
+      "name": "a course target with too long a name",
+      "currentYear": 2026,
+      "record": { "sittings": [], "targetCourse": { "name": "Medicine and Surgery at a university with a very long name that keeps going on and on and on", "required": ["biology"] } },
+      "ok": false,
+      "errors": [{ "code": "target-course" }]
+    }
+  ],
+  "parseStored": [
+    { "name": "not an object", "raw": null, "expected": { "sittings": [] } },
+    {
+      "name": "keeps the first two good sittings and the first nine good rows",
+      "raw": {
+        "schemaVersion": 1,
+        "junk": true,
+        "sittings": [
+          { "id": "s1", "exam": "waec", "year": 2024, "extra": 1, "subjects": [
+            { "subjectId": "english", "name": "English Language", "grade": "C6", "x": 1 },
+            { "subjectId": "mathematics", "name": "Mathematics", "grade": "Q9" },
+            { "subjectId": "biology", "name": "Biology" },
+            "nonsense",
+            { "subjectId": "a1", "name": "A1", "grade": "A1" },
+            { "subjectId": "a2", "name": "A2", "grade": "A1" },
+            { "subjectId": "a3", "name": "A3", "grade": "A1" },
+            { "subjectId": "a4", "name": "A4", "grade": "A1" },
+            { "subjectId": "a5", "name": "A5", "grade": "A1" },
+            { "subjectId": "a6", "name": "A6", "grade": "A1" },
+            { "subjectId": "a7", "name": "A7", "grade": "A1" },
+            { "subjectId": "a8", "name": "A8", "grade": "A1" },
+            { "subjectId": "a9", "name": "A9", "grade": "A1" }
+          ] },
+          { "id": "bad", "exam": "jamb", "year": 2024, "subjects": [] },
+          { "id": "s2", "exam": "neco", "year": "2024", "subjects": [{ "subjectId": "english", "name": "English Language", "grade": "B2" }] },
+          { "id": "s3", "exam": "nabteb", "year": 2025, "subjects": [] },
+          { "id": "s4", "exam": "waec", "year": 2025, "subjects": [] }
+        ],
+        "targetCourse": { "name": "Medicine", "required": ["biology", ["physics", "chemistry"], 7] }
+      },
+      "expected": {
+        "sittings": [
+          { "id": "s1", "exam": "waec", "year": 2024, "subjects": [
+            { "subjectId": "english", "name": "English Language", "grade": "C6" },
+            { "subjectId": "a1", "name": "A1", "grade": "A1" },
+            { "subjectId": "a2", "name": "A2", "grade": "A1" },
+            { "subjectId": "a3", "name": "A3", "grade": "A1" },
+            { "subjectId": "a4", "name": "A4", "grade": "A1" },
+            { "subjectId": "a5", "name": "A5", "grade": "A1" },
+            { "subjectId": "a6", "name": "A6", "grade": "A1" },
+            { "subjectId": "a7", "name": "A7", "grade": "A1" },
+            { "subjectId": "a8", "name": "A8", "grade": "A1" }
+          ] },
+          { "id": "s3", "exam": "nabteb", "year": 2025, "subjects": [] }
+        ],
+        "targetCourse": { "name": "Medicine", "required": ["biology", ["physics", "chemistry"]] }
+      }
+    }
+  ],
+  "findSubject": [
+    { "input": "English Language", "id": "english" },
+    { "input": "  eng   lang ", "id": "english" },
+    { "input": "ENGLISH", "id": "english" },
+    { "input": "Maths", "id": "mathematics" },
+    { "input": "General Mathematics", "id": "mathematics" },
+    { "input": "Further Maths", "id": "further-mathematics" },
+    { "input": "F/Maths", "id": "further-mathematics" },
+    { "input": "CRK", "id": "christian-religious-studies" },
+    { "input": "I.R.S", "id": "islamic-studies" },
+    { "input": "Agric", "id": "agricultural-science" },
+    { "input": "Lit-in-English", "id": "literature-in-english" },
+    { "input": "Accounting", "id": "financial-accounting" },
+    { "input": "Civic Edu", "id": "civic-education" },
+    { "input": "Food & Nutrition", "id": "foods-and-nutrition" },
+    { "input": "Econs", "id": "economics" },
+    { "input": "Govt", "id": "government" },
+    { "input": "physics", "id": "physics" },
+    { "input": "Basket weaving", "id": null },
+    { "input": "", "id": null }
+  ],
+  "subjectIdFor": [
+    { "input": "Eng Lang", "id": "english" },
+    { "input": "Radio & TV Works", "id": "custom:radio and tv works" },
+    { "input": "   ", "id": "" }
+  ],
+  "searchSubjects": [
+    { "query": "math", "limit": 3, "ids": ["mathematics", "further-mathematics"] },
+    { "query": "eng", "limit": 2, "ids": ["english", "literature-in-english"] },
+    { "query": "chem", "limit": 5, "ids": ["chemistry"] },
+    { "query": "crk", "limit": 5, "ids": ["christian-religious-studies"] },
+    { "query": "", "limit": 3, "ids": ["english", "mathematics", "biology"] },
+    { "query": "zzz", "limit": 5, "ids": [] }
+  ]
+}

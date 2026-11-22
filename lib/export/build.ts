@@ -1,6 +1,6 @@
 /**
  * E1 "Download my data": a JSON export (profile, semesters, courses, cached
- * insights, notifications) and a courses CSV, built on the device from the
+ * insights, notifications, timetables, O-level and admission records) and a courses CSV, built on the device from the
  * student's own records. No server work, nothing written anywhere.
  */
 
@@ -24,6 +24,9 @@ export interface ExportInput {
   notifications: unknown[];
   /** T1 timetables (users/{uid}/timetables). Optional so older callers keep working. */
   timetables?: unknown[];
+  /** Phase 2 records (users/{uid}/olevel/current, admission/current). Optional for older callers. */
+  olevel?: unknown;
+  admission?: unknown;
   exportedAt?: Date;
 }
 
@@ -74,6 +77,8 @@ export function buildDataExport(input: ExportInput) {
     insights: toPlain(input.analytics),
     notifications: input.notifications.map(toPlain) as Array<{ [key: string]: Plain }>,
     timetables: (input.timetables ?? []).map(toPlain) as Array<{ [key: string]: Plain }>,
+    olevel: toPlain(input.olevel ?? null),
+    admission: toPlain(input.admission ?? null),
   };
 }
 
@@ -123,12 +128,14 @@ export async function collectExportData(uid: string, profile: unknown, readers: 
     ...semester,
     courses: await readers.queryCollection<Record<string, unknown>>(`users/${uid}/semesters/${semester.id}/courses`),
   })));
-  const [analytics, notifications, timetables] = await Promise.all([
+  const [analytics, notifications, timetables, olevel, admission] = await Promise.all([
     readers.getDocument<unknown>(`analytics/${uid}`).catch(() => null),
     readers.queryCollection<unknown>(`notifications/${uid}/items`).catch(() => [] as unknown[]),
     readers.queryCollection<unknown>(`users/${uid}/timetables`).catch(() => [] as unknown[]),
+    readers.getDocument<unknown>(`users/${uid}/olevel/current`).catch(() => null),
+    readers.getDocument<unknown>(`users/${uid}/admission/current`).catch(() => null),
   ]);
-  return { uid, profile, semesters: withCourses, analytics, notifications, timetables };
+  return { uid, profile, semesters: withCourses, analytics, notifications, timetables, olevel, admission };
 }
 
 /** Saves text as a file through a temporary link. Browser only. */

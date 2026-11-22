@@ -397,6 +397,8 @@ const TOOLS = [
   { href: '/tools/required-gpa', name: 'Required GPA', text: 'The GPA you need for the class you want' },
   { href: '/tools/carry-over-impact', name: 'Carry-over impact', text: 'What a carry-over does to your CGPA' },
   { href: '/tools/weighted-average', name: 'Weighted average', text: 'Your average mark, weighted by units' },
+  { href: '/tools/waec-credit-checker', name: 'WAEC credit checker', text: 'Your credits across two sittings, with English and Maths' },
+  { href: '/tools/admission-aggregate', name: 'Admission aggregate', text: 'Your UTME and post-UTME aggregate out of 100' },
 ] as const;
 
 export function ToolsStrip() {
@@ -406,10 +408,10 @@ export function ToolsStrip() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-end">
           <Heading id="tools-title" size="md" title="Free planning tools, no sign-up." />
           <p className="max-w-xl text-[1.0625rem] leading-relaxed text-ag-mist lg:justify-self-end">
-            Work out a target, a carry-over or your class in the browser. Nothing is saved unless you create a record.
+            Work out a target, a carry-over, your class, your WAEC credits or your admission aggregate in the browser. Nothing is saved unless you create a record.
           </p>
         </div>
-        <ul {...reveal('stagger')} className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <ul {...reveal('stagger')} className="mt-10 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {TOOLS.map((tool) => (
             <li key={tool.href}>
               <Link href={tool.href} className="ag-focus group flex h-full flex-col rounded-[20px] bg-white p-5 ring-1 ring-ag-ink/5 transition hover:ring-ag-violet/40">

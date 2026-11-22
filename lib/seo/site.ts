@@ -103,6 +103,8 @@ export const PUBLIC_SITEMAP_ROUTES = [
   '/tools/required-gpa',
   '/tools/carry-over-impact',
   '/tools/weighted-average',
+  '/tools/waec-credit-checker',
+  '/tools/admission-aggregate',
   '/about',
   '/support',
   '/privacy',

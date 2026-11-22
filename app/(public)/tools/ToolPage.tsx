@@ -36,7 +36,7 @@ export function moreToolLinks(current: string): { name: string; href: string; qu
 }
 
 /**
- * The frame all four tools share, brand v2: a compact night hero with the
+ * The frame all six tools share, brand v2: a compact night hero with the
  * trail, the tool island (panel and "how it works"), any reference section,
  * More free tools, the FAQ (with FAQPage JSON-LD) and the gold close, plus
  * WebApplication and BreadcrumbList JSON-LD. The layout provides header,
@@ -52,19 +52,19 @@ export function ToolPage({ slug, children, extra, lastTone = 'white' }: ToolPage
         trail={<Trail items={[{ label: 'Free tools', href: '/tools' }, { label: tool.menuName }]} />}
         title={tool.heading}
         sentence={tool.sentence}
-        facts={['No account needed', 'Nothing you type is saved', DEFAULT_SCALE.line]}
+        facts={tool.facts ?? ['No account needed', 'Nothing you type is saved', DEFAULT_SCALE.line]}
       />
       {children}
       {extra}
       <section aria-labelledby="more-tools" className={`${moreTone === 'haze' ? 'bg-ag-haze' : 'bg-white'} py-20 sm:py-28`}>
         <Container>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <Heading id="more-tools" title="More free tools, same scale" lead="Each one works on the Nigerian university 5-point scale and saves nothing." />
+            <Heading id="more-tools" title="More free tools" lead="Each one is free, needs no account and saves nothing you type." />
             <TextLinkV2 href="/tools" className="shrink-0 text-[1rem]">
               All free tools
             </TextLinkV2>
           </div>
-          <ul {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ul {...reveal('stagger')} className="mt-12 grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {moreToolLinks(path).map((link) => (
               <ToolCard key={link.href} name={link.name} href={link.href} tone={moreTone === 'haze' ? 'white' : 'haze'} footer={<OpenCue />}>
                 <p className="mt-3 text-[0.9375rem] leading-relaxed text-ag-mist">{link.question}</p>
@@ -73,7 +73,7 @@ export function ToolPage({ slug, children, extra, lastTone = 'white' }: ToolPage
           </ul>
         </Container>
       </section>
-      <ToolFaqSection id="tool-questions" title={faqTitle(slug)} faqs={tool.faqs} tone={moreTone === 'haze' ? 'white' : 'haze'} />
+      <ToolFaqSection id="tool-questions" title={tool.faqTitle} faqs={tool.faqs} tone={moreTone === 'haze' ? 'white' : 'haze'} />
       <ToolClosing title={tool.close} secondary={{ href: '/tools', label: 'All free tools' }} />
       <JsonLd
         data={[
@@ -88,17 +88,4 @@ export function ToolPage({ slug, children, extra, lastTone = 'white' }: ToolPage
       />
     </div>
   );
-}
-
-function faqTitle(slug: ToolSlug): string {
-  switch (slug) {
-    case 'degree-class-checker':
-      return 'Degree class questions';
-    case 'required-gpa':
-      return 'Planning questions';
-    case 'carry-over-impact':
-      return 'Carry-over questions';
-    default:
-      return 'Average score questions';
-  }
 }

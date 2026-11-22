@@ -7,12 +7,20 @@ import { ChevronDown, Plus, Search, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Panel } from '@/components/admin/ui/Panel';
+import { Notice } from '@/components/admin/ui/Notice';
+import { AssignPanel, type AssignRequest, type AssignTarget } from '@/components/admin/academic-catalog/AssignPanel';
+import { TypedNamesPanel, typedRowKey, type TypedNameRow } from '@/components/admin/academic-catalog/TypedNamesPanel';
 import { cn } from '@/lib/utils/cn';
 
 type Kind = 'university' | 'department' | 'programme';
-type Entry = { id: string; kind: Kind; name: string; status: 'active' | 'archived'; source: 'default' | 'admin' };
+type Entry = { id: string; kind: Kind; name: string; status: 'active' | 'archived'; source: 'default' | 'admin'; aliases?: string[] };
 type Snapshot = { revision: number; entries: Entry[] };
-type Suggestion = { id: string; kind: Kind; name: string; status: 'pending'; uid: string; createdAt: string };
+type Suggestion = { id: string; kind: Kind; name: string; status: 'pending'; uid: string; createdAt: string; suggestedBy?: string | null };
+type AssignResult = { assignmentId: string; entryName: string; departmentName: string | null; changedCount: number; aliasAdded: boolean; aliasNote: string | null; truncated: boolean };
+type UndoResult = { restoredCount: number; keptCount: number };
+type LastAssign = { typed: string; result: AssignResult; undo?: UndoResult };
+
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 type Mutation = { action: 'add'; kind: Kind; name: string } | { action: 'edit'; id: string; name: string } | { action: 'archive' | 'restore'; id: string };
 
 const kinds: { value: Kind; label: string; singular: string }[] = [
@@ -95,8 +103,132 @@ export default function AcademicCatalogPage() {
     }
   }, [user]);
 
+  const [typedRows, setTypedRows] = useState<TypedNameRow[]>([]);
+  const [typedMeta, setTypedMeta] = useState({ scanned: 0, truncated: false });
+  const [typedLoading, setTypedLoading] = useState(true);
+  const [typedError, setTypedError] = useState('');
+  const [typedBusyKey, setTypedBusyKey] = useState<string | null>(null);
+  const [assignTarget, setAssignTarget] = useState<AssignTarget | null>(null);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [assignError, setAssignError] = useState('');
+  const [lastAssign, setLastAssign] = useState<LastAssign | null>(null);
+  const [undoBusy, setUndoBusy] = useState(false);
+  const [undoError, setUndoError] = useState('');
+
+  const authorized = useCallback(async (url: string, init: RequestInit = {}) => {
+    const token = await user!.getIdToken();
+    return fetch(url, { ...init, headers: { ...(init.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}` } });
+  }, [user]);
+
+  const loadTyped = useCallback(async () => {
+    if (!user) return;
+    setTypedLoading(true);
+    setTypedError('');
+    try {
+      const response = await authorized('/api/admin/academic-catalog/typed-names');
+      if (!response.ok) throw new Error(await responseMessage(response, 'Unable to check student profiles.'));
+      const data = await response.json();
+      setTypedRows(Array.isArray(data.rows) ? data.rows : []);
+      setTypedMeta({ scanned: Number.isFinite(data.scanned) ? data.scanned : 0, truncated: data.truncated === true });
+    } catch (cause) {
+      setTypedError(cause instanceof Error ? cause.message : 'Unable to check student profiles.');
+    } finally {
+      setTypedLoading(false);
+    }
+  }, [user, authorized]);
+
   useEffect(() => { void load(); }, [load]);
   useEffect(() => { void loadSuggestions(); }, [loadSuggestions]);
+  useEffect(() => { void loadTyped(); }, [loadTyped]);
+
+  function openAssign(target: AssignTarget) {
+    setAssignTarget(target);
+    setAssignError('');
+  }
+
+  async function assign(request: AssignRequest) {
+    if (!user || assignBusy || !assignTarget) return;
+    const target = assignTarget;
+    setAssignBusy(true);
+    setAssignError('');
+    try {
+      const response = await authorized('/api/admin/academic-catalog/assign', { method: 'POST', body: JSON.stringify(request) });
+      if (!response.ok) throw new Error(await responseMessage(response, 'Unable to assign this name.'));
+      const result: AssignResult = await response.json();
+      setLastAssign({ typed: target.name, result });
+      setUndoError('');
+      setAssignTarget(null);
+      const key = target.name.trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+      const sameName = (kind: Kind, name: string) => kind === target.kind && name.trim().replace(/\s+/g, ' ').toLocaleLowerCase() === key;
+      // The server resolves the same-name suggestions of the students it updated.
+      setSuggestions(previous => previous.filter(item => item.id !== target.suggestionId && !(request.updateAll && sameName(item.kind, item.name))));
+      setTypedRows(previous => previous.filter(row => !sameName(row.kind, row.name)));
+      void load();
+    } catch (cause) {
+      setAssignError(cause instanceof Error ? cause.message : 'Unable to assign this name.');
+    } finally {
+      setAssignBusy(false);
+    }
+  }
+
+  async function undoLast() {
+    if (!user || !lastAssign || undoBusy) return;
+    setUndoBusy(true);
+    setUndoError('');
+    try {
+      const response = await authorized('/api/admin/academic-catalog/assign/undo', { method: 'POST', body: JSON.stringify({ assignmentId: lastAssign.result.assignmentId }) });
+      if (!response.ok) throw new Error(await responseMessage(response, 'Unable to undo this change.'));
+      const undo: UndoResult = await response.json();
+      setLastAssign(previous => (previous ? { ...previous, undo } : previous));
+      void load();
+      void loadSuggestions();
+      void loadTyped();
+    } catch (cause) {
+      setUndoError(cause instanceof Error ? cause.message : 'Unable to undo this change.');
+    } finally {
+      setUndoBusy(false);
+    }
+  }
+
+  async function typedAction(row: TypedNameRow, action: 'add' | 'ignore') {
+    if (!user || typedBusyKey) return;
+    const key = typedRowKey(row);
+    setTypedBusyKey(key);
+    setTypedError('');
+    try {
+      const response = action === 'add'
+        ? await authorized('/api/admin/academic-catalog', { method: 'PATCH', body: JSON.stringify({ action: 'add', kind: row.kind, name: row.name }) })
+        : await authorized('/api/admin/academic-catalog/typed-names', { method: 'POST', body: JSON.stringify({ action: 'ignore', kind: row.kind, name: row.name }) });
+      if (!response.ok) throw new Error(await responseMessage(response, action === 'add' ? 'Unable to add this entry.' : 'Unable to ignore this name.'));
+      if (action === 'add') setSnapshot(await response.json());
+      setTypedRows(previous => previous.filter(item => typedRowKey(item) !== key));
+      if (assignTarget?.key === key) setAssignTarget(null);
+      setNotice(action === 'add' ? `Added “${row.name}” to the catalogue.` : `“${row.name}” is hidden from this list.`);
+    } catch (cause) {
+      setTypedError(cause instanceof Error ? cause.message : 'Unable to update this name.');
+    } finally {
+      setTypedBusyKey(null);
+    }
+  }
+
+  async function loadStudents(row: TypedNameRow) {
+    const response = await authorized(`/api/admin/academic-catalog/typed-names?kind=${encodeURIComponent(row.kind)}&name=${encodeURIComponent(row.name)}`);
+    if (!response.ok) throw new Error('Unable to load students.');
+    const data = await response.json();
+    return { students: Array.isArray(data.students) ? data.students : [], total: Number(data.total) || 0 };
+  }
+
+  const assignPanel = assignTarget && snapshot ? (
+    <AssignPanel
+      key={assignTarget.key}
+      target={assignTarget}
+      entries={snapshot.entries}
+      busy={assignBusy}
+      error={assignError}
+      onSubmit={(request) => void assign(request)}
+      onCancel={() => setAssignTarget(null)}
+    />
+  ) : null;
   useEffect(() => { if (form) nameRef.current?.focus(); }, [form]);
 
   const selectedKind = kinds.find(item => item.value === kind)!;
@@ -174,6 +306,32 @@ export default function AcademicCatalogPage() {
         actions={<Button size="sm" onClick={() => { setName(''); setForm({ mode: 'add' }); setError(''); }} disabled={loading || !snapshot || saving}><Plus size={16} aria-hidden="true" />Add {selectedKind.singular}</Button>}
       />
 
+      {lastAssign && (
+        <div role="status" aria-label={lastAssign.undo ? 'Undone' : 'Assigned'}>
+          <Notice
+            tone={lastAssign.undo ? 'info' : 'success'}
+            title={lastAssign.undo ? 'Undone' : 'Assigned'}
+            action={lastAssign.undo
+              ? <Button variant="ghost" size="sm" onClick={() => setLastAssign(null)}>Dismiss</Button>
+              : <Button variant="outline" size="sm" loading={undoBusy} loadingLabel="Undoing…" onClick={() => void undoLast()}>Undo</Button>}
+          >
+            {lastAssign.undo ? (
+              <p>
+                {plural(lastAssign.undo.restoredCount, 'profile')} put back to “{lastAssign.typed}”.
+                {lastAssign.undo.keptCount ? ` ${plural(lastAssign.undo.keptCount, 'student')} had changed it since, so theirs stayed.` : ''}
+              </p>
+            ) : (
+              <p>
+                “{lastAssign.typed}” now points to {lastAssign.result.entryName}{lastAssign.result.departmentName ? ` (department ${lastAssign.result.departmentName})` : ''}. {plural(lastAssign.result.changedCount, 'profile')} updated.
+                {lastAssign.result.aliasNote ? ` ${lastAssign.result.aliasNote}` : ''}
+                {lastAssign.result.truncated ? ' More students have this name; assign it again to reach them.' : ''}
+              </p>
+            )}
+            {undoError ? <p role="alert" className="text-[var(--acade-danger)]">{undoError}</p> : null}
+          </Notice>
+        </div>
+      )}
+
       {/* Suggestions queue */}
       <Panel
         title="Pending suggestions"
@@ -195,28 +353,56 @@ export default function AcademicCatalogPage() {
           ) : suggestions.length === 0 ? (
             <p className="py-6 text-sm text-[var(--acade-text-muted)]">No pending suggestions.</p>
           ) : (
-            <ul className="mt-2 divide-y divide-[var(--acade-border-subtle)]">
-              {suggestions.map(suggestion => (
-                <li key={suggestion.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="break-words font-semibold text-[var(--acade-text)]">{suggestion.name}</p>
-                      <span className={cn(pillClass, 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]')}>{KIND_NAMES[suggestion.kind] ?? suggestion.kind}</span>
+            <ul aria-label="Pending suggestions" className="mt-2 divide-y divide-[var(--acade-border-subtle)]">
+              {suggestions.map(suggestion => {
+                const key = `suggestion:${suggestion.id}`;
+                const when = suggestedWhen(suggestion.createdAt);
+                return (
+                  <li key={suggestion.id} className="py-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="break-words font-semibold text-[var(--acade-text)]">{suggestion.name}</p>
+                          <span className={cn(pillClass, 'bg-[var(--acade-primary-dim)] text-[var(--acade-primary)]')}>{KIND_NAMES[suggestion.kind] ?? suggestion.kind}</span>
+                        </div>
+                        <p className="mt-0.5 text-[0.8125rem] text-[var(--acade-text-muted)]">
+                          Suggested by{' '}
+                          {suggestion.uid ? (
+                            <Link href={`/admin/users?uid=${encodeURIComponent(suggestion.uid)}`} className="font-medium text-[var(--acade-primary)] underline underline-offset-2">{suggestion.suggestedBy || 'a student'}</Link>
+                          ) : 'a student'}
+                          {when ? ` on ${when}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <Button size="sm" aria-label={`Assign ${suggestion.name}`} disabled={Boolean(moderatingId) || !snapshot} onClick={() => openAssign({ key, kind: suggestion.kind, name: suggestion.name, suggestionId: suggestion.id })}>Assign</Button>
+                        <Button variant="outline" size="sm" aria-label={`Approve ${suggestion.name}`} disabled={Boolean(moderatingId)} loading={moderatingId === suggestion.id} onClick={() => void moderate(suggestion, 'approve')}>Approve</Button>
+                        <Button variant="ghost" size="sm" aria-label={`Reject ${suggestion.name}`} disabled={Boolean(moderatingId)} onClick={() => void moderate(suggestion, 'reject')}>Reject</Button>
+                      </div>
                     </div>
-                    <p className="mt-0.5 break-all text-[0.8125rem] text-[var(--acade-text-muted)]">
-                      Suggested by {suggestion.uid}{suggestedWhen(suggestion.createdAt) ? ` on ${suggestedWhen(suggestion.createdAt)}` : ''}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button size="sm" aria-label={`Approve ${suggestion.name}`} disabled={Boolean(moderatingId)} loading={moderatingId === suggestion.id} onClick={() => void moderate(suggestion, 'approve')}>Approve</Button>
-                    <Button variant="outline" size="sm" aria-label={`Reject ${suggestion.name}`} disabled={Boolean(moderatingId)} onClick={() => void moderate(suggestion, 'reject')}>Reject</Button>
-                  </div>
-                </li>
-              ))}
+                    {assignTarget?.key === key ? <div className="mt-4">{assignPanel}</div> : null}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
       </Panel>
+
+      <TypedNamesPanel
+        rows={typedRows}
+        scanned={typedMeta.scanned}
+        truncated={typedMeta.truncated}
+        loading={typedLoading}
+        error={typedError}
+        onRetry={() => void loadTyped()}
+        busyKey={typedBusyKey}
+        assignKey={assignTarget?.key ?? null}
+        assignSlot={assignPanel}
+        onAssign={(row) => openAssign({ key: typedRowKey(row), kind: row.kind, name: row.name, count: row.count })}
+        onAdd={(row) => void typedAction(row, 'add')}
+        onIgnore={(row) => void typedAction(row, 'ignore')}
+        loadStudents={loadStudents}
+      />
 
       {/* Catalogue browser */}
       <Panel padded={false}>

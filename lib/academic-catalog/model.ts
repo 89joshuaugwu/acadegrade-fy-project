@@ -1,4 +1,4 @@
-import type { AcademicCatalogNames, PublicAcademicCatalog } from './merge';
+import type { AcademicCatalogAliases, AcademicCatalogNames, PublicAcademicCatalog } from './merge';
 
 export type CatalogKind = 'university' | 'department' | 'programme';
 export type CatalogStatus = 'active' | 'archived';
@@ -9,6 +9,8 @@ export interface CatalogEntry {
   name: string;
   status: CatalogStatus;
   source: 'default' | 'admin';
+  /** Other names students type for this entry ("ESUT"). Additive; see ./aliases. */
+  aliases?: string[];
 }
 
 export interface CatalogSnapshot {
@@ -52,12 +54,26 @@ export function createInitialCatalog(defaults: AcademicCatalogNames): CatalogSna
   };
 }
 
+/** Aliases of active entries by kind and name (an additive response field; old APKs ignore it). */
+function publicAliases(entries: CatalogEntry[]): AcademicCatalogAliases {
+  const aliases = { universities: {}, departments: {}, programmes: {} } as Record<keyof AcademicCatalogAliases, Record<string, string[]>>;
+  for (const [field, kind] of FIELDS) {
+    for (const entry of entries) {
+      if (entry.kind !== kind || entry.status !== 'active' || !Array.isArray(entry.aliases)) continue;
+      const list = entry.aliases.filter((alias): alias is string => typeof alias === 'string' && alias.trim().length > 0);
+      if (list.length) aliases[field][entry.name] = list;
+    }
+  }
+  return aliases;
+}
+
 export function publicCatalog(snapshot: CatalogSnapshot): PublicAcademicCatalog {
   return {
     revision: snapshot.revision,
     universities: snapshot.entries.filter((entry) => entry.kind === 'university' && entry.status === 'active').map((entry) => entry.name),
     departments: snapshot.entries.filter((entry) => entry.kind === 'department' && entry.status === 'active').map((entry) => entry.name),
     programmes: snapshot.entries.filter((entry) => entry.kind === 'programme' && entry.status === 'active').map((entry) => entry.name),
+    aliases: publicAliases(snapshot.entries),
   };
 }
 

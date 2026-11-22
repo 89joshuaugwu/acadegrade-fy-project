@@ -42,6 +42,16 @@ export function formatAcademicSession(startYear: number): string {
   return `${startYear}/${startYear + 1}`;
 }
 
+/**
+ * Formats a session as it is typed: "20222023" becomes "2022/2023". iPhone
+ * number pads have no "/" key, so the slash is added for the student. Same
+ * behaviour as the Android app.
+ */
+export function formatSessionInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  return digits.length <= 4 ? digits : `${digits.slice(0, 4)}/${digits.slice(4)}`;
+}
+
 export function graduationSession(entrySession: string, duration: number): string {
   const start = parseAcademicSession(entrySession);
   if (start == null) return '';

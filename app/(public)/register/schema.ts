@@ -10,6 +10,13 @@ import { buildAcademicSlots, parseAcademicSession } from '@/lib/academic/timelin
 
 const SESSION_MESSAGE = 'Use two years in a row, for example 2022/2023';
 
+/** Step 0, "What are you tracking?" (Phase 2). Absent means tertiary, as before. */
+export const step0Base = z.object({
+  recordType: z.enum(['tertiary', 'olevel', 'admission']).optional(),
+});
+
+export type RegistrationRecordType = NonNullable<z.infer<typeof step0Base>['recordType']>;
+
 export const step1Base = z.object({
   authMethod: z.enum(['email', 'google']),
   fullName: z.string().trim().min(2, 'Enter your full name').max(100, 'That name is too long'),
@@ -58,7 +65,8 @@ export const step4Base = z.object({
   })).optional(),
 });
 
-export const formSchema = step1Base
+export const formSchema = step0Base
+  .merge(step1Base)
   .merge(step2Base)
   .merge(step3Base)
   .merge(step4Base)
@@ -92,6 +100,34 @@ export const formSchema = step1Base
   });
 
 export type FormData = z.infer<typeof formSchema>;
+
+/**
+ * WAEC/NECO and JAMB accounts: the account fields without the matric number,
+ * plus age and terms. No university, timeline or past semesters.
+ */
+export const schoolSchema = step0Base
+  .merge(step1Base.omit({ matric: true }))
+  .merge(step3Base.pick({ age: true, termsAccepted: true, aiConsent: true }))
+  .refine((data) => data.authMethod !== 'email' || (!!data.password && data.password.length >= 8), {
+    message: 'Use at least 8 characters',
+    path: ['password'],
+  })
+  .refine((data) => data.authMethod !== 'email' || data.password === data.confirmPassword, {
+    message: "The two passwords don't match",
+    path: ['confirmPassword'],
+  });
+
+export const isSchoolRecordType = (value: unknown): value is 'olevel' | 'admission' => value === 'olevel' || value === 'admission';
+
+/** The rules for the chosen record type (the form resolver switches on it). */
+export function schemaFor(recordType: unknown): typeof formSchema | typeof schoolSchema {
+  return isSchoolRecordType(recordType) ? schoolSchema : formSchema;
+}
+
+/** The finalize request's `recordType` and `profile` for an O-level or admission account. */
+export function finalizeProfileFor(data: Pick<FormData, 'recordType' | 'fullName' | 'email'>) {
+  return { recordType: data.recordType, profile: { fullName: data.fullName, email: data.email } };
+}
 
 /** sessionStorage only: per tab, never localStorage (register.md §5.12). */
 export const REGISTRATION_DRAFT_KEY = 'acadegrade:registration-draft:v2';

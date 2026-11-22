@@ -1,5 +1,6 @@
 import { EXAMPLE_COURSES } from '@/lib/public/example-student';
 import { DEFAULT_SCALE, type PublicClassBand } from '@/lib/public/scales';
+import { ADMISSION_EXAMPLE, WAEC_EXAMPLE, admissionView, waecView } from './records-model';
 import { carryOverImpact, checkDegreeClass, requiredGpa, weightedAverageFromRows } from './tool-math';
 import type { ToolSlug } from './tools-config';
 
@@ -18,10 +19,10 @@ const range = (short: PublicClassBand['short']) => {
 export const HUB_COPY = {
   title: 'Free CGPA tools for Nigerian universities',
   description:
-    'Free CGPA tools for Nigerian university students: a CGPA calculator, degree class checker, required GPA, carry-over impact and weighted average score.',
+    'Free tools for Nigerian students: CGPA calculator, degree class, required GPA, carry-over, weighted average, WAEC credit checker and JAMB aggregate.',
   h1: 'Free CGPA tools',
   sentence:
-    'Work out your GPA and CGPA, check your class and see what next semester needs. Built for Nigerian universities. Free, and nothing you type is saved.',
+    'Work out your GPA and CGPA, check your class and see what next semester needs. Before university, check your WAEC credits and your admission aggregate. Free, and nothing you type is saved.',
   facts: ['No account needed', scale.line, "Personal estimates; your university's result is the official one"],
   shared: ['Answers appear as you type.', 'Nothing you type is saved or sent.', `${scale.line}.`, 'Personal estimates, not official results.'],
   close: 'Ready to keep every semester in one place?',
@@ -51,24 +52,32 @@ export function hubExample(slug: ToolSlug): { value: string; spoken: string } {
         spoken: `Example: an A on a 3-unit retake gives ${impact.bothAttemptsCount.toFixed(2)} or ${impact.replacesFailure.toFixed(2)}, depending on your school's rule.`,
       };
     }
+    case 'waec-credit-checker': {
+      const view = waecView(WAEC_EXAMPLE);
+      return { value: `${view.credits} credits`, spoken: `Example: two sittings combined give ${view.credits} credits, including English Language and Mathematics.` };
+    }
+    case 'admission-aggregate': {
+      const aggregate = admissionView(ADMISSION_EXAMPLE).aggregate!.toFixed(2);
+      return { value: aggregate, spoken: `Example: 268 in UTME, five O-level credits and 62 in post-UTME give an aggregate of ${aggregate} out of 100.` };
+    }
   }
 }
 
 export const HUB_FAQS: readonly { question: string; answer: string }[] = [
-  { question: 'Are these CGPA tools free?', answer: 'Yes. All five are free, need no account and work in any phone browser.' },
+  { question: 'Are these tools free?', answer: 'Yes. All seven are free, need no account and work in any phone browser.' },
   {
     question: 'Which grading scale do they use?',
-    answer: `The Nigerian university 5-point scale: A (70 to 100) is 5 points down to F (0 to 39) at 0, with classes from First Class (${range('1st')}) to Pass (${range('Pass')}), and PI beside your GPA. If your handbook differs, it is the final word.`,
+    answer: `The Nigerian university 5-point scale: A (70 to 100) is 5 points down to F (0 to 39) at 0, with classes from First Class (${range('1st')}) to Pass (${range('Pass')}), and PI beside your GPA. If your handbook differs, it is the final word. The WAEC credit checker uses the O-level letters A1 to F9, and the admission aggregate works out of 100.`,
   },
   {
     question: 'Do the tools save what I type?',
     answer:
-      'No. The four quick tools save nothing: close the page and it is gone. The CGPA calculator keeps your courses only if you choose "Save to your record", and then only on your device for 24 hours while you sign up.',
+      'No. The six quick tools save nothing: close the page and it is gone. The CGPA calculator keeps your courses only if you choose "Save to your record", and then only on your device for 24 hours while you sign up.',
   },
   {
     question: 'Which tool should I use?',
     answer:
-      'The CGPA calculator for a semester\'s courses; the degree class checker if you know your CGPA; Required GPA to plan for a target class; Carry-over impact before a retake; the weighted average score if a form asks for an average score.',
+      'The CGPA calculator for a semester\'s courses; the degree class checker if you know your CGPA; Required GPA to plan for a target class; Carry-over impact before a retake; the weighted average score if a form asks for an average score. Before university, the WAEC credit checker for your O-level and the admission aggregate for UTME and post-UTME.',
   },
   {
     question: 'Are the results official?',

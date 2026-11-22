@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import { requireAdmin } from '@/lib/api/admin-auth';
 import { writeAdminAudit } from '@/lib/api/admin-audit';
 import { DEFAULT_CATALOG } from '@/lib/academic-catalog/defaults';
+import { invalidateTypedNamesCache } from '@/lib/academic-catalog/typed-names';
 import { createInitialCatalog, mutateCatalog, type CatalogMutation, type CatalogSnapshot } from '@/lib/academic-catalog/model';
 
 const headers = { 'Cache-Control': 'private, no-store' };
@@ -57,6 +58,7 @@ export async function PATCH(request: Request) {
       transaction.set(reference, next);
       return next;
     });
+    invalidateTypedNamesCache();
     await writeAdminAudit({
       actorUid: actor?.uid, actorEmail: actor?.email ?? '', action: `academic-catalog.${mutation.action}`,
       target: 'id' in mutation ? `config/academicCatalog#${mutation.id}` : 'config/academicCatalog',

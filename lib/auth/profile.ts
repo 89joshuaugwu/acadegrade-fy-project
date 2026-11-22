@@ -15,6 +15,11 @@ export function isStudentProfileComplete(candidate: unknown): candidate is User 
   const profile = candidate as Partial<User>;
   if (profile.setupComplete === false) return false;
 
+  // WAEC/NECO and JAMB accounts (Phase 2) have no university profile: a name and email are enough.
+  if (profile.recordType === 'olevel' || profile.recordType === 'admission') {
+    return [profile.fullName, profile.email].every((value) => typeof value === 'string' && value.trim().length > 0);
+  }
+
   const requiredText = [
     profile.fullName,
     profile.email,
