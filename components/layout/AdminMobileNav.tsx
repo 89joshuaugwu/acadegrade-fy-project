@@ -1,5 +1,5 @@
-'use client';
-
+// Client module without its own 'use client': only AdminShell (a client component) imports it, so its
+// function props never cross the server boundary.
 import { forwardRef, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -224,7 +224,7 @@ export function AdminSectionsSheet({ open, onClose, pathname, badges, startWithF
               router.push(items[0].href);
               close();
             }}
-            className="h-12 w-full rounded-[12px] border border-white/12 bg-white/[0.06] pl-11 pr-4 text-base text-white placeholder:text-ag-mist-night focus:border-ag-gold/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-ag-gold/40 [&::-webkit-search-cancel-button]:appearance-none"
+            className="h-12 w-full rounded-[12px] border border-white/12 bg-white/[0.06] pl-11 pr-4 text-base text-white placeholder:text-ag-mist-night [&::-webkit-search-cancel-button]:appearance-none"
           />
         </div>
 

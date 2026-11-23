@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { signOut } from '@/lib/firebase/auth';
-import { removeNotificationToken } from '@/lib/firebase/fcm';
+import { removeNotificationTokenBeforeSignOut } from '@/lib/firebase/fcm';
 
 export const SIGN_OUT_COPY = {
   title: 'Sign out?',
@@ -28,7 +28,8 @@ export function SignOutDialog({ open, onClose, uid }: SignOutDialogProps) {
   async function confirmSignOut() {
     setBusy(true);
     try {
-      if (uid) await removeNotificationToken(uid);
+      // Capped (about 2 s): a slow network must never hold up signing out.
+      if (uid) await removeNotificationTokenBeforeSignOut(uid);
       await signOut();
       onClose();
     } catch (error) {

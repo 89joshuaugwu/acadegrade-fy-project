@@ -7,9 +7,11 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/admin/dashboard',
   useRouter: () => router,
 }));
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ loading: false, user: { uid: 'admin-1', email: 'admin@acadegrade.example', getIdToken: () => Promise.resolve('token') } }),
+// One stable user object: the layout re-verifies whenever `user` changes identity.
+const auth = vi.hoisted(() => ({
+  state: { loading: false, user: { uid: 'admin-1', email: 'admin@acadegrade.example', getIdToken: () => Promise.resolve('token') } },
 }));
+vi.mock('@/hooks/useAuth', () => ({ useAuth: () => auth.state }));
 vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 const firebaseAuth = vi.hoisted(() => ({ signOut: vi.fn(() => Promise.resolve()) }));
 vi.mock('@/lib/firebase/auth', () => firebaseAuth);

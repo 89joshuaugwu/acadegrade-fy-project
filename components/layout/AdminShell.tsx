@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
-import { removeNotificationToken } from '@/lib/firebase/fcm';
+import { removeNotificationTokenBeforeSignOut } from '@/lib/firebase/fcm';
 import { cn } from '@/lib/utils/cn';
 import { ThemeControl } from '@/components/ui/ThemeControl';
 import { RouteAnnouncer } from '@/components/shared/RouteAnnouncer';
@@ -57,7 +57,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     setSigningOut(true);
     try {
       if (user?.uid) {
-        await removeNotificationToken(user.uid);
+        await removeNotificationTokenBeforeSignOut(user.uid);
       }
       await signOut();
     } catch (error) {

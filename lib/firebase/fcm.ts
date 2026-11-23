@@ -200,7 +200,11 @@ export async function removeNotificationToken(uid: string, tokenOverride?: strin
     // ask the browser for the current token one more time
     if (!tokenToRemove && msg) {
       try {
-        const registration = await navigator.serviceWorker.ready;
+        // getRegistration() resolves at once (undefined when nothing is
+        // registered); `serviceWorker.ready` never resolves in that case and
+        // used to hang sign-out.
+        const registration = await navigator.serviceWorker?.getRegistration();
+        if (!registration) throw new Error('No service worker');
         tokenToRemove = await getToken(msg, {
           vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
           serviceWorkerRegistration: registration,
@@ -238,6 +242,31 @@ export async function removeNotificationToken(uid: string, tokenOverride?: strin
     sessionStorage.removeItem('acadegrade_fcm_token');
     // Reset the module-level messaging instance so the next user starts fresh
     messaging = null;
+  }
+}
+
+/** How long sign-out waits for notification cleanup before signing out anyway. */
+export const SIGN_OUT_CLEANUP_BUDGET_MS = 2000;
+
+/**
+ * Sign-out helper: removes this device's notification token, but never makes
+ * the student wait more than `budgetMs`. On a slow or offline connection the
+ * cleanup keeps going in the background (or is retried by the server when a
+ * push to the stale token fails); sign-out itself is never held up.
+ */
+export async function removeNotificationTokenBeforeSignOut(
+  uid: string,
+  budgetMs: number = SIGN_OUT_CLEANUP_BUDGET_MS,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cleanup = removeNotificationToken(uid).catch((error) => {
+    console.warn('[FCM] Token cleanup failed during sign-out:', error);
+  });
+  const budget = new Promise<void>((resolve) => { timer = setTimeout(resolve, budgetMs); });
+  try {
+    await Promise.race([cleanup, budget]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

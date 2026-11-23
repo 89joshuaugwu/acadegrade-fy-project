@@ -16,7 +16,7 @@ vi.mock('@/hooks/useReducedMotion', () => ({ useReducedMotion: () => true }));
 
 const firebaseAuth = vi.hoisted(() => ({ signOut: vi.fn(() => Promise.resolve()) }));
 vi.mock('@/lib/firebase/auth', () => firebaseAuth);
-vi.mock('@/lib/firebase/fcm', () => ({ removeNotificationToken: vi.fn(() => Promise.resolve()) }));
+vi.mock('@/lib/firebase/fcm', () => ({ removeNotificationTokenBeforeSignOut: vi.fn(() => Promise.resolve()) }));
 vi.mock('@/components/ui/ThemeControl', () => ({ ThemeControl: () => <div aria-label="Theme controls" /> }));
 
 import { AdminShell } from '@/components/layout/AdminShell';

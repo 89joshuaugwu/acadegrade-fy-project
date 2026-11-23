@@ -217,3 +217,9 @@
   border-color: rgba(255, 255, 255, 0.1);
   color: #ffffff;
 }
+
+/* One gold focus ring on the section finder instead of the global outline plus its own border. */
+.ag-admin-sheet input[type='search']:focus-visible {
+  outline: 2px solid #ffb23f;
+  outline-offset: 2px;
+}

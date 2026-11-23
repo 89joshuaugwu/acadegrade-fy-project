@@ -1,5 +1,5 @@
-'use client';
-
+// Client module without its own 'use client': only client components (AdminShell, the admin layout)
+// import it, so its function props never cross the server boundary.
 import { useRef } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';

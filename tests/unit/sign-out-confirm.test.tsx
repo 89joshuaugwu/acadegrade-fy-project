@@ -28,7 +28,7 @@ vi.mock('@/hooks/usePlatformSettings', () => ({
 vi.mock('@/lib/firebase/firestore', () => ({ getDocument: vi.fn().mockResolvedValue(null) }));
 vi.mock('@/lib/firebase/fcm', () => ({
   onForegroundMessage: () => () => undefined,
-  removeNotificationToken: mocks.removeNotificationToken,
+  removeNotificationTokenBeforeSignOut: mocks.removeNotificationToken,
 }));
 vi.mock('@/lib/firebase/auth', () => ({ signOut: mocks.signOut }));
 vi.mock('@/components/layout/NotificationDropdown', () => ({
