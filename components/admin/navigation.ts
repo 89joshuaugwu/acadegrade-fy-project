@@ -9,7 +9,13 @@ import {
  * This replaces `adminNavigation` in `lib/ui/route-meta.ts` for the admin
  * shell; that list is left untouched for any other reader.
  */
-export interface AdminNavItem { href: string; label: string; icon: LucideIcon }
+export interface AdminNavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  /** Shorter name for the phone bottom bar. */
+  shortLabel?: string;
+}
 export interface AdminNavGroup { label: string | null; items: AdminNavItem[] }
 
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
@@ -18,8 +24,8 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     label: 'Students',
     items: [
       { href: '/admin/users', label: 'Users', icon: Users },
-      { href: '/admin/academic-catalog', label: 'Academic catalogue', icon: BookOpen },
-      { href: '/admin/support', label: 'Support inbox', icon: LifeBuoy },
+      { href: '/admin/academic-catalog', label: 'Academic catalogue', shortLabel: 'Catalogue', icon: BookOpen },
+      { href: '/admin/support', label: 'Support inbox', shortLabel: 'Support', icon: LifeBuoy },
       { href: '/admin/share-codes', label: 'Share codes', icon: Share2 },
     ],
   },
@@ -50,6 +56,36 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   },
 ];
 
+const ALL_ITEMS = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
+
+/**
+ * The phone bottom bar: the four destinations used most (the daily glance, people, the queue students
+ * are waiting on, and catalogue suggestions to review). Everything else sits behind More.
+ */
+export const ADMIN_TAB_ITEMS: AdminNavItem[] = ['/admin/dashboard', '/admin/users', '/admin/support', '/admin/academic-catalog']
+  .map((href) => ALL_ITEMS.find((item) => item.href === href)!)
+  .filter(Boolean);
+
+/** True when the open section is not one of the bottom-bar tabs, so More carries the "you are here" mark. */
+export function isAdminRouteInMore(pathname: string) {
+  return !ADMIN_TAB_ITEMS.some((item) => isAdminRouteActive(pathname, item.href));
+}
+
+/** Sections whose name contains every word typed, in navigation order. */
+export function filterAdminNav(groups: AdminNavGroup[], query: string): AdminNavGroup[] {
+  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return groups;
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => {
+        const haystack = `${item.label} ${item.shortLabel ?? ''} ${group.label ?? ''}`.toLowerCase();
+        return words.every((word) => haystack.includes(word));
+      }),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
 /** Routes that exist but are not in the navigation. */
 const HIDDEN_ROUTE_TITLES: Record<string, string> = {
   '/admin/courses': 'Legacy course list',
@@ -69,6 +105,6 @@ export function isAdminRouteActive(pathname: string, href: string) {
 export function adminRouteTitle(pathname: string) {
   const current = cleanPath(pathname);
   if (HIDDEN_ROUTE_TITLES[current]) return HIDDEN_ROUTE_TITLES[current];
-  const item = ADMIN_NAV_GROUPS.flatMap((group) => group.items).find((entry) => isAdminRouteActive(current, entry.href));
+  const item = ALL_ITEMS.find((entry) => isAdminRouteActive(current, entry.href));
   return item?.label ?? 'Admin';
 }

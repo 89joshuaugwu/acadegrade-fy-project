@@ -55,8 +55,10 @@ export const RESET_COPY = {
 } as const;
 
 /** Step names: the step line and the screen-reader progress list. */
-export const REGISTER_STEPS_WITH_PAST = ['Your account', 'Where you study', 'Your record', 'Past semesters'] as const;
-export const REGISTER_STEPS_FRESH = ['Your account', 'Where you study', 'Your record'] as const;
+export const REGISTER_STEPS_WITH_PAST = ['What you track', 'Your account', 'Where you study', 'Your record', 'Past semesters'] as const;
+export const REGISTER_STEPS_FRESH = ['What you track', 'Your account', 'Where you study', 'Your record'] as const;
+/** WAEC/NECO and JAMB accounts skip the university and timeline steps. */
+export const REGISTER_STEPS_SCHOOL = ['What you track', 'Your account', 'Before you finish'] as const;
 export const RESET_STEPS = ['Your email', 'The code', 'New password'] as const;
 
 /* ------------------------------------------------------------- sign in */

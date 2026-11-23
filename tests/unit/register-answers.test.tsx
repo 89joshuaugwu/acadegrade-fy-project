@@ -137,4 +137,27 @@ describe('Registration answers', () => {
       privacy: { version: '2026-11-13' },
     });
   });
+  it('creates a WAEC/NECO account without academic fields or an AI choice', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+      step: 3,
+      values: { recordType: 'olevel', authMethod: 'google', fullName: 'Ada Example', email: 'ada@example.com' },
+    }));
+    render(<ThemeProvider attribute="class" defaultTheme="system"><RegisterPage /></ThemeProvider>);
+    await screen.findByRole('radiogroup', { name: 'How old are you?' }, { timeout: 8000 });
+    expect(screen.getByRole('heading', { level: 2, name: 'Before you finish' })).toBeInTheDocument();
+    expect(screen.getByText('Step 3 of 3')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('radio', { name: "I'm 18 or older" }));
+    expect(screen.queryByRole('checkbox', { name: /allow acadegrade to send my results/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('checkbox', { name: /i agree to the terms and privacy notice/i }));
+    await user.click(screen.getByRole('button', { name: /create my record/i }));
+
+    await waitFor(() => expect(finalizeBody(fetchMock)).not.toBeNull());
+    const body = finalizeBody(fetchMock);
+    expect(body.recordType).toBe('olevel');
+    expect(body.profile).toEqual({ fullName: 'Ada Example', email: 'ada@example.com' });
+    expect(body).not.toHaveProperty('pastSemesters');
+    expect(body.answers).toMatchObject({ age: 'adult', aiConsent: false });
+  });
 });

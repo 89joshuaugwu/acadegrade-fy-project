@@ -6,6 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { StudentShell } from '@/components/layout/StudentShell';
 import { GradingScaleProvider } from '@/hooks/useGradingScale';
+import { RecordTypeProvider } from '@/hooks/useRecordType';
+import { RecordTypeGate } from '@/components/records/RecordTypeGate';
 import { getDocument } from '@/lib/firebase/firestore';
 import { isStudentProfileComplete } from '@/lib/auth/profile';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
@@ -115,7 +117,12 @@ export default function StudentLayout({
 
   return (
     <GradingScaleProvider setting={profile?.gradingScale}>
-      <StudentShell>{children}</StudentShell>
+      <RecordTypeProvider value={profile?.recordType}>
+        <StudentShell>
+          {/* WAEC/NECO and JAMB accounts never open university pages, and the reverse. */}
+          <RecordTypeGate>{children}</RecordTypeGate>
+        </StudentShell>
+      </RecordTypeProvider>
       {/* "Finish setting up" for existing accounts; fails open when the endpoint is unavailable. */}
       <RequirementsGate />
     </GradingScaleProvider>

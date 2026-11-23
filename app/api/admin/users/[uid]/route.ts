@@ -8,6 +8,31 @@ import { currentAnswers } from '@/lib/user/requirements';
 import { toMillis } from '@/lib/admin/metrics';
 import { deviceTokens } from '@/lib/admin/user-devices';
 import { resolveGradingScale } from '@/lib/cgpa/academicRules';
+import { resolveRecordType } from '@/types/records';
+import { checkOlevelRequirements, parseStoredOlevelRecord } from '@/lib/records/olevelRules';
+import { computeAggregate } from '@/lib/records/admissionRules';
+import { aggregateInputFrom, parseStoredAdmissionRecord } from '@/lib/records/shape';
+
+/** Read-only summary of an O-level or admission account for the drawer (no grades listed). */
+async function recordSummary(userRef: FirebaseFirestore.DocumentReference) {
+  const [olevelSnap, admissionSnap] = await Promise.all([
+    userRef.collection('olevel').doc('current').get(),
+    userRef.collection('admission').doc('current').get(),
+  ]);
+  const olevel = olevelSnap.exists ? parseStoredOlevelRecord(olevelSnap.data()) : null;
+  const check = olevel ? checkOlevelRequirements(olevel.sittings, { required: olevel.targetCourse?.required ?? [] }) : null;
+  const admission = admissionSnap.exists ? parseStoredAdmissionRecord(admissionSnap.data()) : null;
+  const aggregate = admission ? computeAggregate(aggregateInputFrom(admission, olevel)) : null;
+  return {
+    olevel: olevel && check ? { sittings: check.sittingsUsed, credits: check.creditCount, meetsRule: check.meets } : null,
+    admission: admission && aggregate ? {
+      formula: admission.formula,
+      aggregate: aggregate.aggregate,
+      partial: aggregate.ok ? aggregate.partial : null,
+      complete: aggregate.complete,
+    } : null,
+  };
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -37,12 +62,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ uid:
     if (!snapshot.exists) return NextResponse.json({ error: 'User not found' }, { status: 404, headers });
     const data = (snapshot.data() ?? {}) as Record<string, unknown>;
     const answers = currentAnswers(data);
+    const recordType = resolveRecordType(data.recordType);
 
-    const [semesters, usage, walletSnap, ledgerSnap] = await Promise.all([
+    const [semesters, usage, walletSnap, ledgerSnap, records] = await Promise.all([
       userRef.collection('semesters').get(),
       getUsageSummary(uid),
       walletRef(adminDb, uid).get(),
       adminDb.collection('_coin_ledger').where('uidHash', '==', sha256(uid)).orderBy('at', 'desc').limit(LEDGER_LIMIT).get(),
+      recordType === 'tertiary' ? Promise.resolve(null) : recordSummary(userRef).catch(() => null),
     ]);
     const wallet = new WalletState(walletSnap.data() as ConstructorParameters<typeof WalletState>[0], Date.now());
 
@@ -64,7 +91,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ uid:
         marketingConsent: answers.marketingConsent,
         // Read-only: the scale's name (5-point when none is stored).
         gradingScale: resolveGradingScale(data.gradingScale).name,
+        recordType,
       },
+      // Phase 2: O-level and admission accounts only (null for university accounts).
+      records,
       academic: {
         semesterCount: semesters.size,
         completedCount: semesters.docs.filter((doc) => doc.data()?.isComplete === true).length,

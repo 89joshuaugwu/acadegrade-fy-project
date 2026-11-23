@@ -43,6 +43,16 @@ const renderDrawer = (onDeleted = vi.fn()) => {
 beforeEach(() => { posts = []; });
 
 describe('UserDetailDrawer', () => {
+  it.each([{ success: true }, null, { profile: null }, { profile: 'x' }])('shows the load error, not a crash, when the reply has no profile: %o', async (reply) => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => ({ ok: true, status: 200, json: async () => reply }) as Response);
+    renderDrawer();
+    const dialog = await screen.findByRole('dialog', { name: 'Student account' });
+    await within(dialog).findByText('This account could not be loaded. Nothing was changed.');
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
   it('shows the account without grades', async () => {
     mockFetch();
     renderDrawer();

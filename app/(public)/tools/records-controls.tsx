@@ -1,5 +1,3 @@
-'use client';
-
 import { useId, useMemo, useState, type ReactNode } from 'react';
 import { OLEVEL_GRADES, type OlevelGrade } from '@/lib/records/olevelRules';
 import { findOlevelSubject, normaliseSubjectKey, searchOlevelSubjects, type OlevelSubject } from '@/lib/records/olevelSubjects';

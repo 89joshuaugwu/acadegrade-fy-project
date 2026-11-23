@@ -30,8 +30,11 @@ export interface StoredAdmissionRecord {
   schemaVersion: 1;
   /** Whole number 0-400; absent until the student has it. */
   utme?: { score: number; year?: number };
-  /** Score 0..max (2 dp), max a whole number 1-400. */
-  postUtme?: { score: number; max: number };
+  /**
+   * Score 0..max (2 dp), max a whole number 1-400. The score is optional so the
+   * school's "out of" total can be saved before the result is out.
+   */
+  postUtme?: { score?: number; max: number };
   formula: AggregateFormulaId;
   /** Only for formula 'custom'. */
   weights?: AggregateWeights;
@@ -46,5 +49,7 @@ export interface StoredAdmissionRecord {
   /** Free text, at most 80 characters each; never looked up. */
   school?: string;
   course?: string;
+  /** The aggregate the student is aiming for, 0-100 (2 dp). */
+  target?: number;
   updatedAt: Timestamp;
 }

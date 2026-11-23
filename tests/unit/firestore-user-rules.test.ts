@@ -60,7 +60,7 @@ describe('new server-only collections and config/legal', () => {
     const block = text.slice(start, text.indexOf('// 7. Shared Transcripts', start));
 
     // Creating a code is refused while the admin has switched share_code off (admins always may).
-    expect(block).toMatch(/allow create: if isAdmin\(\) \|\| \(isAuthenticated\(\) && platformFeatureEnabled\('share_code'\)\);/);
+    expect(block).toContain("allow create: if isAdmin() || (isAuthenticated() && platformFeatureEnabled('share_code')");
     expect(text).toContain("function platformFeatureEnabled(feature) {");
     expect(text).toContain("get(/databases/$(database)/documents/config/settings).data.get('disabledFeatures', [])");
     // The platform settings document may not exist yet: that must not lock everyone out.
@@ -68,11 +68,33 @@ describe('new server-only collections and config/legal', () => {
 
     // A single code can be fetched by a signed-in user; nobody can list every code.
     // ... unless an admin disabled it (G7 moderation); a missing flag reads as enabled.
-    expect(block).toContain("allow get: if isAuthenticated() && resource.data.get('disabled', false) != true;");
+    expect(block).toContain("allow get: if isAuthenticated() && (resource == null || resource.data.get('disabled', false) != true);");
     expect(block).not.toMatch(/allow (read|list)\b/);
 
     // Importing still works: only the use counter may be updated by a non-admin.
     expect(block).toContain("hasOnly(['useCount'])");
+  });
+
+  it('share-code get of a code that does not exist is allowed, so the app can tell "not found" from denied', () => {
+    // Android probes candidate codes with get() before creating one, and both apps show
+    // "code not found" on import. Reading resource.data on a missing doc errors and denies.
+    const text = rules();
+    const block = text.slice(text.indexOf('match /shareCodes/{codeId} {'), text.indexOf('// 7. Shared Transcripts'));
+    expect(block).toContain('resource == null ||');
+    expect(block).not.toContain("allow get: if isAuthenticated() && resource.data.get('disabled', false) != true;");
+  });
+
+  it('share-code create must name the signed-in user as author (admins exempt)', () => {
+    const text = rules();
+    const block = text.slice(text.indexOf('match /shareCodes/{codeId} {'), text.indexOf('// 7. Shared Transcripts'));
+    expect(block).toContain("&& request.resource.data.get('authorId', '') == request.auth.uid);");
+  });
+
+  it('share-code update by a non-admin may only add one to useCount', () => {
+    const text = rules();
+    const block = text.slice(text.indexOf('match /shareCodes/{codeId} {'), text.indexOf('// 7. Shared Transcripts'));
+    expect(block).toContain("&& request.resource.data.useCount == resource.data.get('useCount', 0) + 1)");
+    expect(block).toContain('|| isAdmin();');
   });
 
   it('denies every client read and write to the email verification status', () => {
@@ -191,6 +213,14 @@ describe('Phase 2 record types: users/{uid}.recordType, olevel/current, admissio
     expect(text).toContain("d.pointTable in ['four-to-two', 'six-to-one', 'ten-to-five', 'custom']");
     expect(text).toContain('d.olevelGrades is list && d.olevelGrades.size() <= 5');
     for (let i = 0; i < 5; i += 1) expect(text).toContain(`validAdmissionGradeAt(d.olevelGrades, ${i})`);
+  });
+
+  it('keeps an optional target aggregate (0-100) and a post-UTME total saved before the score', () => {
+    const text = helpers();
+    expect(text).toContain("d.keys().hasOnly(['schemaVersion', 'utme', 'postUtme', 'formula', 'weights', 'pointTable', 'customPoints', 'olevelSource', 'olevelGrades', 'school', 'course', 'target', 'updatedAt'])");
+    expect(text).toContain("(!('target' in d) || (d.target is number && d.target >= 0 && d.target <= 100))");
+    expect(text).toContain("d.postUtme.keys().hasAll(['max'])");
+    expect(text).toContain("(!('score' in d.postUtme) || (d.postUtme.score is number && d.postUtme.score >= 0 && d.postUtme.score <= d.postUtme.max))");
   });
 
   it.each(['olevel', 'admission'])('users/{uid}/%s: one "current" document, owner writes, admin reads', (name) => {

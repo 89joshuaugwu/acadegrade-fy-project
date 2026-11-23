@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useWatch, FormProvider } from 'react-hook-form';
+import { useForm, useWatch, FormProvider, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,7 @@ import {
   REGISTER_COPY,
   REGISTER_REVIEW,
   REGISTER_STEPS_FRESH,
+  REGISTER_STEPS_SCHOOL,
   REGISTER_STEPS_WITH_PAST,
   messageForFinalizeError,
   type AuthNotice,
@@ -36,12 +37,17 @@ import { FilledSoFar, StepProgress, type FilledLine } from '@/components/site/au
 import { FALLBACK_LEGAL_VERSIONS, buildRegistrationAnswers, loadLegalVersions } from './consent';
 import {
   REGISTRATION_DRAFT_KEY,
+  finalizeProfileFor,
   formSchema,
+  isSchoolRecordType,
+  readLinkedRecordType,
+  schemaFor,
   withoutRegistrationSecrets,
   type FormData,
   type SafeRegistrationDraft,
 } from './schema';
-import { Step1Account, Step2Study, Step3Record, Step4Past } from './steps';
+import { Step0Track, Step1Account, Step2Study, Step3Record, Step4Past } from './steps';
+import { RECORD_TYPE_COPY } from '@/lib/records/navigation';
 
 interface PublicSettings {
   maintenanceMode?: boolean;
@@ -52,13 +58,22 @@ interface PublicSettings {
 // The desktop panel shows the 'auth.register' image.
 const AUTH_PHOTO = 'auth.register' as const;
 
+/** The tertiary rules (unchanged) or the WAEC/NECO and JAMB rules, by the chosen record type. */
+const registrationResolver: Resolver<FormData> = (values, context, options) =>
+  (zodResolver(schemaFor(values.recordType) as typeof formSchema) as Resolver<FormData>)(values, context, options);
+
 function filledLines(values: Partial<FormData>, step: number): FilledLine[] {
   const lines: FilledLine[] = [];
   const join = (parts: (string | number | undefined | null)[]) => parts.filter((part) => part !== undefined && part !== null && String(part).trim() !== '').join(', ');
+  const school = isSchoolRecordType(values.recordType);
+  if (step >= 1) {
+    lines.push({ label: 'What you track', value: RECORD_TYPE_COPY[values.recordType ?? 'tertiary'].title });
+  }
   if (step >= 2) {
-    const account = join([values.fullName, values.matric, values.email]);
+    const account = join([values.fullName, school ? null : values.matric, values.email]);
     lines.push({ label: 'Your account', value: values.authMethod === 'google' ? `${account} (with Google)` : account });
   }
+  if (school) return lines;
   if (step >= 3) {
     lines.push({
       label: 'Where you study',
@@ -76,7 +91,8 @@ export default function RegisterWizard() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
-  const [currentStep, setCurrentStep] = useState(1);
+  // Step 0 is "What are you tracking?" (Phase 2).
+  const [currentStep, setCurrentStep] = useState(0);
   const [navigated, setNavigated] = useState(false);
   const [pageNotice, setPageNotice] = useState<AuthNotice | null>(null);
   const [emailChecked, setEmailChecked] = useState(false);
@@ -98,9 +114,10 @@ export default function RegisterWizard() {
   const draftRestored = useRef(false);
 
   const methods = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: registrationResolver,
     mode: 'onTouched',
     defaultValues: {
+      recordType: 'tertiary',
       authMethod: 'email',
       // Owner decision C13: the University field starts empty (was "ESUT Agbani").
       university: '',
@@ -112,6 +129,8 @@ export default function RegisterWizard() {
   });
 
   const recordMode = useWatch({ control: methods.control, name: 'recordMode' });
+  const recordType = useWatch({ control: methods.control, name: 'recordType' });
+  const school = isSchoolRecordType(recordType);
 
   const [legalVersions, setLegalVersions] = useState<LegalVersions>(FALLBACK_LEGAL_VERSIONS);
   useEffect(() => {
@@ -152,12 +171,16 @@ export default function RegisterWizard() {
           confirmPassword: '',
           verificationToken: undefined,
         });
-        setCurrentStep(signedInWithGoogle ? Math.max(1, Math.min(4, Number(draft.step) || 1)) : 1);
+        const draftStep = Math.max(0, Math.min(4, Number(draft.step) || 0));
+        setCurrentStep(signedInWithGoogle ? draftStep : Math.min(1, draftStep));
         setRestored(signedInWithGoogle ? 'google' : 'email');
       }
     } catch {
       sessionStorage.removeItem(REGISTRATION_DRAFT_KEY);
     } finally {
+      // The free WAEC and JAMB tools link to /register?type=olevel|admission: preselect it. Unknown values are ignored.
+      const linkedType = readLinkedRecordType(window.location.search);
+      if (linkedType) methods.setValue('recordType', linkedType);
       draftRestored.current = true;
     }
   }, [authLoading, profileLoading, user, methods]);
@@ -217,7 +240,14 @@ export default function RegisterWizard() {
       const response = await fetch('/api/auth/register/finalize', {
         method: 'POST',
         headers,
-        body: JSON.stringify({
+        body: JSON.stringify(isSchoolRecordType(data.recordType) ? {
+          authMethod: data.authMethod,
+          verificationToken: data.verificationToken,
+          password: data.authMethod === 'email' ? data.password : undefined,
+          ...finalizeProfileFor(data),
+          // No AI for WAEC/NECO and JAMB accounts: no AI consent is asked or sent.
+          answers: buildRegistrationAnswers({ age: data.age, aiConsent: false }, legalVersions),
+        } : {
           authMethod: data.authMethod,
           verificationToken: data.verificationToken,
           password: data.authMethod === 'email' ? data.password : undefined,
@@ -251,7 +281,7 @@ export default function RegisterWizard() {
         await signInWithEmail(data.email.trim().toLowerCase(), data.password!);
       }
 
-      if (suggestToCatalog) {
+      if (suggestToCatalog && !isSchoolRecordType(data.recordType)) {
         const token = await getIdToken();
         if (token) {
           const suggestions = missingAcademicNames(data, academicCatalog);
@@ -379,8 +409,12 @@ export default function RegisterWizard() {
     );
   }
 
-  // An honest count that only shrinks: "of 4" until the record choice, then "of 3" while starting fresh.
-  const steps = currentStep >= 3 && recordMode === 'fromScratch' ? REGISTER_STEPS_FRESH : REGISTER_STEPS_WITH_PAST;
+  // An honest count that only shrinks: "of 5" until the record choice, then "of 4" while starting fresh.
+  // WAEC/NECO and JAMB accounts have three steps: steps 0, 1 and 3 of the wizard.
+  const steps = school
+    ? REGISTER_STEPS_SCHOOL
+    : currentStep >= 3 && recordMode === 'fromScratch' ? REGISTER_STEPS_FRESH : REGISTER_STEPS_WITH_PAST;
+  const progressStep = school ? (currentStep >= 3 ? 3 : currentStep + 1) : currentStep + 1;
   const stepMotion = { focusOnMount: navigated, enter: navigated };
   const lines = !isSuccess && !isSubmitting ? filledLines(methods.getValues(), currentStep) : [];
 
@@ -420,6 +454,8 @@ export default function RegisterWizard() {
         <p className="text-[0.9375rem] text-ag-mist">Keep this page open. It takes a few seconds.</p>
       </div>
     );
+  } else if (currentStep === 0) {
+    content = <Step0Track key="step0" motion={stepMotion} onNext={() => goTo(1)} />;
   } else if (currentStep === 1) {
     content = (
       <Step1Account
@@ -427,9 +463,11 @@ export default function RegisterWizard() {
         motion={stepMotion}
         pageNotice={pageNotice}
         onPaused={() => setSignupsDisabled(true)}
+        onBack={() => goTo(0)}
         onNext={(fromCode) => {
           setEmailChecked(fromCode);
-          goTo(2);
+          // WAEC/NECO and JAMB accounts skip "Where you study".
+          goTo(school ? 3 : 2);
         }}
       />
     );
@@ -454,7 +492,7 @@ export default function RegisterWizard() {
     );
   } else if (currentStep === 3) {
     content = (
-      <Step3Record key="step3" motion={stepMotion} pageNotice={pageNotice} onNext={() => goTo(4)} onSubmit={submitRegistration} onBack={() => goTo(2)} />
+      <Step3Record key="step3" school={school} motion={stepMotion} pageNotice={pageNotice} onNext={() => goTo(4)} onSubmit={submitRegistration} onBack={() => goTo(school ? 1 : 2)} />
     );
   } else {
     content = <Step4Past key="step4" motion={stepMotion} pageNotice={pageNotice} onNext={submitRegistration} onBack={() => goTo(3)} />;
@@ -466,7 +504,7 @@ export default function RegisterWizard() {
       sentence={header}
       photo={AUTH_PHOTO}
       reassurance={REGISTER_COPY.reassurance}
-      progress={<StepProgress steps={steps} current={Math.min(currentStep, steps.length)} done={isSuccess} label="Registration progress" />}
+      progress={<StepProgress steps={steps} current={Math.min(progressStep, steps.length)} done={isSuccess} label="Registration progress" />}
       below={isSuccess ? undefined : below}
     >
       <div className="flex flex-col gap-6">

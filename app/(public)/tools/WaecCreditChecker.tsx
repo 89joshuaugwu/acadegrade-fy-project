@@ -8,7 +8,7 @@ import { PANEL_CLASS, ToolStage, UnderNote } from '@/components/site/tools/frame
 import { TButton, textButtonClass } from '@/components/site/tools/controls';
 import { Announcer, useQueryOnce, useTween } from '@/components/site/tools/hooks';
 import { ReceiptCard, ReceiptRows } from '@/components/site/tools/Receipt';
-import { ClassPill, GaugeFigure, NightCard } from '@/components/site/tools/result';
+import { ClassPill, GaugeFigure, MiniArc, NightCard, SummaryStrip } from '@/components/site/tools/result';
 import { NO_VALUE } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
 import { decodeOlevelLink, encodeOlevelLink, registerHref, REQUIRED_SUBJECTS_MAX, type OlevelLink } from '@/components/public/tools/records-url';
@@ -63,6 +63,16 @@ const rowId = (row: RowState) => subjectIdFor(row.text);
 /** The catalogue name for a typed alias ("Eng Lang" → English Language), else the text as typed. */
 const rowName = (row: RowState) => findOlevelSubject(row.text)?.name ?? row.text.trim();
 
+/**
+ * The first render's sitting, with fixed (negative) keys: the server and the
+ * browser must print the same ids, and the running counter differs between
+ * them. Keys made later come from the counter and are positive, so they never clash.
+ */
+const initialSittings = (): SittingState[] => {
+  const sitting = freshSitting(true);
+  return [{ ...sitting, key: -1, rows: sitting.rows.map((row, index) => ({ ...row, key: -2 - index })) }];
+};
+
 function stateFromLink(link: OlevelLink): { sittings: SittingState[]; required: string[] } {
   const sittings = link.sittings.slice(0, 2).map((sitting) => ({
     key: nextKey++,
@@ -102,7 +112,7 @@ function duplicateError(rows: readonly RowState[], index: number): string | null
 
 export function WaecCreditChecker() {
   const { user } = useAuth();
-  const [sittings, setSittings] = useState<SittingState[]>(() => [freshSitting(true)]);
+  const [sittings, setSittings] = useState<SittingState[]>(initialSittings);
   const [required, setRequired] = useState<string[]>([]);
   const [courseText, setCourseText] = useState('');
   const [note, setNote] = useState<string | null>(null);
@@ -180,6 +190,15 @@ export function WaecCreditChecker() {
       <ToolStage label="WAEC credit checker" after={<UnderNote>A personal guide, not an official result. Nothing you type is saved.</UnderNote>}>
         <div className={`${PANEL_CLASS} grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,23.5rem)] lg:gap-x-10`}>
           <div className="min-w-0">
+            <SummaryStrip>
+              <MiniArc value={view.started ? view.credits : null} max={OLEVEL_MAX_SUBJECTS} />
+              <p className="min-w-0 text-[0.9375rem] leading-snug">
+                <span className="font-semibold">{view.started ? `${view.credits} credit${view.credits === 1 ? '' : 's'}` : 'No grades yet'}</span>
+                <span className="block text-[0.8125rem] text-ag-mist-night">
+                  {view.started ? (view.meets ? 'English and Maths included' : 'Not yet five with English and Maths') : 'Your credits appear here'}
+                </span>
+              </p>
+            </SummaryStrip>
             <h2 className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">Your O-level grades</h2>
             <p className="mt-1 max-w-[36rem] text-[0.9375rem] text-ag-mist">
               One row per subject, as it is on your result. Add a second sitting if you are combining two.
@@ -358,7 +377,7 @@ export function WaecCreditChecker() {
                 caption="Credits"
                 label={view.started ? `${view.credits} credits, A1 to C6` : 'No grades yet'}
                 max={OLEVEL_MAX_SUBJECTS}
-                ticks={[view.minCredits]}
+                ticks={[]}
                 intro
               />
               <div className="mt-1 text-center" key={pillText}>

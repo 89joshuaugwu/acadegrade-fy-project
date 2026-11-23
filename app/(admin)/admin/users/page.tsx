@@ -28,6 +28,8 @@ interface UserRecord {
   /** The student's grading scale name and top point (absent from older servers: 5-point). */
   gradingScale?: string;
   gradingScaleMax?: number;
+  /** Phase 2: what the account tracks; absent from older servers (tertiary). */
+  recordType?: 'tertiary' | 'olevel' | 'admission';
   semesterCount: number;
   disabled: boolean;
   /** From the admin users API: 'unknown' for accounts that have not answered yet. */
@@ -318,13 +320,18 @@ export default function AdminUsersPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-center gap-2">
                           <span className="truncate text-[0.9375rem] font-semibold text-[var(--acade-text)]">{u.fullName}</span>
+                          {u.recordType === 'olevel' || u.recordType === 'admission' ? (
+                            <span className="shrink-0 rounded-full bg-[var(--acade-info-dim)] px-2 py-0.5 text-xs font-medium text-[var(--acade-info)]">
+                              {u.recordType === 'olevel' ? 'O-level' : 'Admission'}
+                            </span>
+                          ) : null}
                           {u.ageStatus === 'minor' ? <span className="shrink-0 rounded-full bg-[var(--acade-gold-dim)] px-2 py-0.5 text-xs font-medium text-[var(--acade-warning)]">Under 18</span> : null}
                           {u.disabled && <StatusPill disabled className="shrink-0 md:hidden" />}
                         </div>
                         <p className="hidden truncate text-[0.8125rem] text-[var(--acade-text-muted)] md:block">{u.email}</p>
                         {/* Small screens hide the columns; keep their facts on a second line. */}
                         <p className="mt-0.5 truncate text-[0.8125rem] text-[var(--acade-text-muted)] tabular-nums md:hidden">
-                          {u.department || 'No department'}, {u.currentLevel}L, CGPA {formatCgpa(u.cgpa)}{u.gradingScaleMax && u.gradingScaleMax !== 5 ? ` of ${u.gradingScaleMax}` : ''}
+                          {u.recordType === 'olevel' ? 'Tracks WAEC/NECO results' : u.recordType === 'admission' ? 'Tracks a JAMB aggregate' : <>{u.department || 'No department'}, {u.currentLevel}L, CGPA {formatCgpa(u.cgpa)}{u.gradingScaleMax && u.gradingScaleMax !== 5 ? ` of ${u.gradingScaleMax}` : ''}</>}
                         </p>
                       </div>
                       <ChevronDown size={18} aria-hidden="true" className={cn('shrink-0 text-[var(--acade-text-muted)] transition-transform md:hidden', expanded && 'rotate-180')} />

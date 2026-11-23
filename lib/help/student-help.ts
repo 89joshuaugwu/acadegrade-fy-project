@@ -11,8 +11,8 @@ import webOnly from './web-help.json';
 import type { HelpEntry, HelpId, HelpSource } from './types';
 
 /** sha256 of student-help.json with CRLF normalised to LF; matches the Android lock file. */
-export const STUDENT_HELP_SHA256 = '36c5e99177d31144fa14936d576644084b58348694ae66c73a821d81b4293519';
-export const STUDENT_HELP_CONTENT_VERSION = '2026-11-22.1';
+export const STUDENT_HELP_SHA256 = 'df5e61201c2bd2fe3079be7f9c9b8b3709fb382a80d9cf8b7d14bfe4665dcd29';
+export const STUDENT_HELP_CONTENT_VERSION = '2026-11-23.1';
 
 /** Help ids for each authenticated student page (spec 4.4). */
 export const STUDENT_HELP = {
@@ -24,6 +24,9 @@ export const STUDENT_HELP = {
   transcript: 'student.transcript',
   notifications: 'student.notifications',
   settings: 'student.settings',
+  olevel: 'student.olevel',
+  admission: 'student.admission',
+  recordType: 'student.record-type',
 } as const satisfies Record<string, HelpId>;
 
 export type InsightsHelpTab = 'forecast' | 'whatif' | 'risk' | 'analysis';
@@ -62,6 +65,8 @@ const ROUTES: Record<string, string> = {
   'student.transcript': '/transcript',
   'student.notifications': '/notifications',
   'student.settings': '/settings',
+  'student.olevel': '/olevel',
+  'student.admission': '/admission',
 };
 
 export const studentHelpSource: HelpSource = {

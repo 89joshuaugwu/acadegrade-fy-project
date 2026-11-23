@@ -293,7 +293,7 @@ export function admissionView(link: AdmissionLink): AdmissionView {
   });
 
   const missing = result?.missing ?? [];
-  const missingLine = result && !result.complete && missing.length ? `Add ${listWords(missing.map((part) => PART_MISSING[part]))} to finish.` : null;
+  const missingLine = result && result.steps.length > 0 && !result.complete && missing.length ? `Add ${listWords(missing.map((part) => PART_MISSING[part]))} to finish.` : null;
   const aggregate = result?.aggregate ?? null;
   const partial = result?.partial ?? 0;
   const started = steps.length > 0;

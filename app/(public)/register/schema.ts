@@ -124,6 +124,12 @@ export function schemaFor(recordType: unknown): typeof formSchema | typeof schoo
   return isSchoolRecordType(recordType) ? schoolSchema : formSchema;
 }
 
+/** `?type=olevel|admission|tertiary` from a sign-up link (the free WAEC and JAMB tools), or null. */
+export function readLinkedRecordType(search: string): RegistrationRecordType | null {
+  const value = new URLSearchParams(search).get('type');
+  return value === 'olevel' || value === 'admission' || value === 'tertiary' ? value : null;
+}
+
 /** The finalize request's `recordType` and `profile` for an O-level or admission account. */
 export function finalizeProfileFor(data: Pick<FormData, 'recordType' | 'fullName' | 'email'>) {
   return { recordType: data.recordType, profile: { fullName: data.fullName, email: data.email } };

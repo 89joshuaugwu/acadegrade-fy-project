@@ -209,3 +209,11 @@
     transition: none;
   }
 }
+
+/* ---------- Phone navigation sheets: a Night panel, like the rail ---------- */
+
+.ag-admin-sheet {
+  background: #0e0b2b;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}

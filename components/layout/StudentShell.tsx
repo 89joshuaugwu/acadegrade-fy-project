@@ -4,23 +4,25 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut, X, AlertTriangle, Megaphone } from 'lucide-react';
+import { Menu, LayoutDashboard, BookOpen, BrainCircuit, FileText, Settings, Bell, LogOut, X, AlertTriangle, Megaphone, ClipboardList, Target } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
-import { signOut } from '@/lib/firebase/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { getDocument } from '@/lib/firebase/firestore';
-import { onForegroundMessage, removeNotificationToken } from '@/lib/firebase/fcm';
+import { onForegroundMessage } from '@/lib/firebase/fcm';
 import { loadActiveAnnouncements } from '@/lib/announcements/client';
 import toast from 'react-hot-toast';
 import { MobileDrawer } from './MobileDrawer';
+import { SignOutDialog } from './SignOutDialog';
 import { BottomTabBar } from './BottomTabBar';
 import { NotificationDropdown } from './NotificationDropdown';
 import { StudentTour } from '@/components/onboarding/StudentTour';
 import { Logo, ThemeControl } from '@/components/ui';
 import { RouteAnnouncer } from '@/components/shared';
-import { getRouteMeta, isRouteActive, studentNavigation, type NavigationIcon } from '@/lib/ui/route-meta';
+import { getRouteMeta, isRouteActive, type NavigationIcon } from '@/lib/ui/route-meta';
+import { navigationFor } from '@/lib/records/navigation';
+import { useRecordType } from '@/hooks/useRecordType';
 import { cn } from '@/lib/utils/cn';
 import { DiscreetToggle } from '@/components/privacy/DiscreetToggle';
 
@@ -35,6 +37,8 @@ const STUDENT_ICONS: Record<NavigationIcon, React.ElementType> = {
   activity: BrainCircuit,
   ads: Megaphone,
   ai: BrainCircuit,
+  olevel: ClipboardList,
+  admission: Target,
   settings: Settings,
 };
 
@@ -45,6 +49,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
   const { unreadCount } = useNotifications();
   const { insightsStale } = useAnalytics();
   const pathname = usePathname();
+  // WAEC/NECO and JAMB accounts only see the tabs that mean something for them.
+  const navigation = navigationFor(useRecordType());
   const routeMeta = getRouteMeta(pathname);
   const [announcement, setAnnouncement] = useState<string | null>(null);
 
@@ -104,16 +110,8 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSignOut = async () => {
-    try {
-      if (user?.uid) {
-        await removeNotificationToken(user.uid);
-      }
-      await signOut();
-    } catch (error) {
-      console.error('Failed to sign out', error);
-    }
-  };
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const handleSignOut = () => setConfirmSignOut(true);
 
   return (
     <div className="ag-app flex min-h-screen w-full min-w-0 max-w-full flex-col overflow-x-clip bg-[var(--acade-void)] font-[family-name:var(--font-geist-sans)] lg:flex-row">
@@ -156,7 +154,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
             Workspace
           </p>
           <nav id="tour-sidebar-nav" aria-label="Primary" className="flex flex-col gap-1">
-            {studentNavigation.map((tab) => {
+            {navigation.map((tab) => {
               const active = isRouteActive(pathname, tab.href);
               const Icon = STUDENT_ICONS[tab.icon];
               return (
@@ -323,6 +321,7 @@ export function StudentShell({ children }: { children: React.ReactNode }) {
         profile={profile}
         unreadCount={unreadCount}
       />
+      <SignOutDialog open={confirmSignOut} onClose={() => setConfirmSignOut(false)} uid={user?.uid} />
       <BottomTabBar />
       <StudentTour />
     </div>

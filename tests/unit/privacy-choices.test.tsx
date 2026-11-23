@@ -28,10 +28,10 @@ function json(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } }));
 }
 
-function setup(profile: Record<string, unknown>) {
+function setup(profile: Record<string, unknown>, aiAvailable?: boolean) {
   const fetchMock = vi.fn((url: string) => json(url === '/api/user/age' ? { ageStatus: 'adult', aiAllowed: false } : { items: [], checkedAt: 1 }));
   vi.stubGlobal('fetch', fetchMock);
-  render(<PrivacyChoices uid="u1" profile={profile} getToken={() => Promise.resolve('tok')} readers={readers} />);
+  render(<PrivacyChoices uid="u1" profile={profile} getToken={() => Promise.resolve('tok')} readers={readers} aiAvailable={aiAvailable} />);
   return fetchMock;
 }
 
@@ -49,6 +49,21 @@ afterEach(() => {
 });
 
 describe('PrivacyChoices', () => {
+  it.each([{ ageStatus: 'adult', aiConsent: true }, { ageStatus: 'minor' }, {}])('hides every AI part for accounts without AI (O-level and admission): %o', (profile) => {
+    setup(profile, false);
+    const section = screen.getByRole('region', { name: 'Privacy choices' });
+    expect(within(section).queryByText('AI analysis and result scanning')).not.toBeInTheDocument();
+    expect(within(section).queryByText('Confirm your age')).not.toBeInTheDocument();
+    expect(within(section).queryByText('Your age')).not.toBeInTheDocument();
+    expect(within(section).queryByText(MINOR_NOTICE)).not.toBeInTheDocument();
+    expect(within(section).queryByText(/AI/)).not.toBeInTheDocument();
+    // The non-AI controls stay.
+    expect(within(section).getByText('Product news by email')).toBeInTheDocument();
+    expect(within(section).getByText('Discreet mode on this device')).toBeInTheDocument();
+    expect(within(section).getByRole('button', { name: 'Cookie choices' })).toBeInTheDocument();
+    expect(within(section).getByRole('button', { name: 'Download my data' })).toBeInTheDocument();
+  });
+
   it('is the #privacy section with Terms and Privacy links and Cookie choices', () => {
     setup({ ageStatus: 'adult' });
     const section = screen.getByRole('region', { name: 'Privacy & AI choices' });

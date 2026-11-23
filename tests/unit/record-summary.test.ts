@@ -57,6 +57,8 @@ describe('describeOlevel', () => {
     const status = describeOlevel(record);
     expect(status.state).toBe('short');
     expect(status.missing).toEqual(['Economics', 'Geography or Government']);
+    expect(status.headline).toBe('5 credits, but no credit in Economics and Geography or Government');
+    expect(status.detail).toBe('You have five credits with English and Maths. Your course also needs these subjects.');
   });
 });
 

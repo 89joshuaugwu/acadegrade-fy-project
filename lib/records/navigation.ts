@@ -35,20 +35,23 @@ export function pageRecordType(pathname: string, recordType: RecordType): Record
 }
 
 /** Plain names for each type: registration, settings and admin use the same words. */
-export const RECORD_TYPE_COPY: Record<RecordType, { title: string; line: string; short: string }> = {
+export const RECORD_TYPE_COPY: Record<RecordType, { title: string; line: string; short: string; phrase: string }> = {
   tertiary: {
     title: 'University, polytechnic or college results',
     line: 'GPA, CGPA and your class of degree, semester by semester.',
     short: 'University',
+    phrase: 'university, polytechnic or college results',
   },
   olevel: {
     title: 'WAEC or NECO results',
     line: 'Your O-level grades from up to two sittings, and whether you have five credits with English and Maths.',
     short: 'O-level',
+    phrase: 'WAEC or NECO results',
   },
   admission: {
     title: 'JAMB and admission',
     line: 'Your UTME, post-UTME and O-level grades worked into an admission aggregate.',
     short: 'Admission',
+    phrase: 'a JAMB admission aggregate',
   },
 };

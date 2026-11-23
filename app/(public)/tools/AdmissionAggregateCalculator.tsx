@@ -8,7 +8,7 @@ import { PANEL_CLASS, ToolStage, UnderNote } from '@/components/site/tools/frame
 import { TField, textButtonClass } from '@/components/site/tools/controls';
 import { Announcer, useQueryOnce, useTween } from '@/components/site/tools/hooks';
 import { ReceiptCard, ReceiptRows, type ReceiptGroup } from '@/components/site/tools/Receipt';
-import { ClassPill, GaugeFigure, NightCard } from '@/components/site/tools/result';
+import { ClassPill, GaugeFigure, MiniArc, NightCard, SummaryStrip } from '@/components/site/tools/result';
 import { NO_VALUE } from '@/components/public/tools/calculator-model';
 import { trackToolEvent } from '@/components/public/tools/track';
 import {
@@ -122,6 +122,13 @@ export function AdmissionAggregateCalculator() {
       <ToolStage label="Admission aggregate" after={<UnderNote>A personal estimate, not an official result. Nothing you type is saved.</UnderNote>}>
         <div className={`${PANEL_CLASS} grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,23.5rem)] lg:gap-x-10`}>
           <div className="@container min-w-0">
+            <SummaryStrip>
+              <MiniArc value={headline} max={100} />
+              <p className="min-w-0 text-[0.9375rem] leading-snug">
+                <span className="ag-num font-semibold">{headline === null ? 'No aggregate yet' : `${headline.toFixed(2)} of 100`}</span>
+                <span className="block text-[0.8125rem] text-ag-mist-night">{complete ? 'Aggregate, an estimate' : view.started ? 'So far' : 'Add your UTME score'}</span>
+              </p>
+            </SummaryStrip>
             <h2 className="ag-display text-[1.75rem] font-bold leading-tight text-ag-ink sm:text-[2rem]">Your scores</h2>
             <p className="mt-1 max-w-[36rem] text-[0.9375rem] text-ag-mist">Pick the formula your school uses, then add your scores. Leave out what you don't have yet.</p>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">

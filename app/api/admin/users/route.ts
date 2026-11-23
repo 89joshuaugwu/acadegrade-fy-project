@@ -11,6 +11,7 @@ import { readAgeStatusFrom, readAiConsent } from '@/lib/user/requirements';
 import { computeCumulativeCGPA, resolveGradingScale } from '@/lib/cgpa/academicRules';
 import { AdminAuthorizationError, requireAdmin } from '@/lib/api/admin-auth';
 import { toMillis } from '@/lib/admin/metrics';
+import { resolveRecordType } from '@/types/records';
 import type { DocumentSnapshot, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 const noStore = { 'Cache-Control': 'private, no-store' };
@@ -49,6 +50,8 @@ async function toUserRow(doc: QueryDocumentSnapshot | DocumentSnapshot) {
     // Read-only scale name, so the CGPA is read on the right scale.
     gradingScale: resolveGradingScale(data.gradingScale).name,
     gradingScaleMax: resolveGradingScale(data.gradingScale).maxPoint,
+    // Phase 2: what the account tracks (absent reads as tertiary).
+    recordType: resolveRecordType(data.recordType),
     semesterCount: semSnap.size,
     disabled: data.disabled || false,
     // Read from the profile already loaded: no extra reads.

@@ -19,6 +19,8 @@ Open any signed-in page with `?ag-preview=student` or `?ag-preview=admin`, for e
 - http://localhost:3000/dashboard?ag-preview=student
 - http://localhost:3000/admin/dashboard?ag-preview=admin
 
+Add `&ag-preview-record=olevel` or `&ag-preview-record=admission` to see the student as a WAEC/NECO or JAMB account (Phase 2; `=tertiary` goes back), for example http://localhost:3000/olevel?ag-preview=student&ag-preview-record=olevel.
+
 The choice is kept in a cookie for that browser. `?ag-preview=off` leaves preview mode. Public pages are unaffected unless the cookie is set.
 
 ## How it works

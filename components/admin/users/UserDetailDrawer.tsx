@@ -17,7 +17,14 @@ interface UserDetail {
     aiConsent: boolean | null; marketingConsent: boolean | null;
     /** Name of the student's grading scale; absent from older servers (5-point). */
     gradingScale?: string;
+    /** Phase 2; absent from older servers (tertiary). */
+    recordType?: 'tertiary' | 'olevel' | 'admission';
   };
+  /** O-level and admission accounts only. */
+  records?: {
+    olevel: { sittings: number; credits: number; meetsRule: boolean } | null;
+    admission: { formula: string; aggregate: number | null; partial: number | null; complete: boolean } | null;
+  } | null;
   academic: { semesterCount: number; completedCount: number };
   devices: { count: number };
   usage: { features?: { id: string; label?: string; freeDailyLimit?: number; freeRemaining?: number }[] } | null;
@@ -28,6 +35,34 @@ interface RevealedGrades { semesters: { label: string; gpa: number; creditLoaded
 
 type Mode = 'view' | 'reveal' | 'grant' | 'signout' | 'delete';
 
+const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+const count = (value: unknown) => (typeof value === 'number' && Number.isFinite(value) ? value : 0);
+
+/**
+ * The detail reply, or null when it has no profile (an error page, a proxy, an
+ * older or broken server): the drawer then shows its load error instead of
+ * reading fields that are not there. Missing side sections read as empty.
+ */
+function readUserDetail(raw: unknown): UserDetail | null {
+  if (!isObject(raw) || !isObject(raw.profile)) return null;
+  const academic = isObject(raw.academic) ? raw.academic : {};
+  const devices = isObject(raw.devices) ? raw.devices : {};
+  const coins = isObject(raw.coins) ? raw.coins : {};
+  return {
+    ...(raw as unknown as UserDetail),
+    profile: raw.profile as unknown as UserDetail['profile'],
+    academic: { semesterCount: count(academic.semesterCount), completedCount: count(academic.completedCount) },
+    devices: { count: count(devices.count) },
+    usage: isObject(raw.usage) ? (raw.usage as UserDetail['usage']) : null,
+    coins: {
+      balance: count(coins.balance),
+      earnedToday: count(coins.earnedToday),
+      ledger: Array.isArray(coins.ledger) ? (coins.ledger as UserDetail['coins']['ledger']) : [],
+    },
+    records: isObject(raw.records) ? (raw.records as UserDetail['records']) : null,
+  };
+}
+
 const REASON_MIN = 5;
 const REASON_MAX = 300;
 
@@ -35,6 +70,7 @@ const dateText = (iso: string | null, fallback: string) => (iso
   ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
   : fallback);
 const answerText = (value: boolean | null) => (value === null ? 'Not answered' : value ? 'Yes' : 'No');
+const RECORD_TYPE_TEXT = { tertiary: 'University results', olevel: 'WAEC/NECO results', admission: 'JAMB admission' } as const;
 const AGE_TEXT = { adult: 'Adult', minor: 'Under 18', unknown: 'Not answered' } as const;
 const LEDGER_TEXT: Record<string, string> = { earn: 'Earned', spend: 'Spent', refund: 'Refunded', grant: 'Granted by support' };
 
@@ -77,7 +113,9 @@ export function UserDetailDrawer({ uid, getToken, onClose, onDeleted }: Readonly
       const token = await getToken();
       const res = await fetch(`/api/admin/users/${encodeURIComponent(uid)}`, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error('detail');
-      setDetail(await res.json() as UserDetail);
+      const next = readUserDetail(await res.json());
+      if (!next) throw new Error('detail');
+      setDetail(next);
     } catch {
       setLoadError('This account could not be loaded. Nothing was changed.');
     } finally {
@@ -155,6 +193,7 @@ export function UserDetailDrawer({ uid, getToken, onClose, onDeleted }: Readonly
                   ['University', profile.university ?? '—'],
                   ['Department', profile.department ?? '—'],
                   ['Programme', profile.programme ?? '—'],
+                  ['Record type', RECORD_TYPE_TEXT[profile.recordType ?? 'tertiary']],
                   ['Grading scale', profile.gradingScale ?? '5-point (with E)'],
                   ['Joined', dateText(profile.createdAt, 'Unknown')],
                   ['Last active', dateText(profile.lastActiveAt, 'Never seen')],
@@ -169,6 +208,26 @@ export function UserDetailDrawer({ uid, getToken, onClose, onDeleted }: Readonly
                   </div>
                 ))}
               </dl>
+
+              {detail.records ? (
+                <section aria-labelledby="drawer-records" className="rounded-xl border border-[var(--acade-border)] p-4">
+                  <h3 id="drawer-records" className="font-semibold text-[var(--acade-text)]">{profile.recordType === 'admission' ? 'Admission record' : 'O-level record'}</h3>
+                  <p className="mt-1 text-[var(--acade-text-muted)]">
+                    {detail.records.olevel
+                      ? `${detail.records.olevel.sittings} sitting${detail.records.olevel.sittings === 1 ? '' : 's'}, ${detail.records.olevel.credits} credit${detail.records.olevel.credits === 1 ? '' : 's'}, ${detail.records.olevel.meetsRule ? 'meets' : 'does not meet yet'} the five-credit rule.`
+                      : 'No O-level results saved yet.'}
+                  </p>
+                  {profile.recordType === 'admission' ? (
+                    <p className="mt-1 text-[var(--acade-text-muted)]">
+                      {detail.records.admission
+                        ? detail.records.admission.aggregate !== null
+                          ? `Estimated aggregate ${detail.records.admission.aggregate} of 100.`
+                          : `Aggregate not complete${detail.records.admission.partial !== null ? ` (${detail.records.admission.partial} so far)` : ''}.`
+                        : 'No UTME details saved yet.'}
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
 
               <section aria-labelledby="drawer-academic" className="rounded-xl border border-[var(--acade-border)] p-4">
                 <h3 id="drawer-academic" className="font-semibold text-[var(--acade-text)]">Academic record</h3>

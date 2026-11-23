@@ -37,8 +37,18 @@ import { LandingMotion, ReplayTypingText } from '@/components/marketing/LandingM
 import { DiscreetRevealButton, DiscreetScope, DiscreetValue } from '@/lib/discreet';
 import { HelpButton } from '@/components/help/HelpDrawer';
 import { STUDENT_HELP, studentHelpSource } from '@/lib/help/student-help';
+import { useRecordType } from '@/hooks/useRecordType';
+import { AdmissionDashboard, OlevelDashboard } from '@/components/records/RecordDashboard';
 
+/** The dashboard adapts by record type (Phase 2); university accounts see today's dashboard, unchanged. */
 export default function DashboardPage() {
+  const recordType = useRecordType();
+  if (recordType === 'olevel') return <OlevelDashboard />;
+  if (recordType === 'admission') return <AdmissionDashboard />;
+  return <TertiaryDashboard />;
+}
+
+function TertiaryDashboard() {
   const { user } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
   const { cgpa, pi, degreeClass, semesterHistory, totalCredits, loading: cgpaLoading, error: cgpaError } = useCGPA();

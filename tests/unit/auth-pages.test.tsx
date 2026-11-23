@@ -363,16 +363,45 @@ describe('RegisterPage presentation', () => {
     expect(main).toBeInTheDocument();
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     const progress = screen.getByRole('navigation', { name: 'Registration progress' });
-    expect(within(progress).getAllByRole('listitem')).toHaveLength(4);
-    expect(within(progress).getAllByRole('listitem')[0]).toHaveTextContent('Your account, current step');
-    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
+    expect(within(progress).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(progress).getAllByRole('listitem')[0]).toHaveTextContent('What you track, current step');
+    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument();
     expect(screen.getByText('Your answers stay in this tab until you finish. Passwords are never stored.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 2, name: 'Your account' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 2, name: 'What are you tracking?' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /University, polytechnic or college results/ })).toBeChecked();
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Your account' })).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 5')).toBeInTheDocument();
+  });
+
+  it('WAEC/NECO accounts skip the matric number and the university steps', async () => {
+    const user = userEvent.setup();
+    renderPage(<RegisterPage />);
+    await user.click(await screen.findByRole('radio', { name: /WAEC or NECO results/ }));
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByRole('textbox', { name: 'Full name' })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Matric number' })).not.toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 3')).toBeInTheDocument();
+  });
+
+  it('preselects the type a free tool linked to (/register?type=admission) and ignores unknown values', async () => {
+    window.history.pushState({}, '', '/register?type=admission');
+    const first = renderPage(<RegisterPage />);
+    expect(await screen.findByRole('radio', { name: /JAMB and admission/ })).toBeChecked();
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+    first.unmount();
+    sessionStorage.clear();
+    window.history.pushState({}, '', '/register?type=primary');
+    renderPage(<RegisterPage />);
+    expect(await screen.findByRole('radio', { name: /University, polytechnic or college results/ })).toBeChecked();
+    window.history.pushState({}, '', '/register');
   });
 
   it('drops the developer placeholder and uses sentence case labels', async () => {
     renderPage(<RegisterPage />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Continue' }));
     const name = await screen.findByRole('textbox', { name: 'Full name' });
     expect(name).not.toHaveAttribute('placeholder');
     expect(screen.queryByPlaceholderText('joshuazaza')).not.toBeInTheDocument();
@@ -392,6 +421,7 @@ describe('RegisterPage presentation', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     renderPage(<RegisterPage />);
+    await user.click(await screen.findByRole('button', { name: 'Continue' }));
     await user.type(await screen.findByRole('textbox', { name: 'Full name' }), 'Ada Obi');
     await user.type(screen.getByRole('textbox', { name: 'Matric number' }), '2021/243567');
     await user.type(screen.getByRole('textbox', { name: 'Email' }), 'ada@example.com');
@@ -409,8 +439,8 @@ describe('RegisterPage presentation', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/otp/verify', expect.objectContaining({
       body: JSON.stringify({ email: 'ada@example.com', type: 'registration', code: '482913' }),
     }));
-    expect(screen.getByText('Step 2 of 4')).toBeInTheDocument();
-    expect(within(screen.getByRole('navigation', { name: 'Registration progress' })).getAllByRole('listitem')[1]).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByText('Step 3 of 5')).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'Registration progress' })).getAllByRole('listitem')[2]).toHaveAttribute('aria-current', 'step');
     expect(screen.getByText(/^Email checked\./)).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'University' })).toHaveValue('');
     expect(screen.getByRole('region', { name: 'Filled in so far' })).toHaveTextContent('Ada Obi, 2021/243567, ada@example.com');

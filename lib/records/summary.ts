@@ -46,22 +46,17 @@ export function describeOlevel(record: OlevelRecord): OlevelStatus {
       missing,
     };
   }
+  const coreMissing = result.required.slice(0, 2).some((group) => !group.met);
+  const listed = missing.length > 1 ? `${missing.slice(0, -1).join(', ')} and ${missing[missing.length - 1]}` : missing[0];
   const parts: string[] = [];
   if (result.awaiting > 0) parts.push(`${plural(result.awaiting, 'result')} still awaited.`);
   if (result.creditsShort > 0) parts.push(`You need ${plural(result.creditsShort, 'more credit')}.`);
-  if (missing.length > 0) parts.push(`Still needed: a credit in ${missing.join(', ')}.`);
-  const coreMissing = result.required.slice(0, 2).filter((group) => !group.met).map((group) => subjectLabel(group.ids[0]));
-  const headline = result.creditsShort > 0
-    ? `${count} of ${result.minCredits} credits`
-    : coreMissing.length > 0
-      ? `${plural(count, 'credit')}, but no credit in ${coreMissing.join(' or ')}`
-      : `${plural(count, 'credit')}, course subjects missing`;
+  else if (coreMissing) parts.push('Almost every course needs a credit in both English and Maths.');
+  else parts.push(`You have five credits with English and Maths. Your course also needs ${missing.length === 1 ? 'this subject' : 'these subjects'}.`);
   return {
     state: result.awaiting > 0 ? 'awaiting' : 'short',
-    headline,
-    detail: result.creditsShort > 0 || result.awaiting > 0
-      ? parts.filter((part) => !part.startsWith('Still needed') || result.creditsShort === 0).join(' ')
-      : parts.join(' '),
+    headline: result.creditsShort > 0 ? `${count} of ${result.minCredits} credits` : `${plural(count, 'credit')}, but no credit in ${listed}`,
+    detail: parts.join(' '),
     creditCount: count,
     missing,
   };

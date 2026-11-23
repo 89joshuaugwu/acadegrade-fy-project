@@ -3,11 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
-import { LayoutDashboard, BookOpen, BrainCircuit, FileText, Megaphone } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BrainCircuit, FileText, Megaphone, ClipboardList, Target } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAnalytics } from '@/hooks/useAnalytics';
-import { isRouteActive, studentNavigation, type NavigationIcon } from '@/lib/ui/route-meta';
+import { isRouteActive, type NavigationIcon } from '@/lib/ui/route-meta';
+import { navigationFor } from '@/lib/records/navigation';
+import { useRecordType } from '@/hooks/useRecordType';
 
 const TAB_ICONS: Record<NavigationIcon, React.ElementType> = {
   dashboard: LayoutDashboard,
@@ -20,6 +22,8 @@ const TAB_ICONS: Record<NavigationIcon, React.ElementType> = {
   activity: BrainCircuit,
   ads: Megaphone,
   ai: BrainCircuit,
+  olevel: ClipboardList,
+  admission: Target,
   settings: LayoutDashboard,
 };
 
@@ -27,6 +31,7 @@ export function BottomTabBar() {
   const pathname = usePathname();
   const shouldReduceMotion = useReducedMotion();
   const { insightsStale } = useAnalytics();
+  const navigation = navigationFor(useRecordType());
 
   return (
     <nav
@@ -34,8 +39,8 @@ export function BottomTabBar() {
       className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] rounded-[var(--radius-dialog)] border border-[var(--acade-border)] bg-[var(--acade-deep)]/94 shadow-[0_18px_48px_rgba(2,6,23,0.28)] backdrop-blur-xl lg:hidden"
       style={{ zIndex: 'var(--z-sticky)' }}
     >
-      <div className="mx-auto grid min-h-[4.5rem] max-w-xl grid-cols-4 items-stretch p-1.5">
-        {studentNavigation.map((tab) => {
+      <div className="mx-auto grid min-h-[4.5rem] max-w-xl items-stretch p-1.5" style={{ gridTemplateColumns: `repeat(${navigation.length}, minmax(0, 1fr))` }}>
+        {navigation.map((tab) => {
           const active = isRouteActive(pathname, tab.href);
           const Icon = TAB_ICONS[tab.icon];
 

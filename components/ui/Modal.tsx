@@ -40,12 +40,14 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   description?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   confirm?: {
     label: string;
     onConfirm: () => void;
     loading?: boolean;
     requireText?: string;
+    /** Put first focus on Cancel, for confirmations where the safe choice should be the default. */
+    initialFocus?: 'cancel';
   };
   className?: string;
   size?: 'confirm' | 'form' | 'review';
@@ -162,6 +164,7 @@ export function Modal({
 
   if (!portalRoot) return null;
 
+  const hasBody = (children != null && children !== false) || Boolean(confirm?.requireText);
   const confirmationMatches = !confirm?.requireText
     || confirmationText.trim() === confirm.requireText;
 
@@ -222,6 +225,7 @@ export function Modal({
                 </IconButton>
               </header>
 
+              {hasBody && (
               <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 md:px-6">
                 {children}
                 {confirm?.requireText && (
@@ -235,10 +239,11 @@ export function Modal({
                   </div>
                 )}
               </div>
+              )}
 
               {confirm && (
-                <footer className="flex shrink-0 flex-col-reverse gap-3 border-t border-[var(--acade-border-subtle)] px-5 py-4 sm:flex-row sm:justify-end md:px-6">
-                  <Button variant="ghost" onClick={dismiss}>Cancel</Button>
+                <footer className={cn('flex shrink-0 flex-col-reverse gap-3 px-5 py-4 sm:flex-row sm:justify-end md:px-6', hasBody && 'border-t border-[var(--acade-border-subtle)]')}>
+                  <Button variant="ghost" onClick={dismiss} data-autofocus={confirm.initialFocus === 'cancel' ? true : undefined}>Cancel</Button>
                   <Button
                     variant="danger"
                     onClick={confirm.onConfirm}

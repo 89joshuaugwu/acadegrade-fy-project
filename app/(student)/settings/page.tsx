@@ -44,6 +44,9 @@ import { GradingScaleSection } from '@/components/settings/GradingScaleSection';
 import { applyGradingScaleSwitch, loadSwitchSemesters } from '@/lib/firebase/gradingScale';
 import { computeCumulativeCGPA, resolveGradingScale } from '@/lib/cgpa/academicRules';
 import { resolveDegreeClass } from '@/lib/cgpa/degreeClass';
+import { useRecordType } from '@/hooks/useRecordType';
+import { RecordTypeSection } from '@/components/settings/RecordTypeSection';
+import { setRecordType } from '@/lib/records/store';
 const STUDENT_LEVELS = Array.from({length: 10}, (_, i) => (i + 1) * 100);
 
 export default function SettingsPage() {
@@ -52,6 +55,9 @@ export default function SettingsPage() {
   const { semesters } = useSemesters();
   const { isFeatureDisabled } = usePlatformSettings();
   const disableEditProfile = isFeatureDisabled('edit_profile');
+  // WAEC/NECO and JAMB accounts have no university profile, timeline, scale or semester alerts.
+  const recordType = useRecordType();
+  const tertiary = recordType === 'tertiary';
   
   // Profile State
   const [fullName, setFullName] = useState('');
@@ -170,6 +176,16 @@ export default function SettingsPage() {
   // 2. Save Profile
   const handleSaveProfile = async () => {
     if (!user) return;
+    if (!tertiary) {
+      setSavingProfile(true);
+      try {
+        await updateProfile({ fullName, name: fullName } as Parameters<typeof updateProfile>[0]);
+        toast.success('Profile updated');
+      } finally {
+        setSavingProfile(false);
+      }
+      return;
+    }
     if (parseAcademicSession(entrySession) == null) {
       setTimelineError('Use consecutive years in YYYY/YYYY format, for example 2022/2023.');
       return;
@@ -372,10 +388,13 @@ export default function SettingsPage() {
         <div className="hidden md:flex flex-col gap-2 sticky top-24 h-fit">
           {[
             { id: 'profile', label: 'Profile', danger: false },
-            { id: 'academic', label: 'Academic Setup', danger: false },
-            { id: 'grading', label: 'Grading scale', danger: false },
+            { id: 'record-type', label: 'Record type', danger: false },
+            ...(tertiary ? [
+              { id: 'academic', label: 'Academic Setup', danger: false },
+              { id: 'grading', label: 'Grading scale', danger: false },
+            ] : []),
             { id: 'notifications', label: 'Notifications', danger: false },
-            { id: 'privacy', label: 'Privacy & AI choices', danger: false },
+            { id: 'privacy', label: tertiary ? 'Privacy & AI choices' : 'Privacy choices', danger: false },
             { id: 'security', label: 'Security & data', danger: true }
           ].map(tab => (
             <button
@@ -428,6 +447,7 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} disabled={disableEditProfile} />
+              {tertiary ? (<>
               <Input label="Matric Number" value={profile?.matric || ''} disabled hint="Contact admin to change matric" />
               <Input label="Department" value={department} onChange={e => setDepartment(e.target.value)} disabled={disableEditProfile} />
               <Input label="Programme" value={programme} onChange={e => setProgramme(e.target.value)} disabled={disableEditProfile} />
@@ -440,6 +460,7 @@ export default function SettingsPage() {
                   disabled={disableEditProfile}
                 />
               </div>
+              </>) : null}
             </div>
 
             <div className="mt-6 flex justify-end">
@@ -449,7 +470,17 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          {/* RECORD TYPE (#section-record-type): Phase 2 */}
+          {user && (
+            <RecordTypeSection
+              disabled={disableEditProfile}
+              hasUniversityProfile={Boolean(profile?.matric && profile?.university && (profile?.entrySession || profile?.currentSession))}
+              onSwitch={(next) => setRecordType(user.uid, next)}
+            />
+          )}
+
           {/* ACADEMIC SETUP SECTION */}
+          {tertiary && (
           <section id="section-academic" className="relative bg-[var(--acade-deep)] border border-[var(--acade-border)] rounded-2xl p-4 sm:p-6 scroll-mt-24">
             <h2 className="text-[length:var(--text-lg)] font-bold text-[var(--acade-text)] mb-6">Academic Setup</h2>
             
@@ -558,8 +589,10 @@ export default function SettingsPage() {
             </div>
           </section>
 
+          )}
+
           {/* GRADING SCALE SECTION (#section-grading) */}
-          {user && (
+          {user && tertiary && (
             <GradingScaleSection
               disabled={disableEditProfile}
               loadSemesters={() => loadSwitchSemesters(user.uid)}
@@ -588,6 +621,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
+              {tertiary && (<>
               <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 border-b border-[var(--acade-border-subtle)] py-1">
                 <span id="notification-semester-saved" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Semester saved successfully</span>
                 <Switch aria-labelledby="notification-semester-saved" checked={notifPrefs.semesterSaved} onCheckedChange={(val) => handleTogglePreference('semesterSaved', val)} />
@@ -600,6 +634,7 @@ export default function SettingsPage() {
                 <span id="notification-ai-insights" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">AI insights are ready</span>
                 <Switch aria-labelledby="notification-ai-insights" checked={notifPrefs.aiInsights} onCheckedChange={(val) => handleTogglePreference('aiInsights', val)} />
               </div>
+              </>)}
               <div data-setting-row className="flex min-h-14 items-center justify-between gap-4 py-1">
                 <span id="notification-admin-broadcasts" className="min-w-0 flex-1 text-[length:var(--text-sm)] text-[var(--acade-text-muted)] font-medium">Admin broadcasts</span>
                 <Switch aria-labelledby="notification-admin-broadcasts" checked={notifPrefs.adminBroadcasts} onCheckedChange={(val) => handleTogglePreference('adminBroadcasts', val)} />
@@ -609,7 +644,7 @@ export default function SettingsPage() {
 
           {/* PRIVACY & AI CHOICES (#privacy) */}
           {user && (
-            <PrivacyChoices uid={user.uid} profile={profile} getToken={() => user.getIdToken()} />
+            <PrivacyChoices uid={user.uid} profile={profile} getToken={() => user.getIdToken()} aiAvailable={tertiary} />
           )}
 
           {/* HELP & SUPPORT: hides itself when the admin switches "support" off */}

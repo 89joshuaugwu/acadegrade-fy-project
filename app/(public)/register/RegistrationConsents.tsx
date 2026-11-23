@@ -40,9 +40,9 @@ const AGE_DOT_CLASS =
  * phones), neither chosen; both are drawn radios over real, visually hidden
  * inputs, as are the checkboxes. Adults see the optional AI box, unticked, with
  * the legal label word for word; under-18s never see it and any tick is
- * cleared. Agreements are never restored from the draft.
+ * cleared. WAEC/NECO and JAMB accounts have no AI features, so they never see it. Agreements are never restored from the draft.
  */
-export function RegistrationConsents() {
+export function RegistrationConsents({ showAiConsent = true }: { showAiConsent?: boolean } = {}) {
   const { register, watch, setValue, formState: { errors } } = useFormContext<ConsentFields>();
   const age = watch('age');
   const questionId = useId();
@@ -93,7 +93,7 @@ export function RegistrationConsents() {
         ) : null}
       </fieldset>
 
-      {age === 'adult' ? (
+      {age === 'adult' && showAiConsent ? (
         <CheckField aria-describedby={aiHintId} hint="Optional. You can change this later in Settings." hintId={aiHintId} {...register('aiConsent')}>
           {AI_CONSENT_LABEL}
         </CheckField>

@@ -136,6 +136,26 @@ describe('admission records', () => {
     expect(result.ok && result.data).not.toHaveProperty('customPoints');
   });
 
+  it('keeps a saved target aggregate from 0 to 100 and drops a broken one', () => {
+    expect(parseStoredAdmissionRecord({ formula: 'utme-post', target: 70.5 })).toMatchObject({ target: 70.5 });
+    expect(parseStoredAdmissionRecord({ formula: 'utme-post', target: 101 })).not.toHaveProperty('target');
+    expect(parseStoredAdmissionRecord({ formula: 'utme-post', target: '70' })).not.toHaveProperty('target');
+    expect(toAdmissionWrite({ ...defaultAdmissionRecord(), target: 72 })).toMatchObject({ ok: true, data: { target: 72 } });
+    expect(toAdmissionWrite({ ...defaultAdmissionRecord(), target: 100.5 })).toEqual({ ok: false, errors: ['target'] });
+    expect(toAdmissionWrite({ ...defaultAdmissionRecord(), target: 70.123 })).toEqual({ ok: false, errors: ['target'] });
+  });
+
+  it('stores a post-UTME "out of" total before the score is known', () => {
+    expect(toAdmissionWrite({ ...defaultAdmissionRecord(), postUtme: { max: 60 } })).toMatchObject({ ok: true, data: { postUtme: { max: 60 } } });
+    expect(toAdmissionWrite({ ...defaultAdmissionRecord(), postUtme: { max: 0 } }).ok).toBe(false);
+    expect(parseStoredAdmissionRecord({ formula: 'utme-post', postUtme: { max: 60 } })).toMatchObject({ postUtme: { max: 60 } });
+    expect(parseStoredAdmissionRecord({ formula: 'utme-post', postUtme: { max: 900 } })).not.toHaveProperty('postUtme');
+    // The engine still treats the score as missing, but works out what is needed out of 60.
+    const input = aggregateInputFrom({ ...defaultAdmissionRecord(), utme: { score: 240 }, postUtme: { max: 60 } }, null);
+    expect(input.postUtme).toEqual({ score: null, max: 60 });
+    expect(computeAggregate(input).missing).toEqual(['postUtme']);
+  });
+
   it('saves with merge false', async () => {
     await saveAdmissionRecord('u1', { ...defaultAdmissionRecord(), utme: { score: 245 } });
     expect(fs.setDocument).toHaveBeenCalledWith('users/u1/admission/current', expect.objectContaining({ utme: { score: 245 } }), { merge: false });

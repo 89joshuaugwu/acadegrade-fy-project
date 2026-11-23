@@ -141,7 +141,7 @@ service cloud.firestore {
 
     function validAdmissionRecord(d) {
       return d.keys().hasAll(['formula', 'olevelSource'])
-        && d.keys().hasOnly(['schemaVersion', 'utme', 'postUtme', 'formula', 'weights', 'pointTable', 'customPoints', 'olevelSource', 'olevelGrades', 'school', 'course', 'updatedAt'])
+        && d.keys().hasOnly(['schemaVersion', 'utme', 'postUtme', 'formula', 'weights', 'pointTable', 'customPoints', 'olevelSource', 'olevelGrades', 'school', 'course', 'target', 'updatedAt'])
         && (!('schemaVersion' in d) || d.schemaVersion == 1)
         && (!('updatedAt' in d) || d.updatedAt is timestamp)
         && d.formula in ['utme-post', 'utme-olevel-post', 'custom']
@@ -152,10 +152,10 @@ service cloud.firestore {
           && d.utme.score is int && d.utme.score >= 0 && d.utme.score <= 400
           && (!('year' in d.utme) || (d.utme.year is int && d.utme.year >= 1978 && d.utme.year <= 2100))))
         && (!('postUtme' in d) || (d.postUtme is map
-          && d.postUtme.keys().hasAll(['score', 'max'])
+          && d.postUtme.keys().hasAll(['max'])
           && d.postUtme.keys().hasOnly(['score', 'max'])
           && d.postUtme.max is int && d.postUtme.max >= 1 && d.postUtme.max <= 400
-          && d.postUtme.score is number && d.postUtme.score >= 0 && d.postUtme.score <= d.postUtme.max))
+          && (!('score' in d.postUtme) || (d.postUtme.score is number && d.postUtme.score >= 0 && d.postUtme.score <= d.postUtme.max))))
         && (!('weights' in d) || (d.weights is map
           && d.weights.keys().hasAll(['utme', 'olevel', 'postUtme'])
           && d.weights.keys().hasOnly(['utme', 'olevel', 'postUtme'])
@@ -167,7 +167,8 @@ service cloud.firestore {
           && validAdmissionGradeAt(d.olevelGrades, 0) && validAdmissionGradeAt(d.olevelGrades, 1) && validAdmissionGradeAt(d.olevelGrades, 2)
           && validAdmissionGradeAt(d.olevelGrades, 3) && validAdmissionGradeAt(d.olevelGrades, 4)))
         && (!('school' in d) || (d.school is string && d.school.size() <= 80))
-        && (!('course' in d) || (d.course is string && d.course.size() <= 80));
+        && (!('course' in d) || (d.course is string && d.course.size() <= 80))
+        && (!('target' in d) || (d.target is number && d.target >= 0 && d.target <= 100));
     }
 
     // 1. Users Collection
@@ -263,10 +264,18 @@ service cloud.firestore {
     match /shareCodes/{codeId} {
       // A signed-in user can fetch one code they know; nobody can list every code.
       // A code an admin has disabled (Admin > Share codes) can no longer be fetched.
-      allow get: if isAuthenticated() && resource.data.get('disabled', false) != true;
+      // A code that does not exist reads as "not found" (resource == null), not denied:
+      // Android probes candidate codes before creating one, and both apps report unknown codes.
+      allow get: if isAuthenticated() && (resource == null || resource.data.get('disabled', false) != true);
       // New codes stop while the admin has switched "share_code" off (admins always may).
-      allow create: if isAdmin() || (isAuthenticated() && platformFeatureEnabled('share_code'));
-      allow update: if (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])) || isAdmin();
+      // A student can only create a code under their own uid.
+      allow create: if isAdmin() || (isAuthenticated() && platformFeatureEnabled('share_code')
+        && request.resource.data.get('authorId', '') == request.auth.uid);
+      // Importing adds exactly one to the counter (both apps use increment(1)).
+      allow update: if (isAuthenticated()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['useCount'])
+          && request.resource.data.useCount == resource.data.get('useCount', 0) + 1)
+        || isAdmin();
       allow delete: if isAdmin();
     }
     

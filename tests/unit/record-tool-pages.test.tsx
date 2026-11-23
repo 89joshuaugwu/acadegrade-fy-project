@@ -126,7 +126,7 @@ describe('admission aggregate', () => {
     await waitFor(() => expect(status()).toHaveTextContent('Aggregate 64.50 out of 100.'));
     expect(screen.getByText('268 ÷ 400 × 50')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Target aggregate'), '70');
-    expect(screen.getByText('To reach 70, you need 73.00 out of 100 in post-UTME.')).toBeInTheDocument();
+    expect(screen.getAllByText('To reach 70, you need 73.00 out of 100 in post-UTME.')).toHaveLength(2);
   });
 
   it('explains an out-of-range UTME score on blur', async () => {

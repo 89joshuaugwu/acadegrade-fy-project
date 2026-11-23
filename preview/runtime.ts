@@ -32,6 +32,31 @@ function readRole(): PreviewRole | null {
 }
 
 export const PREVIEW_ROLE: PreviewRole | null = readRole();
+
+/**
+ * Phase 2 record types: `?ag-preview-record=olevel` or `=admission` turns the
+ * preview student into a WAEC/NECO or JAMB account (kept in a cookie;
+ * `=tertiary` goes back). Writes from Settings still change memory only.
+ */
+export type PreviewRecordType = 'tertiary' | 'olevel' | 'admission';
+const RECORD_COOKIE = 'ag-ui-preview-record';
+
+function readRecordType(): PreviewRecordType {
+  if (typeof window === 'undefined') return 'tertiary';
+  try {
+    const asked = new URLSearchParams(window.location.search).get('ag-preview-record');
+    if (asked === 'olevel' || asked === 'admission' || asked === 'tertiary') {
+      document.cookie = `${RECORD_COOKIE}=${asked}; path=/; max-age=86400; samesite=lax`;
+      return asked;
+    }
+    const match = document.cookie.match(/(?:^|;\s*)ag-ui-preview-record=(olevel|admission|tertiary)/);
+    return match ? (match[1] as PreviewRecordType) : 'tertiary';
+  } catch {
+    return 'tertiary';
+  }
+}
+
+export const PREVIEW_RECORD_TYPE: PreviewRecordType = readRecordType();
 export const PREVIEW = PREVIEW_ROLE !== null;
 export const PREVIEW_UID = PREVIEW_ROLE === 'admin' ? 'preview-admin' : 'preview-student';
 

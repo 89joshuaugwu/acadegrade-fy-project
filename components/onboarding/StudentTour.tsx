@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { useProfile } from '@/hooks/useProfile';
+import { useRecordType } from '@/hooks/useRecordType';
 import { ProductTour, type ProductTourStep } from './ProductTour';
 
 const DASHBOARD_TOUR_VERSION = 1;
@@ -10,6 +11,8 @@ const DASHBOARD_TOUR_VERSION = 1;
 export function StudentTour() {
   const pathname = usePathname();
   const { profile, completeProductTour } = useProfile();
+  // The tour points at the CGPA arc and Results: university accounts only.
+  const tertiary = useRecordType() === 'tertiary';
 
   const steps = useMemo<readonly ProductTourStep[]>(() => [
     {
@@ -55,7 +58,7 @@ export function StudentTour() {
     <ProductTour
       tourId="dashboard"
       version={DASHBOARD_TOUR_VERSION}
-      eligible={pathname === '/dashboard'}
+      eligible={pathname === '/dashboard' && tertiary}
       completedVersion={profile.tourVersions?.dashboard}
       legacyCompleted={profile.tourCompleted === true}
       steps={steps}

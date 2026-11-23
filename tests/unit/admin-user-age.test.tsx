@@ -18,9 +18,27 @@ const student = {
   currentLevel: 300, cgpa: 4.2, pi: 4.1, semesterCount: 5, disabled: false, createdAt: '2026-01-01T00:00:00.000Z',
 };
 
+/** What GET /api/admin/users/{uid} returns (the drawer opens beside the list). */
+const detail = {
+  profile: {
+    uid: 'student-1', fullName: 'Ada Obi', email: 'ada@example.com', matric: 'CSC/21/001', university: 'Uni', department: 'Computer Science',
+    programme: 'BSc', currentLevel: 300, createdAt: '2026-01-01T00:00:00.000Z', lastActiveAt: null, disabled: false,
+    ageStatus: 'adult', aiConsent: null, marketingConsent: null, gradingScale: '5-point', recordType: 'tertiary',
+  },
+  records: null,
+  academic: { semesterCount: 5, completedCount: 5 },
+  devices: { count: 1 },
+  usage: null,
+  coins: { balance: 0, earnedToday: 0, ledger: [] },
+};
+
 function mockFetch() {
   return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-    const body = String(input) === '/api/admin/users' && !init?.method ? { users: [student] } : { success: true, ageStatus: 'minor' };
+    const url = String(input);
+    const body = init?.method === 'POST' ? { success: true, ageStatus: 'minor' }
+      : url === '/api/admin/users' ? { users: [student] }
+        : url === '/api/admin/users/student-1' ? detail
+          : { users: [student] };
     return { ok: true, status: 200, json: async () => body } as Response;
   });
 }

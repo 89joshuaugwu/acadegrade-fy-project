@@ -33,6 +33,12 @@ interface PrivacyChoicesProps {
   getToken: () => Promise<string>;
   /** Firestore readers for the export; defaults to the client SDK helpers. */
   readers?: ExportReaders;
+  /**
+   * False for accounts that have no AI (O-level and admission record types,
+   * Phase 2): the AI consent, the age rows and the under-18 AI notice are hidden
+   * and the section is "Privacy choices". Defaults to true.
+   */
+  aiAvailable?: boolean;
 }
 
 async function defaultReaders(): Promise<ExportReaders> {
@@ -61,7 +67,7 @@ function SettingRow({ titleId, title, description, children }: { titleId: string
  * Settings → "Privacy & AI choices" (anchor #privacy): consents, the
  * under-18 notice and upgrade, discreet mode, cookie choices and data export.
  */
-export function PrivacyChoices({ uid, profile, getToken, readers }: PrivacyChoicesProps) {
+export function PrivacyChoices({ uid, profile, getToken, readers, aiAvailable = true }: PrivacyChoicesProps) {
   const ids = useId();
   // The server's recorded answers (`current`) win over the profile copy when available.
   const [serverState, setServerState] = useState<PrivacyState | null>(null);
@@ -180,20 +186,20 @@ export function PrivacyChoices({ uid, profile, getToken, readers }: PrivacyChoic
       className="relative scroll-mt-24 rounded-2xl border border-[var(--acade-border)] bg-[var(--acade-deep)] p-4 sm:p-6"
     >
       <h2 id={`${ids}-title`} className="flex items-center gap-2 text-[length:var(--text-lg)] font-bold text-[var(--acade-text)]">
-        <ShieldCheck size={20} aria-hidden="true" /> Privacy &amp; AI choices
+        <ShieldCheck size={20} aria-hidden="true" /> {aiAvailable ? <>Privacy &amp; AI choices</> : 'Privacy choices'}
       </h2>
       <p className="mt-1 text-sm leading-6 text-[var(--acade-text-muted)]">
         Decide what AcadeGrade may do with your records. Changes apply to your account straight away.
       </p>
 
-      {isMinor && (
+      {aiAvailable && isMinor && (
         <p className="mt-5 rounded-[var(--radius-control)] border border-[var(--acade-info)]/30 bg-[var(--acade-info)]/10 px-4 py-3 text-sm leading-6 text-[var(--acade-text)]">
           {MINOR_NOTICE}
         </p>
       )}
 
       <div className="mt-2 divide-y divide-[var(--acade-border-subtle)]">
-        {isMinor ? (
+        {!aiAvailable ? null : isMinor ? (
           <SettingRow
             titleId={`${ids}-age`}
             title="Your age"

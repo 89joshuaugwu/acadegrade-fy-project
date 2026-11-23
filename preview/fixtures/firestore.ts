@@ -4,7 +4,7 @@
  * Numbers come from the real grading rules, so every GPA and CGPA on screen adds up.
  */
 import { computeCourseMetrics, computeSemesterGPA, type GpaRow } from '@/lib/cgpa/academicRules';
-import { daysAgo, PREVIEW_UID, PreviewTimestamp } from '../runtime';
+import { daysAgo, PREVIEW_RECORD_TYPE, PREVIEW_UID, PreviewTimestamp } from '../runtime';
 
 type Row = [code: string, title: string, units: number, ca: number | null, exam: number | null, ar?: boolean];
 
@@ -220,7 +220,70 @@ export function firestoreSeed(): Record<string, unknown> {
     },
   };
 
+  if (PREVIEW_RECORD_TYPE !== 'tertiary') seedSchoolRecords(out, uid);
+
   return out;
+}
+
+/**
+ * `?ag-preview-record=olevel|admission`: the same student as a WAEC/NECO or JAMB
+ * account. Two sittings (Maths improved at the NECO resit), Physics missing a
+ * credit for the chosen course, and a UTME of 268 with post-UTME 71/100.
+ */
+function seedSchoolRecords(out: Record<string, unknown>, uid: string) {
+  const user = out[`users/${uid}`] as Record<string, unknown>;
+  const { matric: _m, matricNormalized: _n, university: _u, department: _d, programme: _p, currentLevel: _l, currentSession: _c, entrySession: _e, graduationSession: _g, courseDuration: _cd, semestersCompleted: _s, ...rest } = user;
+  out[`users/${uid}`] = { ...rest, fullName: 'Chidera Blessing Nwosu', email: 'chidera.nwosu@student.preview', recordType: PREVIEW_RECORD_TYPE, ageStatus: 'minor', aiConsent: false };
+  for (const key of Object.keys(out)) {
+    if (key.startsWith(`users/${uid}/semesters`) || key.startsWith(`users/${uid}/timetables`) || key.startsWith('shared_transcripts/')) delete out[key];
+  }
+  out[`users/${uid}/olevel/current`] = {
+    schemaVersion: 1,
+    sittings: [
+      {
+        id: 'sitting-waec-2025',
+        exam: 'waec',
+        year: 2025,
+        subjects: [
+          { subjectId: 'english', name: 'English Language', grade: 'B3' },
+          { subjectId: 'mathematics', name: 'Mathematics', grade: 'D7' },
+          { subjectId: 'biology', name: 'Biology', grade: 'B2' },
+          { subjectId: 'chemistry', name: 'Chemistry', grade: 'C4' },
+          { subjectId: 'physics', name: 'Physics', grade: 'E8' },
+          { subjectId: 'civic-education', name: 'Civic Education', grade: 'A1' },
+          { subjectId: 'economics', name: 'Economics', grade: 'C5' },
+          { subjectId: 'igbo', name: 'Igbo', grade: 'B3' },
+          { subjectId: 'agricultural-science', name: 'Agricultural Science', grade: 'C6' },
+        ],
+      },
+      {
+        id: 'sitting-neco-2025',
+        exam: 'neco',
+        year: 2025,
+        subjects: [
+          { subjectId: 'english', name: 'English Language', grade: 'C4' },
+          { subjectId: 'mathematics', name: 'Mathematics', grade: 'C5' },
+          { subjectId: 'physics', name: 'Physics', grade: 'D7' },
+          { subjectId: 'chemistry', name: 'Chemistry', grade: 'B3' },
+        ],
+      },
+    ],
+    targetCourse: { name: 'Medicine and Surgery', required: ['biology', 'chemistry', 'physics'] },
+    updatedAt: daysAgo(3),
+  };
+  if (PREVIEW_RECORD_TYPE === 'admission') {
+    out[`users/${uid}/admission/current`] = {
+      schemaVersion: 1,
+      utme: { score: 268 },
+      postUtme: { score: 71, max: 100 },
+      formula: 'utme-olevel-post',
+      pointTable: 'four-to-two',
+      olevelSource: 'record',
+      school: 'University of Nigeria, Nsukka',
+      course: 'Medicine and Surgery',
+      updatedAt: daysAgo(1),
+    };
+  }
 }
 
 export function rtdbSeed(): Record<string, unknown> {

@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/firebase/auth';
 import { canRenderAdminContent, type AdminAccessState } from '@/lib/admin/access-state';
 import { AdminShell } from '@/components/layout/AdminShell';
+import { AdminSignOutDialog } from '@/components/admin/AdminSignOutDialog';
 import { Button } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -30,6 +31,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoginRoute = pathname === '/admin/login';
   const [access, setAccess] = useState<AdminAccessState>(INITIAL_ACCESS);
   const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   useAdminBodyClass();
 
   useEffect(() => {
@@ -114,11 +117,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         primaryLabel="Try again"
         onPrimary={() => setVerificationAttempt((attempt) => attempt + 1)}
         secondaryLabel="Sign out"
-        onSecondary={async () => {
-          await signOut();
-          router.replace('/admin/login');
-        }}
-      />
+        onSecondary={() => setConfirmSignOut(true)}
+      >
+        <AdminSignOutDialog
+          open={confirmSignOut}
+          busy={signingOut}
+          onCancel={() => setConfirmSignOut(false)}
+          onConfirm={async () => {
+            setSigningOut(true);
+            try {
+              await signOut();
+              router.replace('/admin/login');
+            } finally {
+              setSigningOut(false);
+              setConfirmSignOut(false);
+            }
+          }}
+        />
+      </AdminAccessMessage>
     );
   }
 
@@ -152,6 +168,7 @@ interface AdminAccessMessageProps {
   onPrimary: () => void | Promise<void>;
   secondaryLabel?: string;
   onSecondary?: () => void | Promise<void>;
+  children?: React.ReactNode;
 }
 
 function AdminAccessMessage({
@@ -163,6 +180,7 @@ function AdminAccessMessage({
   onPrimary,
   secondaryLabel,
   onSecondary,
+  children,
 }: AdminAccessMessageProps) {
   return (
     <main className="ag-admin min-h-screen bg-[var(--acade-void)] px-5 py-10">
@@ -182,6 +200,7 @@ function AdminAccessMessage({
           </div>
         </section>
       </div>
+      {children}
     </main>
   );
 }

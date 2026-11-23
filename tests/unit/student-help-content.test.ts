@@ -20,7 +20,7 @@ describe('canonical student help copy', () => {
   it('is byte-identical to the shared Android copy (sha256 with CRLF normalised to LF)', () => {
     const raw = readFileSync(path.join(root, 'lib/help/student-help.json'), 'utf8').replace(/\r\n/g, '\n');
     expect(createHash('sha256').update(raw, 'utf8').digest('hex')).toBe(STUDENT_HELP_SHA256);
-    expect(STUDENT_HELP_SHA256).toBe('36c5e99177d31144fa14936d576644084b58348694ae66c73a821d81b4293519');
+    expect(STUDENT_HELP_SHA256).toBe('df5e61201c2bd2fe3079be7f9c9b8b3709fb382a80d9cf8b7d14bfe4665dcd29');
     expect(sharedHelp.version).toBe(STUDENT_HELP_CONTENT_VERSION);
   });
 
@@ -52,6 +52,24 @@ describe('studentHelpSource', () => {
     expect(studentHelpSource.hrefFor('student.insights.forecast')).toBe('/insights');
     expect(studentHelpSource.hrefFor('student.new-semester')).toBe('/results/new');
     expect(studentHelpSource.hrefFor('student.notifications')).toBe('/notifications');
+  });
+
+  it('has the Phase 2 entries in plain words, mounted on the O-level, aggregate and Record type screens', () => {
+    expect(STUDENT_HELP.olevel).toBe('student.olevel');
+    expect(STUDENT_HELP.admission).toBe('student.admission');
+    expect(STUDENT_HELP.recordType).toBe('student.record-type');
+    expect(studentHelpSource.entries['student.olevel'].title).toBe('WAEC and NECO results');
+    expect(studentHelpSource.entries['student.olevel'].summary).toMatch(/two sittings.*best grade.*A1–C6 are credits.*five credits including English and Maths/);
+    expect(studentHelpSource.entries['student.admission'].title).toBe('Admission aggregate');
+    expect(studentHelpSource.entries['student.admission'].summary).toMatch(/estimate out of 100/);
+    expect(studentHelpSource.entries['student.record-type'].title).toBe('Record type');
+    expect(studentHelpSource.entries['student.record-type'].summary).toMatch(/Nothing is deleted when you switch/);
+    expect(studentHelpIdForPath('/olevel')).toBe('student.olevel');
+    expect(studentHelpIdForPath('/admission')).toBe('student.admission');
+    const source = (file: string) => readFileSync(path.join(root, file), 'utf8');
+    expect(source('components/records/OlevelWorkspace.tsx')).toContain('entryId={STUDENT_HELP.olevel}');
+    expect(source('components/records/AdmissionWorkspace.tsx')).toContain('entryId={STUDENT_HELP.admission}');
+    expect(source('components/settings/RecordTypeSection.tsx')).toContain('entryId={STUDENT_HELP.recordType}');
   });
 
   it('resolves a pathname to its help id', () => {

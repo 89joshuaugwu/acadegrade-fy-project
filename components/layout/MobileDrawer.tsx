@@ -1,16 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { CalendarDays, LogOut, Settings } from 'lucide-react';
 import { useTimetableEnabled } from '@/hooks/useTimetableEnabled';
-import { signOut } from '@/lib/firebase/auth';
-import { removeNotificationToken } from '@/lib/firebase/fcm';
+import { useRecordType } from '@/hooks/useRecordType';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils/cn';
 import { Sheet, ThemeControl } from '@/components/ui';
 import { isRouteActive } from '@/lib/ui/route-meta';
 import type { UserWithId } from '@/types/user';
+import { SignOutDialog } from './SignOutDialog';
 
 interface MobileDrawerProps {
   isOpen: boolean;
@@ -25,68 +26,71 @@ export function MobileDrawer({
   profile,
 }: MobileDrawerProps) {
   const { user } = useAuth();
-  const timetableEnabled = useTimetableEnabled();
+  // The timetable is for semester lectures and exams: university accounts only.
+  const recordType = useRecordType();
+  const timetableEnabled = useTimetableEnabled() && recordType === 'tertiary';
 
-  const handleSignOut = async () => {
-    try {
-      if (user?.uid) await removeNotificationToken(user.uid);
-      await signOut();
-      onClose();
-    } catch (error) {
-      console.error('Failed to sign out', error);
-    }
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  // Close the drawer first so only one dialog is open (and listening for Escape) at a time.
+  const handleSignOut = () => {
+    onClose();
+    setConfirmSignOut(true);
   };
 
   return (
-    <Sheet
-      open={isOpen}
-      onClose={onClose}
-      title="Account and preferences"
-      description="Manage your profile, display preferences and session."
-      className="h-auto max-h-[calc(100dvh-0.75rem)] lg:hidden"
-    >
-      <div className="pb-[max(0px,env(safe-area-inset-bottom))]">
-        {user && (
-          <div className="mb-4 flex items-center gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
-            <div className="size-12 shrink-0 overflow-hidden rounded-full border-2 border-[var(--acade-primary)]/35 bg-[var(--acade-overlay)]">
-              <img
-                src={profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
-                alt=""
-                className="size-full object-cover"
-              />
+    <>
+      <Sheet
+        open={isOpen}
+        onClose={onClose}
+        title="Account and preferences"
+        description="Manage your profile, display preferences and session."
+        className="h-auto max-h-[calc(100dvh-0.75rem)] lg:hidden"
+      >
+        <div className="pb-[max(0px,env(safe-area-inset-bottom))]">
+          {user && (
+            <div className="mb-4 flex items-center gap-3 rounded-[var(--radius-surface)] border border-[var(--acade-border)] bg-[var(--acade-deep)] p-3">
+              <div className="size-12 shrink-0 overflow-hidden rounded-full border-2 border-[var(--acade-primary)]/35 bg-[var(--acade-overlay)]">
+                <img
+                  src={profile?.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-[var(--acade-text)]">
+                  {profile?.fullName || user.displayName || 'Student'}
+                </p>
+                <p className="truncate text-sm text-[var(--acade-text-muted)]">
+                  {profile?.matric || user.email || 'Academic profile'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-[var(--acade-text)]">
-                {profile?.fullName || user.displayName || 'Student'}
-              </p>
-              <p className="truncate text-sm text-[var(--acade-text-muted)]">
-                {profile?.matric || user.email || 'Academic profile'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        <nav aria-label="Account settings" className="grid gap-1">
-          {timetableEnabled && (
-            <DrawerLink href="/timetable" id="tour-mobile-nav-timetable" icon={CalendarDays} label="Timetable" onClick={onClose} />
           )}
-          <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
-        </nav>
 
-        <div className="mt-4 border-t border-[var(--acade-border-subtle)] pt-4">
-          <ThemeControl className="w-full" />
-          <button
-            type="button"
-            id="tour-mobile-nav-logout"
-            onClick={handleSignOut}
-            className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
-          >
-            <LogOut className="size-5" aria-hidden="true" />
-            Sign out
-          </button>
+          <nav aria-label="Account settings" className="grid gap-1">
+            {timetableEnabled && (
+              <DrawerLink href="/timetable" id="tour-mobile-nav-timetable" icon={CalendarDays} label="Timetable" onClick={onClose} />
+            )}
+            <DrawerLink href="/settings" id="tour-mobile-nav-settings" icon={Settings} label="Settings" onClick={onClose} />
+          </nav>
+
+          <div className="mt-4 border-t border-[var(--acade-border-subtle)] pt-4">
+            <ThemeControl className="w-full" />
+            <button
+              type="button"
+              id="tour-mobile-nav-logout"
+              onClick={handleSignOut}
+              className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold text-[var(--acade-danger)] transition-colors hover:bg-[var(--acade-danger-dim)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--acade-danger)]"
+            >
+              <LogOut className="size-5" aria-hidden="true" />
+              Sign out
+            </button>
+          </div>
         </div>
-      </div>
-    </Sheet>
+      </Sheet>
+      <SignOutDialog open={confirmSignOut} onClose={() => setConfirmSignOut(false)} uid={user?.uid} />
+    </>
   );
 }
 

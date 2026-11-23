@@ -1,5 +1,5 @@
 {
-  "version": "2026-11-22.1",
+  "version": "2026-11-23.1",
   "entries": {
     "student.dashboard": {
       "id": "student.dashboard",
@@ -1393,6 +1393,129 @@
         {
           "label": "Settings",
           "to": "student.settings"
+        }
+      ]
+    },
+    "student.olevel": {
+      "audience": "student",
+      "id": "student.olevel",
+      "title": "WAEC and NECO results",
+      "summary": "Add up to two sittings. We take your best grade in each subject; A1–C6 are credits. Most courses need five credits including English and Maths.",
+      "tasks": [
+        {
+          "title": "Add a sitting",
+          "steps": [
+            "Open your O-level results.",
+            "Choose Add a sitting, then pick the exam and the year.",
+            "Add each subject and its grade. A sitting holds up to nine subjects."
+          ]
+        },
+        {
+          "title": "Waiting for a result",
+          "steps": [
+            "Pick Awaiting (AR) as the grade.",
+            "It does not count as a credit until you change it."
+          ]
+        }
+      ],
+      "cautions": [
+        "D7 and E8 are passes, not credits. F9 is a fail.",
+        "Check the exact subjects with your school. Some courses also need a particular subject, such as Physics or Biology.",
+        "Nothing here is sent to WAEC, NECO or JAMB. It is your own record."
+      ],
+      "related": [
+        {
+          "label": "Admission aggregate",
+          "to": "student.admission"
+        },
+        {
+          "label": "Record type",
+          "to": "student.record-type"
+        }
+      ],
+      "platformNotes": {
+        "web": [
+          "Under Subjects your course needs, add the subjects your course asks for. We show which ones you have a credit in and which are missing."
+        ]
+      }
+    },
+    "student.admission": {
+      "audience": "student",
+      "id": "student.admission",
+      "title": "Admission aggregate",
+      "summary": "Pick your school's formula. Your aggregate is an estimate out of 100; check your school's published formula.",
+      "tasks": [
+        {
+          "title": "Work out your aggregate",
+          "steps": [
+            "Enter your UTME score, out of 400.",
+            "Enter your post-UTME score and what it is out of. Leave the score empty until you have it.",
+            "Pick the formula your school uses."
+          ]
+        },
+        {
+          "title": "Use your O-level grades",
+          "steps": [
+            "If your formula counts O-level, use the grades from your WAEC or NECO results, or type five grades.",
+            "English and Maths always count. The best three other subjects make up the five."
+          ]
+        },
+        {
+          "title": "Set a target",
+          "steps": [
+            "Enter the aggregate you are aiming for, out of 100.",
+            "We show the post-UTME score you need to reach it.",
+            "Save, and your target is kept with your scores."
+          ]
+        }
+      ],
+      "cautions": [
+        "This is an estimate. Schools change their formulas, so check your school's published formula.",
+        "If your school uses its own weights, pick My school's weights and enter them."
+      ],
+      "related": [
+        {
+          "label": "WAEC and NECO results",
+          "to": "student.olevel"
+        },
+        {
+          "label": "Record type",
+          "to": "student.record-type"
+        }
+      ]
+    },
+    "student.record-type": {
+      "audience": "student",
+      "id": "student.record-type",
+      "title": "Record type",
+      "summary": "Switch between university, WAEC/NECO and JAMB tracking. Nothing is deleted when you switch.",
+      "tasks": [
+        {
+          "title": "Switch what you track",
+          "steps": [
+            "Open Settings, then Record type.",
+            "Pick university, WAEC or NECO, or JAMB and admission.",
+            "Confirm the switch."
+          ]
+        }
+      ],
+      "cautions": [
+        "Your other records are kept. Switch back and they are all still there.",
+        "To switch to university tracking you may need to add your school details first.",
+        "AcadeMind and the other AI features are only for university tracking."
+      ],
+      "related": [
+        {
+          "label": "Settings",
+          "to": "student.settings"
+        },
+        {
+          "label": "WAEC and NECO results",
+          "to": "student.olevel"
+        },
+        {
+          "label": "Admission aggregate",
+          "to": "student.admission"
         }
       ]
     }

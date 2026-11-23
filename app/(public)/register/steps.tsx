@@ -43,8 +43,11 @@ import { SuggestField } from '@/components/site/auth/SuggestField';
 import { AuthNoticeLine, CooldownNotice } from '@/components/site/auth/messages';
 import { StepActions, StepFrame } from '@/components/site/auth/steps';
 
+import { RECORD_TYPE_COPY } from '@/lib/records/navigation';
+import { RECORD_TYPES, type RecordType } from '@/types/records';
+
 import { RegistrationConsents } from './RegistrationConsents';
-import { generatePastSemesters, maxCompletedSemesters, type FormData } from './schema';
+import { generatePastSemesters, isSchoolRecordType, maxCompletedSemesters, type FormData } from './schema';
 
 /** Shared by every step: focus and motion only after the first step change. */
 export interface StepMotion {
@@ -52,15 +55,43 @@ export interface StepMotion {
   enter: boolean;
 }
 
+/* ─────────────────────────────── Step 0 · What are you tracking? */
+
+export function Step0Track({ onNext, motion }: { onNext: () => void; motion: StepMotion }) {
+  const { watch, setValue } = useFormContext<FormData>();
+  const value: RecordType = watch('recordType') ?? 'tertiary';
+
+  return (
+    <StepFrame
+      heading="What are you tracking?"
+      sentence="Pick the one you need now. You can change it later in Settings."
+      focusOnMount={motion.focusOnMount}
+      enter={motion.enter}
+    >
+      <ChoiceCards
+        name="recordType"
+        label="What are you tracking?"
+        value={value}
+        options={RECORD_TYPES.map((type) => ({ value: type, title: RECORD_TYPE_COPY[type].title, line: RECORD_TYPE_COPY[type].line }))}
+        onChange={(next) => setValue('recordType', next, { shouldDirty: true })}
+      />
+      <AuthButton block onClick={onNext}>Continue</AuthButton>
+    </StepFrame>
+  );
+}
+
 /* ─────────────────────────────── Step 1 · Your account (and the code screen) */
 
 export function Step1Account({
   onNext,
+  onBack,
   onPaused,
   pageNotice,
   motion,
 }: {
   onNext: (fromCode: boolean) => void;
+  /** Back to "What are you tracking?". */
+  onBack?: () => void;
   onPaused: () => void;
   pageNotice: AuthNotice | null;
   motion: StepMotion;
@@ -79,6 +110,8 @@ export function Step1Account({
   const verifying = useRef(false);
   const { shake, props: shakeProps } = useShake();
   const authMethod = watch('authMethod');
+  // WAEC/NECO and JAMB accounts have no matric number.
+  const school = isSchoolRecordType(watch('recordType'));
 
   const handleGoogleSignup = async () => {
     setIsLoading(true);
@@ -101,9 +134,10 @@ export function Step1Account({
   };
 
   const handleSendOtp = async () => {
+    const accountFields = school ? (['fullName', 'email'] as const) : (['fullName', 'matric', 'email'] as const);
     const fieldsToValidate = authMethod === 'google'
-      ? (['fullName', 'matric', 'email'] as const)
-      : (['fullName', 'matric', 'email', 'password', 'confirmPassword'] as const);
+      ? [...accountFields]
+      : [...accountFields, 'password' as const, 'confirmPassword' as const];
     const valid = await trigger(fieldsToValidate, { shouldFocus: true });
     if (!valid) return;
 
@@ -241,13 +275,15 @@ export function Step1Account({
         <p className="flex items-start gap-3 rounded-2xl bg-ag-haze px-4 py-3.5 text-[0.9375rem] leading-snug text-ag-ink">
           <GoogleG />
           <span>
-            Signed in with Google as {getValues('email')}. Check your name and add your matric number.
+            Signed in with Google as {getValues('email')}. {school ? 'Check your name.' : 'Check your name and add your matric number.'}
           </span>
         </p>
       )}
 
-      <TextField label="Full name" autoComplete="name" hint="As it appears on your school records." error={errors.fullName?.message} {...register('fullName')} />
-      <TextField label="Matric number" placeholder="e.g. 2021/243567" hint="As printed on your ID card." error={errors.matric?.message} {...register('matric')} />
+      <TextField label="Full name" autoComplete="name" hint={school ? 'As it appears on your result.' : 'As it appears on your school records.'} error={errors.fullName?.message} {...register('fullName')} />
+      {school ? null : (
+        <TextField label="Matric number" placeholder="e.g. 2021/243567" hint="As printed on your ID card." error={errors.matric?.message} {...register('matric')} />
+      )}
       <TextField
         label="Email"
         type="email"
@@ -269,6 +305,9 @@ export function Step1Account({
       <AuthButton block busy={isLoading && !googleBusy} onClick={() => void handleSendOtp()}>
         {authMethod === 'google' ? (isLoading && !googleBusy ? 'Saving…' : 'Continue') : isLoading && !googleBusy ? 'Sending your code…' : 'Email me a code'}
       </AuthButton>
+      {onBack ? (
+        <TextButton onClick={onBack}>Change what you&apos;re tracking</TextButton>
+      ) : null}
     </StepFrame>
   );
 }
@@ -468,7 +507,10 @@ export function Step3Record({
   onBack,
   pageNotice,
   motion,
+  school = false,
 }: {
+  /** WAEC/NECO or JAMB: only the age and terms, then the account is created. */
+  school?: boolean;
   onNext: () => void;
   onSubmit: () => void | Promise<void>;
   onBack: () => void;
@@ -489,6 +531,10 @@ export function Step3Record({
   }, [maxSemesters, modeVal, semsCompleted, setValue]);
 
   const handleNext = async () => {
+    if (school) {
+      if (await trigger(['age', 'termsAccepted'], { shouldFocus: true })) await onSubmit();
+      return;
+    }
     const valid = await trigger(['recordMode', 'semestersCompleted', 'age', 'termsAccepted'], { shouldFocus: true });
     if (valid) {
       if (modeVal === 'fromScratch') {
@@ -502,6 +548,23 @@ export function Step3Record({
   };
 
   const upTo = maxSemesters === 1 ? '1 semester' : `${maxSemesters} semesters`;
+
+  if (school) {
+    return (
+      <StepFrame
+        heading="Before you finish"
+        sentence="Two quick answers, then your record is ready. You add your grades after this."
+        focusOnMount={motion.focusOnMount}
+        enter={motion.enter}
+      >
+        <RegistrationConsents showAiConsent={false} />
+        <AuthNoticeLine notice={pageNotice} />
+        <StepActions onBack={onBack}>
+          <AuthButton block onClick={() => void handleNext()}>Create my record</AuthButton>
+        </StepActions>
+      </StepFrame>
+    );
+  }
 
   return (
     <StepFrame
