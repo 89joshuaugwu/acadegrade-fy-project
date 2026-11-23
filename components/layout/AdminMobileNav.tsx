@@ -184,15 +184,15 @@ export function AdminSectionsSheet({ open, onClose, pathname, badges, startWithF
         aria-current={active ? 'page' : undefined}
         aria-label={badge ? `${item.label}, ${badge.spoken}` : undefined}
         className={cn(
-          'relative flex min-h-[4.25rem] min-w-0 flex-col justify-between gap-2 rounded-[14px] px-3 py-2.5 text-[0.875rem] leading-[1.125rem] transition-colors motion-reduce:transition-none',
+          'flex min-h-14 min-w-0 items-center gap-2.5 rounded-[14px] py-2 pl-3 pr-2.5 text-[0.875rem] leading-[1.125rem] transition-colors motion-reduce:transition-none',
           focusRing,
-          wide && 'col-span-2 min-h-12 flex-row items-center justify-start gap-3',
+          wide && 'col-span-2 min-h-12',
           active ? 'bg-white/[0.13] font-semibold text-white' : 'bg-white/[0.05] font-medium text-white/90 hover:bg-white/[0.09]',
         )}
       >
         <Icon className={cn('size-5 shrink-0', active ? 'text-ag-gold' : 'text-ag-mist-night')} aria-hidden="true" />
-        <span className="min-w-0 text-balance pr-6">{item.label}</span>
-        {badge ? <CountBadge text={badge.text} className="absolute right-2.5 top-2.5" /> : null}
+        <span className="min-w-0 flex-1 text-balance">{item.label}</span>
+        {badge ? <CountBadge text={badge.text} className="shrink-0" /> : null}
       </Link>
     );
   };
@@ -204,7 +204,7 @@ export function AdminSectionsSheet({ open, onClose, pathname, badges, startWithF
       title="All sections"
       presentation="sheet"
       initialFocusRef={startWithFind ? fieldRef : firstFocusRef}
-      className={cn(darkSheet, 'h-[calc(100dvh-0.75rem)] max-h-[calc(100dvh-0.75rem)]')}
+      className={cn(darkSheet, 'h-[calc(100dvh-2rem)]')}
     >
       <div className="pb-[env(safe-area-inset-bottom)]">
         <div className="relative">
@@ -231,7 +231,7 @@ export function AdminSectionsSheet({ open, onClose, pathname, badges, startWithF
         {items.length === 0 ? (
           <p role="status" className="mt-6 text-center text-sm text-ag-mist-night">No section called “{query.trim()}”.</p>
         ) : (
-          <nav aria-label="All admin sections" className="mt-5 flex flex-col gap-5">
+          <nav aria-label="All admin sections" className="mt-4 flex flex-col gap-4">
             {groups.map((group, index) => {
               if (!group.label) {
                 return <div key="primary" className="grid grid-cols-2 gap-2">{group.items.map((item) => tile(item, true))}</div>;
